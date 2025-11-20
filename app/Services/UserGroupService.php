@@ -22,8 +22,14 @@ class UserGroupService
         
         return DataTables::of($data)
             ->addIndexColumn()
-            ->addColumn('users_count', function($row){
-                return $row->users_count;
+            ->addColumn('users_link', function($row){
+                $count = $row->users_count ?? $row->users()->count();
+                if ($count < 1) {
+                    return '<span class="text-muted">0 Users</span>';
+                }
+
+                $url = route('system.users.index', ['group_id' => $row->id]);
+                return '<a href="'.$url.'" target="_blank" class="badge badge-primary">'.$count.' Users</a>';
             })
             ->addColumn('status', function($row){
                 if ($row->is_active) {
@@ -47,7 +53,7 @@ class UserGroupService
 
                 return !empty($actions) ? implode(' ', $actions) : '-';
             })
-            ->rawColumns(['status', 'action'])
+            ->rawColumns(['status', 'action', 'users_link'])
             ->make(true);
     }
 

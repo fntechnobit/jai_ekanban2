@@ -32,6 +32,7 @@
 
   <!-- Theme style -->
   <link rel="stylesheet" href="{{ url('css/adminlte.min.css') }}">
+  <link rel="stylesheet" href="{{ url('css/custom.css') }}">
 
   <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -49,11 +50,11 @@
   @yield('css')
   @stack('styles')
 </head>
-<body class="hold-transition sidebar-mini layout-fixed">
+<body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed accent-primary">
 <!-- Site wrapper -->
 <div class="wrapper">
   <!-- Navbar -->
-  <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+  <nav class="main-header navbar navbar-expand navbar-primary navbar-dark">
     <!-- Left navbar links -->
     <ul class="navbar-nav">
       <li class="nav-item">
@@ -64,7 +65,7 @@
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
       <li class="nav-item dropdown">
-        <a class="nav-link" data-toggle="dropdown" href="#">
+        <a class="nav-link text-white" data-toggle="dropdown" href="#">
           <i class="fas fa-user"></i> {{ Auth::user()->name }}
         </a>
         <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">

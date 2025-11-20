@@ -33,13 +33,33 @@
                 </div>
             </div>
             <div class="card-body">
+                <div class="card card-primary card-filter mb-4">
+                    <div class="card-body">
+                        <div class="row align-items-end">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <label for="filter-group" class="filter-label">User Group</label>
+                                <select id="filter-group" class="filter-select" style="width: 100%;">
+                                    <option value="">All Groups</option>
+                                    @foreach($groups as $group)
+                                        <option value="{{ $group->id }}">{{ $group->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="filter-action text-left mt-3">
+                            <button class="btn btn-primary filter-btn" type="button" id="btn-filter">
+                                <i class="fas fa-filter"></i> Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <table id="users-table" class="table table-bordered table-striped">
                     <thead>
                         <tr>
                             <th width="5%">No</th>
                             <th>Name</th>
                             <th>Email</th>
-                            <th>Group</th>
+                            <th>User Group</th>
                             <th width="10%">Status</th>
                             <th width="15%">Action</th>
                         </tr>
@@ -78,25 +98,61 @@
 <script>
 $(function() {
     // Initialize Select2
-    $('.select2').select2({
+    $('.select2').not('#filter-group').select2({
         theme: 'bootstrap4',
         dropdownParent: $('#userModal')
     });
+
+    $('#filter-group').select2({
+        theme: 'bootstrap4',
+        dropdownParent: $('body'),
+        placeholder: 'All Groups',
+        allowClear: true,
+        minimumResultsForSearch: 8
+    });
+
+    var initialGroup = "{{ request()->query('group_id') }}";
+    if (initialGroup) {
+        $('#filter-group').val(initialGroup).trigger('change');
+    }
 
     // DataTable
     var table = $('#users-table').DataTable({
         processing: true,
         serverSide: true,
-        ajax: "{{ route('system.users.datatable') }}",
+        ajax: {
+            url: "{{ route('system.users.datatable') }}",
+            data: function(params) {
+                params.group_id = $('#filter-group').val();
+            }
+        },
+        order: [[1, 'asc']],
         columns: [
             {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
             {data: 'name', name: 'name'},
             {data: 'email', name: 'email'},
-            {data: 'group_name', name: 'group.name'},
+            {data: 'group_label', name: 'group.name', orderable: false, searchable: false},
             {data: 'status', name: 'is_active', orderable: false},
             {data: 'action', name: 'action', orderable: false, searchable: false}
         ]
     });
+
+    $('#btn-filter').on('click', function() {
+        table.ajax.reload();
+        toggleCardState();
+    });
+
+    $('#filter-group').on('change', function() {
+        toggleCardState();
+        if (!$('#btn-filter').is(':focus')) {
+            table.ajax.reload();
+        }
+    }).trigger('change');
+
+    function toggleCardState() {
+        var hasFilter = !!$('#filter-group').val();
+        $('.card-filter').toggleClass('is-filtered', hasFilter);
+    }
 
     // Add User Button
     $('#btn-add').click(function() {

@@ -14,10 +14,11 @@
   <link rel="stylesheet" href="{{ url('plugins/icheck-bootstrap/icheck-bootstrap.min.css') }}">
   <!-- Theme style -->
   <link rel="stylesheet" href="{{ url('css/adminlte.min.css') }}">
+  <link rel="stylesheet" href="{{ url('css/custom.css') }}">
 
   @yield('style')
 </head>
-<body class="hold-transition login-page">
+<body class="hold-transition login-page accent-primary">
 <div class="login-box">
   <div class="login-logo">
     <a href="#"><b>JAI</b> E-Kanban</a>

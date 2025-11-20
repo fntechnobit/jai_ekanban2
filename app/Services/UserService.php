@@ -9,19 +9,32 @@ use Yajra\DataTables\Facades\DataTables;
 
 class UserService
 {
-    public function getAllWithGroups()
+    public function getAllWithGroups(?int $groupId = null)
     {
-        return User::with('group')->select('users.*');
+        $query = User::with('group')->select('users.*');
+
+        if (!is_null($groupId)) {
+            $query->where('group_id', $groupId);
+        }
+
+        return $query;
     }
 
     public function getDatatable()
     {
-        $data = $this->getAllWithGroups();
+        $groupId = request()->filled('group_id') ? (int) request()->input('group_id') : null;
+
+        $data = $this->getAllWithGroups($groupId);
         
         return DataTables::of($data)
             ->addIndexColumn()
-            ->addColumn('group_name', function($row){
-                return $row->group ? $row->group->name : '-';
+            ->addColumn('group_label', function($row){
+                if ($row->group) {
+                    $badgeClass = $row->group->is_active ? 'badge badge-primary' : 'badge badge-secondary';
+                    return '<span class="'.$badgeClass.'">'.$row->group->name.'</span>';
+                }
+
+                return '<span class="text-muted">Unassigned</span>';
             })
             ->addColumn('status', function($row){
                 if ($row->is_active) {
@@ -44,7 +57,7 @@ class UserService
 
                 return !empty($actions) ? implode(' ', $actions) : '-';
             })
-            ->rawColumns(['status', 'action'])
+            ->rawColumns(['status', 'action', 'group_label'])
             ->make(true);
     }
 

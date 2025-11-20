@@ -1,0 +1,168 @@
+:root {
+    --kanban-primary: #0d6efd;
+    --kanban-primary-dark: #0b5ed7;
+    --kanban-primary-light: #f0f6ff;
+}
+
+body.hold-transition {
+    background-color: #f4f6f9;
+}
+
+.main-header.navbar-primary {
+    background: linear-gradient(90deg, var(--kanban-primary-dark) 0%, var(--kanban-primary) 100%);
+    box-shadow: 0 0.125rem 0.5rem rgba(13, 110, 253, 0.35);
+}
+
+.main-header.navbar-primary .nav-link,
+.main-header.navbar-primary .navbar-nav > .nav-item > .nav-link {
+    color: #fff;
+}
+
+.main-header.navbar-primary .nav-link:hover,
+.main-header.navbar-primary .nav-link:focus {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.main-header.navbar-primary .dropdown-menu {
+    border-radius: 0.5rem;
+    border: none;
+    box-shadow: 0 0.75rem 1.25rem rgba(15, 30, 84, 0.25);
+}
+
+.brand-link {
+    background: linear-gradient(135deg, var(--kanban-primary) 0%, var(--kanban-primary-dark) 100%);
+    color: #fff !important;
+    border-bottom: none;
+}
+
+.brand-link .brand-text {
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active,
+.sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active:hover {
+    background: linear-gradient(135deg, var(--kanban-primary-dark) 0%, var(--kanban-primary) 100%);
+    color: #fff;
+}
+
+.sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active .nav-icon,
+.sidebar-dark-primary .nav-sidebar > .nav-item > .nav-link.active p {
+    color: inherit;
+}
+
+.sidebar-dark-primary .nav-sidebar .nav-treeview > .nav-item > .nav-link.active,
+.sidebar-dark-primary .nav-sidebar .nav-treeview > .nav-item > .nav-link:hover {
+    background-color: rgba(13, 110, 253, 0.25);
+    color: #fff;
+}
+
+.content-header {
+    background: linear-gradient(90deg, rgba(13, 110, 253, 0.08) 0%, rgba(13, 110, 253, 0) 70%);
+    border-bottom: 1px solid rgba(13, 110, 253, 0.1);
+}
+
+.card-primary:not(.card-outline) > .card-header {
+    background: linear-gradient(135deg, var(--kanban-primary-dark) 0%, var(--kanban-primary) 100%);
+}
+
+.btn-primary {
+    background: var(--kanban-primary);
+    border-color: var(--kanban-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background: var(--kanban-primary-dark);
+    border-color: var(--kanban-primary-dark);
+}
+
+.badge-primary {
+    background-color: var(--kanban-primary);
+}
+
+.login-page {
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.35) 0%, rgba(7, 76, 201, 0.75) 100%);
+}
+
+.login-card-body,
+.register-card-body {
+    border-top: 3px solid var(--kanban-primary);
+}
+
+.card-filter {
+    border-radius: 1rem;
+    box-shadow: 0 0.45rem 0.9rem rgba(13, 110, 253, 0.15);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card-filter .card-body {
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.15) 0%, rgba(13, 110, 253, 0.05) 100%);
+    border-radius: 1rem;
+}
+
+.card-filter.is-filtered {
+    box-shadow: 0 0.75rem 1.2rem rgba(13, 110, 253, 0.22);
+    transform: translateY(-2px);
+}
+
+.card-filter .filter-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--kanban-primary-dark);
+    margin-bottom: 0.45rem;
+}
+
+.card-filter .select2-container--bootstrap4 .select2-selection {
+    border-radius: 0.6rem;
+    border-color: rgba(13, 110, 253, 0.4);
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    padding-left: 0.5rem;
+    transition: border-color 0.2s ease;
+}
+
+.card-filter .select2-container--bootstrap4 .select2-selection:focus,
+.card-filter .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered:focus {
+    border-color: var(--kanban-primary);
+}
+
+.card-filter .select2-container--bootstrap4 .select2-selection__rendered {
+    line-height: 1.4;
+}
+
+.card-filter .select2-container--bootstrap4 .select2-selection__arrow {
+    height: 100%;
+}
+
+.card-filter .filter-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.6rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    box-shadow: 0 0.45rem 0.9rem rgba(13, 110, 253, 0.25);
+}
+
+.card-filter .filter-btn i {
+    margin-right: 0.45rem;
+}
+
+@media (max-width: 767.98px) {
+    .card-filter {
+        padding: 1rem;
+    }
+
+    .card-filter .filter-action {
+        width: 100%;
+    }
+
+    .card-filter .filter-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

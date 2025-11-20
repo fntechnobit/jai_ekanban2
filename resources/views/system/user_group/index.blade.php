@@ -39,7 +39,7 @@
                             <th width="5%">No</th>
                             <th>Name</th>
                             <th>Description</th>
-                            <th width="10%">Users</th>
+                            <th width="15%">Users</th>
                             <th width="10%">Status</th>
                             <th width="15%">Action</th>
                         </tr>
@@ -82,7 +82,7 @@ $(function() {
             {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
             {data: 'name', name: 'name'},
             {data: 'description', name: 'description'},
-            {data: 'users_count', name: 'users_count'},
+            {data: 'users_link', name: 'users_count', orderable: false, searchable: false},
             {data: 'status', name: 'is_active', orderable: false},
             {data: 'action', name: 'action', orderable: false, searchable: false}
         ]
