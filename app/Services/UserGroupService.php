@@ -6,6 +6,7 @@ use App\Models\UserGroup;
 use App\Models\Menu;
 use App\Models\GroupMenuAccess;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Yajra\DataTables\Facades\DataTables;
 
 class UserGroupService
@@ -31,13 +32,20 @@ class UserGroupService
                 return '<span class="badge bg-danger">Inactive</span>';
             })
             ->addColumn('action', function($row){
-                $btn = '<button type="button" class="btn btn-sm btn-info btn-edit" data-id="'.$row->id.'" title="Edit">';
-                $btn .= '<i class="fas fa-edit"></i></button> ';
-                $btn .= '<button type="button" class="btn btn-sm btn-warning btn-permission" data-id="'.$row->id.'" title="Permissions">';
-                $btn .= '<i class="fas fa-key"></i></button> ';
-                $btn .= '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="'.$row->id.'" title="Delete">';
-                $btn .= '<i class="fas fa-trash"></i></button>';
-                return $btn;
+                /** @var \App\Models\User|null $currentUser */
+                $currentUser = Auth::user();
+                $actions = [];
+
+                if ($currentUser && $currentUser->hasMenuPermission('user_groups', 'can_update')) {
+                    $actions[] = '<button type="button" class="btn btn-sm btn-info btn-edit" data-id="'.$row->id.'" title="Edit"><i class="fas fa-edit"></i></button>';
+                    $actions[] = '<button type="button" class="btn btn-sm btn-warning btn-permission" data-id="'.$row->id.'" title="Permissions"><i class="fas fa-key"></i></button>';
+                }
+
+                if ($currentUser && $currentUser->hasMenuPermission('user_groups', 'can_delete')) {
+                    $actions[] = '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="'.$row->id.'" title="Delete"><i class="fas fa-trash"></i></button>';
+                }
+
+                return !empty($actions) ? implode(' ', $actions) : '-';
             })
             ->rawColumns(['status', 'action'])
             ->make(true);

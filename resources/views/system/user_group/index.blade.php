@@ -25,9 +25,11 @@
             <div class="card-header">
                 <h3 class="card-title">User Group List</h3>
                 <div class="card-tools">
-                    <button type="button" class="btn btn-primary btn-sm" id="btn-add">
-                        <i class="fas fa-plus"></i> Add User Group
-                    </button>
+                    @if(auth()->user()->hasMenuPermission('user_groups', 'can_create'))
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-add">
+                            <i class="fas fa-plus"></i> Add User Group
+                        </button>
+                    @endif
                 </div>
             </div>
             <div class="card-body">
@@ -102,11 +104,13 @@ $(function() {
             url: "{{ route('system.user-groups.index') }}/" + id + "/edit",
             type: 'GET',
             success: function(response) {
-                $('#group_id').val(response.id);
-                $('#name').val(response.name);
-                $('#description').val(response.description);
-                
-                if(response.is_active == 1) {
+                const group = response.data || response;
+
+                $('#group_id').val(group.id);
+                $('#name').val(group.name);
+                $('#description').val(group.description);
+
+                if(group.is_active == 1) {
                     $('#is_active_yes').prop('checked', true);
                 } else {
                     $('#is_active_no').prop('checked', true);
@@ -167,30 +171,33 @@ $(function() {
             url: "{{ route('system.user-groups.index') }}/" + id + "/permissions",
             type: 'GET',
             success: function(response) {
-                $('#permissionsModalLabel').text('Menu Permissions - ' + response.group.name);
+                const data = response.data || response;
+                const permissions = data.permissions || {};
+
+                $('#permissionsModalLabel').text('Menu Permissions - ' + data.group.name);
                 var html = '<table class="table table-bordered table-sm">';
                 html += '<thead><tr><th>Menu</th><th width="80">Create</th><th width="80">Read</th><th width="80">Update</th><th width="80">Delete</th></tr></thead>';
                 html += '<tbody>';
                 
-                response.menus.forEach(function(menu) {
-                    var perm = response.permissions[menu.id] || {};
+                data.menus.forEach(function(menu) {
+                    var perm = permissions[menu.id] || {};
                     html += '<tr>';
                     html += '<td><strong>' + menu.name + '</strong></td>';
-                    html += '<td><input type="checkbox" name="permissions[' + menu.id + '][can_create]" value="1" ' + (perm.can_create ? 'checked' : '') + '></td>';
-                    html += '<td><input type="checkbox" name="permissions[' + menu.id + '][can_read]" value="1" ' + (perm.can_read ? 'checked' : '') + '></td>';
-                    html += '<td><input type="checkbox" name="permissions[' + menu.id + '][can_update]" value="1" ' + (perm.can_update ? 'checked' : '') + '></td>';
-                    html += '<td><input type="checkbox" name="permissions[' + menu.id + '][can_delete]" value="1" ' + (perm.can_delete ? 'checked' : '') + '></td>';
+                    html += '<td><input type="checkbox" class="perm-checkbox" data-scope="parent" data-menu-id="' + menu.id + '" data-permission="can_create" name="permissions[' + menu.id + '][can_create]" value="1" ' + (perm.can_create ? 'checked' : '') + '></td>';
+                    html += '<td><input type="checkbox" class="perm-checkbox" data-scope="parent" data-menu-id="' + menu.id + '" data-permission="can_read" name="permissions[' + menu.id + '][can_read]" value="1" ' + (perm.can_read ? 'checked' : '') + '></td>';
+                    html += '<td><input type="checkbox" class="perm-checkbox" data-scope="parent" data-menu-id="' + menu.id + '" data-permission="can_update" name="permissions[' + menu.id + '][can_update]" value="1" ' + (perm.can_update ? 'checked' : '') + '></td>';
+                    html += '<td><input type="checkbox" class="perm-checkbox" data-scope="parent" data-menu-id="' + menu.id + '" data-permission="can_delete" name="permissions[' + menu.id + '][can_delete]" value="1" ' + (perm.can_delete ? 'checked' : '') + '></td>';
                     html += '</tr>';
                     
                     if(menu.children && menu.children.length > 0) {
                         menu.children.forEach(function(child) {
-                            var childPerm = response.permissions[child.id] || {};
+                            var childPerm = permissions[child.id] || {};
                             html += '<tr>';
                             html += '<td>&nbsp;&nbsp;&nbsp;&nbsp;' + child.name + '</td>';
-                            html += '<td><input type="checkbox" name="permissions[' + child.id + '][can_create]" value="1" ' + (childPerm.can_create ? 'checked' : '') + '></td>';
-                            html += '<td><input type="checkbox" name="permissions[' + child.id + '][can_read]" value="1" ' + (childPerm.can_read ? 'checked' : '') + '></td>';
-                            html += '<td><input type="checkbox" name="permissions[' + child.id + '][can_update]" value="1" ' + (childPerm.can_update ? 'checked' : '') + '></td>';
-                            html += '<td><input type="checkbox" name="permissions[' + child.id + '][can_delete]" value="1" ' + (childPerm.can_delete ? 'checked' : '') + '></td>';
+                            html += '<td><input type="checkbox" class="perm-checkbox" data-scope="child" data-parent-id="' + menu.id + '" data-menu-id="' + child.id + '" data-permission="can_create" name="permissions[' + child.id + '][can_create]" value="1" ' + (childPerm.can_create ? 'checked' : '') + '></td>';
+                            html += '<td><input type="checkbox" class="perm-checkbox" data-scope="child" data-parent-id="' + menu.id + '" data-menu-id="' + child.id + '" data-permission="can_read" name="permissions[' + child.id + '][can_read]" value="1" ' + (childPerm.can_read ? 'checked' : '') + '></td>';
+                            html += '<td><input type="checkbox" class="perm-checkbox" data-scope="child" data-parent-id="' + menu.id + '" data-menu-id="' + child.id + '" data-permission="can_update" name="permissions[' + child.id + '][can_update]" value="1" ' + (childPerm.can_update ? 'checked' : '') + '></td>';
+                            html += '<td><input type="checkbox" class="perm-checkbox" data-scope="child" data-parent-id="' + menu.id + '" data-menu-id="' + child.id + '" data-permission="can_delete" name="permissions[' + child.id + '][can_delete]" value="1" ' + (childPerm.can_delete ? 'checked' : '') + '></td>';
                             html += '</tr>';
                         });
                     }
@@ -204,6 +211,25 @@ $(function() {
                 Swal.fire('Error!', 'Failed to load permissions', 'error');
             }
         });
+    });
+
+    // Toggle child permissions when parent checkbox is changed and keep parents in sync
+    $(document).on('change', '.perm-checkbox', function() {
+        var scope = $(this).data('scope');
+        var permission = $(this).data('permission');
+        var menuId = $(this).data('menuId');
+        var isChecked = $(this).is(':checked');
+
+        if (scope === 'parent') {
+            $('.perm-checkbox[data-scope="child"][data-parent-id="' + menuId + '"][data-permission="' + permission + '"]').prop('checked', isChecked);
+        } else if (scope === 'child') {
+            var parentId = $(this).data('parentId');
+            var parentSelector = '.perm-checkbox[data-scope="parent"][data-menu-id="' + parentId + '"][data-permission="' + permission + '"]';
+            var siblingsSelector = '.perm-checkbox[data-scope="child"][data-parent-id="' + parentId + '"][data-permission="' + permission + '"]';
+            var hasCheckedSiblings = $(siblingsSelector + ':checked').length > 0;
+
+            $(parentSelector).prop('checked', hasCheckedSiblings);
+        }
     });
 
     // Save Permissions

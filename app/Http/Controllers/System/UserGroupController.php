@@ -15,6 +15,11 @@ class UserGroupController extends Controller
     public function __construct(UserGroupService $userGroupService)
     {
         $this->userGroupService = $userGroupService;
+
+        $this->middleware('check.menu:user_groups,can_read')->only(['index', 'datatable', 'show']);
+        $this->middleware('check.menu:user_groups,can_create')->only(['create', 'store']);
+        $this->middleware('check.menu:user_groups,can_update')->only(['edit', 'update', 'permissions', 'updatePermissions']);
+        $this->middleware('check.menu:user_groups,can_delete')->only(['destroy']);
     }
 
     public function index()

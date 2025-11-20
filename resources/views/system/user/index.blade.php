@@ -25,9 +25,11 @@
             <div class="card-header">
                 <h3 class="card-title">User List</h3>
                 <div class="card-tools">
-                    <button type="button" class="btn btn-primary btn-sm" id="btn-add">
-                        <i class="fas fa-plus"></i> Add User
-                    </button>
+                    @if(auth()->user()->hasMenuPermission('users', 'can_create'))
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-add">
+                            <i class="fas fa-plus"></i> Add User
+                        </button>
+                    @endif
                 </div>
             </div>
             <div class="card-body">
@@ -116,12 +118,14 @@ $(function() {
             url: "{{ route('system.users.index') }}/" + id + "/edit",
             type: 'GET',
             success: function(response) {
-                $('#user_id').val(response.id);
-                $('#name').val(response.name);
-                $('#email').val(response.email);
-                $('#group_id').val(response.group_id).trigger('change');
-                
-                if(response.is_active == 1) {
+                const user = response.data || response;
+
+                $('#user_id').val(user.id);
+                $('#name').val(user.name);
+                $('#email').val(user.email);
+                $('#group_id').val(user.group_id).trigger('change');
+
+                if(user.is_active == 1) {
                     $('#is_active_yes').prop('checked', true);
                 } else {
                     $('#is_active_no').prop('checked', true);

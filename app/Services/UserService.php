@@ -30,11 +30,19 @@ class UserService
                 return '<span class="badge bg-danger">Inactive</span>';
             })
             ->addColumn('action', function($row){
-                $btn = '<button type="button" class="btn btn-sm btn-info btn-edit" data-id="'.$row->id.'" title="Edit">';
-                $btn .= '<i class="fas fa-edit"></i></button> ';
-                $btn .= '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="'.$row->id.'" title="Delete">';
-                $btn .= '<i class="fas fa-trash"></i></button>';
-                return $btn;
+                /** @var \App\Models\User|null $currentUser */
+                $currentUser = Auth::user();
+                $actions = [];
+
+                if ($currentUser && $currentUser->hasMenuPermission('users', 'can_update')) {
+                    $actions[] = '<button type="button" class="btn btn-sm btn-info btn-edit" data-id="'.$row->id.'" title="Edit"><i class="fas fa-edit"></i></button>';
+                }
+
+                if ($currentUser && $currentUser->hasMenuPermission('users', 'can_delete') && $currentUser->id !== $row->id) {
+                    $actions[] = '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="'.$row->id.'" title="Delete"><i class="fas fa-trash"></i></button>';
+                }
+
+                return !empty($actions) ? implode(' ', $actions) : '-';
             })
             ->rawColumns(['status', 'action'])
             ->make(true);

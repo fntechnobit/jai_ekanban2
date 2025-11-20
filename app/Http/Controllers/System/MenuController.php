@@ -15,6 +15,11 @@ class MenuController extends Controller
     public function __construct(MenuService $menuService)
     {
         $this->menuService = $menuService;
+
+        $this->middleware('check.menu:menus,can_read')->only(['index', 'datatable', 'show']);
+        $this->middleware('check.menu:menus,can_create')->only(['create', 'store']);
+        $this->middleware('check.menu:menus,can_update')->only(['edit', 'update']);
+        $this->middleware('check.menu:menus,can_delete')->only(['destroy']);
     }
 
     public function index()

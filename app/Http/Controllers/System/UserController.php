@@ -16,6 +16,10 @@ class UserController extends Controller
     public function __construct(UserService $userService)
     {
         $this->userService = $userService;
+        $this->middleware('check.menu:users,can_read')->only(['index', 'datatable', 'show']);
+        $this->middleware('check.menu:users,can_create')->only(['create', 'store']);
+        $this->middleware('check.menu:users,can_update')->only(['edit', 'update']);
+        $this->middleware('check.menu:users,can_delete')->only(['destroy']);
     }
 
     public function index()

@@ -25,9 +25,11 @@
             <div class="card-header">
                 <h3 class="card-title">Menu List</h3>
                 <div class="card-tools">
-                    <button type="button" class="btn btn-primary btn-sm" id="btn-add">
-                        <i class="fas fa-plus"></i> Add Menu
-                    </button>
+                    @if(auth()->user()->hasMenuPermission('menus', 'can_create'))
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-add">
+                            <i class="fas fa-plus"></i> Add Menu
+                        </button>
+                    @endif
                 </div>
             </div>
             <div class="card-body">
@@ -107,15 +109,17 @@ $(function() {
             url: "{{ route('system.menus.index') }}/" + id + "/edit",
             type: 'GET',
             success: function(response) {
-                $('#menu_id').val(response.id);
-                $('#code').val(response.code);
-                $('#name').val(response.name);
-                $('#url').val(response.url);
-                $('#icon').val(response.icon);
-                $('#parent_id').val(response.parent_id);
-                $('#order').val(response.order);
-                
-                if(response.is_active == 1) {
+                const menu = response.data || response;
+
+                $('#menu_id').val(menu.id);
+                $('#code').val(menu.code);
+                $('#name').val(menu.name);
+                $('#url').val(menu.url);
+                $('#icon').val(menu.icon);
+                $('#parent_id').val(menu.parent_id);
+                $('#order').val(menu.order);
+
+                if(menu.is_active == 1) {
                     $('#is_active_yes').prop('checked', true);
                 } else {
                     $('#is_active_no').prop('checked', true);
