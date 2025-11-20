@@ -1,194 +1,140 @@
 # JAI E-Kanban Application
 
-E-Kanban management system built with Laravel 12 and PHP 8.4.
+JAI E-Kanban is a web-based kanban management system that digitizes supplier ordering, kanban card tracking, and access-control workflows for PT JAI. The application offers user, group, and menu administration with granular permissions, AJAX-driven forms, and responsive modals on top of the AdminLTE UI kit.
 
 ## Technology Stack
 
-- **Framework:** Laravel 12
-- **PHP Version:** 8.4
+- **Language & Runtime:** PHP 8.4
+- **Framework:** Laravel 12.39
+- **Front-end UI:** AdminLTE 3 (Bootstrap 4), jQuery, Select2, SweetAlert2, Yajra DataTables
 - **Database:** MySQL 8.0
-- **Cache/Session:** Redis
+- **Caching & Session:** Redis
 - **Web Server:** Apache 2.4
-- **Containerization:** Docker & Docker Compose
+- **Runtime Environment:** Docker & Docker Compose
+- **Queue / Worker Ready:** Laravel queues (configurable)
 
-## Prerequisites
+## Local Development Setup (Docker)
 
-- Docker
-- Docker Compose
+### 1. Prerequisites
 
-## Installation & Setup
+- Docker Desktop / Docker Engine 24+
+- Docker Compose V2
 
-### 1. Clone and Setup
+### 2. Clone the Repository
 
 ```bash
-cd /path/to/jai_e_kanban
+git clone https://github.com/hasanupin/jai_e_kanban.git
+cd jai_e_kanban
 ```
 
-### 2. Environment Configuration
-
-Copy the example environment file:
+### 3. Environment Configuration
 
 ```bash
 cp .env.example .env
 ```
 
-The `.env` file is pre-configured with the following database settings:
-- Database: `jai_e_kanban`
-- Host: `db` (Docker service)
-- Port: `3306`
-- Username: `laravel_user`
-- Password: `laravel_password`
+The template already includes sensible defaults:
 
-### 3. Build and Start Docker Containers
+| Key | Value |
+| --- | --- |
+| DB_DATABASE | jai_e_kanban |
+| DB_HOST | db |
+| DB_USERNAME | laravel_user |
+| DB_PASSWORD | laravel_password |
+
+### 4. Build and Start Containers
 
 ```bash
 docker-compose up -d --build
 ```
 
-This will start three services:
-- **app** (Laravel application with PHP 8.4) - Port 8001
-- **db** (MySQL 8.0) - Port 3307 (mapped from 3306)
-- **redis** (Redis cache) - Port 6380 (mapped from 6379)
+Services launched:
 
-### 4. Install Dependencies
+| Service | Description | Host Port |
+| --- | --- | --- |
+| app | Laravel + Apache | 8001 |
+| db | MySQL 8.0 | 3308 |
+| redis | Redis cache | 6381 |
+
+### 5. Install Dependencies & Generate Key
 
 ```bash
 docker-compose exec app composer install
-```
-
-### 5. Generate Application Key
-
-```bash
 docker-compose exec app php artisan key:generate
 ```
 
-### 6. Run Database Migrations
+### 6. Run Migrations & Seeders (Optional)
 
 ```bash
-docker-compose exec app php artisan migrate
+docker-compose exec app php artisan migrate --seed
 ```
 
-### 7. Set Permissions
+### 7. Set Writable Permissions
 
 ```bash
 docker-compose exec app chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 docker-compose exec app chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 ```
 
-## Access Application
+### 8. Access the Application
 
-Open your browser and navigate to:
-```
-http://localhost:8001
-```
+Visit `http://localhost:8001` in your browser.
 
-## Docker Commands
+### Useful Docker Commands
 
-### Start containers
 ```bash
-docker-compose up -d
+docker-compose logs -f            # Tail service logs
+docker-compose exec app bash      # Shell into the PHP container
+docker-compose exec app php artisan migrate:fresh --seed
+docker-compose down               # Stop and remove containers
 ```
 
-### Stop containers
+### Database & Cache
+
+- MySQL DSN: `mysql://laravel_user:laravel_password@127.0.0.1:3308/jai_e_kanban`
+- Redis: `redis://127.0.0.1:6381`
+
+## Running Without Docker
+
+> If you prefer a local PHP environment, ensure PHP 8.4, Composer, MySQL 8, and Redis are installed.
+
 ```bash
-docker-compose down
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve --host=0.0.0.0 --port=8001
 ```
 
-### View logs
-```bash
-docker-compose logs -f
-```
+MySQL credentials should match your local setup; update `.env` accordingly.
 
-### Access Laravel container shell
-```bash
-# Using docker-compose
-docker-compose exec app bash
+## Project Highlights
 
-# Using docker exec
-docker exec -it jai_e_kanban_app bash
-```
-
-### Access MySQL database
-```bash
-docker-compose exec db mysql -u laravel_user -plaravel_password jai_e_kanban
-
-# Or from host machine
-mysql -h 127.0.0.1 -P 3308 -u laravel_user -plaravel_password jai_e_kanban
-```
-
-### Run Artisan commands
-```bash
-docker-compose exec app php artisan <command>
-```
-
-## Database Information
-
-- **Database Name:** jai_e_kanban
-- **MySQL Version:** 8.0
-- **Internal Port:** 3306
-- **External Port:** 3308
-- **Root Password:** root_password
-- **User:** laravel_user
-- **Password:** laravel_password
-
-## Redis Information
-
-- **Version:** Alpine (latest)
-- **Internal Port:** 6379
-- **External Port:** 6381
-- **Usage:** Session storage and cache
-
-## Development
-
-### Clear cache
-```bash
-docker-compose exec app php artisan cache:clear
-docker-compose exec app php artisan config:clear
-docker-compose exec app php artisan route:clear
-docker-compose exec app php artisan view:clear
-```
-
-### Create migration
-```bash
-docker-compose exec app php artisan make:migration create_table_name
-```
-
-### Create model
-```bash
-docker-compose exec app php artisan make:model ModelName -m
-```
-
-### Create controller
-```bash
-docker-compose exec app php artisan make:controller ControllerName
-```
-
-## Port Configuration
-
-To avoid conflicts with other applications:
-- Application: 8001 (instead of 8000)
-- MySQL: 3308 (instead of 3306)
-- Redis: 6381 (instead of 6379)
+- Dynamic, database-driven sidebar and permissions tied to user groups
+- User, group, and menu CRUD refactored into dedicated services and form requests
+- Consistent JSON responses with custom helper for AJAX flows
+- Modal-powered CRUD forms, DataTables integration, and Select2 enhanced selects
+- Middleware-enforced menu access with per-action permission flags
+- Blue AdminLTE theme derived from legacy JAI styling for UI consistency
 
 ## Troubleshooting
 
-### Permission Issues
-```bash
-docker-compose exec app chown -R www-data:www-data /var/www/html
-docker-compose exec app chmod -R 775 /var/www/html/storage
-```
-
-### Rebuild containers
-```bash
-docker-compose down
-docker-compose up -d --build
-```
-
-### Reset database
-```bash
-docker-compose exec app php artisan migrate:fresh
-```
+- Rebuild containers:
+	```bash
+	docker-compose down
+	docker-compose up -d --build
+	```
+- Reset database:
+	```bash
+	docker-compose exec app php artisan migrate:fresh --seed
+	```
+- Permission issues:
+	```bash
+	docker-compose exec app chown -R www-data:www-data /var/www/html
+	docker-compose exec app chmod -R 775 /var/www/html/storage
+	```
 
 ## License
 
 This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
