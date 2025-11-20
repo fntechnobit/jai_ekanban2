@@ -53,20 +53,26 @@ return [
             ]
         ],
         [
-            'title' => 'Settings',
+            'title' => 'System',
             'url' => '#',
-            'icon' => 'cogs',
+            'icon' => 'cog',
             'sub_menu' => [
                 [
                     'title' => 'Users',
-                    'url' => 'settings/users',
+                    'url' => 'system/users',
                     'icon' => 'users',
                     'sub_menu' => '#'
                 ],
                 [
-                    'title' => 'Roles',
-                    'url' => 'settings/roles',
-                    'icon' => 'user-shield',
+                    'title' => 'User Groups',
+                    'url' => 'system/user-groups',
+                    'icon' => 'users-cog',
+                    'sub_menu' => '#'
+                ],
+                [
+                    'title' => 'Menus',
+                    'url' => 'system/menus',
+                    'icon' => 'bars',
                     'sub_menu' => '#'
                 ],
             ]

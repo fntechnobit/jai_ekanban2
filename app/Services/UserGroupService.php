@@ -1,0 +1,116 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\UserGroup;
+use App\Models\Menu;
+use App\Models\GroupMenuAccess;
+use Illuminate\Support\Facades\DB;
+use Yajra\DataTables\Facades\DataTables;
+
+class UserGroupService
+{
+    public function getAllWithCount()
+    {
+        return UserGroup::withCount('users')->select('user_groups.*');
+    }
+
+    public function getDatatable()
+    {
+        $data = $this->getAllWithCount();
+        
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('users_count', function($row){
+                return $row->users_count;
+            })
+            ->addColumn('status', function($row){
+                if ($row->is_active) {
+                    return '<span class="badge bg-success">Active</span>';
+                }
+                return '<span class="badge bg-danger">Inactive</span>';
+            })
+            ->addColumn('action', function($row){
+                $btn = '<button type="button" class="btn btn-sm btn-info btn-edit" data-id="'.$row->id.'" title="Edit">';
+                $btn .= '<i class="fas fa-edit"></i></button> ';
+                $btn .= '<button type="button" class="btn btn-sm btn-warning btn-permission" data-id="'.$row->id.'" title="Permissions">';
+                $btn .= '<i class="fas fa-key"></i></button> ';
+                $btn .= '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="'.$row->id.'" title="Delete">';
+                $btn .= '<i class="fas fa-trash"></i></button>';
+                return $btn;
+            })
+            ->rawColumns(['status', 'action'])
+            ->make(true);
+    }
+
+    public function create(array $data)
+    {
+        return UserGroup::create($data);
+    }
+
+    public function update(UserGroup $group, array $data)
+    {
+        $group->update($data);
+        return $group;
+    }
+
+    public function delete(UserGroup $group)
+    {
+        // Check if group has users
+        if ($group->users()->count() > 0) {
+            throw new \Exception('Cannot delete group with active users');
+        }
+
+        $group->delete();
+        return true;
+    }
+
+    public function findById($id)
+    {
+        return UserGroup::findOrFail($id);
+    }
+
+    public function getPermissions($groupId)
+    {
+        $group = UserGroup::findOrFail($groupId);
+        $menus = Menu::with(['children'])->whereNull('parent_id')->orderBy('order')->get();
+        $permissions = GroupMenuAccess::where('group_id', $groupId)->get()->keyBy('menu_id');
+
+        return [
+            'group' => $group,
+            'menus' => $menus,
+            'permissions' => $permissions
+        ];
+    }
+
+    public function updatePermissions($groupId, array $permissions)
+    {
+        $group = UserGroup::findOrFail($groupId);
+
+        DB::beginTransaction();
+        try {
+            // Delete existing permissions
+            GroupMenuAccess::where('group_id', $groupId)->delete();
+
+            // Insert new permissions
+            foreach ($permissions as $menuId => $perms) {
+                if (isset($perms['can_read']) && $perms['can_read']) {
+                    GroupMenuAccess::create([
+                        'group_id' => $groupId,
+                        'menu_id' => $menuId,
+                        'can_create' => $perms['can_create'] ?? false,
+                        'can_read' => true,
+                        'can_update' => $perms['can_update'] ?? false,
+                        'can_delete' => $perms['can_delete'] ?? false,
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return true;
+        } catch (\Exception $e) {
+            DB::rollback();
+            throw $e;
+        }
+    }
+}

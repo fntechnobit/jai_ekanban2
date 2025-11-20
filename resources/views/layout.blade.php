@@ -47,6 +47,7 @@
 }
 </style>
   @yield('css')
+  @stack('styles')
 </head>
 <body class="hold-transition sidebar-mini layout-fixed">
 <!-- Site wrapper -->
@@ -59,6 +60,27 @@
         <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
       </li>
     </ul>
+
+    <!-- Right navbar links -->
+    <ul class="navbar-nav ml-auto">
+      <li class="nav-item dropdown">
+        <a class="nav-link" data-toggle="dropdown" href="#">
+          <i class="fas fa-user"></i> {{ Auth::user()->name }}
+        </a>
+        <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+          <a href="#" class="dropdown-item">
+            <i class="fas fa-user mr-2"></i> Profile
+          </a>
+          <div class="dropdown-divider"></div>
+          <form action="{{ route('logout') }}" method="POST">
+            @csrf
+            <button type="submit" class="dropdown-item">
+              <i class="fas fa-sign-out-alt mr-2"></i> Logout
+            </button>
+          </form>
+        </div>
+      </li>
+    </ul>
   </nav>
   <!-- /.navbar -->
 
@@ -67,20 +89,6 @@
 
   <!-- Content Wrapper. Contains page content -->
   <div class="content-wrapper">
-    <!-- Content Header (Page header) -->
-    <section class="content-header">
-      <div class="container-fluid">
-        <div class="row mb-2">
-          <div class="col-sm-6">
-            <h1>@yield('pageTitle')</h1>
-          </div>
-          <div class="col-sm-6">
-                @yield('breadcrumb')
-          </div>
-        </div>
-      </div><!-- /.container-fluid -->
-    </section>
-
     @yield('content')
   </div>
   <!-- /.content-wrapper -->
@@ -89,7 +97,7 @@
     <div class="float-right d-none d-sm-block">
       <b>Version</b> 1.0.0
     </div>
-    <strong>Copyright &copy; 2024 <a href="https://technobit.co.id">Technobit Indonesia</a>.</strong> All rights reserved.
+    <strong>Copyright &copy; 2025 <a href="https://technobit.co.id">Technobit Indonesia</a>.</strong> All rights reserved.
   </footer>
 </div>
 <!-- ./wrapper -->
@@ -122,7 +130,16 @@
 <!-- SweetAlert -->
 <script src="{{ url('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 
+<script>
+// Setup AJAX CSRF token
+$.ajaxSetup({
+    headers: {
+        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+    }
+});
+</script>
 
 @yield('script')
+@stack('scripts')
 </body>
 </html>

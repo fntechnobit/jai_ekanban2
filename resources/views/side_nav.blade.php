@@ -1,5 +1,4 @@
 @php
-    $menu = config('menu.main_menu', []);
     $user = auth()->user() ?? null;
 @endphp
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
@@ -22,45 +21,47 @@
       <!-- Sidebar Menu -->
       <nav class="mt-2">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-            @foreach($menu as $row_menu)
-            <li class="nav-item">
-                <a href="{{ url($row_menu['url']) }}" class="nav-link">
-                    <i class="nav-icon fas fa-{{$row_menu['icon']}}"></i>
+            @foreach($userMenus as $menu)
+            @php
+                $hasActiveChild = false;
+                $isParentActive = request()->is(ltrim($menu->url, '/'));
+                
+                // Check if any child menu is active
+                if(count($menu->children) > 0) {
+                    foreach($menu->children as $child) {
+                        if(request()->is(ltrim($child->url, '/')) || request()->is(ltrim($child->url, '/').'/*')) {
+                            $hasActiveChild = true;
+                            break;
+                        }
+                    }
+                }
+                
+                $menuOpen = $hasActiveChild ? 'menu-open' : '';
+                $menuIsOpen = $hasActiveChild ? 'menu-is-opening menu-open' : '';
+            @endphp
+            <li class="nav-item {{ count($menu->children) > 0 ? 'has-treeview' : '' }} {{ $menuIsOpen }}">
+                <a href="{{ $menu->url == '#' ? '#' : url($menu->url) }}" class="nav-link {{ $isParentActive || $hasActiveChild ? 'active' : '' }}">
+                    <i class="nav-icon {{ $menu->icon }}"></i>
                     <p>
-                        {{ $row_menu['title'] }}
-                        @if(isset($row_menu['sub_menu']) && $row_menu['sub_menu'] != '#')
+                        {{ $menu->name }}
+                        @if(count($menu->children) > 0)
                         <i class="right fas fa-angle-left"></i>
                         @endif
                     </p>
                 </a>
-                @if(isset($row_menu['sub_menu']) && $row_menu['sub_menu'] != '#')
-                <ul class="nav nav-treeview">
-                    @foreach($row_menu['sub_menu'] as $row_sub_menu)
+                @if(count($menu->children) > 0)
+                <ul class="nav nav-treeview" style="{{ $hasActiveChild ? 'display: block;' : '' }}">
+                    @foreach($menu->children as $subMenu)
+                        @php
+                            $isSubMenuActive = request()->is(ltrim($subMenu->url, '/')) || request()->is(ltrim($subMenu->url, '/').'/*');
+                        @endphp
                         <li class="nav-item">
-                            <a href="{{url('/'.$row_sub_menu['url'])}}" class="nav-link">
-                            <i class="far fa-{{ $row_sub_menu['icon'] }} nav-icon"></i>
-                            <p>{{$row_sub_menu['title']}}
-                                @if(isset($row_sub_menu['sub_menu']) && $row_sub_menu['sub_menu'] != '#')
-                                <i class="right fas fa-angle-left"></i>
-                                @endif
-                            </p>
+                            <a href="{{ $subMenu->url == '#' ? '#' : url($subMenu->url) }}" class="nav-link {{ $isSubMenuActive ? 'active' : '' }}">
+                            <i class="{{ $subMenu->icon }} nav-icon"></i>
+                            <p>{{ $subMenu->name }}</p>
                             </a>
-                            @if(isset($row_sub_menu['sub_menu']) && $row_sub_menu['sub_menu'] != '#')
-                            <ul class="nav nav-treeview">
-                                @foreach($row_sub_menu['sub_menu'] as $row_sub_sub_menu)
-                                    <li class="nav-item">
-                                        <a href="{{url('/'.$row_sub_sub_menu['url'])}}" class="nav-link">
-                                        <i class="far fa-{{ $row_sub_sub_menu['icon'] }} nav-icon"></i>
-                                        <p>
-                                          {{$row_sub_sub_menu['title']}}
-                                        </p>
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
-                            @endif
                         </li>
-                    @endforeach>
+                    @endforeach
                 </ul>
                 @endif
             </li>

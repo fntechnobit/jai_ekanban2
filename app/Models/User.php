@@ -21,6 +21,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'group_id',
+        'is_active',
     ];
 
     /**
@@ -43,6 +45,15 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Get the user group that owns the user.
+     */
+    public function group()
+    {
+        return $this->belongsTo(UserGroup::class, 'group_id');
     }
 }
