@@ -24,9 +24,15 @@ class UserRequest extends FormRequest
     {
         $userId = $this->route('user');
         $isUpdate = $this->isMethod('put') || $this->isMethod('patch');
-        
+
         return [
             'name' => 'required|string|max:255',
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('users')->ignore($userId)
+            ],
             'email' => [
                 'required',
                 'email',

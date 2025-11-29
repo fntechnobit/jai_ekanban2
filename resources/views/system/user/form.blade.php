@@ -11,11 +11,17 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="user_id" name="user_id">
-                    
+
                     <div class="form-group">
                         <label for="name">Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="name" name="name" required>
                         <span class="text-danger error-text name_error"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">Username <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                        <span class="text-danger error-text username_error"></span>
                     </div>
 
                     <div class="form-group">
@@ -26,7 +32,8 @@
 
                     <div class="form-group">
                         <label for="group_id">User Group <span class="text-danger">*</span></label>
-                        <select class="form-control select2" id="group_id" name="group_id" required style="width: 100%;">
+                        <select class="form-control select2" id="group_id" name="group_id" required
+                            style="width: 100%;">
                             <option value="">Select Group</option>
                             @foreach($groups as $group)
                                 <option value="{{ $group->id }}">{{ $group->name }}</option>
@@ -43,19 +50,23 @@
                     </div>
 
                     <div class="form-group" id="password-confirmation-group">
-                        <label for="password_confirmation">Confirm Password <span class="text-danger password-required">*</span></label>
-                        <input type="password" class="form-control" id="password_confirmation" name="password_confirmation">
+                        <label for="password_confirmation">Confirm Password <span
+                                class="text-danger password-required">*</span></label>
+                        <input type="password" class="form-control" id="password_confirmation"
+                            name="password_confirmation">
                         <span class="text-danger error-text password_confirmation_error"></span>
                     </div>
 
                     <div class="form-group">
                         <label>Status <span class="text-danger">*</span></label>
                         <div class="custom-control custom-radio">
-                            <input class="custom-control-input" type="radio" id="is_active_yes" name="is_active" value="1" checked>
+                            <input class="custom-control-input" type="radio" id="is_active_yes" name="is_active"
+                                value="1" checked>
                             <label for="is_active_yes" class="custom-control-label">Active</label>
                         </div>
                         <div class="custom-control custom-radio">
-                            <input class="custom-control-input" type="radio" id="is_active_no" name="is_active" value="0">
+                            <input class="custom-control-input" type="radio" id="is_active_no" name="is_active"
+                                value="0">
                             <label for="is_active_no" class="custom-control-label">Inactive</label>
                         </div>
                         <span class="text-danger error-text is_active_error"></span>
