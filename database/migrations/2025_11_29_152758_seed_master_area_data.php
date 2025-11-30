@@ -38,17 +38,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        DB::table('master_area')->whereIn('area', [
-            'BATTERY CABLE',
-            'BIG SIZE',
-            'GT43',
-            'MAZDA',
-            'MEZZANINE',
-            'NISSAN',
-            'TNGA',
-            'TOYOTA GEDUNG A',
-            'TOYOTA GEDUNG C',
-            'TWIST GENBA A',
-        ])->delete();
+        /// Irreversible
     }
 };
