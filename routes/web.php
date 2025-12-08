@@ -5,7 +5,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\System\UserController;
 use App\Http\Controllers\System\UserGroupController;
 use App\Http\Controllers\System\MenuController;
-use App\Http\Controllers\System\MasterAreaController;
+use App\Http\Controllers\MasterData\MasterAreaController;
+use App\Http\Controllers\MasterData\MasterFamilyController;
 use App\Http\Controllers\Auth\LoginController;
 
 Route::get('/', function () {
@@ -35,9 +36,18 @@ Route::middleware('auth')->group(function () {
         // Menus Management
         Route::resource('menus', MenuController::class);
         Route::get('menus/datatable/data', [MenuController::class, 'datatable'])->name('menus.datatable');
+        Route::get('menus/tree/data', [MenuController::class, 'getTreeData'])->name('menus.tree');
+        Route::post('menus/reorder', [MenuController::class, 'reorder'])->name('menus.reorder');
+    });
 
+    // Master Data Module Routes
+    Route::prefix('master-data')->name('master-data.')->group(function () {
         // Preassy Area Data Management
         Route::resource('master-area', MasterAreaController::class);
         Route::get('master-area/datatable/data', [MasterAreaController::class, 'datatable'])->name('master-area.datatable');
+
+        // Master Family Management
+        Route::resource('master-family', MasterFamilyController::class);
+        Route::get('master-family/datatable/data', [MasterFamilyController::class, 'datatable'])->name('master-family.datatable');
     });
 });

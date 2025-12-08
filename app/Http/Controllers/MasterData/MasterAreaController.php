@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\System;
+namespace App\Http\Controllers\MasterData;
 
 use App\Http\Controllers\Controller;
 use App\Services\MasterAreaService;
@@ -24,7 +24,7 @@ class MasterAreaController extends Controller
 
     public function index()
     {
-        return view('system.master_area.index');
+        return view('master_data.master_area.index');
     }
 
     public function datatable(Request $request)

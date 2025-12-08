@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Menu;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 
 class MenuService
@@ -50,6 +51,69 @@ class MenuService
     public function getParentMenus()
     {
         return Menu::whereNull('parent_id')->orderBy('order')->get();
+    }
+
+    /**
+     * Get menus in hierarchical tree structure
+     */
+    public function getMenuTree()
+    {
+        $menus = Menu::whereNull('parent_id')
+            ->with(['children' => function($query) {
+                $query->orderBy('order');
+            }])
+            ->orderBy('order')
+            ->get();
+
+        return $this->formatMenuTree($menus);
+    }
+
+    /**
+     * Format menu collection into tree structure for nested sortable
+     */
+    protected function formatMenuTree($menus)
+    {
+        return $menus->map(function($menu) {
+            return [
+                'id' => $menu->id,
+                'code' => $menu->code,
+                'name' => $menu->name,
+                'url' => $menu->url,
+                'icon' => $menu->icon,
+                'order' => $menu->order,
+                'is_active' => $menu->is_active,
+                'children' => $menu->children->count() > 0 
+                    ? $this->formatMenuTree($menu->children) 
+                    : []
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Reorder menus based on drag-and-drop hierarchy
+     */
+    public function reorderMenus(array $items, $parentId = null, $order = 0)
+    {
+        DB::beginTransaction();
+        try {
+            foreach ($items as $item) {
+                Menu::where('id', $item['id'])->update([
+                    'parent_id' => $parentId,
+                    'order' => $order
+                ]);
+                $order++;
+
+                // Process children recursively
+                if (!empty($item['children'])) {
+                    $this->reorderMenus($item['children'], $item['id']);
+                }
+            }
+            DB::commit();
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 
     public function create(array $data)

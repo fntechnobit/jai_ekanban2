@@ -39,7 +39,6 @@
                             <tr>
                                 <th width="5%">No</th>
                                 <th>Area</th>
-                                <th width="10%">Status</th>
                                 <th width="15%">Action</th>
                             </tr>
                         </thead>
@@ -51,7 +50,7 @@
         </div>
     </section>
 
-    @include('system.master_area.form')
+    @include('master_data.master_area.form')
 @endsection
 
 @push('styles')
@@ -75,11 +74,10 @@
             var table = $('#master-area-table').DataTable({
                 processing: true,
                 serverSide: true,
-                ajax: "{{ route('system.master-area.datatable') }}",
+                ajax: "{{ route('master-data.master-area.datatable') }}",
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                     { data: 'area', name: 'area' },
-                    { data: 'status', name: 'status', orderable: false },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
                 ]
             });
@@ -97,7 +95,7 @@
             $(document).on('click', '.btn-edit', function () {
                 var id = $(this).data('id');
                 $.ajax({
-                    url: "{{ route('system.master-area.index') }}/" + id + "/edit",
+                    url: "{{ route('master-data.master-area.index') }}/" + id + "/edit",
                     type: 'GET',
                     success: function (response) {
                         const area = response.data || response;
@@ -122,7 +120,7 @@
 
                 var formData = $(this).serialize();
                 var areaId = $('#area_id').val();
-                var url = areaId ? "{{ route('system.master-area.index') }}/" + areaId : "{{ route('system.master-area.store') }}";
+                var url = areaId ? "{{ route('master-data.master-area.index') }}/" + areaId : "{{ route('master-data.master-area.store') }}";
                 var method = areaId ? 'PUT' : 'POST';
 
                 if (areaId) {
@@ -166,7 +164,7 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
-                            url: "{{ route('system.master-area.index') }}/" + id,
+                            url: "{{ route('master-data.master-area.index') }}/" + id,
                             type: 'DELETE',
                             data: {
                                 _token: '{{ csrf_token() }}'

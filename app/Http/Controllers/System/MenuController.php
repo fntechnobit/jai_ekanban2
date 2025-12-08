@@ -16,9 +16,9 @@ class MenuController extends Controller
     {
         $this->menuService = $menuService;
 
-        $this->middleware('check.menu:menus,can_read')->only(['index', 'datatable', 'show']);
+        $this->middleware('check.menu:menus,can_read')->only(['index', 'datatable', 'show', 'getTreeData']);
         $this->middleware('check.menu:menus,can_create')->only(['create', 'store']);
-        $this->middleware('check.menu:menus,can_update')->only(['edit', 'update']);
+        $this->middleware('check.menu:menus,can_update')->only(['edit', 'update', 'reorder']);
         $this->middleware('check.menu:menus,can_delete')->only(['destroy']);
     }
 
@@ -32,6 +32,29 @@ class MenuController extends Controller
     {
         if ($request->ajax()) {
             return $this->menuService->getDatatable();
+        }
+    }
+
+    /**
+     * Get menu tree data for drag-and-drop
+     */
+    public function getTreeData()
+    {
+        $tree = $this->menuService->getMenuTree();
+        return ResponseHelper::success($tree);
+    }
+
+    /**
+     * Reorder menus based on drag-and-drop
+     */
+    public function reorder(Request $request)
+    {
+        try {
+            $items = $request->input('items', []);
+            $this->menuService->reorderMenus($items);
+            return ResponseHelper::success(null, 'Menu order updated successfully');
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage());
         }
     }
 

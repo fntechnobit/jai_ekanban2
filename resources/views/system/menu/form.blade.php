@@ -34,8 +34,9 @@
 
                     <div class="form-group">
                         <label for="icon">Icon</label>
-                        <input type="text" class="form-control" id="icon" name="icon">
-                        <small class="form-text text-muted">FontAwesome class (e.g., fas fa-home)</small>
+                        <select class="form-control select2-icon" id="icon" name="icon" style="width: 100%;">
+                            <option value="">-- Select Icon --</option>
+                        </select>
                         <span class="text-danger error-text icon_error"></span>
                     </div>
 

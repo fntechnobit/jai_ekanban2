@@ -2,15 +2,15 @@
 
 namespace App\Services;
 
-use App\Models\MasterArea;
+use App\Models\MasterFamily;
 use Illuminate\Support\Facades\Auth;
 use Yajra\DataTables\Facades\DataTables;
 
-class MasterAreaService
+class MasterFamilyService
 {
     public function getAll()
     {
-        return MasterArea::select('master_area.*');
+        return MasterFamily::select('master_family.*');
     }
 
     public function getDatatable()
@@ -24,11 +24,11 @@ class MasterAreaService
                 $currentUser = Auth::user();
                 $actions = [];
 
-                if ($currentUser && $currentUser->hasMenuPermission('master_area', 'can_update')) {
+                if ($currentUser && $currentUser->hasMenuPermission('master_family', 'can_update')) {
                     $actions[] = '<button type="button" class="btn btn-sm btn-info btn-edit" data-id="' . $row->id . '" title="Edit"><i class="fas fa-edit"></i></button>';
                 }
 
-                if ($currentUser && $currentUser->hasMenuPermission('master_area', 'can_delete')) {
+                if ($currentUser && $currentUser->hasMenuPermission('master_family', 'can_delete')) {
                     $actions[] = '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="' . $row->id . '" title="Delete"><i class="fas fa-trash"></i></button>';
                 }
 
@@ -41,26 +41,26 @@ class MasterAreaService
     public function create(array $data)
     {
         $data['created_by'] = Auth::id();
-        return MasterArea::create($data);
+        return MasterFamily::create($data);
     }
 
-    public function update(MasterArea $masterArea, array $data)
+    public function update(MasterFamily $masterFamily, array $data)
     {
         $data['updated_by'] = Auth::id();
-        $masterArea->update($data);
-        return $masterArea;
+        $masterFamily->update($data);
+        return $masterFamily;
     }
 
-    public function delete(MasterArea $masterArea)
+    public function delete(MasterFamily $masterFamily)
     {
-        $masterArea->deleted_by = Auth::id();
-        $masterArea->save();
-        $masterArea->delete();
+        $masterFamily->deleted_by = Auth::id();
+        $masterFamily->save();
+        $masterFamily->delete();
         return true;
     }
 
     public function findById($id)
     {
-        return MasterArea::findOrFail($id);
+        return MasterFamily::findOrFail($id);
     }
 }

@@ -1,0 +1,2 @@
+#!/bin/bash
+docker exec -i jai_e_kanban_app php "$@"
