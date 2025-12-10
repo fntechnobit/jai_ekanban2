@@ -7,6 +7,8 @@ use App\Http\Controllers\System\UserGroupController;
 use App\Http\Controllers\System\MenuController;
 use App\Http\Controllers\MasterData\MasterAreaController;
 use App\Http\Controllers\MasterData\MasterFamilyController;
+use App\Http\Controllers\MasterData\MasterConveyorController;
+use App\Http\Controllers\MasterData\MasterMachineController;
 use App\Http\Controllers\Auth\LoginController;
 
 Route::get('/', function () {
@@ -49,5 +51,15 @@ Route::middleware('auth')->group(function () {
         // Master Family Management
         Route::resource('master-family', MasterFamilyController::class);
         Route::get('master-family/datatable/data', [MasterFamilyController::class, 'datatable'])->name('master-family.datatable');
+
+        // Master Conveyor Management
+        Route::resource('master-conveyor', MasterConveyorController::class);
+        Route::get('master-conveyor/datatable/data', [MasterConveyorController::class, 'datatable'])->name('master-conveyor.datatable');
+        Route::get('master-conveyor/areas/data', [MasterConveyorController::class, 'getAreas'])->name('master-conveyor.areas');
+        Route::get('master-conveyor/families/data', [MasterConveyorController::class, 'getFamilies'])->name('master-conveyor.families');
+
+        // Master Machine Management
+        Route::resource('master-machine', MasterMachineController::class);
+        Route::get('master-machine/datatable/data', [MasterMachineController::class, 'datatable'])->name('master-machine.datatable');
     });
 });

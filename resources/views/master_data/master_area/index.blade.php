@@ -1,24 +1,9 @@
 @extends('layout')
 
-@section('title', 'Preassy Area Data Management')
+@section('title', 'Preassy Area Data')
 
 @section('content')
-    <div class="content-header">
-        <div class="container-fluid">
-            <div class="row mb-2">
-                <div class="col-sm-6">
-                    <h1 class="m-0">Preassy Area Data Management</h1>
-                </div>
-                <div class="col-sm-6">
-                    <ol class="breadcrumb float-sm-right">
-                        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                        <li class="breadcrumb-item">Master Data</li>
-                        <li class="breadcrumb-item active">Preassy Area Data</li>
-                    </ol>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-page-header menu-code="master_area" />
 
     <section class="content">
         <div class="container-fluid">

@@ -3,21 +3,7 @@
 @section('title', 'Menu Management')
 
 @section('content')
-<div class="content-header" >
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0">Menu Management</h1>
-            </div>
-            <div class="col-sm-6">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Home</a></li>
-                    <li class="breadcrumb-item active">Menus</li>
-                </ol>
-            </div>
-        </div>
-    </div>
-</div>
+<x-page-header menu-code="menus" />
 
 <section class="content">
     <div class="container-fluid">
@@ -39,7 +25,9 @@
                     Changes are saved automatically.
                 </div>
                 
-                <div id="menu-tree-container">
+                <div id="menu-tree-container"
+                        data-can-update="{{ auth()->user()->hasMenuPermission('menus', 'can_update') ? '1' : '0' }}"
+                        data-can-delete="{{ auth()->user()->hasMenuPermission('menus', 'can_delete') ? '1' : '0' }}">
                     <div class="text-center py-4">
                         <i class="fas fa-spinner fa-spin fa-2x"></i>
                         <p class="mt-2">Loading menus...</p>
@@ -596,8 +584,9 @@ function formatIconOption(icon) {
 $(function() {
     let menuTree = [];
     let sortableInstances = [];
-    const canUpdate = {{ auth()->user()->hasMenuPermission('menus', 'can_update') ? 'true' : 'false' }};
-    const canDelete = {{ auth()->user()->hasMenuPermission('menus', 'can_delete') ? 'true' : 'false' }};
+    const $container = $('#menu-tree-container');
+    const canUpdate = parseInt($container.attr('data-can-update')) === 1;
+    const canDelete = parseInt($container.attr('data-can-delete')) === 1;
 
     // Load menu tree
     loadMenuTree();
