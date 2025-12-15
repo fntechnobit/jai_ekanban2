@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             UserGroupSeeder::class,
             MenuSeeder::class,
+            MasterDataMenuSeeder::class,
         ]);
 
         // Create default admin user

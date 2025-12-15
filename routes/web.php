@@ -9,6 +9,8 @@ use App\Http\Controllers\MasterData\MasterAreaController;
 use App\Http\Controllers\MasterData\MasterFamilyController;
 use App\Http\Controllers\MasterData\MasterConveyorController;
 use App\Http\Controllers\MasterData\MasterMachineController;
+use App\Http\Controllers\MasterData\MasterShikakeController;
+use App\Http\Controllers\MasterData\MasterCircuitController;
 use App\Http\Controllers\Auth\LoginController;
 
 Route::get('/', function () {
@@ -61,5 +63,19 @@ Route::middleware('auth')->group(function () {
         // Master Machine Management
         Route::resource('master-machine', MasterMachineController::class);
         Route::get('master-machine/datatable/data', [MasterMachineController::class, 'datatable'])->name('master-machine.datatable');
+
+        // Master Shikake Management
+        Route::get('master-shikake/datatable', [MasterShikakeController::class, 'datatable'])->name('master-shikake.datatable');
+        Route::get('master-shikake/import-form', [MasterShikakeController::class, 'importForm'])->name('master-shikake.import-form');
+        Route::post('master-shikake/import', [MasterShikakeController::class, 'import'])->name('master-shikake.import');
+        Route::get('master-shikake/download-template', [MasterShikakeController::class, 'downloadTemplate'])->name('master-shikake.download-template');
+        Route::resource('master-shikake', MasterShikakeController::class);
+
+        // Master Circuit Management
+        Route::get('master-circuit/datatable', [MasterCircuitController::class, 'datatable'])->name('master-circuit.datatable');
+        Route::get('master-circuit/import-form', [MasterCircuitController::class, 'importForm'])->name('master-circuit.import-form');
+        Route::post('master-circuit/import', [MasterCircuitController::class, 'import'])->name('master-circuit.import');
+        Route::get('master-circuit/download-template', [MasterCircuitController::class, 'downloadTemplate'])->name('master-circuit.download-template');
+        Route::resource('master-circuit', MasterCircuitController::class);
     });
 });
