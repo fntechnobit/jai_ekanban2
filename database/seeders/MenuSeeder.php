@@ -35,8 +35,25 @@ class MenuSeeder extends Seeder
             ],
         ];
 
-        foreach ($menus as $menu) {
-            Menu::create($menu);
+        foreach ($menus as $menuData) {
+            $menu = Menu::firstOrCreate(
+                ['code' => $menuData['code']],
+                $menuData
+            );
+
+            // Grant permissions to Super Admin (group_id = 1)
+            GroupMenuAccess::firstOrCreate(
+                [
+                    'group_id' => 1,
+                    'menu_id' => $menu->id,
+                ],
+                [
+                    'can_create' => true,
+                    'can_read' => true,
+                    'can_update' => true,
+                    'can_delete' => true,
+                ]
+            );
         }
 
         // Create submenu for System
@@ -73,20 +90,24 @@ class MenuSeeder extends Seeder
         ];
 
         foreach ($submenus as $submenu) {
-            Menu::create($submenu);
-        }
+            $menu = Menu::firstOrCreate(
+                ['code' => $submenu['code']],
+                $submenu
+            );
 
-        // Grant all permissions to Super Admin (group_id = 1)
-        $allMenus = Menu::all();
-        foreach ($allMenus as $menu) {
-            GroupMenuAccess::create([
-                'group_id' => 1,
-                'menu_id' => $menu->id,
-                'can_create' => true,
-                'can_read' => true,
-                'can_update' => true,
-                'can_delete' => true,
-            ]);
+            // Grant permissions to Super Admin (group_id = 1)
+            GroupMenuAccess::firstOrCreate(
+                [
+                    'group_id' => 1,
+                    'menu_id' => $menu->id,
+                ],
+                [
+                    'can_create' => true,
+                    'can_read' => true,
+                    'can_update' => true,
+                    'can_delete' => true,
+                ]
+            );
         }
     }
 }

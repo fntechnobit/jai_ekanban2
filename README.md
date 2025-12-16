@@ -54,6 +54,16 @@ docker-compose exec app php artisan migrate:fresh --seed
 docker-compose down
 ```
 
+### Syncing Menus After Pull
+
+When you pull the latest code and new menus have been added, run:
+
+```bash
+docker-compose exec app php artisan menu:sync
+```
+
+This command syncs all menus from seeders without affecting your database data.
+
 ## 💻 Running Without Docker
 
 If you maintain a local PHP environment:
@@ -70,7 +80,36 @@ php artisan serve --host=0.0.0.0 --port=8001
 
 Ensure MySQL 8.0 and Redis are running locally and match your `.env` settings.
 
-## 📚 Additional Documentation
+## � Developer Guide
+
+### Adding New Menus
+
+When you create a new menu/navigation item:
+
+1. **Add to appropriate seeder** ([MenuSeeder.php](database/seeders/MenuSeeder.php) or [MasterDataMenuSeeder.php](database/seeders/MasterDataMenuSeeder.php))
+   
+   ```php
+   [
+       'code' => 'your_menu_code',
+       'name' => 'Your Menu Name',
+       'url' => '/your-route',
+       'icon' => 'fas fa-icon-name',
+       'parent_id' => $parentMenu->id, // or null for root menu
+       'order' => 7,
+       'is_active' => true,
+   ],
+   ```
+
+2. **Commit the seeder changes** to git
+
+3. **Other developers** can sync menus by running:
+   ```bash
+   docker-compose exec app php artisan menu:sync
+   ```
+
+This ensures all team members have the same menu structure without manual database edits.
+
+## �📚 Additional Documentation
 
 - **[README-Docker.md](README-Docker.md)** – Detailed container workflow & troubleshooting
 - **[COMMANDS.md](COMMANDS.md)** – Frequently used artisan/docker commands

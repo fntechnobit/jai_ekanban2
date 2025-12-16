@@ -1,22 +1,22 @@
 @extends('layout')
 
-@section('title', 'Shikake Data')
+@section('title', 'Master Circuit')
 
 @section('content')
-    <x-page-header menu-code="master_shikake" />
+    <x-page-header menu-code="master_circuit" />
 
     <section class="content">
         <div class="container-fluid">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">Shikake Data List</h3>
+                    <h3 class="card-title">Master Circuit (Cutting) Data List</h3>
                     <div class="card-tools">
-                        @if(auth()->user()->hasMenuPermission('master_shikake', 'can_create'))
+                        @if(auth()->user()->hasMenuPermission('master_circuit', 'can_create'))
                             <button type="button" class="btn btn-primary btn-sm" id="btn-import">
-                                <i class="fas fa-upload"></i> Import/Upload Shikake
+                                <i class="fas fa-upload"></i> Import/Upload Circuit
                             </button>
                         @endif
-                        @if(auth()->user()->hasMenuPermission('master_shikake', 'can_delete'))
+                        @if(auth()->user()->hasMenuPermission('master_circuit', 'can_delete'))
                             <button type="button" class="btn btn-danger btn-sm" id="btn-remove-data">
                                 <i class="fas fa-trash"></i> Remove Data
                             </button>
@@ -27,8 +27,8 @@
                     <!-- Filters -->
                     <div class="row mb-3">
                         <div class="col-md-4">
-                            <label for="filter_area">Area * :</label>
-                            <select class="form-control select2" id="filter_area" style="width: 100%;">
+                            <label for="filter_area_id">Area * :</label>
+                            <select class="form-control select2" id="filter_area_id" style="width: 100%;">
                                 <option value="">- All Area -</option>
                                 @foreach($areas as $area)
                                     <option value="{{ $area->id }}">{{ $area->area }}</option>
@@ -36,8 +36,8 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="filter_conveyor">Conveyor * :</label>
-                            <select class="form-control select2" id="filter_conveyor" style="width: 100%;">
+                            <label for="filter_conveyor_id">Conveyor * :</label>
+                            <select class="form-control select2" id="filter_conveyor_id" style="width: 100%;">
                                 <option value="">- All Conveyor -</option>
                                 @foreach($conveyors as $conveyor)
                                     <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
@@ -46,16 +46,18 @@
                         </div>
                     </div>
 
-                    <table id="master-shikake-table" class="table table-bordered table-striped">
+                    <table id="master-circuit-table" class="table table-bordered table-striped">
                         <thead>
                             <tr>
                                 <th width="5%">No</th>
                                 <th>Conveyor</th>
-                                <th>Shikake Number</th>
-                                <th>Barcode</th>
+                                <th>CCT No</th>
                                 <th>Family</th>
-                                <th>Process</th>
-                                <th>Qty.</th>
+                                <th>QTY</th>
+                                <th>Issue</th>
+                                <th>Machine</th>
+                                <th>Sequence</th>
+                                <th>Barcode Kanban</th>
                                 <th width="12%">Action</th>
                             </tr>
                         </thead>
@@ -67,8 +69,8 @@
         </div>
     </section>
 
-    @include('master_data.master_shikake.import_modal')
-    @include('master_data.master_shikake.detail_modal')
+    @include('master_data.master_circuit.import_modal')
+    @include('master_data.master_circuit.detail_modal')
 @endsection
 
 @push('styles')
@@ -94,7 +96,7 @@
     <script>
         $(function () {
             // Initialize Select2 for filters
-            $('#filter_area, #filter_conveyor').select2({
+            $('#filter_area_id, #filter_conveyor_id').select2({
                 theme: 'bootstrap4',
                 allowClear: true,
                 placeholder: function() {
@@ -102,45 +104,48 @@
                 }
             });
 
-            // DataTable
-            var table = $('#master-shikake-table').DataTable({
+            // Initialize DataTable
+            var table = $('#master-circuit-table').DataTable({
                 processing: true,
                 serverSide: true,
                 ajax: {
-                    url: "{{ route('master-data.master-shikake.datatable') }}",
+                    url: "{{ route('master-data.master-circuit.datatable') }}",
                     data: function(d) {
-                        d.area_id = $('#filter_area').val();
-                        d.conveyor_id = $('#filter_conveyor').val();
+                        d.area_id = $('#filter_area_id').val();
+                        d.conveyor_id = $('#filter_conveyor_id').val();
                     }
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-                    { data: 'conveyor_name', name: 'conveyor' },
-                    { data: 'shikake_no', name: 'shikake_no' },
-                    { data: 'barcode_kanban', name: 'barcode_kanban' },
+                    { data: 'conveyor_name', name: 'conveyor_name' },
+                    { data: 'cct_no', name: 'cct_no' },
                     { data: 'family', name: 'family' },
-                    { data: 'process', name: 'barcode_proses' },
                     { data: 'qty', name: 'qty' },
+                    { data: 'issue', name: 'issue' },
+                    { data: 'machine', name: 'machine' },
+                    { data: 'sequence', name: 'sequence' },
+                    { data: 'barcode_kanban', name: 'barcode_kanban' },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
                 ],
                 pageLength: 100,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+                order: [[1, 'asc']]
             });
 
-            // Filter change events
-            $('#filter_area, #filter_conveyor').on('change', function() {
+            // Filter handlers
+            $('#filter_area_id, #filter_conveyor_id').on('change', function() {
                 table.ajax.reload();
             });
 
-            // Import Button
-            $('#btn-import').click(function () {
-                $('#importShikakeModal').modal('show');
+            // Import button handler
+            $('#btn-import').click(function() {
+                $('#importCircuitModal').modal('show');
             });
 
             // Initialize Select2 for import modal
             $('#import_area_id, #import_conveyor_id').select2({
                 theme: 'bootstrap4',
-                dropdownParent: $('#importShikakeModal'),
+                dropdownParent: $('#importCircuitModal'),
                 allowClear: true
             });
 
@@ -170,29 +175,29 @@
             });
 
             // Download Template
-            $('#btn-download-template-shikake').click(function() {
-                window.location.href = "{{ route('master-data.master-shikake.download-template') }}";
+            $('#btn-download-template-circuit').click(function() {
+                window.location.href = "{{ route('master-data.master-circuit.download-template') }}";
             });
 
             // Submit Import Form
-            $('#importShikakeForm').submit(function(e) {
+            $('#importCircuitForm').submit(function(e) {
                 e.preventDefault();
                 $('.error-text, .text-danger').text('');
 
                 var formData = new FormData(this);
-                var submitBtn = $('#btn-submit-import-shikake');
+                var submitBtn = $('#btn-submit-import');
                 
                 submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importing...');
 
                 $.ajax({
-                    url: "{{ route('master-data.master-shikake.import') }}",
+                    url: "{{ route('master-data.master-circuit.import') }}",
                     type: 'POST',
                     data: formData,
                     processData: false,
                     contentType: false,
                     success: function(response) {
-                        $('#importShikakeModal').modal('hide');
-                        $('#importShikakeForm')[0].reset();
+                        $('#importCircuitModal').modal('hide');
+                        $('#importCircuitForm')[0].reset();
                         $('.custom-file-label').html('Browse File');
                         table.ajax.reload();
                         
@@ -234,17 +239,17 @@
                 });
             });
 
-            // Delete Shikake
-            $(document).on('click', '.btn-delete', function () {
+            // Delete button handler
+            $(document).on('click', '.btn-delete', function() {
                 var id = $(this).data('id');
                 var name = $(this).data('name');
                 var barcode = $(this).data('barcode');
-
+                
                 Swal.fire({
-                    title: 'Delete Shikake Data?',
+                    title: 'Delete Circuit Data?',
                     html: `<div style="text-align: left;">
-                        <p><strong>Shikake Number:</strong> ${name}</p>
-                        <p><strong>Barcode:</strong> ${barcode}</p>
+                        <p><strong>Machine Sequence:</strong> ${name}</p>
+                        <p><strong>Barcode Kanban:</strong> ${barcode}</p>
                         <p class="text-danger mt-3">This action cannot be undone!</p>
                     </div>`,
                     icon: 'warning',
@@ -256,17 +261,17 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
-                            url: "{{ route('master-data.master-shikake.index') }}/" + id,
+                            url: "{{ route('master-data.master-circuit.destroy', ':id') }}".replace(':id', id),
                             type: 'DELETE',
                             data: {
                                 _token: '{{ csrf_token() }}'
                             },
-                            success: function (response) {
+                            success: function(response) {
                                 table.ajax.reload();
                                 Swal.fire('Deleted!', response.message, 'success');
                             },
-                            error: function (xhr) {
-                                Swal.fire('Error!', xhr.responseJSON.message || 'Failed to delete shikake', 'error');
+                            error: function(xhr) {
+                                Swal.fire('Error!', xhr.responseJSON.message || 'Something went wrong', 'error');
                             }
                         });
                     }
@@ -274,68 +279,73 @@
             });
 
             // Handle View button click
-            $('#master-shikake-table').on('click', '.btn-view', function() {
+            $('#master-circuit-table').on('click', '.btn-view', function() {
                 const id = $(this).data('id');
                 
                 // Show modal
-                $('#detailShikakeModal').modal('show');
+                $('#detailCircuitModal').modal('show');
                 
                 // Fetch data via AJAX
                 $.ajax({
-                    url: "{{ route('master-data.master-shikake.index') }}/" + id,
+                    url: "{{ route('master-data.master-circuit.show', ':id') }}".replace(':id', id),
                     type: 'GET',
                     dataType: 'json',
                     success: function(response) {
                         if (response.success) {
                             const data = response.data;
-                            console.log('Shikake data:', data);
+                            console.log('Circuit data:', data);
                             console.log('Released date:', data.released_date);
                             
                             // Populate form fields
-                            $('#shikake_id').val(data.id);
+                            $('#circuit_id').val(data.id);
                             $('#conveyor').val(data.conveyor ? data.conveyor.conveyor : '');
-                            $('#shikake_no').val(data.shikake_no);
-                            $('#barcode_kanban').val(data.barcode_kanban);
+                            $('#cct_no').val(data.cct_no);
                             $('#family').val(data.family);
-                            $('#barcode_proses').val(data.barcode_proses);
                             $('#qty').val(data.qty);
                             $('#issue').val(data.issue);
                             $('#machine').val(data.machine);
                             $('#sequence').val(data.sequence);
+                            $('#barcode_kanban').val(data.barcode_kanban);
                             $('#released_date').val(data.released_date || '');
                             $('#released_note').val(data.released_note);
-                            $('#store').val(data.store);
+                            $('#cust_no').val(data.cust_no);
                             $('#barcode_mesin').val(data.barcode_mesin);
                             $('#address').val(data.address);
+                            $('#cct_code').val(data.cct_code);
+                            $('#kind').val(data.kind);
+                            $('#size').val(data.size);
+                            $('#col').val(data.col);
+                            $('#cl').val(data.cl);
                             
-                            // CCT and Address fields
-                            $('#cct_a').val(data.cct_a);
-                            $('#address_a').val(data.address_a);
-                            $('#cct_b').val(data.cct_b);
-                            $('#address_b').val(data.address_b);
-                            $('#cct_c').val(data.cct_c);
-                            $('#address_c').val(data.address_c);
-                            $('#cct_4').val(data.cct_4);
-                            $('#address_4').val(data.address_4);
-                            $('#cct_5').val(data.cct_5);
-                            $('#address_5').val(data.address_5);
-                            $('#cct_6').val(data.cct_6);
-                            $('#address_6').val(data.address_6);
-                            $('#cct_7').val(data.cct_7);
-                            $('#address_7').val(data.address_7);
+                            // Terminal 1 fields
+                            $('#terminal_1').val(data.terminal_1);
+                            $('#note_1').val(data.note_1);
+                            $('#gold_1').val(data.gold_1);
+                            $('#strip_1').val(data.strip_1);
+                            $('#acc_1').val(data.acc_1);
+                            $('#acc_1a').val(data.acc_1a);
+                            $('#tube_1').val(data.tube_1);
+                            $('#mark_1').val(data.mark_1);
+                            $('#remark_1').val(data.remark_1);
                             
-                            $('#barcode_navigasi').val(data.barcode_navigasi);
-                            $('#dies').val(data.dies);
-                            $('#jumlah_kombinasi').val(data.jumlah_kombinasi);
-                            $('#blade').val(data.blade);
+                            // Terminal 2 fields
+                            $('#terminal_2').val(data.terminal_2);
+                            $('#note_2').val(data.note_2);
+                            $('#gold_2').val(data.gold_2);
+                            $('#strip_2').val(data.strip_2);
+                            $('#acc_2').val(data.acc_2);
+                            $('#acc_2a').val(data.acc_2a);
+                            $('#tube_2').val(data.tube_2);
+                            $('#mark_2').val(data.mark_2);
+                            $('#remark_2').val(data.remark_2);
                             
                             // T fields
-                            for(let i = 1; i <= 9; i++) {
+                            $('#ta').val(data.ta);
+                            $('#tb').val(data.tb);
+                            for(let i = 1; i <= 6; i++) {
                                 const fieldName = 't' + String(i).padStart(2, '0');
                                 $('#' + fieldName).val(data[fieldName]);
                             }
-                            
-                            $('#joint').val(data.joint);
                             
                             // Image preview
                             if (data.image_path) {
@@ -356,7 +366,7 @@
                     },
                     error: function(xhr) {
                         Swal.fire('Error!', xhr.responseJSON?.message || 'Failed to load data', 'error');
-                        $('#detailShikakeModal').modal('hide');
+                        $('#detailCircuitModal').modal('hide');
                     }
                 });
             });
@@ -375,26 +385,26 @@
             });
 
             // Handle form submission
-            $('#shikakeDetailForm').on('submit', function(e) {
+            $('#circuitDetailForm').on('submit', function(e) {
                 e.preventDefault();
                 
                 const formData = new FormData(this);
-                const id = $('#shikake_id').val();
+                const id = $('#circuit_id').val();
                 formData.append('_method', 'PUT');
                 
                 // Disable form inputs during upload
-                $('#detailShikakeForm input, #detailShikakeForm textarea, #detailShikakeForm select').prop('disabled', true);
-                $('#detailShikakeModal .btn-primary').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+                $('#circuitDetailForm input, #circuitDetailForm textarea, #circuitDetailForm select').prop('disabled', true);
+                $('#detailCircuitModal .btn-primary').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
                 
                 $.ajax({
-                    url: "{{ route('master-data.master-shikake.index') }}/" + id,
+                    url: "{{ route('master-data.master-circuit.update', ':id') }}".replace(':id', id),
                     type: 'POST',
                     data: formData,
                     processData: false,
                     contentType: false,
                     success: function(response) {
                         if (response.success) {
-                            $('#detailShikakeModal').modal('hide');
+                            $('#detailCircuitModal').modal('hide');
                             table.ajax.reload();
                             Swal.fire('Success!', response.message, 'success');
                         }
@@ -404,8 +414,8 @@
                     },
                     complete: function() {
                         // Re-enable form inputs
-                        $('#detailShikakeForm input, #detailShikakeForm textarea, #detailShikakeForm select').prop('disabled', false);
-                        $('#detailShikakeModal .btn-primary').prop('disabled', false).html('<i class="fas fa-save"></i> Save');
+                        $('#circuitDetailForm input, #circuitDetailForm textarea, #circuitDetailForm select').prop('disabled', false);
+                        $('#detailCircuitModal .btn-primary').prop('disabled', false).html('<i class="fas fa-save"></i> Save');
                     }
                 });
             });
@@ -436,7 +446,7 @@
 
                 Swal.fire({
                     title: 'Are you sure?',
-                    html: `You are about to delete all Shikake data for:<br><strong>${conveyorName}</strong><br><br>This action cannot be undone!`,
+                    html: `You are about to delete all Circuit data for:<br><strong>${conveyorName}</strong><br><br>This action cannot be undone!`,
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#d33',
@@ -446,7 +456,7 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
-                            url: "{{ route('master-data.master-shikake.remove-by-conveyor') }}",
+                            url: "{{ route('master-data.master-circuit.remove-by-conveyor') }}",
                             type: 'POST',
                             data: {
                                 _token: '{{ csrf_token() }}',
@@ -471,4 +481,4 @@
     </script>
 @endpush
 
-@include('master_data.master_shikake.remove_modal')
+@include('master_data.master_circuit.remove_modal')

@@ -34,7 +34,7 @@ class MasterShikakeService
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('conveyor_name', function ($row) {
-                return $row->conveyor ? $row->conveyor->conveyor : $row->conveyor ?? '-';
+                return $row->getRelation('conveyor') ? $row->getRelation('conveyor')->conveyor : ($row->conveyor ?? '-');
             })
             ->addColumn('cct_code', function ($row) {
                 // Combining cct fields for CCT Code display
@@ -57,23 +57,20 @@ class MasterShikakeService
                 $currentUser = Auth::user();
                 $actions = [];
 
-                // View button
-                if ($currentUser && $currentUser->hasMenuPermission('master_shikake', 'can_read')) {
-                    $actions[] = '<a href="' . route('master-data.master-shikake.show', $row->id) . '" class="btn btn-info btn-sm" title="View">
-                        <i class="fas fa-eye"></i> View
-                    </a>';
-                }
-
-                // Edit button
+                // View/Edit button
                 if ($currentUser && $currentUser->hasMenuPermission('master_shikake', 'can_update')) {
-                    $actions[] = '<a href="' . route('master-data.master-shikake.edit', $row->id) . '" class="btn btn-warning btn-sm" title="Edit">
-                        <i class="fas fa-edit"></i>
-                    </a>';
+                    $actions[] = '<button type="button" class="btn btn-info btn-sm btn-view" data-id="' . $row->id . '" title="View">
+                        <i class="fas fa-eye"></i> View
+                    </button>';
                 }
 
                 // Delete button
                 if ($currentUser && $currentUser->hasMenuPermission('master_shikake', 'can_delete')) {
-                    $actions[] = '<button type="button" class="btn btn-danger btn-sm btn-delete" data-id="' . $row->id . '" title="Delete">
+                    $actions[] = '<button type="button" class="btn btn-danger btn-sm btn-delete" 
+                        data-id="' . $row->id . '" 
+                        data-name="' . htmlspecialchars($row->shikake_no ?? '-', ENT_QUOTES) . '" 
+                        data-barcode="' . htmlspecialchars($row->barcode_kanban ?? '-', ENT_QUOTES) . '" 
+                        title="Delete">
                         <i class="fas fa-trash"></i>
                     </button>';
                 }
@@ -129,6 +126,33 @@ class MasterShikakeService
 
             DB::commit();
             return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    public function import($filePath, $conveyorId, $startRow = 2)
+    {
+        $importer = new \App\Imports\MasterShikakeImport($conveyorId);
+        return $importer->import($filePath, $startRow);
+    }
+
+    public function deleteByConveyor($conveyorId)
+    {
+        DB::beginTransaction();
+        try {
+            $userId = Auth::id();
+            
+            // Update deleted_by before soft deleting
+            MasterShikake::where('conveyor_id', $conveyorId)
+                ->update(['deleted_by' => $userId]);
+            
+            // Soft delete all records for the conveyor
+            $deleted = MasterShikake::where('conveyor_id', $conveyorId)->delete();
+            
+            DB::commit();
+            return $deleted;
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;

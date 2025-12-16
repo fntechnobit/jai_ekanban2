@@ -21,8 +21,7 @@ class MasterCircuit extends Model
         'issue',
         'machine',
         'sequence',
-        'barcode',
-        'kanban',
+        'barcode_kanban',
         'released_date',
         'released_note',
         'cust_no',
@@ -32,7 +31,7 @@ class MasterCircuit extends Model
         'kind',
         'size',
         'col',
-        'c_l',
+        'cl',
         'terminal_1',
         'note_1',
         'gold_1',
@@ -59,6 +58,7 @@ class MasterCircuit extends Model
         't04',
         't05',
         't06',
+        'image_path',
         'created_by',
         'updated_by',
         'deleted_by',
@@ -67,7 +67,6 @@ class MasterCircuit extends Model
     protected $casts = [
         'released_date' => 'date',
         'qty' => 'integer',
-        'sequence' => 'integer',
         'deleted_at' => 'datetime',
     ];
 

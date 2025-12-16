@@ -1,14 +1,14 @@
 <!-- Import Modal -->
-<div class="modal fade" id="importShikakeModal" tabindex="-1" role="dialog" aria-labelledby="importShikakeModalLabel" aria-hidden="true">
+<div class="modal fade" id="importCircuitModal" tabindex="-1" role="dialog" aria-labelledby="importCircuitModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="importShikakeModalLabel">Import Data shikake</h5>
+                <h5 class="modal-title" id="importCircuitModalLabel">Import Data Circuit (Cutting)</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form id="importShikakeForm" enctype="multipart/form-data">
+            <form id="importCircuitForm" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info">
@@ -66,11 +66,11 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success" id="btn-download-template-shikake">
+                    <button type="button" class="btn btn-success" id="btn-download-template-circuit">
                         <i class="fas fa-file-excel"></i> Download Template
                     </button>
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="btn-submit-import-shikake">
+                    <button type="submit" class="btn btn-primary" id="btn-submit-import">
                         <i class="fas fa-upload"></i> Import
                     </button>
                 </div>

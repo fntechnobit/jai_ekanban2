@@ -56,6 +56,7 @@ class MasterShikake extends Model
         't08',
         't09',
         'joint',
+        'image_path',
         'created_by',
         'updated_by',
         'deleted_by',
