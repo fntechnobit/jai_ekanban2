@@ -87,6 +87,15 @@ class MenuSeeder extends Seeder
                 'order' => 3,
                 'is_active' => true,
             ],
+            [
+                'code' => 'listing_sync',
+                'name' => 'Synchronize List Assy',
+                'url' => '/system/listing-sync',
+                'icon' => 'fas fa-sync-alt',
+                'parent_id' => $systemMenu->id,
+                'order' => 4,
+                'is_active' => true,
+            ],
         ];
 
         foreach ($submenus as $submenu) {

@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\System\UserController;
 use App\Http\Controllers\System\UserGroupController;
 use App\Http\Controllers\System\MenuController;
+use App\Http\Controllers\System\ListingSyncController;
 use App\Http\Controllers\MasterData\MasterAreaController;
 use App\Http\Controllers\MasterData\MasterFamilyController;
 use App\Http\Controllers\MasterData\MasterConveyorController;
@@ -42,6 +43,11 @@ Route::middleware('auth')->group(function () {
         Route::get('menus/datatable/data', [MenuController::class, 'datatable'])->name('menus.datatable');
         Route::get('menus/tree/data', [MenuController::class, 'getTreeData'])->name('menus.tree');
         Route::post('menus/reorder', [MenuController::class, 'reorder'])->name('menus.reorder');
+
+        // Listing Synchronization
+        Route::get('listing-sync', [ListingSyncController::class, 'index'])->name('listing-sync.index');
+        Route::post('listing-sync/sync', [ListingSyncController::class, 'sync'])->name('listing-sync.sync');
+        Route::get('listing-sync/statistics', [ListingSyncController::class, 'statistics'])->name('listing-sync.statistics');
     });
 
     // Master Data Module Routes
