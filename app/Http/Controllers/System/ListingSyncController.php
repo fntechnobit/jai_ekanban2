@@ -31,13 +31,15 @@ class ListingSyncController extends Controller
     public function sync(Request $request)
     {
         $request->validate([
-            'days' => 'required|integer|min:1|max:30'
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date'
         ]);
 
-        $days = $request->input('days', 7);
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
 
         try {
-            $result = $this->listingSyncService->syncListingData($days);
+            $result = $this->listingSyncService->syncListingData($startDate, $endDate);
 
             if ($result['success']) {
                 $message = "Synchronization completed successfully! Synced: {$result['synced']}, Skipped: {$result['skipped']}";

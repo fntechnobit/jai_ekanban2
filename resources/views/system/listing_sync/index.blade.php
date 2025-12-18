@@ -1,4 +1,4 @@
-@extends('adminx.master')
+@extends('layout')
 
 @section('title', 'Synchronize List Assy')
 
@@ -52,16 +52,19 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="days">Number of Days to Sync <span class="text-danger">*</span></label>
-                                    <select class="form-control" id="days" name="days" required>
-                                        <option value="1">Last 1 Day</option>
-                                        <option value="3">Last 3 Days</option>
-                                        <option value="7" selected>Last 7 Days</option>
-                                        <option value="14">Last 14 Days</option>
-                                        <option value="30">Last 30 Days</option>
-                                    </select>
+                                    <label for="start_date">Start Date <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date" required>
                                     <small class="form-text text-muted">
-                                        Select how many days of data to synchronize from the listing database.
+                                        Select the starting date for synchronization.
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="end_date">End Date <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                    <small class="form-text text-muted">
+                                        Select the ending date for synchronization.
                                     </small>
                                 </div>
                             </div>
@@ -123,12 +126,27 @@
 @section('script')
     <script>
         $(function () {
+            // Set default date range (last 7 days)
+            var today = new Date();
+            var lastWeek = new Date();
+            lastWeek.setDate(today.getDate() - 7);
+            
+            $('#end_date').val(today.toISOString().split('T')[0]);
+            $('#start_date').val(lastWeek.toISOString().split('T')[0]);
+
             // Handle sync form submission
             $('#syncForm').submit(function(e) {
                 e.preventDefault();
 
-                var days = $('#days').val();
+                var startDate = $('#start_date').val();
+                var endDate = $('#end_date').val();
                 var submitBtn = $('#btn-sync');
+
+                // Validate dates
+                if (new Date(startDate) > new Date(endDate)) {
+                    Swal.fire('Error!', 'Start date must be before or equal to end date.', 'error');
+                    return;
+                }
 
                 // Show progress
                 $('#sync-progress').show();
@@ -140,7 +158,8 @@
                     type: 'POST',
                     data: {
                         _token: '{{ csrf_token() }}',
-                        days: days
+                        start_date: startDate,
+                        end_date: endDate
                     },
                     success: function(response) {
                         $('#sync-progress').hide();

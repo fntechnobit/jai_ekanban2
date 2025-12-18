@@ -50,7 +50,7 @@
   @yield('css')
   @stack('styles')
 </head>
-<body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed accent-primary">
+<body class="hold-transition sidebar-mini sidebar-collapse layout-fixed layout-navbar-fixed layout-footer-fixed accent-primary">
 <!-- Site wrapper -->
 <div class="wrapper">
   <!-- Navbar -->

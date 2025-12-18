@@ -6,6 +6,7 @@ use App\Http\Controllers\System\UserController;
 use App\Http\Controllers\System\UserGroupController;
 use App\Http\Controllers\System\MenuController;
 use App\Http\Controllers\System\ListingSyncController;
+use App\Http\Controllers\Schedule\AssySchedulerController;
 use App\Http\Controllers\MasterData\MasterAreaController;
 use App\Http\Controllers\MasterData\MasterFamilyController;
 use App\Http\Controllers\MasterData\MasterConveyorController;
@@ -85,5 +86,15 @@ Route::middleware('auth')->group(function () {
         Route::get('master-circuit/download-template', [MasterCircuitController::class, 'downloadTemplate'])->name('master-circuit.download-template');
         Route::post('master-circuit/remove-by-conveyor', [MasterCircuitController::class, 'removeByConveyor'])->name('master-circuit.remove-by-conveyor');
         Route::resource('master-circuit', MasterCircuitController::class);
+    });
+
+    // Schedule Module Routes
+    Route::prefix('schedule')->name('schedule.')->group(function () {
+        // Assy Scheduler
+        Route::get('assy-scheduler', [AssySchedulerController::class, 'index'])->name('assy-scheduler.index');
+        Route::get('assy-scheduler/datatable', [AssySchedulerController::class, 'datatable'])->name('assy-scheduler.datatable');
+        Route::post('assy-scheduler/generate', [AssySchedulerController::class, 'generate'])->name('assy-scheduler.generate');
+        Route::post('assy-scheduler/{id}/verify', [AssySchedulerController::class, 'verify'])->name('assy-scheduler.verify');
+        Route::delete('assy-scheduler', [AssySchedulerController::class, 'destroy'])->name('assy-scheduler.destroy');
     });
 });

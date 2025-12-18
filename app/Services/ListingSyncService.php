@@ -13,14 +13,15 @@ class ListingSyncService
     /**
      * Synchronize listing data from mysql_listing to listing_stage
      *
-     * @param int $days Number of days to sync (default 7)
+     * @param string $startDate Start date (Y-m-d format)
+     * @param string $endDate End date (Y-m-d format)
      * @return array
      */
-    public function syncListingData($days = 7)
+    public function syncListingData($startDate, $endDate)
     {
         try {
-            $startDate = Carbon::now()->subDays($days)->startOfDay();
-            $endDate = Carbon::now()->endOfDay();
+            $startDate = Carbon::parse($startDate)->startOfDay();
+            $endDate = Carbon::parse($endDate)->endOfDay();
 
             // Fetch data from mysql_listing
             $listings = Listing::whereBetween('time', [$startDate, $endDate])
@@ -93,6 +94,45 @@ class ListingSyncService
                 'success' => false,
                 'message' => 'Synchronization failed: ' . $e->getMessage(),
                 'errors' => [$e->getMessage()]
+            ];
+        }
+    }
+
+    /**
+     * Delete listing_stage data for the specified date range
+     *
+     * @param string $startDate Start date (Y-m-d format)
+     * @param string $endDate End date (Y-m-d format)
+     * @return array
+     */
+    public function deleteListingStageData($startDate, $endDate)
+    {
+        try {
+            $startDate = Carbon::parse($startDate)->startOfDay();
+            $endDate = Carbon::parse($endDate)->endOfDay();
+
+            $deletedCount = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])->delete();
+
+            Log::info("Deleted {$deletedCount} listing_stage records for date range", [
+                'start_date' => $startDate->format('Y-m-d'),
+                'end_date' => $endDate->format('Y-m-d'),
+                'deleted_count' => $deletedCount
+            ]);
+
+            return [
+                'success' => true,
+                'deleted_count' => $deletedCount,
+                'date_range' => [
+                    'from' => $startDate->format('Y-m-d'),
+                    'to' => $endDate->format('Y-m-d')
+                ]
+            ];
+        } catch (\Exception $e) {
+            Log::error("Failed to delete listing_stage data", ['error' => $e->getMessage()]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to delete listing_stage data: ' . $e->getMessage(),
             ];
         }
     }

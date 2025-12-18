@@ -33,6 +33,15 @@ class MenuSeeder extends Seeder
                 'order' => 2,
                 'is_active' => true,
             ],
+            [
+                'code' => 'schedule',
+                'name' => 'Schedule',
+                'url' => '#',
+                'icon' => 'fas fa-calendar-alt',
+                'parent_id' => null,
+                'order' => 3,
+                'is_active' => true,
+            ],
         ];
 
         foreach ($menus as $menuData) {
@@ -99,6 +108,42 @@ class MenuSeeder extends Seeder
         ];
 
         foreach ($submenus as $submenu) {
+            $menu = Menu::firstOrCreate(
+                ['code' => $submenu['code']],
+                $submenu
+            );
+
+            // Grant permissions to Super Admin (group_id = 1)
+            GroupMenuAccess::firstOrCreate(
+                [
+                    'group_id' => 1,
+                    'menu_id' => $menu->id,
+                ],
+                [
+                    'can_create' => true,
+                    'can_read' => true,
+                    'can_update' => true,
+                    'can_delete' => true,
+                ]
+            );
+        }
+
+        // Create submenu for Schedule
+        $scheduleMenu = Menu::where('code', 'schedule')->first();
+        
+        $scheduleSubmenus = [
+            [
+                'code' => 'assy_scheduler',
+                'name' => 'Assy Scheduler',
+                'url' => '/schedule/assy-scheduler',
+                'icon' => 'fas fa-calendar-check',
+                'parent_id' => $scheduleMenu->id,
+                'order' => 1,
+                'is_active' => true,
+            ],
+        ];
+
+        foreach ($scheduleSubmenus as $submenu) {
             $menu = Menu::firstOrCreate(
                 ['code' => $submenu['code']],
                 $submenu
