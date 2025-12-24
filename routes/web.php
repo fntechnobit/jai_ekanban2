@@ -7,6 +7,8 @@ use App\Http\Controllers\System\UserGroupController;
 use App\Http\Controllers\System\MenuController;
 use App\Http\Controllers\System\ListingSyncController;
 use App\Http\Controllers\Schedule\AssySchedulerController;
+use App\Http\Controllers\Schedule\EkanbanCircuitController;
+use App\Http\Controllers\Schedule\EkanbanShikakeController;
 use App\Http\Controllers\MasterData\MasterAreaController;
 use App\Http\Controllers\MasterData\MasterFamilyController;
 use App\Http\Controllers\MasterData\MasterConveyorController;
@@ -96,5 +98,20 @@ Route::middleware('auth')->group(function () {
         Route::post('assy-scheduler/generate', [AssySchedulerController::class, 'generate'])->name('assy-scheduler.generate');
         Route::post('assy-scheduler/{id}/verify', [AssySchedulerController::class, 'verify'])->name('assy-scheduler.verify');
         Route::delete('assy-scheduler', [AssySchedulerController::class, 'destroy'])->name('assy-scheduler.destroy');
+        Route::get('assy-scheduler/manage-data', [AssySchedulerController::class, 'manageData'])->name('assy-scheduler.manage-data');
+        Route::post('assy-scheduler/save-manage', [AssySchedulerController::class, 'saveManage'])->name('assy-scheduler.save-manage');
+        Route::post('assy-scheduler/available-assy', [AssySchedulerController::class, 'availableAssyData'])->name('assy-scheduler.available-assy');
+        
+        // eKanban Circuit
+        Route::get('ekanban-circuit/print-machine', [EkanbanCircuitController::class, 'printMachine'])->name('ekanban-circuit.print-machine');
+        Route::get('ekanban-circuit/print-preview', [EkanbanCircuitController::class, 'printPreview'])->name('ekanban-circuit.print-preview');
+        Route::post('ekanban-circuit/print', [EkanbanCircuitController::class, 'print'])->name('ekanban-circuit.print');
+        Route::get('ekanban-circuit/machines-by-conveyor', [EkanbanCircuitController::class, 'getMachinesByConveyor'])->name('ekanban-circuit.machines-by-conveyor');
+        
+        // eKanban Shikake
+        Route::get('ekanban-shikake/print-machine', [EkanbanShikakeController::class, 'printMachine'])->name('ekanban-shikake.print-machine');
+        Route::get('ekanban-shikake/print-preview', [EkanbanShikakeController::class, 'printPreview'])->name('ekanban-shikake.print-preview');
+        Route::post('ekanban-shikake/print', [EkanbanShikakeController::class, 'print'])->name('ekanban-shikake.print');
+        Route::get('ekanban-shikake/machines-by-conveyor', [EkanbanShikakeController::class, 'getMachinesByConveyor'])->name('ekanban-shikake.machines-by-conveyor');
     });
 });

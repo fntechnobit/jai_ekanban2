@@ -8,6 +8,7 @@ use App\Models\MasterConveyor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\Facades\DataTables;
+use Carbon\Carbon;
 
 class AssySchedulerController extends Controller
 {
@@ -81,20 +82,29 @@ class AssySchedulerController extends Controller
             ->addColumn('assy_list', function ($schedule) {
                 return $schedule->assy_list ?: '-';
             })
-            ->addColumn('status', function ($schedule) {
-                if ($schedule->is_lock) {
-                    return '<span class="badge badge-success">Verified</span>';
-                }
-                return '<span class="badge badge-warning">Pending</span>';
-            })
+            // ->addColumn('status', function ($schedule) {
+            //     if ($schedule->is_lock) {
+            //         return '<span class="badge badge-success">Verified</span>';
+            //     }
+            //     return '<span class="badge badge-warning">Pending</span>';
+            // })
             ->addColumn('action', function ($schedule) {
                 // Join all IDs with commas for bulk verification
-                $ids = implode(',', $schedule->group_ids);
-                $verifyBtn = '<button type="button" class="btn btn-warning btn-sm btn-verify" data-ids="' . $ids . '">
-                    <i class="fas fa-check"></i> Verify
+                //$ids = implode(',', $schedule->group_ids);
+                // $verifyBtn = '<button type="button" class="btn btn-warning btn-sm btn-verify" data-ids="' . $ids . '">
+                //     <i class="fas fa-check"></i> Verify
+                // </button>';
+                
+                $manageBtn = '<button type="button" class="btn btn-info btn-sm btn-manage ml-1" 
+                    data-conveyor-id="' . $schedule->conveyor_id . '" 
+                    data-conveyor-name="' . ($schedule->conveyor ? $schedule->conveyor->conveyor : '') . '" 
+                    data-date="' . $schedule->schedule->format('Y-m-d') . '" 
+                    data-capacity="' . ($schedule->conveyor ? $schedule->conveyor->capacity : 0) . '" 
+                    data-max-shifts="' . ($schedule->conveyor ? $schedule->conveyor->shift_qty : 0) . '">
+                    <i class="fas fa-cogs"></i> Manage
                 </button>';
                 
-                return $verifyBtn;
+                return $manageBtn;
             })
             ->rawColumns(['status', 'action'])
             ->make(true);
@@ -207,6 +217,107 @@ class AssySchedulerController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete schedules: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get manage data for a specific conveyor and date
+     */
+    public function manageData(Request $request)
+    {
+        $request->validate([
+            'conveyor_id' => 'required|exists:master_conveyor,id',
+            'date' => 'required|date',
+        ]);
+
+        try {
+            $result = $this->assySchedulerService->getManageData(
+                $request->input('conveyor_id'),
+                $request->input('date')
+            );
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+            Log::error("Manage data retrieval error", ['error' => $e->getMessage()]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load manage data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Save manage changes
+     */
+    public function saveManage(Request $request)
+    {
+        $request->validate([
+            'conveyor_id' => 'required|exists:master_conveyor,id',
+            'date' => 'required|date',
+            'shifts' => 'required|array',
+        ]);
+
+        try {
+            $result = $this->assySchedulerService->saveManageData(
+                $request->input('conveyor_id'),
+                $request->input('date'),
+                $request->input('shifts')
+            );
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+            Log::error("Manage save error", ['error' => $e->getMessage()]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save manage changes: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get available assy data with date range and pagination
+     */
+    public function availableAssyData(Request $request)
+    {
+        $request->validate([
+            'conveyor_id' => 'required|exists:master_conveyor,id',
+            'selected_date' => 'required|date',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'page' => 'nullable|integer|min:1',
+        ]);
+
+        // Validate 7-day maximum range
+        // if ($request->filled('start_date') && $request->filled('end_date')) {
+        //     $start = Carbon::parse($request->input('start_date'));
+        //     $end = Carbon::parse($request->input('end_date'));
+        //     if ($start->diffInDays($end) > 7) {
+        //         return response()->json([
+        //             'success' => false,
+        //             'message' => 'Date range cannot exceed 7 days'
+        //         ], 400);
+        //     }
+        // }
+
+        try {
+            $result = $this->assySchedulerService->getAvailableAssyData(
+                $request->input('conveyor_id'),
+                $request->input('selected_date'),
+                $request->input('start_date'),
+                $request->input('end_date'),
+                $request->input('page', 1)
+            );
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+            Log::error("Available assy data retrieval error", ['error' => $e->getMessage()]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load available assy data: ' . $e->getMessage()
             ], 500);
         }
     }

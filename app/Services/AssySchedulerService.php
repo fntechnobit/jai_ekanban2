@@ -157,7 +157,7 @@ class AssySchedulerService
                             'mode' => $listing->mode,
                             'snp' => $listing->snp,
                             'snpa' => $listing->snpa,
-                            'is_lock' => 0,
+                            'is_lock' => 1,
                             'created_by' => Auth::id(),
                         ]);
 
@@ -307,5 +307,267 @@ class AssySchedulerService
         ]);
         
         return $deletedCount;
+    }
+
+    /**
+     * Get manage data for a specific conveyor and date
+     *
+     * @param int $conveyorId
+     * @param string $date
+     * @return array
+     */
+    public function getManageData($conveyorId, $date)
+    {
+        try {
+            $date = Carbon::parse($date);
+            $conveyor = MasterConveyor::findOrFail($conveyorId);
+
+            // Get existing scheduled items
+            $scheduledItems = AssySchedule::where('conveyor_id', $conveyorId)
+                ->whereDate('schedule', $date)
+                ->with('listingStage')
+                ->orderBy('shift')
+                ->orderBy('seq')
+                ->get();
+
+            // Group scheduled items by shift
+            $shifts = [];
+            $maxShifts = $conveyor->shift_qty ?? 3;
+            $shiftCapacity = $conveyor->capacity ?? 100;
+
+            // Initialize all shifts
+            for ($i = 1; $i <= $maxShifts; $i++) {
+                $shifts[$i] = [
+                    'total_capacity' => $shiftCapacity,
+                    'used_capacity' => 0,
+                    'items' => []
+                ];
+            }
+
+            // Populate shifts with scheduled items
+            foreach ($scheduledItems as $item) {
+                if (isset($shifts[$item->shift])) {
+                    $shifts[$item->shift]['items'][] = [
+                        'id' => $item->id,
+                        'assy' => $item->assy,
+                        'qty' => $item->qty,
+                        'listing_id' => $item->listing_id,
+                        'listing_date_time' => $item->listingStage ? $item->listingStage->listing_date_time->format('Y-m-d H:i') : ''
+                    ];
+                    $shifts[$item->shift]['used_capacity'] += $item->qty;
+                }
+            }
+
+            // Calculate real counts for header
+            $totalAssyCount = AssySchedule::where('conveyor_id', $conveyorId)
+                ->whereDate('schedule', $date)
+                ->distinct('assy')
+                ->count();
+                
+            $totalListingCount = AssySchedule::where('conveyor_id', $conveyorId)
+                ->whereDate('schedule', $date)
+                ->sum('qty');
+
+            return [
+                'success' => true,
+                'shifts' => $shifts,
+                'conveyor' => $conveyor,
+                'date' => $date->format('Y-m-d'),
+                'total_assy_count' => $totalAssyCount,
+                'total_listing_count' => $totalListingCount
+            ];
+        } catch (\Exception $e) {
+            Log::error("Get manage data failed", ['error' => $e->getMessage()]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to get manage data: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Save manage data changes
+     *
+     * @param int $conveyorId
+     * @param string $date
+     * @param array $shifts
+     * @return array
+     */
+    public function saveManageData($conveyorId, $date, $shifts)
+    {
+        try {
+            DB::beginTransaction();
+
+            $date = Carbon::parse($date);
+            $conveyor = MasterConveyor::findOrFail($conveyorId);
+
+            // Collect all item IDs that are being updated
+            $itemsToUpdateIds = [];
+            foreach ($shifts as $shiftNumber => $shiftData) {
+                if (!empty($shiftData['items'])) {
+                    foreach ($shiftData['items'] as $item) {
+                        $itemsToUpdateIds[] = $item['id'];
+                    }
+                }
+            }
+
+            // Only delete existing schedules that are being replaced/updated
+            if (!empty($itemsToUpdateIds)) {
+                AssySchedule::whereIn('id', $itemsToUpdateIds)->delete();
+            }
+
+            $createdCount = 0;
+
+            // Recreate schedules based on new arrangement
+            foreach ($shifts as $shiftNumber => $shiftData) {
+                if (!empty($shiftData['items'])) {
+                    foreach ($shiftData['items'] as $item) {
+                        // Get original listing data
+                        $type = $item['type'] ?? 'shift'; // Default to 'shift' if not provided
+
+                        if ($type === 'available') {
+                            // delete assy schedule from original date
+                            AssySchedule::where('id', $item['id'])->delete();
+                        }
+
+                        $listingStage = ListingStage::find($item['listing_id']);
+                        
+                        if ($listingStage) {
+                            AssySchedule::create([
+                                'schedule' => $date,
+                                'conveyor_id' => $conveyorId,
+                                'listing_id' => $listingStage->id,
+                                'shift' => $shiftNumber,
+                                'assycode' => $listingStage->assycode,
+                                'assy' => $listingStage->assy,
+                                'qty' => $item['qty'], // Use the possibly modified qty
+                                'seq' => $listingStage->seq,
+                                'mode' => $listingStage->mode,
+                                'snp' => $listingStage->snp,
+                                'snpa' => $listingStage->snpa,
+                                'created_by' => Auth::id(),
+                            ]);
+                            $createdCount++;
+                        }
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'message' => "Successfully updated schedule with {$createdCount} items",
+                'created' => $createdCount,
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Save manage data failed", ['error' => $e->getMessage()]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to save manage data: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Get available assy data with date range filter and pagination
+     *
+     * @param int $conveyorId
+     * @param string $selectedDate
+     * @param string|null $startDate
+     * @param string|null $endDate
+     * @param int $page
+     * @param int $perPage
+     * @return array
+     */
+    public function getAvailableAssyData($conveyorId, $selectedDate, $startDate = null, $endDate = null, $page = 1, $perPage = 20)
+    {
+        try {
+            $selectedDate = Carbon::parse($selectedDate);
+
+            // Default date range: selected date to +7 days
+            if (!$startDate) {
+                $startDate = $selectedDate->format('Y-m-d');
+            }
+            if (!$endDate) {
+                $endDate = $selectedDate->copy()->addDays(7)->format('Y-m-d');
+            }
+
+            // Validate maximum 7-day range
+            $start = Carbon::parse($startDate);
+            $end = Carbon::parse($endDate);
+            if ($start->diffInDays($end) > 7) {
+                // Adjust to 7-day range from selected date
+                $startDate = $selectedDate->format('Y-m-d');
+                $endDate = $selectedDate->copy()->addDays(7)->format('Y-m-d');
+            }
+
+            // Get available assy schedules from future dates that can be moved to selected date
+            $query = AssySchedule::where('conveyor_id', $conveyorId)
+                ->whereBetween('schedule', [
+                    Carbon::parse($startDate)->startOfDay(),
+                    Carbon::parse($endDate)->endOfDay()
+                ])
+                // Only get schedules from dates after the selected date
+                ->whereDate('schedule', '!=', $selectedDate)
+                // Exclude assy codes already assigned to the selected date
+                ->whereNotNull('assycode')
+                ->where('assycode', '!=', '')
+                ->whereNotNull('assy')
+                ->where('assy', '!=', '')
+                ->where('qty', '>', 0)
+                ->orderBy('schedule')
+                ->orderBy('shift')
+                ->orderBy('seq');
+
+            // Get paginated results
+            $totalCount = $query->count();
+            $items = $query->skip(($page - 1) * $perPage)
+                ->take($perPage)
+                ->get();
+
+            // Prepare available items
+            $available = [];
+            foreach ($items as $item) {
+                $available[] = [
+                    'id' => $item->id,
+                    'assy' => $item->assy,
+                    'qty' => $item->qty,
+                    'schedule_date' => $item->schedule->format('Y-m-d'),
+                    'shift' => $item->shift,
+                    'listing_id' => $item->listing_id
+                ];
+            }
+
+            $totalPages = ceil($totalCount / $perPage);
+
+            return [
+                'success' => true,
+                'available' => $available,
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $totalCount,
+                    'total_pages' => $totalPages,
+                    'has_next' => $page < $totalPages,
+                    'has_prev' => $page > 1
+                ],
+                'date_range' => [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                    'selected_date' => $selectedDate->format('Y-m-d')
+                ]
+            ];
+        } catch (\Exception $e) {
+            Log::error("Get available assy data failed", ['error' => $e->getMessage()]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to get available assy data: ' . $e->getMessage(),
+            ];
+        }
     }
 }

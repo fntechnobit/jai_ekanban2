@@ -141,6 +141,24 @@ class MenuSeeder extends Seeder
                 'order' => 1,
                 'is_active' => true,
             ],
+            [
+                'code' => 'ekanban_circuit',
+                'name' => 'eKanban Circuit',
+                'url' => '#',
+                'icon' => 'fas fa-route',
+                'parent_id' => $scheduleMenu->id,
+                'order' => 2,
+                'is_active' => true,
+            ],
+            [
+                'code' => 'ekanban_shikake',
+                'name' => 'eKanban Shikake',
+                'url' => '#',
+                'icon' => 'fas fa-wrench',
+                'parent_id' => $scheduleMenu->id,
+                'order' => 3,
+                'is_active' => true,
+            ],
         ];
 
         foreach ($scheduleSubmenus as $submenu) {
@@ -150,6 +168,92 @@ class MenuSeeder extends Seeder
             );
 
             // Grant permissions to Super Admin (group_id = 1)
+            GroupMenuAccess::firstOrCreate(
+                [
+                    'group_id' => 1,
+                    'menu_id' => $menu->id,
+                ],
+                [
+                    'can_create' => true,
+                    'can_read' => true,
+                    'can_update' => true,
+                    'can_delete' => true,
+                ]
+            );
+        }
+
+        // Create sub-sub menus for eKanban Circuit
+        $ekanbanCircuitMenu = Menu::where('code', 'ekanban_circuit')->first();
+        $circuitSubmenus = [
+            [
+                'code' => 'ekanban_circuit_print_machine',
+                'name' => 'Print Per Machine',
+                'url' => '/schedule/ekanban-circuit/print-machine',
+                'icon' => 'fas fa-print',
+                'parent_id' => $ekanbanCircuitMenu->id,
+                'order' => 1,
+                'is_active' => true,
+            ],
+            [
+                'code' => 'ekanban_circuit_print_preview',
+                'name' => 'Print Preview from Office',
+                'url' => '/schedule/ekanban-circuit/print-preview',
+                'icon' => 'fas fa-eye',
+                'parent_id' => $ekanbanCircuitMenu->id,
+                'order' => 2,
+                'is_active' => true,
+            ],
+        ];
+
+        foreach ($circuitSubmenus as $submenu) {
+            $menu = Menu::firstOrCreate(
+                ['code' => $submenu['code']],
+                $submenu
+            );
+
+            GroupMenuAccess::firstOrCreate(
+                [
+                    'group_id' => 1,
+                    'menu_id' => $menu->id,
+                ],
+                [
+                    'can_create' => true,
+                    'can_read' => true,
+                    'can_update' => true,
+                    'can_delete' => true,
+                ]
+            );
+        }
+
+        // Create sub-sub menus for eKanban Shikake  
+        $ekanbanShikakeMenu = Menu::where('code', 'ekanban_shikake')->first();
+        $shikakeSubmenus = [
+            [
+                'code' => 'ekanban_shikake_print_machine',
+                'name' => 'Print Per Machine',
+                'url' => '/schedule/ekanban-shikake/print-machine',
+                'icon' => 'fas fa-print',
+                'parent_id' => $ekanbanShikakeMenu->id,
+                'order' => 1,
+                'is_active' => true,
+            ],
+            [
+                'code' => 'ekanban_shikake_print_preview',
+                'name' => 'Print Preview from Office',
+                'url' => '/schedule/ekanban-shikake/print-preview',
+                'icon' => 'fas fa-eye',
+                'parent_id' => $ekanbanShikakeMenu->id,
+                'order' => 2,
+                'is_active' => true,
+            ],
+        ];
+
+        foreach ($shikakeSubmenus as $submenu) {
+            $menu = Menu::firstOrCreate(
+                ['code' => $submenu['code']],
+                $submenu
+            );
+
             GroupMenuAccess::firstOrCreate(
                 [
                     'group_id' => 1,
