@@ -50,7 +50,7 @@ class MasterShikakeService
                 return !empty($cct_codes) ? implode(', ', $cct_codes) : '-';
             })
             ->addColumn('process', function ($row) {
-                return $row->barcode_proses ?? '-';
+                return $row->process ?? '-';
             })
             ->addColumn('action', function ($row) {
                 /** @var \App\Models\User|null $currentUser */
@@ -132,9 +132,9 @@ class MasterShikakeService
         }
     }
 
-    public function import($filePath, $conveyorId, $startRow = 2)
+    public function import($filePath, $conveyorId, $process = null, $startRow = 2)
     {
-        $importer = new \App\Imports\MasterShikakeImport($conveyorId);
+        $importer = new \App\Imports\MasterShikakeImport($conveyorId, $process);
         return $importer->import($filePath, $startRow);
     }
 

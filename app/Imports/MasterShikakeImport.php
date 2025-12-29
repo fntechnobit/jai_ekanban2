@@ -14,14 +14,16 @@ use PhpOffice\PhpSpreadsheet\Shared\Date;
 class MasterShikakeImport
 {
     protected $conveyorId;
+    protected $process;
     protected $errors = [];
     protected $successCount = 0;
     protected $failedCount = 0;
     protected $totalRows = 0;
 
-    public function __construct($conveyorId)
+    public function __construct($conveyorId, $process = null)
     {
         $this->conveyorId = $conveyorId;
+        $this->process = $process;
     }
 
     public function import($filePath, $startRow = 2)
@@ -232,6 +234,7 @@ class MasterShikakeImport
         return [
             'conveyor_id' => $this->conveyorId,
             'conveyor' => $this->cleanValue($rowData[0] ?? null),           // Column A
+            'process' => $this->process,
             'shikake_no' => $this->cleanValue($rowData[1] ?? null),         // Column B
             'family' => $this->cleanValue($rowData[2] ?? null),             // Column C
             'qty' => $this->cleanNumeric($rowData[3] ?? null),              // Column D

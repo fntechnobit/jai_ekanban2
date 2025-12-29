@@ -55,6 +55,7 @@ class ListingSyncService
                         'shift' => $listing->shift ?? 0,
                         'assycode' => $listing->assycode ?? '',
                         'assy' => $listing->assy ?? '',
+                        'carline' => $listing->carline ?? '',
                         'qty' => $listing->qty ?? 0,
                         'seq' => $listing->seq ?? 0,
                         'plt' => $listing->plt ?? 0,

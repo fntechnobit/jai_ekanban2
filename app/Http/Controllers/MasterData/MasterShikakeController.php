@@ -136,16 +136,18 @@ class MasterShikakeController extends Controller
         try {
             $request->validate([
                 'conveyor_id' => 'required|exists:master_conveyor,id',
+                'process' => 'required|string|in:BONDER,DBL CRIMP,JOINT,SHIELD,TWIST',
                 'file' => 'required|file|mimes:xlsx,xls|max:10240',
                 'rows_start' => 'required|integer|min:1',
             ]);
 
             $file = $request->file('file');
             $conveyorId = $request->input('conveyor_id');
+            $process = $request->input('process');
             $rowsStart = $request->input('rows_start', 2);
 
             // Import the data
-            $result = $this->masterShikakeService->import($file->getRealPath(), $conveyorId, $rowsStart);
+            $result = $this->masterShikakeService->import($file->getRealPath(), $conveyorId, $process, $rowsStart);
 
             if ($result['success']) {
                 $message = "Import completed successfully. {$result['success_count']} records imported";

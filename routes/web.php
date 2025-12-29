@@ -7,6 +7,7 @@ use App\Http\Controllers\System\UserGroupController;
 use App\Http\Controllers\System\MenuController;
 use App\Http\Controllers\System\ListingSyncController;
 use App\Http\Controllers\Schedule\AssySchedulerController;
+use App\Http\Controllers\Schedule\ScheduleVerificationController;
 use App\Http\Controllers\Schedule\EkanbanCircuitController;
 use App\Http\Controllers\Schedule\EkanbanShikakeController;
 use App\Http\Controllers\MasterData\MasterAreaController;
@@ -95,12 +96,20 @@ Route::middleware('auth')->group(function () {
         // Assy Scheduler
         Route::get('assy-scheduler', [AssySchedulerController::class, 'index'])->name('assy-scheduler.index');
         Route::get('assy-scheduler/datatable', [AssySchedulerController::class, 'datatable'])->name('assy-scheduler.datatable');
+        Route::get('assy-scheduler/list', [AssySchedulerController::class, 'getAssyScheduleList'])->name('assy-scheduler.assy-schedule-list');
         Route::post('assy-scheduler/generate', [AssySchedulerController::class, 'generate'])->name('assy-scheduler.generate');
         Route::post('assy-scheduler/{id}/verify', [AssySchedulerController::class, 'verify'])->name('assy-scheduler.verify');
         Route::delete('assy-scheduler', [AssySchedulerController::class, 'destroy'])->name('assy-scheduler.destroy');
         Route::get('assy-scheduler/manage-data', [AssySchedulerController::class, 'manageData'])->name('assy-scheduler.manage-data');
         Route::post('assy-scheduler/save-manage', [AssySchedulerController::class, 'saveManage'])->name('assy-scheduler.save-manage');
         Route::post('assy-scheduler/available-assy', [AssySchedulerController::class, 'availableAssyData'])->name('assy-scheduler.available-assy');
+        
+        // Schedule Verification
+        Route::get('schedule-verification', [ScheduleVerificationController::class, 'index'])->name('schedule-verification.index');
+        Route::get('schedule-verification/datatable', [ScheduleVerificationController::class, 'datatable'])->name('schedule-verification.datatable');
+        Route::get('schedule-verification/details', [ScheduleVerificationController::class, 'details'])->name('schedule-verification.details');
+        Route::post('schedule-verification/save', [ScheduleVerificationController::class, 'save'])->name('schedule-verification.save');
+        Route::post('schedule-verification/verify', [ScheduleVerificationController::class, 'verify'])->name('schedule-verification.verify');
         
         // eKanban Circuit
         Route::get('ekanban-circuit/print-machine', [EkanbanCircuitController::class, 'printMachine'])->name('ekanban-circuit.print-machine');

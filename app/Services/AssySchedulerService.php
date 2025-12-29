@@ -5,6 +5,10 @@ namespace App\Services;
 use App\Models\AssySchedule;
 use App\Models\ListingStage;
 use App\Models\MasterConveyor;
+use App\Services\Schedule\ShiftCapacityCalculator;
+use App\Services\Schedule\ShiftLockChecker;
+use App\Services\Schedule\ListingAllocator;
+use App\Services\Schedule\ScheduleCleanupService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -13,13 +17,26 @@ use Illuminate\Support\Facades\Log;
 class AssySchedulerService
 {
     protected $listingSyncService;
+    protected $capacityCalculator;
+    protected $lockChecker;
+    protected $listingAllocator;
+    protected $scheduleCleanup;
 
-    public function __construct(ListingSyncService $listingSyncService)
-    {
+    public function __construct(
+        ListingSyncService $listingSyncService,
+        ShiftCapacityCalculator $capacityCalculator,
+        ShiftLockChecker $lockChecker,
+        ListingAllocator $listingAllocator,
+        ScheduleCleanupService $scheduleCleanup
+    ) {
         $this->listingSyncService = $listingSyncService;
+        $this->capacityCalculator = $capacityCalculator;
+        $this->lockChecker = $lockChecker;
+        $this->listingAllocator = $listingAllocator;
+        $this->scheduleCleanup = $scheduleCleanup;
     }
     /**
-     * Generate assy schedules for the specified date range
+     * Generate assy schedules for the specified date range with cutoff system
      *
      * @param string $startDate
      * @param string $endDate
@@ -54,10 +71,7 @@ class AssySchedulerService
                 throw new \Exception('Failed to sync listing data: ' . $syncResult['message']);
             }
 
-            // Step 3: Delete existing assy_schedule records for the date range
-            $deletedCount = $this->deleteExistingSchedules($startDate, $endDate, $conveyorId);
-
-            // Step 4: Get fresh listing data from listing_stage for the date range
+            // Step 3: Get fresh listing data from listing_stage for the date range
             $listingsQuery = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])
                 ->whereNotNull('assycode')
                 ->where('assycode', '!=', '')
@@ -95,6 +109,7 @@ class AssySchedulerService
             });
 
             $generatedCount = 0;
+            $schedulesToCreate = [];
 
             foreach ($groupedListings as $groupKey => $groupListings) {
                 list($date, $conveyorName) = explode('_', $groupKey, 2);
@@ -108,65 +123,71 @@ class AssySchedulerService
                     continue;
                 }
 
-                // Get conveyor capacity per shift (default to 100 if not set)
+                $scheduleDate = Carbon::parse($date);
                 $shiftCapacity = $conveyor->capacity ?? 100;
-                
-                // Get max shifts available for this conveyor (default to 3 if not set)
                 $maxShifts = $conveyor->shift_qty ?? 2;
 
-                // Reset shift and capacity for each new group (conveyor + date combination)
-                $currentShift = 1;
-                $currentCapacity = 0;
-                $scheduleDate = Carbon::parse($date);
+                // Step 4: Initialize tracking field for listings (rem_qty)
+                $this->listingAllocator->initializeListings($groupListings);
 
-                foreach ($groupListings as $listing) {
-                    $remainingQty = $listing->qty ?? 1;
+                // Step 5: Check shift lock status for this conveyor on this date
+                $shiftLockStatus = $this->lockChecker->getShiftLockStatus(
+                    $scheduleDate,
+                    $conveyor->id,
+                    $maxShifts
+                );
 
-                    // Process the listing until all quantity is allocated or max shifts reached
-                    while ($remainingQty > 0 && $currentShift <= $maxShifts) {
-                        // Calculate how much capacity is available in current shift
-                        $availableCapacity = $shiftCapacity - $currentCapacity;
-                        
-                        // If current shift is full, move to next shift
-                        if ($availableCapacity <= 0) {
-                            $currentShift++;
-                            $currentCapacity = 0;
-                            
-                            // Check if we exceeded max shifts
-                            if ($currentShift > $maxShifts) {
-                                Log::info("Max shifts ({$maxShifts}) reached for {$conveyorName} on {$date}, remaining qty: {$remainingQty}");
-                                break;
-                            }
-                            
-                            $availableCapacity = $shiftCapacity;
-                        }
+                // Step 6: Delete only unlocked schedules
+                $this->scheduleCleanup->deleteUnlockedSchedulesInRange(
+                    $scheduleDate,
+                    $scheduleDate,
+                    $conveyor->id,
+                    $shiftLockStatus
+                );
 
-                        // Determine how much qty to allocate to this shift
-                        $qtyForThisShift = min($remainingQty, $availableCapacity);
+                // Step 7: Calculate cutoff capacities for each shift
+                $shiftCapacities = $this->capacityCalculator->calculateShiftCapacities(
+                    $conveyor,
+                    $shiftLockStatus
+                );
 
-                        // Create assy_schedule record for this shift portion
-                        AssySchedule::create([
-                            'schedule' => $scheduleDate,
-                            'conveyor_id' => $conveyor->id,
-                            'listing_id' => $listing->id,
-                            'shift' => $currentShift,
-                            'assycode' => $listing->assycode,
-                            'assy' => $listing->assy,
-                            'qty' => $qtyForThisShift,
-                            'seq' => $listing->seq,
-                            'mode' => $listing->mode,
-                            'snp' => $listing->snp,
-                            'snpa' => $listing->snpa,
-                            'is_lock' => 1,
-                            'created_by' => Auth::id(),
-                        ]);
-
-                        // Update counters
-                        $currentCapacity += $qtyForThisShift;
-                        $remainingQty -= $qtyForThisShift;
-                        $generatedCount++;
+                // Step 8: Process each shift separately (cutoffs 1-4)
+                foreach ($shiftCapacities as $shift => $cutoffCapacities) {
+                    // Skip locked shifts - they already have verified schedules
+                    if (isset($shiftLockStatus[$shift]) && $shiftLockStatus[$shift]) {
+                        continue;
                     }
+
+                    // Allocate listings to this shift using cutoff system
+                    $allocationResult = $this->listingAllocator->allocateToShift(
+                        $groupListings,
+                        $cutoffCapacities,
+                        $shift,
+                        $conveyor->id,
+                        $scheduleDate->format('Y-m-d')
+                    );
+
+                    $schedulesToCreate = array_merge($schedulesToCreate, $allocationResult['schedules']);
                 }
+
+                // Step 9: Handle overflow (cutoff 5) for remaining quantities
+                $overflowResult = $this->listingAllocator->allocateOverflow(
+                    $groupListings,
+                    $shiftLockStatus,
+                    $maxShifts,
+                    $conveyor->id,
+                    $scheduleDate->format('Y-m-d')
+                );
+
+                $schedulesToCreate = array_merge($schedulesToCreate, $overflowResult['schedules']);
+            }
+
+            // Step 10: Bulk insert all schedules
+            if (!empty($schedulesToCreate)) {
+                foreach (array_chunk($schedulesToCreate, 500) as $chunk) {
+                    AssySchedule::insert($chunk);
+                }
+                $generatedCount = count($schedulesToCreate);
             }
 
             DB::commit();

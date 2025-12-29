@@ -14,6 +14,7 @@ class ListingStage extends Model
         'shift',
         'assycode',
         'assy',
+        'carline',
         'qty',
         'seq',
         'plt',

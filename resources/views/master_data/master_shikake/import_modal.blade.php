@@ -43,6 +43,21 @@
                     </div>
 
                     <div class="form-group row">
+                        <label for="import_process" class="col-sm-3 col-form-label">Process <span class="text-danger">*</span>:</label>
+                        <div class="col-sm-9">
+                            <select class="form-control select2" id="import_process" name="process" style="width: 100%;" required>
+                                <option value="">- Choose Process -</option>
+                                <option value="BONDER">BONDER</option>
+                                <option value="DBL CRIMP">DBL CRIMP</option>
+                                <option value="JOINT">JOINT</option>
+                                <option value="SHIELD">SHIELD</option>
+                                <option value="TWIST">TWIST</option>
+                            </select>
+                            <small class="form-text text-danger import_process_error"></small>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
                         <label for="import_file" class="col-sm-3 col-form-label">File Import <span class="text-danger">*</span>:</label>
                         <div class="col-sm-9">
                             <div class="custom-file">

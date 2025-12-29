@@ -48,7 +48,12 @@
 
                                 <div class="form-group">
                                     <label>Process</label>
-                                    <input type="text" name="barcode_proses" class="form-control" value="{{ $shikake->barcode_proses ?? '' }}">
+                                    <input type="text" name="process" class="form-control" value="{{ $shikake->process ?? '' }}" readonly>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Barcode Process</label>
+                                    <input type="text" name="barcode_proses" class="form-control" value="{{ $shikake->barcode_proses ?? '' }}" readonly>
                                 </div>
 
                                 <div class="form-group">
@@ -205,11 +210,6 @@
 
                             <!-- Right Column -->
                             <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Barcode Proses</label>
-                                    <input type="text" name="barcode_proses" class="form-control" value="{{ $shikake->barcode_proses ?? '' }}">
-                                </div>
-
                                 <div class="form-group">
                                     <label>Barcode Navigasi</label>
                                     <input type="text" name="barcode_navigasi" class="form-control" value="{{ $shikake->barcode_navigasi ?? '' }}">

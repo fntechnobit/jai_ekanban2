@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Schedule;
 use App\Http\Controllers\Controller;
 use App\Services\AssySchedulerService;
 use App\Models\MasterConveyor;
+use App\Models\AssySchedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\Facades\DataTables;
@@ -107,6 +108,50 @@ class AssySchedulerController extends Controller
                 return $manageBtn;
             })
             ->rawColumns(['status', 'action'])
+            ->make(true);
+    }
+
+    /**
+     * Get assy schedule list - shows all individual schedule records
+     */
+    public function getAssyScheduleList(Request $request)
+    {
+        $query = AssySchedule::with('conveyor')
+            ->orderBy('schedule', 'asc')
+            ->orderBy('shift', 'asc')
+            ->orderBy('cutoff', 'asc');
+
+        // Apply filters
+        if ($request->start_date) {
+            $query->whereDate('schedule', '>=', $request->start_date);
+        }
+        if ($request->end_date) {
+            $query->whereDate('schedule', '<=', $request->end_date);
+        }
+        if ($request->conveyor_id) {
+            $query->where('conveyor_id', $request->conveyor_id);
+        }
+
+        return DataTables::of($query->get())
+            ->addIndexColumn()
+            ->addColumn('conveyor_name', function ($schedule) {
+                return $schedule->conveyor ? $schedule->conveyor->conveyor : '-';
+            })
+            ->editColumn('schedule', function ($schedule) {
+                return $schedule->schedule->format('Y-m-d');
+            })
+            ->editColumn('shift', function ($schedule) {
+                return $schedule->shift;
+            })
+            ->editColumn('cutoff', function ($schedule) {
+                return $schedule->cutoff ?? '-';
+            })
+            ->editColumn('assy', function ($schedule) {
+                return $schedule->assy;
+            })
+            ->editColumn('qty', function ($schedule) {
+                return $schedule->qty;
+            })
             ->make(true);
     }
 

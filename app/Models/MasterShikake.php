@@ -15,6 +15,7 @@ class MasterShikake extends Model
     protected $fillable = [
         'conveyor_id',
         'conveyor',
+        'process',
         'shikake_no',
         'family',
         'qty',
