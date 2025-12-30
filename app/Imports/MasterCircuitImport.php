@@ -317,9 +317,33 @@ class MasterCircuitImport
                 return Date::excelToDateTimeObject($value)->format('Y-m-d');
             }
             
-            // Handle string dates
-            return date('Y-m-d', strtotime($value));
+            // Handle string dates with multiple formats
+            $formats = [
+                'd/m/y',     // 31/12/25
+                'd/m/Y',     // 31/12/2025
+                'd-m-y',     // 31-12-25
+                'd-m-Y',     // 31-12-2025
+                'Y-m-d',     // 2025-12-31
+                'm/d/Y',     // 12/31/2025
+                'm/d/y',     // 12/31/25
+            ];
+
+            foreach ($formats as $format) {
+                $date = \DateTime::createFromFormat($format, $value);
+                if ($date !== false && $date->format($format) === $value) {
+                    return $date->format('Y-m-d');
+                }
+            }
+            
+            // Fallback to strtotime
+            $timestamp = strtotime($value);
+            if ($timestamp !== false) {
+                return date('Y-m-d', $timestamp);
+            }
+            
+            return null;
         } catch (\Exception $e) {
+            \Log::warning("Failed to parse date: {$value}", ['error' => $e->getMessage()]);
             return null;
         }
     }

@@ -10,6 +10,7 @@ use App\Models\AssySchedule;
 use App\Services\EkanbanShikakeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class EkanbanShikakeController extends Controller
@@ -64,6 +65,9 @@ class EkanbanShikakeController extends Controller
         $shikakes = $this->ekanbanShikakeService->getShikakesForPrint($ids);
 
         $html = view('schedule.ekanban_shikake.print_ticket', compact('shikakes'))->render();
+
+        // Mark shikakes as printed
+        $this->ekanbanShikakeService->markAsPrinted($ids, Auth::id());
 
         return response()->json([
             'ok' => true,

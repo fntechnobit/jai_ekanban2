@@ -108,8 +108,10 @@ Route::middleware('auth')->group(function () {
         Route::get('schedule-verification', [ScheduleVerificationController::class, 'index'])->name('schedule-verification.index');
         Route::get('schedule-verification/datatable', [ScheduleVerificationController::class, 'datatable'])->name('schedule-verification.datatable');
         Route::get('schedule-verification/details', [ScheduleVerificationController::class, 'details'])->name('schedule-verification.details');
+        Route::get('schedule-verification/available-assy', [ScheduleVerificationController::class, 'availableAssyData'])->name('schedule-verification.available-assy');
         Route::post('schedule-verification/save', [ScheduleVerificationController::class, 'save'])->name('schedule-verification.save');
         Route::post('schedule-verification/verify', [ScheduleVerificationController::class, 'verify'])->name('schedule-verification.verify');
+        Route::post('schedule-verification/unverify', [ScheduleVerificationController::class, 'unverify'])->name('schedule-verification.unverify');
         
         // eKanban Circuit
         Route::get('ekanban-circuit/print-machine', [EkanbanCircuitController::class, 'printMachine'])->name('ekanban-circuit.print-machine');

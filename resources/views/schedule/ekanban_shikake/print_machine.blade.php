@@ -47,13 +47,15 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label for="filter_conveyor" class="col-sm-3 col-form-label">Conveyor: <span class="text-danger">*</span></label>
+                                    <label for="filter_cutoff" class="col-sm-3 col-form-label">Cut Off: <span class="text-danger">*</span></label>
                                     <div class="col-sm-9">
-                                        <select class="form-control select2" id="filter_conveyor" required>
-                                            <option value="">- Choose Conveyor -</option>
-                                            @foreach($conveyors as $conveyor)
-                                                <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
-                                            @endforeach
+                                        <select class="form-control select2" id="filter_cutoff">
+                                            <option value="">- Choose Cut Off -</option>
+                                            <option value="1">Cut Off 1</option>
+                                            <option value="2">Cut Off 2</option>
+                                            <option value="3">Cut Off 3</option>
+                                            <option value="4">Cut Off 4</option>
+                                            <option value="5">Cut Off 5</option>
                                         </select>
                                     </div>
                                 </div>
@@ -66,15 +68,18 @@
                                     <div class="col-sm-9">
                                         <select class="form-control select2" id="filter_machine" required>
                                             <option value="">- Choose Machine -</option>
+                                            @foreach($machines as $machine)
+                                                <option value="{{ $machine->machine }}">{{ $machine->machine }}</option>
+                                            @endforeach
                                         </select>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label for="filter_dates" class="col-sm-3 col-form-label">Dates:</label>
+                                    <label for="filter_date" class="col-sm-3 col-form-label">Date:</label>
                                     <div class="col-sm-9">
-                                        <input type="text" class="form-control" id="filter_dates" readonly placeholder="Select date range">
+                                        <input type="text" class="form-control" id="filter_date" readonly placeholder="Select date">
                                     </div>
                                 </div>
                             </div>
@@ -94,6 +99,22 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group row">
+                                    <label for="filter_print_status" class="col-sm-3 col-form-label">Print Status:</label>
+                                    <div class="col-sm-9">
+                                        <select class="form-control select2" id="filter_print_status">
+                                            <option value="all">All</option>
+                                            <option value="not_printed" selected>Not Printed</option>
+                                            <option value="printed">Already Printed</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
                                     <label class="col-sm-3 col-form-label">&nbsp;</label>
                                     <div class="col-sm-9">
                                         <button type="button" class="btn btn-info" id="btn-filter">
@@ -109,18 +130,20 @@
                     </form>
 
                     <div class="table-responsive">
-                        <table id="shikake-table" class="table table-bordered table-striped">
+                        <table id="shikake-table" class="table table-bordered table-striped" style="width:100%">
                             <thead>
                                 <tr>
                                     <th width="5%">Num.</th>
-                                    <th>Conveyor</th>
+                                    <th>Shikake No</th>
+                                    <th>Shikake Code</th>
                                     <th>Machine</th>
-                                    <th>Dates</th>
+                                    <th>Conveyor</th>
+                                    <th>Date</th>
                                     <th>Shift</th>
+                                    <th>Cut Off</th>
                                     <th>Assy</th>
-                                    <th>Listing</th>
-                                    <th>Pallet</th>
-                                    <th>W/D</th>
+                                    <th>Qty</th>
+                                    <th>Print Status</th>
                                     <th width="8%">#</th>
                                 </tr>
                             </thead>
@@ -151,13 +174,12 @@
                 allowClear: true
             });
 
-            // Initialize date range picker
-            var startDate = moment();
-            var endDate = moment();
+            // Initialize single date picker
+            var currentDate = moment();
 
-            $('#filter_dates').daterangepicker({
-                startDate: startDate,
-                endDate: endDate,
+            $('#filter_date').daterangepicker({
+                singleDatePicker: true,
+                startDate: currentDate,
                 locale: {
                     format: 'DD-MM-YYYY'
                 }
@@ -168,28 +190,55 @@
                 processing: true,
                 serverSide: true,
                 deferLoading: 0, // Don't load data on initialization
+                scrollX: true,
+                scrollCollapse: true,
+                fixedColumns: {
+                    leftColumns: 4,  // Freeze: Num, Shikake No, Shikake Code, Machine
+                    rightColumns: 1   // Freeze: Actions
+                },
                 ajax: {
                     url: "{{ route('schedule.ekanban-shikake.print-machine') }}",
                     data: function(d) {
-                        var dates = $('#filter_dates').data('daterangepicker');
+                        var date = $('#filter_date').data('daterangepicker');
                         d.area_id = $('#filter_area').val();
-                        d.conveyor_id = $('#filter_conveyor').val();
+                        d.cutoff = $('#filter_cutoff').val();
                         d.machine = $('#filter_machine').val();
-                        d.start_date = dates.startDate.format('YYYY-MM-DD');
-                        d.end_date = dates.endDate.format('YYYY-MM-DD');
+                        d.date = date.startDate.format('YYYY-MM-DD');
                         d.shift = $('#filter_shift').val();
+                        d.print_status = $('#filter_print_status').val();
                     }
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '5%' },
-                    { data: 'conveyor', name: 'conveyor', width: '12%' },
-                    { data: 'machine', name: 'machine', width: '12%' },
-                    { data: 'dates', name: 'dates', width: '10%' },
-                    { data: 'shift', name: 'shift', width: '8%' },
-                    { data: 'assy', name: 'assy', width: '15%' },
-                    { data: 'listing', name: 'listing', width: '8%' },
-                    { data: 'pallet', name: 'pallet', width: '8%' },
-                    { data: 'wd', name: 'wd', width: '10%' },
+                    { data: 'shikake_no', name: 'shikake_no', width: '10%' },
+                    { data: 'shikake_code', name: 'shikake_code', width: '10%' },
+                    { data: 'machine', name: 'machine', width: '8%' },
+                    { data: 'conveyor', name: 'conveyor', width: '8%' },
+                    { data: 'date', name: 'date', width: '8%' },
+                    { data: 'shift', name: 'shift', width: '6%' },
+                    { data: 'cutoff', name: 'cutoff', width: '6%' },
+                    { data: 'assy', name: 'assy', width: '12%' },
+                    { data: 'qty', name: 'qty', width: '6%' },
+                    { 
+                        data: 'print_status', 
+                        name: 'print_status',
+                        width: '10%',
+                        orderable: false,
+                        render: function(data, type, row) {
+                            if (row.is_printed) {
+                                var badge = '<span class="badge badge-success">Printed</span>';
+                                if (row.last_printed_at) {
+                                    badge += '<br><small>' + row.last_printed_at + '</small>';
+                                }
+                                if (row.print_count > 1) {
+                                    badge += '<br><small>(' + row.print_count + 'x)</small>';
+                                }
+                                return badge;
+                            } else {
+                                return '<span class="badge badge-warning">Not Printed</span>';
+                            }
+                        }
+                    },
                     { data: 'actions', name: 'actions', orderable: false, searchable: false, width: '8%' }
                 ],
                 pageLength: 100,
@@ -201,13 +250,12 @@
             $('#btn-filter').click(function() {
                 // Validate required filters
                 var machine = $('#filter_machine').val();
-                var conveyor = $('#filter_conveyor').val();
                 
-                if (!machine || !conveyor) {
+                if (!machine) {
                     Swal.fire({
                         icon: 'warning',
-                        title: 'Required Fields',
-                        text: 'Please select both Machine and Conveyor before filtering'
+                        title: 'Required Field',
+                        text: 'Please select Machine before filtering'
                     });
                     return;
                 }
@@ -217,34 +265,8 @@
 
             $('#btn-reset').click(function() {
                 $('.select2').val('').trigger('change');
-                $('#filter_machine').empty().append('<option value="">- Choose Machine -</option>');
-                $('#filter_dates').data('daterangepicker').setStartDate(moment());
-                $('#filter_dates').data('daterangepicker').setEndDate(moment());
+                $('#filter_date').data('daterangepicker').setStartDate(moment());
                 table.ajax.reload();
-            });
-
-            // Dynamic machine loading based on conveyor selection
-            $('#filter_conveyor').change(function() {
-                var conveyorId = $(this).val();
-                var machineSelect = $('#filter_machine');
-                
-                machineSelect.empty().append('<option value="">- Choose Machine -</option>');
-                
-                if (conveyorId) {
-                    $.ajax({
-                        url: "{{ route('schedule.ekanban-shikake.machines-by-conveyor') }}",
-                        type: 'GET',
-                        data: { conveyor_id: conveyorId },
-                        success: function(machines) {
-                            $.each(machines, function(index, machine) {
-                                machineSelect.append('<option value="' + machine.machine + '">' + machine.name + '</option>');
-                            });
-                        },
-                        error: function() {
-                            console.error('Failed to load machines');
-                        }
-                    });
-                }
             });
 
             $('#btn-refresh').click(function() {

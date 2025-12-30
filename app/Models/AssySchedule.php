@@ -23,6 +23,8 @@ class AssySchedule extends Model
         'snpa',
         'cutoff',
         'is_lock',
+        'verified_at',
+        'verified_by',
         'created_by',
         'updated_by',
     ];
@@ -40,6 +42,8 @@ class AssySchedule extends Model
         'snpa' => 'integer',
         'cutoff' => 'integer',
         'is_lock' => 'boolean',
+        'verified_at' => 'datetime',
+        'verified_by' => 'integer',
         'created_by' => 'integer',
         'updated_by' => 'integer',
     ];
@@ -74,5 +78,13 @@ class AssySchedule extends Model
     public function updater()
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    /**
+     * Get the user who verified the schedule
+     */
+    public function verifier()
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 }

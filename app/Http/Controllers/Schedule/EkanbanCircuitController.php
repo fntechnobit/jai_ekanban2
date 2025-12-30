@@ -11,6 +11,7 @@ use App\Services\EkanbanCircuitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
@@ -31,7 +32,6 @@ class EkanbanCircuitController extends Controller
     public function printMachine(Request $request)
     {
         $areas = MasterArea::orderBy('area')->get();
-        $conveyors = MasterConveyor::orderBy('conveyor')->get();
         $machines = MasterMachine::orderBy('machine')->get();
 
         if ($request->ajax()) {
@@ -39,7 +39,7 @@ class EkanbanCircuitController extends Controller
             return response()->json($data);
         }
 
-        return view('schedule.ekanban_circuit.print_machine', compact('areas', 'conveyors', 'machines'));
+        return view('schedule.ekanban_circuit.print_machine', compact('areas', 'machines'));
     }
 
     /**
@@ -153,7 +153,7 @@ class EkanbanCircuitController extends Controller
             }
 
             // Generate Barcode for machine (using cct_code or machine field)
-            $barcodeData = $circuit->machine ?? $circuit->cct_code ?? '';
+            $barcodeData = $circuit->barcode_mesin ?? '';
             if (!empty($barcodeData)) {
                 try {
                     $generator = new BarcodeGeneratorPNG();
@@ -168,6 +168,9 @@ class EkanbanCircuitController extends Controller
             }
         }
 
+        // Mark circuits as printed
+        $this->ekanbanCircuitService->markAsPrinted($ids, Auth::id());
+
         $html = view('schedule.ekanban_circuit.print_ticket', compact('circuits'))->render();
 
         return response()->json([
@@ -181,19 +184,13 @@ class EkanbanCircuitController extends Controller
      */
     public function getMachinesByConveyor(Request $request)
     {
-        $machines = DB::table('master_circuit')
-            ->whereNotNull('machine')
-            ->where('machine', '!=', '')
-            ->select('machine')
-            ->distinct()
-            ->orderBy('machine')
-            ->pluck('machine');
+        $machines = MasterMachine::orderBy('machine')->get();
 
         // Format for select dropdown
         $formattedMachines = $machines->map(function($machine) {
             return [
-                'machine' => $machine,
-                'name' => $machine
+                'machine' => $machine->machine,
+                'name' => $machine->machine
             ];
         });
 

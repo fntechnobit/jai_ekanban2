@@ -4,16 +4,20 @@ namespace App\Http\Controllers\Schedule;
 
 use App\Http\Controllers\Controller;
 use App\Models\MasterConveyor;
-use App\Models\AssySchedule;
-use App\Models\Listing;
+use App\Services\ScheduleVerificationService;
 use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 
 class ScheduleVerificationController extends Controller
 {
+    protected $scheduleVerificationService;
+
+    public function __construct(ScheduleVerificationService $scheduleVerificationService)
+    {
+        $this->scheduleVerificationService = $scheduleVerificationService;
+    }
+
     /**
      * Display the schedule verification page
      */
@@ -33,33 +37,7 @@ class ScheduleVerificationController extends Controller
         $endDate = $request->input('end_date');
         $conveyorId = $request->input('conveyor_id');
 
-        // Build query to get grouped data
-        $query = AssySchedule::with('conveyor')
-            ->select(
-                'conveyor_id',
-                DB::raw('DATE(schedule) as schedule_date'),
-                'shift',
-                DB::raw('GROUP_CONCAT(DISTINCT assy ORDER BY assy SEPARATOR ", ") as assy_list'),
-                DB::raw('SUM(qty) as total_listing'),
-                DB::raw('MAX(is_lock) as is_lock'),
-                DB::raw('MIN(id) as first_id')
-            )
-            ->groupBy('conveyor_id', 'schedule_date', 'shift');
-
-        // Apply filters
-        if ($startDate && $endDate) {
-            $query->whereBetween('schedule', [$startDate, $endDate]);
-        }
-
-        if ($conveyorId) {
-            $query->where('conveyor_id', $conveyorId);
-        }
-
-        $query->orderBy('schedule_date', 'asc')
-              ->orderBy('conveyor_id', 'asc')
-              ->orderBy('shift', 'asc');
-
-        $schedules = $query->get();
+        $schedules = $this->scheduleVerificationService->getDatatableQuery($startDate, $endDate, $conveyorId);
 
         return DataTables::of($schedules)
             ->addIndexColumn()
@@ -74,7 +52,6 @@ class ScheduleVerificationController extends Controller
             })
             ->addColumn('capacity', function ($schedule) {
                 if ($schedule->conveyor) {
-                    // Get the capacity per shift (assuming capacity is daily, divide by 2 for 2 shifts)
                     return $schedule->conveyor->capacity;
                 }
                 return 0;
@@ -92,14 +69,31 @@ class ScheduleVerificationController extends Controller
                 return '<span class="badge badge-danger">Pending</span>';
             })
             ->addColumn('action', function ($schedule) {
-                $verifyBtn = '<button type="button" class="btn btn-warning btn-sm btn-verify" 
-                    data-conveyor-id="' . $schedule->conveyor_id . '" 
-                    data-date="' . $schedule->schedule_date . '" 
-                    data-shift="' . $schedule->shift . '">
-                    <i class="fas fa-check"></i> Verify
-                </button>';
-                
-                return $verifyBtn;
+                if ($schedule->is_lock == 1) {
+                    // Show Detail and Unverify buttons for verified schedules
+                    return '
+                        <button type="button" class="btn btn-info btn-sm btn-detail" 
+                            data-conveyor-id="' . $schedule->conveyor_id . '" 
+                            data-date="' . $schedule->schedule_date . '" 
+                            data-shift="' . $schedule->shift . '">
+                            <i class="fas fa-eye"></i> Detail
+                        </button>
+                        <button type="button" class="btn btn-warning btn-sm btn-unverify" 
+                            data-conveyor-id="' . $schedule->conveyor_id . '" 
+                            data-date="' . $schedule->schedule_date . '" 
+                            data-shift="' . $schedule->shift . '">
+                            <i class="fas fa-unlock"></i> Unverify
+                        </button>
+                    ';
+                } else {
+                    // Show Verify button for pending schedules
+                    return '<button type="button" class="btn btn-success btn-sm btn-verify" 
+                        data-conveyor-id="' . $schedule->conveyor_id . '" 
+                        data-date="' . $schedule->schedule_date . '" 
+                        data-shift="' . $schedule->shift . '">
+                        <i class="fas fa-check"></i> Verify
+                    </button>';
+                }
             })
             ->rawColumns(['status', 'action'])
             ->make(true);
@@ -114,61 +108,27 @@ class ScheduleVerificationController extends Controller
         $date = $request->input('date');
         $shift = $request->input('shift');
 
-        // Get the conveyor
-        $conveyor = MasterConveyor::find($conveyorId);
-        
-        if (!$conveyor) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Conveyor not found'
-            ], 404);
+        $result = $this->scheduleVerificationService->getVerificationDetails($conveyorId, $date, $shift);
+
+        if (!$result['success']) {
+            return response()->json($result, 404);
         }
 
-        // Get all schedules for this conveyor, date, and shift
-        $schedules = AssySchedule::where('conveyor_id', $conveyorId)
-            ->whereDate('schedule', $date)
-            ->where('shift', $shift)
-            ->orderBy('cutoff', 'asc')
-            ->orderBy('seq', 'asc')
-            ->get();
+        return response()->json($result);
+    }
 
-        if ($schedules->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No schedules found'
-            ], 404);
-        }
+    /**
+     * Get available assy data for drag and drop
+     */
+    public function availableAssyData(Request $request)
+    {
+        $conveyorId = $request->input('conveyor_id');
+        $date = $request->input('date');
+        $shift = $request->input('shift');
 
-        // Group by cut off
-        $cutOffs = $schedules->groupBy('cutoff')->map(function ($items, $cutoff) {
-            return [
-                'cutoff' => $cutoff,
-                'items' => $items->map(function ($item) {
-                    return [
-                        'id' => $item->id,
-                        'assy' => $item->assy,
-                        'qty' => $item->qty,
-                        'cutoff' => $item->cutoff
-                    ];
-                })->values()->toArray()
-            ];
-        })->values()->toArray();
+        $result = $this->scheduleVerificationService->getAvailableAssyData($conveyorId, $date, $shift);
 
-        // Get unique assy count
-        $assyCount = $schedules->pluck('assy')->unique()->count();
-        $totalListing = $schedules->sum('qty');
-
-        return response()->json([
-            'success' => true,
-            'conveyor_id' => $conveyorId,
-            'conveyor' => $conveyor->conveyor,
-            'date' => $date,
-            'shift' => $shift,
-            'capacity' => $conveyor->capacity,
-            'assy_count' => $assyCount,
-            'total_listing' => $totalListing,
-            'cut_offs' => $cutOffs
-        ]);
+        return response()->json($result);
     }
 
     /**
@@ -180,55 +140,76 @@ class ScheduleVerificationController extends Controller
             'conveyor_id' => 'required|integer',
             'date' => 'required|date',
             'shift' => 'required|integer',
-            'schedules' => 'required|array',
+            'schedules' => 'nullable|array',
             'schedules.*.id' => 'required|integer',
             'schedules.*.cutoff' => 'required|integer',
             'schedules.*.qty' => 'required|integer|min:1',
+            'new_items' => 'nullable|array',
+            'new_items.*.assy' => 'required|string',
+            'new_items.*.cutoff' => 'required|integer',
+            'new_items.*.qty' => 'required|integer|min:1',
         ]);
 
-        try {
-            DB::beginTransaction();
+        $result = $this->scheduleVerificationService->saveVerification(
+            $request->input('conveyor_id'),
+            $request->input('date'),
+            $request->input('shift'),
+            $request->input('schedules', []),
+            $request->input('new_items', [])
+        );
 
-            $schedules = $request->input('schedules');
-
-            foreach ($schedules as $scheduleData) {
-                AssySchedule::where('id', $scheduleData['id'])
-                    ->update([
-                        'cutoff' => $scheduleData['cutoff'],
-                        'qty' => $scheduleData['qty'],
-                        'updated_by' => Auth::id(),
-                        'updated_at' => now()
-                    ]);
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Schedule updated successfully'
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to save changes: ' . $e->getMessage()
-            ], 500);
+        if (!$result['success']) {
+            return response()->json($result, 500);
         }
+
+        return response()->json($result);
     }
 
     /**
-     * Verify a schedule (placeholder - functionality to be implemented later)
+     * Verify a schedule - lock it for specific conveyor, date and shift
      */
     public function verify(Request $request)
     {
-        // Placeholder for verify functionality
-        // Will be implemented later as per user requirement
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Verification functionality will be implemented later'
+        $request->validate([
+            'conveyor_id' => 'required|integer',
+            'date' => 'required|date',
+            'shift' => 'required|integer',
         ]);
+
+        $result = $this->scheduleVerificationService->verifySchedule(
+            $request->input('conveyor_id'),
+            $request->input('date'),
+            $request->input('shift')
+        );
+
+        if (!$result['success']) {
+            return response()->json($result, 500);
+        }
+
+        return response()->json($result);
+    }
+
+    /**
+     * Unverify a schedule - unlock it for specific conveyor, date and shift
+     */
+    public function unverify(Request $request)
+    {
+        $request->validate([
+            'conveyor_id' => 'required|integer',
+            'date' => 'required|date',
+            'shift' => 'required|integer',
+        ]);
+
+        $result = $this->scheduleVerificationService->unverifySchedule(
+            $request->input('conveyor_id'),
+            $request->input('date'),
+            $request->input('shift')
+        );
+
+        if (!$result['success']) {
+            return response()->json($result, 500);
+        }
+
+        return response()->json($result);
     }
 }

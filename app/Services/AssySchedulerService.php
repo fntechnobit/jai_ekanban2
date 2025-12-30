@@ -78,10 +78,10 @@ class AssySchedulerService
                 ->whereNotNull('assy')
                 ->where('assy', '!=', '')
                 ->where('qty', '>', 0)
+                ->orderBy('id', 'asc')
                 ->orderBy('listing_date_time', 'asc')
                 ->orderBy('seq', 'asc')
-                ->orderBy('assycode', 'asc')
-                ->orderBy('id', 'asc');
+                ->orderBy('assycode', 'asc');
 
             if ($conveyorId) {
                 $listingsQuery->where('conveyor', function($query) use ($conveyorId) {
