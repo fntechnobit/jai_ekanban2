@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Schedule;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\BarcodeHelper;
 use App\Models\MasterArea;
 use App\Models\MasterConveyor;
 use App\Models\MasterMachine;
@@ -10,12 +11,8 @@ use App\Models\AssySchedule;
 use App\Services\EkanbanCircuitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
-use chillerlan\QRCode\QRCode;
-use chillerlan\QRCode\QROptions;
-use Picqer\Barcode\BarcodeGeneratorPNG;
 use Illuminate\Support\Facades\Log;
 
 class EkanbanCircuitController extends Controller
@@ -55,43 +52,7 @@ class EkanbanCircuitController extends Controller
 
             // Generate QR codes and barcodes for each circuit
             foreach ($circuits as $circuit) {
-                // Generate QR Code for barcode_kanban
-                $qrText = !empty($circuit->barcode_kanban) ? $circuit->barcode_kanban : $circuit->cct_no;
-                if (!empty($qrText)) {
-                    try {
-                        $options = new QROptions([
-                            'outputType' => QRCode::OUTPUT_IMAGE_PNG,
-                            'scale' => 5,
-                            'imageTransparent' => false
-                        ]);
-                        $qrcode = new QRCode($options);
-                        $qrCodeDataUri = $qrcode->render($qrText);
-                        
-                        // Extract base64 data from data URI
-                        $qrCodeData = explode(',', $qrCodeDataUri)[1];
-                        $qrCodeBinary = base64_decode($qrCodeData);
-                        
-                        $qrPath = 'temp/qr_' . $circuit->id . '_' . time() . rand(1000, 9999) . '.png';
-                        Storage::disk('public')->put($qrPath, $qrCodeBinary);
-                        $circuit->qr_code_path = '/storage/' . $qrPath;
-                    } catch (\Exception $e) {
-                        Log::error('QR generation failed for circuit ' . $circuit->id . ': ' . $e->getMessage());
-                    }
-                }
-
-                // Generate Barcode for machine
-                $barcodeData = $circuit->machine ?? $circuit->cct_code ?? '';
-                if (!empty($barcodeData)) {
-                    try {
-                        $generator = new BarcodeGeneratorPNG();
-                        $barcode = $generator->getBarcode($barcodeData, $generator::TYPE_CODE_128, 3, 80);
-                        $barcodePath = 'temp/barcode_' . $circuit->id . '_' . time() . rand(1000, 9999) . '.png';
-                        Storage::disk('public')->put($barcodePath, $barcode);
-                        $circuit->barcode_path = '/storage/' . $barcodePath;
-                    } catch (\Exception $e) {
-                        Log::error('Barcode generation failed for circuit ' . $circuit->id . ': ' . $e->getMessage());
-                    }
-                }
+                BarcodeHelper::generateCircuitBarcodes($circuit, 'barcode_kanban', 'cct_no', 'machine', 'cct_code');
             }
 
             $html = view('schedule.ekanban_circuit.print_ticket', compact('circuits'))->render();
@@ -126,46 +87,7 @@ class EkanbanCircuitController extends Controller
         // Generate QR codes and barcodes for each circuit
         foreach ($circuits as $circuit) {
             Log::info('Processing circuit ID: ' . $circuit->id . ', CCT NO: ' . ($circuit->cct_no ?? 'N/A') . ', Barcode Kanban: ' . ($circuit->barcode_kanban ?? 'N/A'));
-            
-            // Generate QR Code for barcode_kanban
-            $qrText = !empty($circuit->barcode_kanban) ? $circuit->barcode_kanban : $circuit->cct_no;
-            if (!empty($qrText)) {
-                try {
-                    $options = new QROptions([
-                        'outputType' => QRCode::OUTPUT_IMAGE_PNG,
-                        'scale' => 5,
-                        'imageTransparent' => false
-                    ]);
-                    $qrcode = new QRCode($options);
-                    $qrCodeDataUri = $qrcode->render($qrText);
-                    
-                    // Extract base64 data from data URI
-                    $qrCodeData = explode(',', $qrCodeDataUri)[1];
-                    $qrCodeBinary = base64_decode($qrCodeData);
-                    
-                    $qrPath = 'temp/qr_' . $circuit->id . '_' . time() . rand(1000, 9999) . '.png';
-                    Storage::disk('public')->put($qrPath, $qrCodeBinary);
-                    $circuit->qr_code_path = '/storage/' . $qrPath;
-                    Log::info('QR code generated successfully: ' . $circuit->qr_code_path);
-                } catch (\Exception $e) {
-                    Log::error('QR generation failed for circuit ' . $circuit->id . ': ' . $e->getMessage());
-                }
-            }
-
-            // Generate Barcode for machine (using cct_code or machine field)
-            $barcodeData = $circuit->barcode_mesin ?? '';
-            if (!empty($barcodeData)) {
-                try {
-                    $generator = new BarcodeGeneratorPNG();
-                    $barcode = $generator->getBarcode($barcodeData, $generator::TYPE_CODE_128, 3, 80);
-                    $barcodePath = 'temp/barcode_' . $circuit->id . '_' . time() . rand(1000, 9999) . '.png';
-                    Storage::disk('public')->put($barcodePath, $barcode);
-                    $circuit->barcode_path = '/storage/' . $barcodePath;
-                    Log::info('Barcode generated successfully: ' . $circuit->barcode_path);
-                } catch (\Exception $e) {
-                    Log::error('Barcode generation failed for circuit ' . $circuit->id . ': ' . $e->getMessage());
-                }
-            }
+            BarcodeHelper::generateCircuitBarcodes($circuit);
         }
 
         // Mark circuits as printed

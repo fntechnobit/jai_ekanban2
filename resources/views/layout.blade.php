@@ -134,6 +134,9 @@
 <!-- SweetAlert -->
 <script src="{{ url('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
 <script>
 // Setup AJAX CSRF token
 $.ajaxSetup({

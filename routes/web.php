@@ -29,6 +29,7 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/printing-trend', [DashboardController::class, 'getPrintingTrendData'])->name('dashboard.printing-trend');
 
     // System Module Routes
     Route::prefix('system')->name('system.')->group(function () {
