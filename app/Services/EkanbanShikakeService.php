@@ -221,7 +221,7 @@ class EkanbanShikakeService
         $query->where('master_shikake.machine', $request->machine);
 
         if ($request->filled('area_id')) {
-            $query->where('assy_schedule.area_id', $request->area_id);
+            $query->where('master_conveyor.master_area_id', $request->area_id);
         }
 
         if ($request->filled('cutoff')) {

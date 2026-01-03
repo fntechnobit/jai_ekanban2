@@ -88,9 +88,34 @@ class ScheduleVerificationService
             ];
         })->values()->toArray();
 
+        // Always ensure Cut Off 5 exists
+        $hasCutOff5 = false;
+        foreach ($cutOffs as $co) {
+            if ($co['cutoff'] == 5) {
+                $hasCutOff5 = true;
+                break;
+            }
+        }
+        
+        if (!$hasCutOff5) {
+            $cutOffs[] = [
+                'cutoff' => 5,
+                'items' => []
+            ];
+        }
+        
+        // Sort by cutoff
+        usort($cutOffs, function($a, $b) {
+            return $a['cutoff'] - $b['cutoff'];
+        });
+
         // Get unique assy count
         $assyCount = $schedules->pluck('assy')->unique()->count();
         $totalListing = $schedules->sum('qty');
+        
+        // Calculate Cut Off 5 capacity (0.875 x capacity per normal CO)
+        $normalCutOffCapacity = $conveyor->capacity / 4;
+        $cutOff5Capacity = round($normalCutOffCapacity * 0.875, 2);
 
         return [
             'success' => true,
@@ -99,6 +124,8 @@ class ScheduleVerificationService
             'date' => $date,
             'shift' => $shift,
             'capacity' => $conveyor->capacity,
+            'normal_cutoff_capacity' => round($normalCutOffCapacity, 2),
+            'cutoff5_capacity' => $cutOff5Capacity,
             'assy_count' => $assyCount,
             'total_listing' => $totalListing,
             'cut_offs' => $cutOffs

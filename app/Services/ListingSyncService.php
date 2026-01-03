@@ -25,7 +25,7 @@ class ListingSyncService
 
             // Fetch data from mysql_listing
             $listings = Listing::whereBetween('time', [$startDate, $endDate])
-                ->orderBy('id', 'desc')
+                ->orderBy('time', 'desc')
                 ->get();
 
             $syncedCount = 0;

@@ -280,8 +280,9 @@ class EkanbanCircuitService
             $query->where('assy_schedule.cutoff', $request->cutoff);
         }
 
+        // Area filter (through conveyor's master_area_id)
         if ($request->filled('area_id')) {
-            $query->where('assy_schedule.area_id', $request->area_id);
+            $query->where('master_conveyor.master_area_id', $request->area_id);
         }
 
         // Single date filter
