@@ -72,12 +72,27 @@ class AssySchedulerService
             }
 
             // Step 3: Get fresh listing data from listing_stage for the date range
+            // Skip listings that already have locked schedules (matching SP logic: NOT EXISTS verified)
             $listingsQuery = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])
                 ->whereNotNull('assycode')
                 ->where('assycode', '!=', '')
                 ->whereNotNull('assy')
                 ->where('assy', '!=', '')
                 ->where('qty', '>', 0)
+                ->whereNotExists(function ($query) {
+                    $query->select(DB::raw(1))
+                        ->from('assy_schedule')
+                        ->whereColumn('assy_schedule.schedule', DB::raw('DATE(listing_stage.listing_date_time)'))
+                        ->whereColumn('assy_schedule.assycode', 'listing_stage.assycode')
+                        ->whereColumn('assy_schedule.assy', 'listing_stage.assy')
+                        ->whereExists(function ($subQuery) {
+                            $subQuery->select(DB::raw(1))
+                                ->from('master_conveyor')
+                                ->whereColumn('master_conveyor.id', 'assy_schedule.conveyor_id')
+                                ->whereColumn('master_conveyor.conveyor', 'listing_stage.conveyor');
+                        })
+                        ->where('assy_schedule.is_lock', '!=', 0);
+                })
                 ->orderBy('id', 'asc')
                 ->orderBy('listing_date_time', 'asc')
                 ->orderBy('seq', 'asc')
@@ -151,30 +166,46 @@ class AssySchedulerService
                     $shiftLockStatus
                 );
 
-                // Step 8: Process each shift separately (cutoffs 1-4)
-                foreach ($shiftCapacities as $shift => $cutoffCapacities) {
-                    // Skip locked shifts - they already have verified schedules
-                    if (isset($shiftLockStatus[$shift]) && $shiftLockStatus[$shift]) {
-                        continue;
-                    }
-
-                    // Allocate listings to this shift using cutoff system
+                // Step 8: Process shifts SEQUENTIALLY (S1 first, then S2) - matching SP logic
+                // Process Shift 1 cutoffs 1-4 first
+                if (!($shiftLockStatus[1] ?? false) && isset($shiftCapacities[1])) {
                     $allocationResult = $this->listingAllocator->allocateToShift(
                         $groupListings,
-                        $cutoffCapacities,
-                        $shift,
+                        $shiftCapacities[1],
+                        1,
                         $conveyor->id,
                         $scheduleDate->format('Y-m-d')
                     );
+                    $schedulesToCreate = array_merge($schedulesToCreate, $allocationResult['schedules']);
+                }
 
+                // Check if there's remaining quantity before processing Shift 2
+                $remainingQty = $groupListings->sum('rem_qty');
+                if ($remainingQty === 0) {
+                    // No remaining listings, skip to next conveyor group
+                    continue;
+                }
+
+                // Process Shift 2 cutoffs 1-4 (only if maxShifts >= 2)
+                if ($maxShifts >= 2 && !($shiftLockStatus[2] ?? false) && isset($shiftCapacities[2])) {
+                    $allocationResult = $this->listingAllocator->allocateToShift(
+                        $groupListings,
+                        $shiftCapacities[2],
+                        2,
+                        $conveyor->id,
+                        $scheduleDate->format('Y-m-d')
+                    );
                     $schedulesToCreate = array_merge($schedulesToCreate, $allocationResult['schedules']);
                 }
 
                 // Step 9: Handle overflow (cutoff 5) for remaining quantities
+                // Using SP formula: S1 cap = FLOOR(0.875 * (capacity / 4))
                 $overflowResult = $this->listingAllocator->allocateOverflow(
                     $groupListings,
                     $shiftLockStatus,
                     $maxShifts,
+                    $conveyor->shift_start ?? 1,
+                    $shiftCapacity,
                     $conveyor->id,
                     $scheduleDate->format('Y-m-d')
                 );
