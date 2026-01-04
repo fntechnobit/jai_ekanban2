@@ -18,18 +18,26 @@
                 <div class="card-body">
                     <!-- Filters -->
                     <div class="row mb-3">
-                        <div class="col-md-5">
+                        <div class="col-md-4">
                             <label for="filter_dates">Dates:</label>
                             <input type="text" class="form-control" id="filter_dates" readonly
                                    placeholder="Select date range">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="filter_conveyor_id">Conveyor:</label>
                             <select class="form-control select2" id="filter_conveyor_id" style="width: 100%;">
                                 <option value="">- All Conveyor -</option>
                                 @foreach($conveyors as $conveyor)
                                     <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
                                 @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="filter_status">Status:</label>
+                            <select class="form-control" id="filter_status" style="width: 100%;">
+                                <option value="">- All -</option>
+                                <option value="verified">Verified</option>
+                                <option value="pending">Pending</option>
                             </select>
                         </div>
                         <div class="col-md-3">

@@ -6,10 +6,10 @@ use App\Models\MasterShikake;
 use App\Models\MasterConveyor;
 use App\Models\MasterAssy;
 use App\Models\MasterShikakeAssy;
+use App\Helpers\ImportHelper;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
 
 class MasterShikakeImport
 {
@@ -57,7 +57,7 @@ class MasterShikakeImport
             // Get assy columns (after column AP which is index 41)
             $assyColumns = [];
             for ($col = 42; $col < count($headerRow); $col++) {
-                $assyName = $this->cleanValue($headerRow[$col]);
+                $assyName = ImportHelper::cleanValue($headerRow[$col]);
                 if ($assyName) {
                     $assyColumns[$col] = $assyName;
                 }
@@ -174,7 +174,7 @@ class MasterShikakeImport
             $expectedHeader = $expectedHeaders[$i];
             
             if (strcasecmp($uploadedHeader, $expectedHeader) !== 0) {
-                $columnLetter = $this->numberToColumnLetter($i + 1);
+                $columnLetter = ImportHelper::numberToColumnLetter($i + 1);
                 $mismatches[] = "Column {$columnLetter}: Expected '{$expectedHeader}', found '{$uploadedHeader}'";
             }
         }
@@ -209,7 +209,7 @@ class MasterShikakeImport
     protected function processAssyRelationships($shikake, $rowData, $assyColumns)
     {
         foreach ($assyColumns as $colIndex => $assyName) {
-            $value = $this->cleanValue($rowData[$colIndex] ?? null);
+            $value = ImportHelper::cleanValue($rowData[$colIndex] ?? null);
             
             // Only process if value is "1"
             if ($value === '1' || $value === 1) {
@@ -233,86 +233,51 @@ class MasterShikakeImport
         // Map Excel columns to database fields based on Template_Shikake.xlsx structure
         return [
             'conveyor_id' => $this->conveyorId,
-            'conveyor' => $this->cleanValue($rowData[0] ?? null),           // Column A
+            'conveyor' => ImportHelper::cleanValue($rowData[0] ?? null),           // Column A
             'process' => $this->process,
-            'shikake_no' => $this->cleanValue($rowData[1] ?? null),         // Column B
-            'family' => $this->cleanValue($rowData[2] ?? null),             // Column C
-            'qty' => $this->cleanNumeric($rowData[3] ?? null),              // Column D
-            'issue' => $this->cleanValue($rowData[4] ?? null),              // Column E
-            'machine' => $this->cleanValue($rowData[5] ?? null),            // Column F
-            'sequence' => $this->cleanNumeric($rowData[6] ?? null),         // Column G
-            'barcode_kanban' => $this->cleanValue($rowData[7] ?? null),     // Column H
-            'released_date' => $this->cleanDate($rowData[8] ?? null),       // Column I
-            'released_note' => $this->cleanValue($rowData[9] ?? null),      // Column J
-            'store' => $this->cleanValue($rowData[10] ?? null),             // Column K
-            'barcode_mesin' => $this->cleanValue($rowData[11] ?? null),     // Column L
-            'address' => $this->cleanValue($rowData[12] ?? null),           // Column M
-            'cct_a' => $this->cleanValue($rowData[13] ?? null),             // Column N
-            'address_a' => $this->cleanValue($rowData[14] ?? null),         // Column O
-            'cct_b' => $this->cleanValue($rowData[15] ?? null),             // Column P
-            'address_b' => $this->cleanValue($rowData[16] ?? null),         // Column Q
-            'cct_c' => $this->cleanValue($rowData[17] ?? null),             // Column R
-            'address_c' => $this->cleanValue($rowData[18] ?? null),         // Column S
-            'cct_4' => $this->cleanValue($rowData[19] ?? null),             // Column T
-            'address_4' => $this->cleanValue($rowData[20] ?? null),         // Column U
-            'cct_5' => $this->cleanValue($rowData[21] ?? null),             // Column V
-            'address_5' => $this->cleanValue($rowData[22] ?? null),         // Column W
-            'cct_6' => $this->cleanValue($rowData[23] ?? null),             // Column X
-            'address_6' => $this->cleanValue($rowData[24] ?? null),         // Column Y
-            'cct_7' => $this->cleanValue($rowData[25] ?? null),             // Column Z
-            'address_7' => $this->cleanValue($rowData[26] ?? null),         // Column AA
-            'barcode_proses' => $this->cleanValue($rowData[27] ?? null),    // Column AB
-            'barcode_navigasi' => $this->cleanValue($rowData[28] ?? null),  // Column AC
-            'dies' => $this->cleanValue($rowData[29] ?? null),              // Column AD
-            'jumlah_kombinasi' => $this->cleanNumeric($rowData[30] ?? null), // Column AE
-            'blade' => $this->cleanValue($rowData[31] ?? null),             // Column AF
-            't01' => $this->cleanValue($rowData[32] ?? null),               // Column AG
-            't02' => $this->cleanValue($rowData[33] ?? null),               // Column AH
-            't03' => $this->cleanValue($rowData[34] ?? null),               // Column AI
-            't04' => $this->cleanValue($rowData[35] ?? null),               // Column AJ
-            't05' => $this->cleanValue($rowData[36] ?? null),               // Column AK
-            't06' => $this->cleanValue($rowData[37] ?? null),               // Column AL
-            't07' => $this->cleanValue($rowData[38] ?? null),               // Column AM
-            't08' => $this->cleanValue($rowData[39] ?? null),               // Column AN
-            't09' => $this->cleanValue($rowData[40] ?? null),               // Column AO
-            'joint' => $this->cleanValue($rowData[41] ?? null),             // Column AP
+            'shikake_no' => ImportHelper::cleanValue($rowData[1] ?? null),         // Column B
+            'family' => ImportHelper::cleanValue($rowData[2] ?? null),             // Column C
+            'qty' => ImportHelper::cleanNumeric($rowData[3] ?? null),              // Column D
+            'issue' => ImportHelper::cleanValue($rowData[4] ?? null),              // Column E
+            'machine' => ImportHelper::cleanValue($rowData[5] ?? null),            // Column F
+            'sequence' => ImportHelper::cleanNumeric($rowData[6] ?? null),         // Column G
+            'barcode_kanban' => ImportHelper::cleanValue($rowData[7] ?? null),     // Column H
+            'released_date' => ImportHelper::cleanDate($rowData[8] ?? null),       // Column I
+            'released_note' => ImportHelper::cleanValue($rowData[9] ?? null),      // Column J
+            'store' => ImportHelper::cleanValue($rowData[10] ?? null),             // Column K
+            'barcode_mesin' => ImportHelper::cleanValue($rowData[11] ?? null),     // Column L
+            'address' => ImportHelper::cleanValue($rowData[12] ?? null),           // Column M
+            'cct_a' => ImportHelper::cleanValue($rowData[13] ?? null),             // Column N
+            'address_a' => ImportHelper::cleanValue($rowData[14] ?? null),         // Column O
+            'cct_b' => ImportHelper::cleanValue($rowData[15] ?? null),             // Column P
+            'address_b' => ImportHelper::cleanValue($rowData[16] ?? null),         // Column Q
+            'cct_c' => ImportHelper::cleanValue($rowData[17] ?? null),             // Column R
+            'address_c' => ImportHelper::cleanValue($rowData[18] ?? null),         // Column S
+            'cct_4' => ImportHelper::cleanValue($rowData[19] ?? null),             // Column T
+            'address_4' => ImportHelper::cleanValue($rowData[20] ?? null),         // Column U
+            'cct_5' => ImportHelper::cleanValue($rowData[21] ?? null),             // Column V
+            'address_5' => ImportHelper::cleanValue($rowData[22] ?? null),         // Column W
+            'cct_6' => ImportHelper::cleanValue($rowData[23] ?? null),             // Column X
+            'address_6' => ImportHelper::cleanValue($rowData[24] ?? null),         // Column Y
+            'cct_7' => ImportHelper::cleanValue($rowData[25] ?? null),             // Column Z
+            'address_7' => ImportHelper::cleanValue($rowData[26] ?? null),         // Column AA
+            'barcode_proses' => ImportHelper::cleanValue($rowData[27] ?? null),    // Column AB
+            'barcode_navigasi' => ImportHelper::cleanValue($rowData[28] ?? null),  // Column AC
+            'dies' => ImportHelper::cleanValue($rowData[29] ?? null),              // Column AD
+            'jumlah_kombinasi' => ImportHelper::cleanNumeric($rowData[30] ?? null), // Column AE
+            'blade' => ImportHelper::cleanValue($rowData[31] ?? null),             // Column AF
+            't01' => ImportHelper::cleanValue($rowData[32] ?? null),               // Column AG
+            't02' => ImportHelper::cleanValue($rowData[33] ?? null),               // Column AH
+            't03' => ImportHelper::cleanValue($rowData[34] ?? null),               // Column AI
+            't04' => ImportHelper::cleanValue($rowData[35] ?? null),               // Column AJ
+            't05' => ImportHelper::cleanValue($rowData[36] ?? null),               // Column AK
+            't06' => ImportHelper::cleanValue($rowData[37] ?? null),               // Column AL
+            't07' => ImportHelper::cleanValue($rowData[38] ?? null),               // Column AM
+            't08' => ImportHelper::cleanValue($rowData[39] ?? null),               // Column AN
+            't09' => ImportHelper::cleanValue($rowData[40] ?? null),               // Column AO
+            'joint' => ImportHelper::cleanValue($rowData[41] ?? null),             // Column AP
             'created_by' => Auth::id(),
         ];
-    }
-
-    protected function cleanValue($value)
-    {
-        if (is_null($value) || $value === '') {
-            return null;
-        }
-        return trim((string) $value);
-    }
-
-    protected function cleanNumeric($value)
-    {
-        if (is_null($value) || $value === '') {
-            return null;
-        }
-        return is_numeric($value) ? (int) $value : null;
-    }
-
-    protected function cleanDate($value)
-    {
-        if (is_null($value) || $value === '') {
-            return null;
-        }
-
-        try {
-            // Handle Excel date serial numbers
-            if (is_numeric($value)) {
-                return Date::excelToDateTimeObject($value)->format('Y-m-d');
-            }
-            
-            // Handle string dates
-            return date('Y-m-d', strtotime($value));
-        } catch (\Exception $e) {
-            return null;
-        }
     }
 
     public function getErrors()

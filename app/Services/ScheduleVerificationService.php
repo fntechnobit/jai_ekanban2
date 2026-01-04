@@ -13,7 +13,7 @@ class ScheduleVerificationService
     /**
      * Get datatable query for schedule verification
      */
-    public function getDatatableQuery($startDate = null, $endDate = null, $conveyorId = null)
+    public function getDatatableQuery($startDate = null, $endDate = null, $conveyorId = null, $status = null)
     {
         $query = AssySchedule::with('conveyor')
             ->select(
@@ -34,6 +34,13 @@ class ScheduleVerificationService
 
         if ($conveyorId) {
             $query->where('conveyor_id', $conveyorId);
+        }
+
+        // Filter by status
+        if ($status === 'verified') {
+            $query->having('is_lock', '=', 1);
+        } elseif ($status === 'pending') {
+            $query->having('is_lock', '=', 0);
         }
 
         $query->orderBy('schedule_date', 'asc')

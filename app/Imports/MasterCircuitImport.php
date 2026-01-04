@@ -6,10 +6,10 @@ use App\Models\MasterCircuit;
 use App\Models\MasterConveyor;
 use App\Models\MasterAssy;
 use App\Models\MasterCircuitAssy;
+use App\Helpers\ImportHelper;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
 
 class MasterCircuitImport
 {
@@ -55,7 +55,7 @@ class MasterCircuitImport
             // Get assy columns (after column AR/T06 which is index 43)
             $assyColumns = [];
             for ($col = 44; $col < count($headerRow); $col++) {
-                $assyName = $this->cleanValue($headerRow[$col]);
+                $assyName = ImportHelper::cleanValue($headerRow[$col]);
                 if ($assyName) {
                     $assyColumns[$col] = $assyName;
                 }
@@ -182,7 +182,7 @@ class MasterCircuitImport
             $expectedHeader = $expectedHeaders[$i];
             
             if (strcasecmp($uploadedHeader, $expectedHeader) !== 0) {
-                $columnLetter = $this->numberToColumnLetter($i + 1);
+                $columnLetter = ImportHelper::numberToColumnLetter($i + 1);
                 $mismatches[] = "Column {$columnLetter}: Expected '{$expectedHeader}', found '{$uploadedHeader}'";
             }
         }
@@ -217,7 +217,7 @@ class MasterCircuitImport
     protected function processAssyRelationships($circuit, $rowData, $assyColumns)
     {
         foreach ($assyColumns as $colIndex => $assyName) {
-            $value = $this->cleanValue($rowData[$colIndex] ?? null);
+            $value = ImportHelper::cleanValue($rowData[$colIndex] ?? null);
             
             // Only process if value is "1"
             if ($value === '1' || $value === 1) {
@@ -241,111 +241,52 @@ class MasterCircuitImport
         // Map Excel columns to database fields based on Template_Cutting.xlsx structure
         return [
             'conveyor_id' => $this->conveyorId,
-            'conveyor' => $this->cleanValue($rowData[0] ?? null),        // Column A - Conveyor
-            'cct_no' => $this->cleanValue($rowData[1] ?? null),          // Column B - CCT No.
-            'family' => $this->cleanValue($rowData[2] ?? null),          // Column C - Family
-            'qty' => $this->cleanNumeric($rowData[3] ?? null),           // Column D - Qty.
-            'issue' => $this->cleanValue($rowData[4] ?? null),           // Column E - Issue
-            'machine' => $this->cleanValue($rowData[5] ?? null),         // Column F - Machine
-            'sequence' => $this->cleanValue($rowData[6] ?? null),        // Column G - Sequence
-            'barcode_kanban' => $this->cleanValue($rowData[7] ?? null),  // Column H - Barcode Kanban
-            'released_date' => $this->cleanDate($rowData[8] ?? null),    // Column I - Released Date
-            'released_note' => $this->cleanValue($rowData[9] ?? null),   // Column J - Released Note
-            'cust_no' => $this->cleanValue($rowData[10] ?? null),        // Column K - Cust No.
-            'barcode_mesin' => $this->cleanValue($rowData[11] ?? null),  // Column L - Barcode Mesin
-            'address' => $this->cleanValue($rowData[12] ?? null),        // Column M - Address
-            'cct_code' => $this->cleanValue($rowData[13] ?? null),       // Column N - CCT Code
-            'kind' => $this->cleanValue($rowData[14] ?? null),           // Column O - Kind
-            'size' => $this->cleanValue($rowData[15] ?? null),           // Column P - Size
-            'col' => $this->cleanValue($rowData[16] ?? null),            // Column Q - Col
-            'cl' => $this->cleanValue($rowData[17] ?? null),             // Column R - C/L
-            'terminal_1' => $this->cleanValue($rowData[18] ?? null),     // Column S - Terminal 1
-            'note_1' => $this->cleanValue($rowData[19] ?? null),         // Column T - Note 1
-            'gold_1' => $this->cleanValue($rowData[20] ?? null),         // Column U - Gold 1
-            'strip_1' => $this->cleanValue($rowData[21] ?? null),        // Column V - Strip 1
-            'acc_1' => $this->cleanValue($rowData[22] ?? null),          // Column W - Acc. 1
-            'acc_1a' => $this->cleanValue($rowData[23] ?? null),         // Column X - Acc. 1A
-            'tube_1' => $this->cleanValue($rowData[24] ?? null),         // Column Y - Tube 1
-            'mark_1' => $this->cleanValue($rowData[25] ?? null),         // Column Z - Mark 1
-            'remark_1' => $this->cleanValue($rowData[26] ?? null),       // Column AA - Remark 1
-            'terminal_2' => $this->cleanValue($rowData[27] ?? null),     // Column AB - Terminal 2
-            'note_2' => $this->cleanValue($rowData[28] ?? null),         // Column AC - Note 2
-            'gold_2' => $this->cleanValue($rowData[29] ?? null),         // Column AD - Gold 2
-            'strip_2' => $this->cleanValue($rowData[30] ?? null),        // Column AE - Strip 2
-            'acc_2' => $this->cleanValue($rowData[31] ?? null),          // Column AF - Acc 2
-            'acc_2a' => $this->cleanValue($rowData[32] ?? null),         // Column AG - Acc 2A
-            'tube_2' => $this->cleanValue($rowData[33] ?? null),         // Column AH - Tube 2
-            'mark_2' => $this->cleanValue($rowData[34] ?? null),         // Column AI - Mark 2
-            'remark_2' => $this->cleanValue($rowData[35] ?? null),       // Column AJ - Remark 2
-            'ta' => $this->cleanValue($rowData[36] ?? null),             // Column AK - TA
-            'tb' => $this->cleanValue($rowData[37] ?? null),             // Column AL - TB
-            't01' => $this->cleanValue($rowData[38] ?? null),            // Column AM - T01
-            't02' => $this->cleanValue($rowData[39] ?? null),            // Column AN - T02
-            't03' => $this->cleanValue($rowData[40] ?? null),            // Column AO - T03
-            't04' => $this->cleanValue($rowData[41] ?? null),            // Column AP - T04
-            't05' => $this->cleanValue($rowData[42] ?? null),            // Column AQ - T05
-            't06' => $this->cleanValue($rowData[43] ?? null),            // Column AR - T06
+            'conveyor' => ImportHelper::cleanValue($rowData[0] ?? null),        // Column A - Conveyor
+            'cct_no' => ImportHelper::cleanValue($rowData[1] ?? null),          // Column B - CCT No.
+            'family' => ImportHelper::cleanValue($rowData[2] ?? null),          // Column C - Family
+            'qty' => ImportHelper::cleanNumeric($rowData[3] ?? null),           // Column D - Qty.
+            'issue' => ImportHelper::cleanValue($rowData[4] ?? null),           // Column E - Issue
+            'machine' => ImportHelper::cleanValue($rowData[5] ?? null),         // Column F - Machine
+            'sequence' => ImportHelper::cleanValue($rowData[6] ?? null),        // Column G - Sequence
+            'barcode_kanban' => ImportHelper::cleanValue($rowData[7] ?? null),  // Column H - Barcode Kanban
+            'released_date' => ImportHelper::cleanDate($rowData[8] ?? null),    // Column I - Released Date
+            'released_note' => ImportHelper::cleanValue($rowData[9] ?? null),   // Column J - Released Note
+            'cust_no' => ImportHelper::cleanValue($rowData[10] ?? null),        // Column K - Cust No.
+            'barcode_mesin' => ImportHelper::cleanValue($rowData[11] ?? null),  // Column L - Barcode Mesin
+            'address' => ImportHelper::cleanValue($rowData[12] ?? null),        // Column M - Address
+            'cct_code' => ImportHelper::cleanValue($rowData[13] ?? null),       // Column N - CCT Code
+            'kind' => ImportHelper::cleanValue($rowData[14] ?? null),           // Column O - Kind
+            'size' => ImportHelper::cleanValue($rowData[15] ?? null),           // Column P - Size
+            'col' => ImportHelper::cleanValue($rowData[16] ?? null),            // Column Q - Col
+            'cl' => ImportHelper::cleanValue($rowData[17] ?? null),             // Column R - C/L
+            'terminal_1' => ImportHelper::cleanValue($rowData[18] ?? null),     // Column S - Terminal 1
+            'note_1' => ImportHelper::cleanValue($rowData[19] ?? null),         // Column T - Note 1
+            'gold_1' => ImportHelper::cleanValue($rowData[20] ?? null),         // Column U - Gold 1
+            'strip_1' => ImportHelper::cleanValue($rowData[21] ?? null),        // Column V - Strip 1
+            'acc_1' => ImportHelper::cleanValue($rowData[22] ?? null),          // Column W - Acc. 1
+            'acc_1a' => ImportHelper::cleanValue($rowData[23] ?? null),         // Column X - Acc. 1A
+            'tube_1' => ImportHelper::cleanValue($rowData[24] ?? null),         // Column Y - Tube 1
+            'mark_1' => ImportHelper::cleanValue($rowData[25] ?? null),         // Column Z - Mark 1
+            'remark_1' => ImportHelper::cleanValue($rowData[26] ?? null),       // Column AA - Remark 1
+            'terminal_2' => ImportHelper::cleanValue($rowData[27] ?? null),     // Column AB - Terminal 2
+            'note_2' => ImportHelper::cleanValue($rowData[28] ?? null),         // Column AC - Note 2
+            'gold_2' => ImportHelper::cleanValue($rowData[29] ?? null),         // Column AD - Gold 2
+            'strip_2' => ImportHelper::cleanValue($rowData[30] ?? null),        // Column AE - Strip 2
+            'acc_2' => ImportHelper::cleanValue($rowData[31] ?? null),          // Column AF - Acc 2
+            'acc_2a' => ImportHelper::cleanValue($rowData[32] ?? null),         // Column AG - Acc 2A
+            'tube_2' => ImportHelper::cleanValue($rowData[33] ?? null),         // Column AH - Tube 2
+            'mark_2' => ImportHelper::cleanValue($rowData[34] ?? null),         // Column AI - Mark 2
+            'remark_2' => ImportHelper::cleanValue($rowData[35] ?? null),       // Column AJ - Remark 2
+            'ta' => ImportHelper::cleanValue($rowData[36] ?? null),             // Column AK - TA
+            'tb' => ImportHelper::cleanValue($rowData[37] ?? null),             // Column AL - TB
+            't01' => ImportHelper::cleanValue($rowData[38] ?? null),            // Column AM - T01
+            't02' => ImportHelper::cleanValue($rowData[39] ?? null),            // Column AN - T02
+            't03' => ImportHelper::cleanValue($rowData[40] ?? null),            // Column AO - T03
+            't04' => ImportHelper::cleanValue($rowData[41] ?? null),            // Column AP - T04
+            't05' => ImportHelper::cleanValue($rowData[42] ?? null),            // Column AQ - T05
+            't06' => ImportHelper::cleanValue($rowData[43] ?? null),            // Column AR - T06
             'created_by' => Auth::id(),
         ];
-    }
-
-    protected function cleanValue($value)
-    {
-        if (is_null($value) || $value === '') {
-            return null;
-        }
-        return trim((string) $value);
-    }
-
-    protected function cleanNumeric($value)
-    {
-        if (is_null($value) || $value === '') {
-            return null;
-        }
-        return is_numeric($value) ? (int) $value : null;
-    }
-
-    protected function cleanDate($value)
-    {
-        if (is_null($value) || $value === '') {
-            return null;
-        }
-
-        try {
-            // Handle Excel date serial numbers
-            if (is_numeric($value)) {
-                return Date::excelToDateTimeObject($value)->format('Y-m-d');
-            }
-            
-            // Handle string dates with multiple formats
-            $formats = [
-                'd/m/y',     // 31/12/25
-                'd/m/Y',     // 31/12/2025
-                'd-m-y',     // 31-12-25
-                'd-m-Y',     // 31-12-2025
-                'Y-m-d',     // 2025-12-31
-                'm/d/Y',     // 12/31/2025
-                'm/d/y',     // 12/31/25
-            ];
-
-            foreach ($formats as $format) {
-                $date = \DateTime::createFromFormat($format, $value);
-                if ($date !== false && $date->format($format) === $value) {
-                    return $date->format('Y-m-d');
-                }
-            }
-            
-            // Fallback to strtotime
-            $timestamp = strtotime($value);
-            if ($timestamp !== false) {
-                return date('Y-m-d', $timestamp);
-            }
-            
-            return null;
-        } catch (\Exception $e) {
-            \Log::warning("Failed to parse date: {$value}", ['error' => $e->getMessage()]);
-            return null;
-        }
     }
 
     public function getErrors()

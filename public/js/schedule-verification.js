@@ -42,6 +42,7 @@ $(function () {
                 d.start_date = dates.startDate.format('YYYY-MM-DD');
                 d.end_date = dates.endDate.format('YYYY-MM-DD');
                 d.conveyor_id = $('#filter_conveyor_id').val();
+                d.status = $('#filter_status').val();
             }
         },
         columns: [
@@ -69,6 +70,7 @@ $(function () {
     // Reset button
     $('#btn-reset').click(function() {
         $('#filter_conveyor_id').val('').trigger('change');
+        $('#filter_status').val('');
         $('#filter_dates').data('daterangepicker').setStartDate(moment().subtract(10, 'days'));
         $('#filter_dates').data('daterangepicker').setEndDate(moment().add(31, 'days'));
         table.ajax.reload();

@@ -36,8 +36,9 @@ class ScheduleVerificationController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
         $conveyorId = $request->input('conveyor_id');
+        $status = $request->input('status');
 
-        $schedules = $this->scheduleVerificationService->getDatatableQuery($startDate, $endDate, $conveyorId);
+        $schedules = $this->scheduleVerificationService->getDatatableQuery($startDate, $endDate, $conveyorId, $status);
 
         return DataTables::of($schedules)
             ->addIndexColumn()
