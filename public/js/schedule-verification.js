@@ -257,7 +257,19 @@ $(function () {
             shiftsHtml += '<div class="cutoff-drop-zone" data-cutoff="' + i + '" data-shift="' + data.shift + '">';
             
             items.forEach(function(item) {
-                shiftsHtml += '<div class="assy-item" data-id="' + item.id + '" data-cutoff="' + i + '" data-shift="' + data.shift + '"';
+                shiftsHtml += '<div class="assy-item" ';
+                shiftsHtml += 'data-id="' + item.id + '" ';
+                shiftsHtml += 'data-cutoff="' + item.cutoff + '" ';
+                shiftsHtml += 'data-shift="' + data.shift + '" ';
+                shiftsHtml += 'data-listing-id="' + (item.listing_id || 0) + '" ';
+                shiftsHtml += 'data-assy="' + (item.assy || '') + '" ';
+                shiftsHtml += 'data-assycode="' + (item.assycode || '') + '" ';
+                shiftsHtml += 'data-seq="' + (item.seq || 0) + '" ';
+                shiftsHtml += 'data-plt="' + (item.plt || 0) + '" ';
+                shiftsHtml += 'data-mode="' + (item.mode || 0) + '" ';
+                shiftsHtml += 'data-snp="' + (item.snp || 0) + '" ';
+                shiftsHtml += 'data-snpa="' + (item.snpa || 0) + '" ';
+                shiftsHtml += 'data-type="current"';
                 if (!readOnly) {
                     shiftsHtml += ' draggable="true"';
                 }
@@ -352,7 +364,20 @@ $(function () {
                             html += '<div class="available-drop-zone" data-cutoff="' + cutoffData.cutoff + '">';
                             
                             cutoffData.items.forEach(function(item) {
-                                html += '<div class="available-assy-item" data-id="' + item.id + '" data-assy="' + item.assy + '" data-cutoff="' + cutoffData.cutoff + '" data-date="' + date + '" draggable="true">';
+                                html += '<div class="available-assy-item" ';
+                                html += 'data-id="' + item.id + '" ';
+                                html += 'data-assy="' + item.assy + '" ';
+                                html += 'data-cutoff="' + cutoffData.cutoff + '" ';
+                                html += 'data-date="' + date + '" ';
+                                html += 'data-listing-id="' + (item.listing_id || 0) + '" ';
+                                html += 'data-assycode="' + (item.assycode || '') + '" ';
+                                html += 'data-seq="' + (item.seq || 0) + '" ';
+                                html += 'data-plt="' + (item.plt || 0) + '" ';
+                                html += 'data-mode="' + (item.mode || 0) + '" ';
+                                html += 'data-snp="' + (item.snp || 0) + '" ';
+                                html += 'data-snpa="' + (item.snpa || 0) + '" ';
+                                html += 'data-qty="' + item.qty + '" ';
+                                html += 'draggable="true">';
                                 html += '<div class="assy-code">' + item.assy + '</div>';
                                 html += '<div class="assy-qty">' + item.qty + ' pcs</div>';
                                 html += '</div>';
@@ -430,13 +455,36 @@ $(function () {
                 var newShift = $(this).data('shift');
                 
                 if (dragSource === 'available') {
-                    // Create new assy item from available
-                    var assyCode = draggedItem.data('assy');
-                    var assyDate = draggedItem.data('date');
-                    var sourceId = draggedItem.data('id');
-                    var sourceQty = draggedItem.find('.assy-qty').text().replace(' pcs', '').trim();
+                    // Create new assy item from available - copy all data
+                    var srcData = draggedItem.data();
+                    var assyCode = srcData.assy;
+                    var assyDate = srcData.date;
+                    var sourceId = srcData.id;
+                    var sourceQty = srcData.qty || draggedItem.find('.assy-qty').text().replace(' pcs', '').trim();
+                    var listingId = srcData.listingId || 0;
+                    var assycode = srcData.assycode || '';
+                    var seq = srcData.seq || 0;
+                    var plt = srcData.plt || 0;
+                    var mode = srcData.mode || 0;
+                    var snp = srcData.snp || 0;
+                    var snpa = srcData.snpa || 0;
                     
-                    var newItem = $('<div class="assy-item" data-id="new_' + Date.now() + '" data-cutoff="' + newCutOff + '" data-shift="' + newShift + '" data-assy="' + assyCode + '" data-source-date="' + assyDate + '" data-source-id="' + sourceId + '" draggable="true">' +
+                    var newItem = $('<div class="assy-item" ' +
+                        'data-id="new_' + Date.now() + '" ' +
+                        'data-cutoff="' + newCutOff + '" ' +
+                        'data-shift="' + newShift + '" ' +
+                        'data-assy="' + assyCode + '" ' +
+                        'data-assycode="' + assycode + '" ' +
+                        'data-source-date="' + assyDate + '" ' +
+                        'data-source-id="' + sourceId + '" ' +
+                        'data-type="available" ' +
+                        'data-listing-id="' + listingId + '" ' +
+                        'data-seq="' + seq + '" ' +
+                        'data-plt="' + plt + '" ' +
+                        'data-mode="' + mode + '" ' +
+                        'data-snp="' + snp + '" ' +
+                        'data-snpa="' + snpa + '" ' +
+                        'draggable="true">' +
                         '<div class="assy-code">' + assyCode + '</div>' +
                         '<input type="number" class="form-control form-control-sm assy-qty" value="' + sourceQty + '" min="1">' +
                         '</div>');
@@ -573,9 +621,47 @@ $(function () {
         var date = $('#verificationModal').data('date');
         var shift = $('#verificationModal').data('shift');
 
+        // Collect all cutoffs data from the modal
+        var cutoffs = [];
+        $('#shifts-container .cutoff-drop-zone').each(function() {
+            var cutoffNumber = $(this).data('cutoff');
+            var items = [];
+            
+            $(this).find('.assy-item').each(function() {
+                var itemData = $(this).data();
+                var qty = parseInt($(this).find('.assy-qty').val()) || 0;
+                
+                console.log('Item data:', itemData, 'qty:', qty);
+                
+                if (qty > 0) {
+                    items.push({
+                        id: itemData.id || 0,
+                        listing_id: itemData.listingId || 0,
+                        assy: itemData.assy || '',
+                        assycode: itemData.assycode || '',
+                        qty: qty,
+                        seq: itemData.seq || 0,
+                        plt: itemData.plt || 0,
+                        mode: itemData.mode || 0,
+                        snp: itemData.snp || 0,
+                        snpa: itemData.snpa || 0,
+                        type: itemData.type || 'current',
+                        source_id: itemData.sourceId || null
+                    });
+                }
+            });
+            
+            cutoffs.push({
+                cutoff: cutoffNumber,
+                items: items
+            });
+        });
+        
+        console.log('Cutoffs data being sent:', cutoffs);
+
         Swal.fire({
             title: 'Verify This Schedule?',
-            html: '<p>This will lock the schedule for:</p>' +
+            html: '<p>This will save any changes and lock the schedule for:</p>' +
                   '<ul style="text-align: left; display: inline-block;">' +
                   '<li><strong>Conveyor:</strong> ' + $('#modal-conveyor').text() + '</li>' +
                   '<li><strong>Date:</strong> ' + $('#modal-date').text() + '</li>' +
@@ -593,12 +679,16 @@ $(function () {
                 $.ajax({
                     url: routeUrls.verify,
                     type: 'POST',
-                    data: {
-                        _token: routeUrls.csrfToken,
+                    contentType: 'application/json',
+                    headers: {
+                        'X-CSRF-TOKEN': routeUrls.csrfToken
+                    },
+                    data: JSON.stringify({
                         conveyor_id: conveyorId,
                         date: date,
-                        shift: shift
-                    },
+                        shift: shift,
+                        cutoffs: cutoffs
+                    }),
                     beforeSend: function() {
                         $('#btn-verify-schedule').prop('disabled', true)
                             .html('<i class="fas fa-spinner fa-spin"></i> Verifying...');

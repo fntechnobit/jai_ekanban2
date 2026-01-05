@@ -171,16 +171,20 @@ class ScheduleVerificationController extends Controller
      */
     public function verify(Request $request)
     {
+        $data = $request->json()->all();
+        
         $request->validate([
             'conveyor_id' => 'required|integer',
             'date' => 'required|date',
             'shift' => 'required|integer',
+            'cutoffs' => 'nullable|array',
         ]);
 
         $result = $this->scheduleVerificationService->verifySchedule(
-            $request->input('conveyor_id'),
-            $request->input('date'),
-            $request->input('shift')
+            $data['conveyor_id'] ?? $request->input('conveyor_id'),
+            $data['date'] ?? $request->input('date'),
+            $data['shift'] ?? $request->input('shift'),
+            $data['cutoffs'] ?? $request->input('cutoffs', [])
         );
 
         if (!$result['success']) {

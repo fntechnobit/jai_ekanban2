@@ -6,6 +6,7 @@ use App\Models\AssySchedule;
 use App\Models\MasterConveyor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class ScheduleVerificationService
@@ -87,9 +88,16 @@ class ScheduleVerificationService
                 'items' => $items->map(function ($item) {
                     return [
                         'id' => $item->id,
+                        'listing_id' => $item->listing_id,
                         'assy' => $item->assy,
+                        'assycode' => $item->assycode,
                         'qty' => $item->qty,
-                        'cutoff' => $item->cutoff
+                        'cutoff' => $item->cutoff,
+                        'seq' => $item->seq,
+                        'plt' => $item->plt,
+                        'mode' => $item->mode,
+                        'snp' => $item->snp,
+                        'snpa' => $item->snpa,
                     ];
                 })->values()->toArray()
             ];
@@ -149,7 +157,7 @@ class ScheduleVerificationService
             ->where('schedule', $date)
             ->where('shift', $shift)
             ->where('is_lock', 0)
-            ->select('id', 'assy', 'qty', 'cutoff')
+            ->select('id', 'assy', 'qty', 'cutoff', 'listing_id', 'assycode', 'seq', 'plt', 'mode', 'snp', 'snpa')
             ->orderBy('cutoff')
             ->orderBy('assy')
             ->get();
@@ -162,7 +170,14 @@ class ScheduleVerificationService
                     return [
                         'id' => $item->id,
                         'assy' => $item->assy,
-                        'qty' => $item->qty
+                        'qty' => $item->qty,
+                        'listing_id' => $item->listing_id,
+                        'assycode' => $item->assycode,
+                        'seq' => $item->seq,
+                        'plt' => $item->plt,
+                        'mode' => $item->mode,
+                        'snp' => $item->snp,
+                        'snpa' => $item->snpa,
                     ];
                 })->values()
             ];
@@ -300,14 +315,171 @@ class ScheduleVerificationService
     }
 
     /**
-     * Verify schedule - lock the schedule for specific conveyor, date, and shift
+     * Verify schedule - save changes and lock the schedule for specific conveyor, date, and shift
      */
-    public function verifySchedule($conveyorId, $date, $shift)
+    public function verifySchedule($conveyorId, $date, $shift, $cutoffs = [])
     {
         try {
             DB::beginTransaction();
 
-            // Update all schedules for this conveyor, date, and shift
+            $date = Carbon::parse($date);
+
+            Log::info("verifySchedule called", [
+                'conveyor_id' => $conveyorId,
+                'date' => $date->format('Y-m-d'),
+                'shift' => $shift,
+                'cutoffs_count' => count($cutoffs),
+                'cutoffs' => $cutoffs
+            ]);
+
+            // Step 1: Save any pending changes if cutoffs data is provided
+            if (!empty($cutoffs)) {
+                // Get existing schedules keyed by ID to preserve original data
+                $existingSchedules = AssySchedule::where('conveyor_id', $conveyorId)
+                    ->whereDate('schedule', $date)
+                    ->where('shift', $shift)
+                    ->get()
+                    ->keyBy('id');
+
+                Log::info("Existing schedules found", [
+                    'count' => $existingSchedules->count(),
+                    'ids' => $existingSchedules->keys()->toArray()
+                ]);
+
+                // Delete existing schedules for this shift
+                if ($existingSchedules->isNotEmpty()) {
+                    AssySchedule::whereIn('id', $existingSchedules->keys()->toArray())->delete();
+                }
+
+                // Recreate schedules based on cutoffs data
+                foreach ($cutoffs as $cutoffData) {
+                    $cutoffNumber = (int) ($cutoffData['cutoff'] ?? 0);
+                    
+                    Log::info("Processing cutoff", [
+                        'cutoff' => $cutoffNumber,
+                        'items_count' => count($cutoffData['items'] ?? [])
+                    ]);
+                    
+                    if (!empty($cutoffData['items'])) {
+                        foreach ($cutoffData['items'] as $item) {
+                            // Handle items dragged from available
+                            $type = $item['type'] ?? 'current';
+                            $itemIdRaw = $item['id'] ?? 0;
+                            $itemId = is_numeric($itemIdRaw) ? (int) $itemIdRaw : 0;
+                            $sourceId = isset($item['source_id']) && !empty($item['source_id']) ? (int) $item['source_id'] : null;
+                            
+                            // Check if this is a new item from available (has source_id OR id starts with "new_")
+                            $isFromAvailable = ($type === 'available') || 
+                                               ($sourceId !== null) || 
+                                               (is_string($itemIdRaw) && strpos($itemIdRaw, 'new_') === 0);
+                            
+                            Log::info("Processing item", [
+                                'itemIdRaw' => $itemIdRaw,
+                                'itemId' => $itemId,
+                                'type' => $type,
+                                'source_id' => $sourceId,
+                                'isFromAvailable' => $isFromAvailable,
+                                'qty' => $item['qty'] ?? 0,
+                                'assy' => $item['assy'] ?? '',
+                                'found_in_existing' => $existingSchedules->has($itemId)
+                            ]);
+                            
+                            if ($isFromAvailable && $sourceId) {
+                                // Get source item to copy data from
+                                $sourceItem = AssySchedule::find($sourceId);
+                                
+                                if ($sourceItem) {
+                                    Log::info("Creating schedule from source", ['source_id' => $sourceId]);
+                                    
+                                    // Create new schedule from source
+                                    AssySchedule::create([
+                                        'schedule' => $date,
+                                        'conveyor_id' => $conveyorId,
+                                        'listing_id' => $sourceItem->listing_id,
+                                        'shift' => $shift,
+                                        'assycode' => $sourceItem->assycode,
+                                        'assy' => $sourceItem->assy,
+                                        'qty' => $item['qty'],
+                                        'cutoff' => $cutoffNumber,
+                                        'seq' => $sourceItem->seq ?? 0,
+                                        'plt' => $sourceItem->plt ?? 0,
+                                        'mode' => $sourceItem->mode ?? 0,
+                                        'snp' => $sourceItem->snp ?? 0,
+                                        'snpa' => $sourceItem->snpa ?? 0,
+                                        'created_by' => Auth::id(),
+                                        'updated_by' => Auth::id(),
+                                    ]);
+                                    
+                                    // Deduct quantity from source or delete if depleted
+                                    $this->deductSourceQuantity($sourceItem, $item['qty']);
+                                } else {
+                                    Log::warning("Source item not found", ['source_id' => $sourceId]);
+                                }
+                            } else {
+                                // Regular item - use original schedule data if available
+                                $originalSchedule = $existingSchedules->get($itemId);
+                                
+                                if ($originalSchedule) {
+                                    // Use data from original schedule
+                                    AssySchedule::create([
+                                        'schedule' => $date,
+                                        'conveyor_id' => $conveyorId,
+                                        'listing_id' => $originalSchedule->listing_id,
+                                        'shift' => $shift,
+                                        'assycode' => $originalSchedule->assycode,
+                                        'assy' => $originalSchedule->assy,
+                                        'qty' => $item['qty'], // Use possibly modified qty
+                                        'cutoff' => $cutoffNumber,
+                                        'seq' => $originalSchedule->seq ?? 0,
+                                        'plt' => $originalSchedule->plt ?? 0,
+                                        'mode' => $originalSchedule->mode ?? 0,
+                                        'snp' => $originalSchedule->snp ?? 0,
+                                        'snpa' => $originalSchedule->snpa ?? 0,
+                                        'created_by' => Auth::id(),
+                                        'updated_by' => Auth::id(),
+                                    ]);
+                                    Log::info("Created schedule from original", ['itemId' => $itemId]);
+                                } else {
+                                    // Fallback: try to find by listing_id
+                                    $listingId = (int) ($item['listing_id'] ?? 0);
+                                    $listingStage = $listingId ? \App\Models\ListingStage::find($listingId) : null;
+                                    
+                                    Log::info("Fallback to listing_stage", [
+                                        'listing_id' => $listingId,
+                                        'found' => $listingStage ? true : false
+                                    ]);
+                                    
+                                    if ($listingStage) {
+                                        AssySchedule::create([
+                                            'schedule' => $date,
+                                            'conveyor_id' => $conveyorId,
+                                            'listing_id' => $listingStage->id,
+                                            'shift' => $shift,
+                                            'assycode' => $listingStage->assycode,
+                                            'assy' => $listingStage->assy,
+                                            'qty' => $item['qty'],
+                                            'cutoff' => $cutoffNumber,
+                                            'seq' => $listingStage->seq ?? 0,
+                                            'plt' => $listingStage->plt ?? 0,
+                                            'mode' => $listingStage->mode ?? 0,
+                                            'snp' => $listingStage->snp ?? 0,
+                                            'snpa' => $listingStage->snpa ?? 0,
+                                            'created_by' => Auth::id(),
+                                            'updated_by' => Auth::id(),
+                                        ]);
+                                        Log::info("Created schedule from listing_stage", ['listing_id' => $listingId]);
+                                    } else {
+                                        Log::warning("Skipping item - no valid data found", ['item' => $item]);
+                                    }
+                                    // Skip items without valid data (same as saveManageData behavior)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Step 2: Lock all schedules for this conveyor, date, and shift
             $affected = AssySchedule::where('conveyor_id', $conveyorId)
                 ->whereDate('schedule', $date)
                 ->where('shift', $shift)
