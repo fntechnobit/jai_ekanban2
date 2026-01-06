@@ -1,97 +1,73 @@
-@extends('layout')
+@extends('layouts.master')
 
 @section('title', 'User Management')
 
-@section('content')
+@section('breadcrumb')
     <x-page-header menu-code="users" />
+@endsection
 
-    <section class="content">
-        <div class="container-fluid">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">User List</h3>
-                    <div class="card-tools">
-                        @if(auth()->user()->hasMenuPermission('users', 'can_create'))
-                            <button type="button" class="btn btn-primary btn-sm" id="btn-add">
-                                <i class="fas fa-plus"></i> Add User
-                            </button>
-                        @endif
-                    </div>
+@section('content')
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">User List</h5>
+                <div class="card-tools float-end">
+                    @if(auth()->user()->hasMenuPermission('users', 'can_create'))
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-add">
+                            <i class="fa-solid fa-plus"></i> Add User
+                        </button>
+                    @endif
                 </div>
-                <div class="card-body">
-                    <div class="card card-primary card-filter mb-4">
-                        <div class="card-body">
-                            <div class="row align-items-end">
-                                <div class="col-md-6 mb-3 mb-md-0">
-                                    <label for="filter-group" class="filter-label">User Group</label>
-                                    <select id="filter-group" class="filter-select" style="width: 100%;">
-                                        <option value="">All Groups</option>
-                                        @foreach($groups as $group)
-                                            <option value="{{ $group->id }}">{{ $group->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="filter-action text-left mt-3">
-                                <button class="btn btn-primary filter-btn" type="button" id="btn-filter">
-                                    <i class="fas fa-filter"></i> Apply Filter
-                                </button>
+            </div>
+            <div class="card-body">
+                <div class="card card-primary card-filter mb-4">
+                    <div class="card-body">
+                        <div class="row align-items-end">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <label for="filter-group" class="form-label filter-label">User Group</label>
+                                <select id="filter-group" class="form-select filter-select" style="width: 100%;">
+                                    <option value="">All Groups</option>
+                                    @foreach($groups as $group)
+                                        <option value="{{ $group->id }}">{{ $group->name }}</option>
+                                    @endforeach
+                                </select>
                             </div>
                         </div>
                     </div>
-                    <table id="users-table" class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th width="5%">No</th>
-                                <th>Name</th>
-                                <th>Username</th>
-                                <th>Email</th>
-                                <th>User Group</th>
-                                <th width="10%">Status</th>
-                                <th width="15%">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
                 </div>
+                <table id="users-table" class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th width="5%">No</th>
+                            <th>Name</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>User Group</th>
+                            <th width="10%">Status</th>
+                            <th width="15%">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
             </div>
         </div>
-    </section>
+    </div>
 
     @include('system.user.form')
 @endsection
 
-@push('styles')
-    <!-- DataTables -->
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
-    <!-- Select2 -->
-    <link rel="stylesheet" href="{{ asset('plugins/select2/css/select2.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
-@endpush
-
-@push('scripts')
-    <!-- DataTables -->
-    <script src="{{ asset('plugins/datatables/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
-    <!-- Select2 -->
-    <script src="{{ asset('plugins/select2/js/select2.full.min.js') }}"></script>
-    <!-- SweetAlert2 -->
-    <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
-
+@section('script')
     <script>
         $(function () {
             // Initialize Select2
             $('.select2').not('#filter-group').select2({
-                theme: 'bootstrap4',
+                theme: 'bootstrap-5',
                 dropdownParent: $('#userModal')
             });
 
             $('#filter-group').select2({
-                theme: 'bootstrap4',
+                theme: 'bootstrap-5',
                 dropdownParent: $('body'),
                 placeholder: 'All Groups',
                 allowClear: true,
@@ -125,16 +101,10 @@
                 ]
             });
 
-            $('#btn-filter').on('click', function () {
-                table.ajax.reload();
-                toggleCardState();
-            });
-
+            // Auto reload when filter changes
             $('#filter-group').on('change', function () {
                 toggleCardState();
-                if (!$('#btn-filter').is(':focus')) {
-                    table.ajax.reload();
-                }
+                table.ajax.reload();
             }).trigger('change');
 
             function toggleCardState() {
@@ -258,4 +228,4 @@
             });
         });
     </script>
-@endpush
+@endsection

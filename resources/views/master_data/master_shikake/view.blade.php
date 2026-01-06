@@ -1,22 +1,23 @@
-@extends('layout')
+@extends('layouts.master')
 
 @section('title', 'View Shikake Data')
 
-@section('content')
+@section('breadcrumb')
     <x-page-header menu-code="master_shikake" />
+@endsection
 
-    <section class="content">
-        <div class="container-fluid">
+@section('content')
+    <div class="container-fluid">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Shikake Detail</h3>
                     <div class="card-tools">
                         <a href="{{ route('master-data.master-shikake.index') }}" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> Back to List
+                            <i class="fa-solid fa-arrow-left"></i> Back to List
                         </a>
                         @if(auth()->user()->hasMenuPermission('master_shikake', 'can_update'))
                             <a href="{{ route('master-data.master-shikake.edit', $shikake->id) }}" class="btn btn-warning btn-sm">
-                                <i class="fas fa-edit"></i> Edit
+                                <i class="fa-solid fa-pen-to-square"></i> Edit
                             </a>
                         @endif
                     </div>
@@ -199,5 +200,5 @@
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 @endsection

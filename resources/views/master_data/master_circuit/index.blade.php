@@ -1,103 +1,85 @@
-@extends('layout')
+@extends('layouts.master')
 
 @section('title', 'Master Circuit')
 
-@section('content')
+@section('breadcrumb')
     <x-page-header menu-code="master_circuit" />
+@endsection
 
-    <section class="content">
-        <div class="container-fluid">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Master Circuit (Cutting) Data List</h3>
-                    <div class="card-tools">
-                        @if(auth()->user()->hasMenuPermission('master_circuit', 'can_create'))
-                            <button type="button" class="btn btn-primary btn-sm" id="btn-import">
-                                <i class="fas fa-upload"></i> Import/Upload Circuit
-                            </button>
-                        @endif
-                        @if(auth()->user()->hasMenuPermission('master_circuit', 'can_delete'))
-                            <button type="button" class="btn btn-danger btn-sm" id="btn-remove-data">
-                                <i class="fas fa-trash"></i> Remove Data
-                            </button>
-                        @endif
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- Filters -->
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label for="filter_area_id">Area * :</label>
-                            <select class="form-control select2" id="filter_area_id" style="width: 100%;">
-                                <option value="">- All Area -</option>
-                                @foreach($areas as $area)
-                                    <option value="{{ $area->id }}">{{ $area->area }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="filter_conveyor_id">Conveyor * :</label>
-                            <select class="form-control select2" id="filter_conveyor_id" style="width: 100%;">
-                                <option value="">- All Conveyor -</option>
-                                @foreach($conveyors as $conveyor)
-                                    <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-
-                    <table id="master-circuit-table" class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th width="5%">No</th>
-                                <th>Conveyor</th>
-                                <th>CCT No</th>
-                                <th>Family</th>
-                                <th>QTY</th>
-                                <th>Issue</th>
-                                <th>Machine</th>
-                                <th>Sequence</th>
-                                <th>Barcode Kanban</th>
-                                <th width="12%">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
+@section('content')
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Master Circuit (Cutting) Data List</h5>
+                <div class="card-tools float-end">
+                    @if(auth()->user()->hasMenuPermission('master_circuit', 'can_create'))
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-import">
+                            <i class="fa-solid fa-upload"></i> Import/Upload Circuit
+                        </button>
+                    @endif
+                    @if(auth()->user()->hasMenuPermission('master_circuit', 'can_delete'))
+                        <button type="button" class="btn btn-danger btn-sm" id="btn-remove-data">
+                            <i class="fa-solid fa-trash"></i> Remove Data
+                        </button>
+                    @endif
                 </div>
             </div>
+            <div class="card-body">
+                <!-- Filters -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="filter_area_id" class="form-label">Area * :</label>
+                        <select class="form-select select2" id="filter_area_id" style="width: 100%;">
+                            <option value="">- All Area -</option>
+                            @foreach($areas as $area)
+                                <option value="{{ $area->id }}">{{ $area->area }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="filter_conveyor_id" class="form-label">Conveyor * :</label>
+                        <select class="form-select select2" id="filter_conveyor_id" style="width: 100%;">
+                            <option value="">- All Conveyor -</option>
+                            @foreach($conveyors as $conveyor)
+                                <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <table id="master-circuit-table" class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th width="5%">No</th>
+                            <th>Conveyor</th>
+                            <th>CCT No</th>
+                            <th>Family</th>
+                            <th>QTY</th>
+                            <th>Issue</th>
+                            <th>Machine</th>
+                            <th>Sequence</th>
+                            <th>Barcode Kanban</th>
+                            <th width="12%">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </section>
+    </div>
 
     @include('master_data.master_circuit.import_modal')
     @include('master_data.master_circuit.detail_modal')
+    @include('master_data.master_circuit.remove_modal')
 @endsection
 
-@push('styles')
-    <!-- DataTables -->
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
-    <!-- Select2 -->
-    <link rel="stylesheet" href="{{ asset('plugins/select2/css/select2.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
-@endpush
-
-@push('scripts')
-    <!-- DataTables -->
-    <script src="{{ asset('plugins/datatables/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
-    <!-- Select2 -->
-    <script src="{{ asset('plugins/select2/js/select2.full.min.js') }}"></script>
-    <!-- SweetAlert2 -->
-    <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
-
+@section('script')
     <script>
         $(function () {
             // Initialize Select2 for filters
             $('#filter_area_id, #filter_conveyor_id').select2({
-                theme: 'bootstrap4',
+                theme: 'bootstrap-5',
                 allowClear: true,
                 placeholder: function() {
                     return $(this).data('placeholder') || 'Select...';
@@ -144,7 +126,7 @@
 
             // Initialize Select2 for import modal
             $('#import_area_id, #import_conveyor_id').select2({
-                theme: 'bootstrap4',
+                theme: 'bootstrap-5',
                 dropdownParent: $('#importCircuitModal'),
                 allowClear: true
             });
@@ -187,7 +169,7 @@
                 var formData = new FormData(this);
                 var submitBtn = $('#btn-submit-import');
                 
-                submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importing...');
+                submitBtn.prop('disabled', true).html('<i class="fa-solid fa-spinner ti-spin"></i> Importing...');
 
                 $.ajax({
                     url: "{{ route('master-data.master-circuit.import') }}",
@@ -234,7 +216,7 @@
                         }
                     },
                     complete: function() {
-                        submitBtn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import');
+                        submitBtn.prop('disabled', false).html('<i class="fa-solid fa-upload"></i> Import');
                     }
                 });
             });
@@ -394,7 +376,7 @@
                 
                 // Disable form inputs during upload
                 $('#circuitDetailForm input, #circuitDetailForm textarea, #circuitDetailForm select').prop('disabled', true);
-                $('#detailCircuitModal .btn-primary').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+                $('#detailCircuitModal .btn-primary').prop('disabled', true).html('<i class="fa-solid fa-spinner ti-spin"></i> Saving...');
                 
                 $.ajax({
                     url: "{{ route('master-data.master-circuit.update', ':id') }}".replace(':id', id),
@@ -415,7 +397,7 @@
                     complete: function() {
                         // Re-enable form inputs
                         $('#circuitDetailForm input, #circuitDetailForm textarea, #circuitDetailForm select').prop('disabled', false);
-                        $('#detailCircuitModal .btn-primary').prop('disabled', false).html('<i class="fas fa-save"></i> Save');
+                        $('#detailCircuitModal .btn-primary').prop('disabled', false).html('<i class="fa-solid fa-floppy-disk"></i> Save');
                     }
                 });
             });
@@ -426,7 +408,7 @@
                 // Re-initialize Select2 after modal is shown
                 setTimeout(function() {
                     $('#remove_conveyor_id').select2({
-                        theme: 'bootstrap4',
+                        theme: 'bootstrap-5',
                         dropdownParent: $('#removeDataModal')
                     });
                 }, 200);
@@ -479,6 +461,4 @@
             });
         });
     </script>
-@endpush
-
-@include('master_data.master_circuit.remove_modal')
+@endsection

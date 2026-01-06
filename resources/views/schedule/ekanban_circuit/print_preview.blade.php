@@ -1,18 +1,19 @@
-@extends('layout')
+@extends('layouts.master')
 
 @section('title', 'eKanban Circuit - Print Preview')
 
-@section('content')
+@section('breadcrumb')
     <x-page-header menu-code="ekanban_circuit_print_preview" />
+@endsection
 
-    <section class="content">
-        <div class="container-fluid">
+@section('content')
+    <div class="container-fluid">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-route"></i> eKanban Circuit - Print Preview from Office</h3>
+                    <h3 class="card-title"><i class="fa-solid fa-route"></i> eKanban Circuit - Print Preview from Office</h3>
                     <div class="card-tools">
                         <button type="button" class="btn btn-info btn-sm" id="btn-refresh">
-                            <i class="fas fa-sync-alt"></i> Refresh
+                            <i class="fa-solid fa-arrows-rotate"></i> Refresh
                         </button>
                     </div>
                 </div>
@@ -21,7 +22,7 @@
                     <div class="row mb-3">
                         <div class="col-md-2">
                             <label for="filter_area">Area:</label>
-                            <select class="form-control select2" id="filter_area">
+                            <select class="form-select select2" id="filter_area">
                                 <option value="">- All Area -</option>
                                 @foreach($areas as $area)
                                     <option value="{{ $area->id }}">{{ $area->area }}</option>
@@ -30,7 +31,7 @@
                         </div>
                         <div class="col-md-2">
                             <label for="filter_conveyor">Conveyor:</label>
-                            <select class="form-control select2" id="filter_conveyor">
+                            <select class="form-select select2" id="filter_conveyor">
                                 <option value="">- Choose Conveyor -</option>
                                 @foreach($conveyors as $conveyor)
                                     <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
@@ -39,11 +40,11 @@
                         </div>
                         <div class="col-md-3">
                             <label for="filter_dates">Dates:</label>
-                            <input type="text" class="form-control" id="filter_dates" readonly placeholder="Select date range">
+                            <input type="text" class="form-control form-control-sm" id="filter_dates" readonly placeholder="Select date range">
                         </div>
                         <div class="col-md-2">
                             <label for="filter_shift">Shift:</label>
-                            <select class="form-control select2" id="filter_shift">
+                            <select class="form-select select2" id="filter_shift">
                                 <option value="">- All Shift -</option>
                                 <option value="1">Shift 1</option>
                                 <option value="2">Shift 2</option>
@@ -51,11 +52,8 @@
                         </div>
                         <div class="col-md-3">
                             <label>&nbsp;</label><br>
-                            <button type="button" class="btn btn-info" id="btn-filter">
-                                <i class="fas fa-search"></i> Filter
-                            </button>
-                            <button type="button" class="btn btn-secondary" id="btn-reset">
-                                <i class="fas fa-redo"></i> Reset
+                            <button type="button" class="btn btn-secondary btn-sm" id="btn-reset">
+                                <i class="fa-solid fa-arrow-rotate-right"></i> Reset
                             </button>
                         </div>
                     </div>
@@ -83,25 +81,25 @@
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
     <!-- Preview Modal -->
-    <div class="modal fade" id="previewModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
+    <div class="modal fade" id="previewModal" tabindex="-1" >
+        <div class="modal-dialog modal-lg" >
             <div class="modal-content">
                 <div class="modal-header">
                     <h4 class="modal-title">Circuit Label Preview</h4>
-                    <button type="button" class="close" data-dismiss="modal">
-                        <span>&times;</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                        
                     </button>
                 </div>
                 <div class="modal-body" id="preview-content">
                     <!-- Preview content will be loaded here -->
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="printPreview()">
-                        <i class="fas fa-print"></i> Print
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="printPreview()">
+                        <i class="fa-solid fa-print"></i> Print
                     </button>
                 </div>
             </div>
@@ -164,8 +162,12 @@
                 order: [[2, 'asc']]
             });
 
-            // Filter buttons
-            $('#btn-filter').click(function() {
+            // Auto-reload when filters change
+            $('#filter_area, #filter_conveyor, #filter_shift').on('change', function() {
+                table.ajax.reload();
+            });
+
+            $('#filter_dates').on('apply.daterangepicker', function() {
                 table.ajax.reload();
             });
 

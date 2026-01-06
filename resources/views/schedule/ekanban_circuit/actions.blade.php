@@ -18,3 +18,4 @@
         <i class="fas fa-eye"></i>
     </button>
 @endif
+</div>

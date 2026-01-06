@@ -1,24 +1,25 @@
-@extends('layout')
+@extends('layouts.master')
 
 @section('title', 'Shikake Data')
 
-@section('content')
+@section('breadcrumb')
     <x-page-header menu-code="master_shikake" />
+@endsection
 
-    <section class="content">
-        <div class="container-fluid">
+@section('content')
+    <div class="container-fluid">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Shikake Data List</h3>
                     <div class="card-tools">
                         @if(auth()->user()->hasMenuPermission('master_shikake', 'can_create'))
                             <button type="button" class="btn btn-primary btn-sm" id="btn-import">
-                                <i class="fas fa-upload"></i> Import/Upload Shikake
+                                <i class="fa-solid fa-upload"></i> Import/Upload Shikake
                             </button>
                         @endif
                         @if(auth()->user()->hasMenuPermission('master_shikake', 'can_delete'))
                             <button type="button" class="btn btn-danger btn-sm" id="btn-remove-data">
-                                <i class="fas fa-trash"></i> Remove Data
+                                <i class="fa-solid fa-trash"></i> Remove Data
                             </button>
                         @endif
                     </div>
@@ -28,7 +29,7 @@
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label for="filter_area">Area * :</label>
-                            <select class="form-control select2" id="filter_area" style="width: 100%;">
+                            <select class="form-select select2" id="filter_area" style="width: 100%;">
                                 <option value="">- All Area -</option>
                                 @foreach($areas as $area)
                                     <option value="{{ $area->id }}">{{ $area->area }}</option>
@@ -37,7 +38,7 @@
                         </div>
                         <div class="col-md-4">
                             <label for="filter_conveyor">Conveyor * :</label>
-                            <select class="form-control select2" id="filter_conveyor" style="width: 100%;">
+                            <select class="form-select select2" id="filter_conveyor" style="width: 100%;">
                                 <option value="">- All Conveyor -</option>
                                 @foreach($conveyors as $conveyor)
                                     <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
@@ -65,37 +66,19 @@
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
     @include('master_data.master_shikake.import_modal')
     @include('master_data.master_shikake.detail_modal')
 @endsection
 
-@push('styles')
-    <!-- DataTables -->
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
-    <!-- Select2 -->
-    <link rel="stylesheet" href="{{ asset('plugins/select2/css/select2.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
-@endpush
-
-@push('scripts')
-    <!-- DataTables -->
-    <script src="{{ asset('plugins/datatables/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
-    <!-- Select2 -->
-    <script src="{{ asset('plugins/select2/js/select2.full.min.js') }}"></script>
-    <!-- SweetAlert2 -->
+@section('script')
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
-
     <script>
         $(function () {
             // Initialize Select2 for filters
             $('#filter_area, #filter_conveyor').select2({
-                theme: 'bootstrap4',
+                theme: 'bootstrap-5',
                 allowClear: true,
                 placeholder: function() {
                     return $(this).data('placeholder') || 'Select...';
@@ -139,7 +122,7 @@
 
             // Initialize Select2 for import modal
             $('#import_area_id, #import_conveyor_id').select2({
-                theme: 'bootstrap4',
+                theme: 'bootstrap-5',
                 dropdownParent: $('#importShikakeModal'),
                 allowClear: true
             });
@@ -182,7 +165,7 @@
                 var formData = new FormData(this);
                 var submitBtn = $('#btn-submit-import-shikake');
                 
-                submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importing...');
+                submitBtn.prop('disabled', true).html('<i class="fa-solid fa-spinner ti-spin"></i> Importing...');
 
                 $.ajax({
                     url: "{{ route('master-data.master-shikake.import') }}",
@@ -229,7 +212,7 @@
                         }
                     },
                     complete: function() {
-                        submitBtn.prop('disabled', false).html('<i class="fas fa-upload"></i> Import');
+                        submitBtn.prop('disabled', false).html('<i class="fa-solid fa-upload"></i> Import');
                     }
                 });
             });
@@ -384,7 +367,7 @@
                 
                 // Disable form inputs during upload
                 $('#detailShikakeForm input, #detailShikakeForm textarea, #detailShikakeForm select').prop('disabled', true);
-                $('#detailShikakeModal .btn-primary').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+                $('#detailShikakeModal .btn-primary').prop('disabled', true).html('<i class="fa-solid fa-spinner ti-spin"></i> Saving...');
                 
                 $.ajax({
                     url: "{{ route('master-data.master-shikake.index') }}/" + id,
@@ -405,7 +388,7 @@
                     complete: function() {
                         // Re-enable form inputs
                         $('#detailShikakeForm input, #detailShikakeForm textarea, #detailShikakeForm select').prop('disabled', false);
-                        $('#detailShikakeModal .btn-primary').prop('disabled', false).html('<i class="fas fa-save"></i> Save');
+                        $('#detailShikakeModal .btn-primary').prop('disabled', false).html('<i class="fa-solid fa-floppy-disk"></i> Save');
                     }
                 });
             });
@@ -416,7 +399,7 @@
                 // Re-initialize Select2 after modal is shown
                 setTimeout(function() {
                     $('#remove_conveyor_id').select2({
-                        theme: 'bootstrap4',
+                        theme: 'bootstrap-5',
                         dropdownParent: $('#removeDataModal')
                     });
                 }, 200);
@@ -469,6 +452,6 @@
             });
         });
     </script>
-@endpush
+@endsection
 
 @include('master_data.master_shikake.remove_modal')

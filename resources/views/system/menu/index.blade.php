@@ -1,26 +1,27 @@
-@extends('layout')
+@extends('layouts.master')
 
 @section('title', 'Menu Management')
 
-@section('content')
-<x-page-header menu-code="menus" />
+@section('breadcrumb')
+    <x-page-header menu-code="menus" />
+@endsection
 
-<section class="content">
+@section('content')
     <div class="container-fluid">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Menu List</h3>
-                <div class="card-tools">
+                <h5 class="card-title mb-0">Menu List</h5>
+                <div class="card-tools float-end">
                     @if(auth()->user()->hasMenuPermission('menus', 'can_create'))
                         <button type="button" class="btn btn-primary btn-sm" id="btn-add">
-                            <i class="fas fa-plus"></i> Add Menu
+                            <i class="fa-solid fa-plus"></i> Add Menu
                         </button>
                     @endif
                 </div>
             </div>
             <div class="card-body">
                 <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> 
+                    <i class="fa-solid fa-circle-info"></i> 
                     <strong>Drag and drop</strong> to reorder menus. Drop a menu onto another to make it a child. 
                     Changes are saved automatically.
                 </div>
@@ -29,16 +30,15 @@
                         data-can-update="{{ auth()->user()->hasMenuPermission('menus', 'can_update') ? '1' : '0' }}"
                         data-can-delete="{{ auth()->user()->hasMenuPermission('menus', 'can_delete') ? '1' : '0' }}">
                     <div class="text-center py-4">
-                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <i class="fa-solid fa-spinner ti-spin" style="font-size: 2rem;"></i>
                         <p class="mt-2">Loading menus...</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</section>
 
-@include('system.menu.form')
+    @include('system.menu.form')
 @endsection
 
 @push('styles')
@@ -202,377 +202,275 @@
 <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
 
 <script>
-// FontAwesome Icons List
-const fontAwesomeIcons = [
+// Tabler Icons List
+const tablerIcons = [
     // Dashboard & Navigation
-    { id: 'fas fa-tachometer-alt', text: 'Tachometer (Dashboard)' },
-    { id: 'fas fa-home', text: 'Home' },
-    { id: 'fas fa-bars', text: 'Bars (Menu)' },
-    { id: 'fas fa-th', text: 'Grid' },
-    { id: 'fas fa-th-large', text: 'Grid Large' },
-    { id: 'fas fa-th-list', text: 'List' },
-    { id: 'fas fa-list', text: 'List Alt' },
-    { id: 'fas fa-list-ul', text: 'List Unordered' },
-    { id: 'fas fa-list-ol', text: 'List Ordered' },
+    { id: 'fa-solid fa-gauge-high', text: 'Dashboard' },
+    { id: 'fa-solid fa-home', text: 'Home' },
+    { id: 'fa-solid fa-bars', text: 'Menu' },
+    { id: 'fa-solid fa-table-cells', text: 'Grid' },
+    { id: 'fa-solid fa-table-cells-large', text: 'Grid Large' },
+    { id: 'fa-solid fa-list', text: 'List' },
+    { id: 'fa-solid fa-rectangle-list', text: 'List Details' },
+    { id: 'fa-solid fa-list-numbers', text: 'List Numbers' },
     
     // Users & People
-    { id: 'fas fa-user', text: 'User' },
-    { id: 'fas fa-users', text: 'Users' },
-    { id: 'fas fa-user-plus', text: 'User Plus' },
-    { id: 'fas fa-user-minus', text: 'User Minus' },
-    { id: 'fas fa-user-edit', text: 'User Edit' },
-    { id: 'fas fa-user-cog', text: 'User Cog' },
-    { id: 'fas fa-user-shield', text: 'User Shield' },
-    { id: 'fas fa-user-tie', text: 'User Tie' },
-    { id: 'fas fa-user-circle', text: 'User Circle' },
-    { id: 'fas fa-users-cog', text: 'Users Cog' },
-    { id: 'fas fa-id-card', text: 'ID Card' },
-    { id: 'fas fa-id-badge', text: 'ID Badge' },
-    { id: 'fas fa-address-book', text: 'Address Book' },
-    { id: 'fas fa-address-card', text: 'Address Card' },
+    { id: 'fa-solid fa-user', text: 'User' },
+    { id: 'fa-solid fa-users', text: 'Users' },
+    { id: 'fa-solid fa-user-plus', text: 'User Plus' },
+    { id: 'fa-solid fa-user-minus', text: 'User Minus' },
+    { id: 'fa-solid fa-user-pen', text: 'User Edit' },
+    { id: 'fa-solid fa-user-gear', text: 'User Cog' },
+    { id: 'fa-solid fa-user-shield', text: 'User Shield' },
+    { id: 'fa-solid fa-users-group', text: 'Users Group' },
+    { id: 'fa-solid fa-id-card', text: 'ID Card' },
+    { id: 'fa-solid fa-id-badge', text: 'ID Badge' },
+    { id: 'fa-solid fa-address-book', text: 'Address Book' },
     
     // Settings & Configuration
-    { id: 'fas fa-cog', text: 'Cog (Settings)' },
-    { id: 'fas fa-cogs', text: 'Cogs (Settings Multiple)' },
-    { id: 'fas fa-sliders-h', text: 'Sliders' },
-    { id: 'fas fa-wrench', text: 'Wrench' },
-    { id: 'fas fa-tools', text: 'Tools' },
-    { id: 'fas fa-toolbox', text: 'Toolbox' },
-    { id: 'fas fa-screwdriver', text: 'Screwdriver' },
-    { id: 'fas fa-hammer', text: 'Hammer' },
+    { id: 'fa-solid fa-gear', text: 'Settings' },
+    { id: 'fa-solid fa-gears', text: 'Settings Alt' },
+    { id: 'fa-solid fa-sliders', text: 'Adjustments' },
+    { id: 'fa-solid fa-wrench', text: 'Tool' },
+    { id: 'fa-solid fa-tools', text: 'Tools' },
+    { id: 'fa-solid fa-hammer', text: 'Hammer' },
     
     // Data & Database
-    { id: 'fas fa-database', text: 'Database' },
-    { id: 'fas fa-server', text: 'Server' },
-    { id: 'fas fa-hdd', text: 'Hard Drive' },
-    { id: 'fas fa-table', text: 'Table' },
-    { id: 'fas fa-columns', text: 'Columns' },
-    { id: 'fas fa-stream', text: 'Stream' },
+    { id: 'fa-solid fa-database', text: 'Database' },
+    { id: 'fa-solid fa-server', text: 'Server' },
+    { id: 'fa-solid fa-table', text: 'Table' },
+    { id: 'fa-solid fa-columns', text: 'Columns' },
     
     // Files & Documents
-    { id: 'fas fa-file', text: 'File' },
-    { id: 'fas fa-file-alt', text: 'File Alt' },
-    { id: 'fas fa-file-pdf', text: 'File PDF' },
-    { id: 'fas fa-file-excel', text: 'File Excel' },
-    { id: 'fas fa-file-word', text: 'File Word' },
-    { id: 'fas fa-file-image', text: 'File Image' },
-    { id: 'fas fa-file-archive', text: 'File Archive' },
-    { id: 'fas fa-file-code', text: 'File Code' },
-    { id: 'fas fa-file-csv', text: 'File CSV' },
-    { id: 'fas fa-file-download', text: 'File Download' },
-    { id: 'fas fa-file-upload', text: 'File Upload' },
-    { id: 'fas fa-file-import', text: 'File Import' },
-    { id: 'fas fa-file-export', text: 'File Export' },
-    { id: 'fas fa-folder', text: 'Folder' },
-    { id: 'fas fa-folder-open', text: 'Folder Open' },
-    { id: 'fas fa-folder-plus', text: 'Folder Plus' },
-    { id: 'fas fa-folder-minus', text: 'Folder Minus' },
-    { id: 'fas fa-copy', text: 'Copy' },
-    { id: 'fas fa-paste', text: 'Paste' },
-    { id: 'fas fa-clipboard', text: 'Clipboard' },
-    { id: 'fas fa-clipboard-list', text: 'Clipboard List' },
-    { id: 'fas fa-clipboard-check', text: 'Clipboard Check' },
+    { id: 'fa-solid fa-file', text: 'File' },
+    { id: 'fa-solid fa-file-text', text: 'File Text' },
+    { id: 'fa-solid fa-file-type-pdf', text: 'File PDF' },
+    { id: 'fa-solid fa-file-spreadsheet', text: 'File Excel' },
+    { id: 'fa-solid fa-file-type-doc', text: 'File Word' },
+    { id: 'fa-solid fa-image', text: 'File Image' },
+    { id: 'fa-solid fa-file-zipper', text: 'File Archive' },
+    { id: 'fa-solid fa-file-code', text: 'File Code' },
+    { id: 'fa-solid fa-file-arrow-down', text: 'File Download' },
+    { id: 'fa-solid fa-file-arrow-up', text: 'File Upload' },
+    { id: 'fa-solid fa-file-import', text: 'File Import' },
+    { id: 'fa-solid fa-file-export', text: 'File Export' },
+    { id: 'fa-solid fa-folder', text: 'Folder' },
+    { id: 'fa-solid fa-folder-open', text: 'Folder Open' },
+    { id: 'fa-solid fa-folder-plus', text: 'Folder Plus' },
+    { id: 'fa-solid fa-copy', text: 'Copy' },
+    { id: 'fa-solid fa-clipboard', text: 'Clipboard' },
+    { id: 'fa-solid fa-clipboard-list', text: 'Clipboard List' },
+    { id: 'fa-solid fa-clipboard-check', text: 'Clipboard Check' },
     
     // Charts & Reports
-    { id: 'fas fa-chart-bar', text: 'Chart Bar' },
-    { id: 'fas fa-chart-line', text: 'Chart Line' },
-    { id: 'fas fa-chart-pie', text: 'Chart Pie' },
-    { id: 'fas fa-chart-area', text: 'Chart Area' },
-    { id: 'fas fa-poll', text: 'Poll' },
-    { id: 'fas fa-poll-h', text: 'Poll Horizontal' },
-    { id: 'fas fa-percentage', text: 'Percentage' },
-    { id: 'fas fa-analytics', text: 'Analytics' },
+    { id: 'fa-solid fa-chart-bar', text: 'Chart Bar' },
+    { id: 'fa-solid fa-chart-line', text: 'Chart Line' },
+    { id: 'fa-solid fa-chart-pie', text: 'Chart Pie' },
+    { id: 'fa-solid fa-chart-area', text: 'Chart Area' },
+    { id: 'fa-solid fa-chart-line', text: 'Analytics' },
     
     // Commerce & Business
-    { id: 'fas fa-shopping-cart', text: 'Shopping Cart' },
-    { id: 'fas fa-shopping-bag', text: 'Shopping Bag' },
-    { id: 'fas fa-shopping-basket', text: 'Shopping Basket' },
-    { id: 'fas fa-store', text: 'Store' },
-    { id: 'fas fa-store-alt', text: 'Store Alt' },
-    { id: 'fas fa-cash-register', text: 'Cash Register' },
-    { id: 'fas fa-receipt', text: 'Receipt' },
-    { id: 'fas fa-money-bill', text: 'Money Bill' },
-    { id: 'fas fa-money-bill-wave', text: 'Money Bill Wave' },
-    { id: 'fas fa-money-check', text: 'Money Check' },
-    { id: 'fas fa-money-check-alt', text: 'Money Check Alt' },
-    { id: 'fas fa-credit-card', text: 'Credit Card' },
-    { id: 'fas fa-wallet', text: 'Wallet' },
-    { id: 'fas fa-coins', text: 'Coins' },
-    { id: 'fas fa-piggy-bank', text: 'Piggy Bank' },
-    { id: 'fas fa-dollar-sign', text: 'Dollar Sign' },
-    { id: 'fas fa-euro-sign', text: 'Euro Sign' },
-    { id: 'fas fa-pound-sign', text: 'Pound Sign' },
-    { id: 'fas fa-yen-sign', text: 'Yen Sign' },
-    { id: 'fas fa-tags', text: 'Tags' },
-    { id: 'fas fa-tag', text: 'Tag' },
-    { id: 'fas fa-barcode', text: 'Barcode' },
-    { id: 'fas fa-qrcode', text: 'QR Code' },
+    { id: 'fa-solid fa-shopping-cart', text: 'Shopping Cart' },
+    { id: 'fa-solid fa-shopping-bag', text: 'Shopping Bag' },
+    { id: 'fa-solid fa-store', text: 'Store' },
+    { id: 'fa-solid fa-money-bill', text: 'Cash' },
+    { id: 'fa-solid fa-receipt', text: 'Receipt' },
+    { id: 'fa-solid fa-credit-card', text: 'Credit Card' },
+    { id: 'fa-solid fa-wallet', text: 'Wallet' },
+    { id: 'fa-solid fa-coins', text: 'Coins' },
+    { id: 'fa-solid fa-dollar-sign', text: 'Dollar' },
+    { id: 'fa-solid fa-tag', text: 'Tag' },
+    { id: 'fa-solid fa-tags', text: 'Tags' },
+    { id: 'fa-solid fa-barcode', text: 'Barcode' },
+    { id: 'fa-solid fa-qrcode', text: 'QR Code' },
     
     // Industry & Manufacturing
-    { id: 'fas fa-industry', text: 'Industry' },
-    { id: 'fas fa-warehouse', text: 'Warehouse' },
-    { id: 'fas fa-boxes', text: 'Boxes' },
-    { id: 'fas fa-box', text: 'Box' },
-    { id: 'fas fa-box-open', text: 'Box Open' },
-    { id: 'fas fa-pallet', text: 'Pallet' },
-    { id: 'fas fa-dolly', text: 'Dolly' },
-    { id: 'fas fa-dolly-flatbed', text: 'Dolly Flatbed' },
-    { id: 'fas fa-truck', text: 'Truck' },
-    { id: 'fas fa-truck-loading', text: 'Truck Loading' },
-    { id: 'fas fa-shipping-fast', text: 'Shipping Fast' },
-    { id: 'fas fa-conveyor-belt', text: 'Conveyor Belt' },
+    { id: 'fa-solid fa-industry', text: 'Factory' },
+    { id: 'fa-solid fa-building-warehouse', text: 'Warehouse' },
+    { id: 'fa-solid fa-box', text: 'Package' },
+    { id: 'fa-solid fa-boxes', text: 'Packages' },
+    { id: 'fa-solid fa-truck', text: 'Truck' },
+    { id: 'fa-solid fa-truck-loading', text: 'Truck Delivery' },
+    { id: 'fa-solid fa-truck', text: 'Forklift' },
     
     // Location & Map
-    { id: 'fas fa-map', text: 'Map' },
-    { id: 'fas fa-map-marked', text: 'Map Marked' },
-    { id: 'fas fa-map-marked-alt', text: 'Map Marked Alt' },
-    { id: 'fas fa-map-marker', text: 'Map Marker' },
-    { id: 'fas fa-map-marker-alt', text: 'Map Marker Alt' },
-    { id: 'fas fa-map-pin', text: 'Map Pin' },
-    { id: 'fas fa-location-arrow', text: 'Location Arrow' },
-    { id: 'fas fa-compass', text: 'Compass' },
-    { id: 'fas fa-globe', text: 'Globe' },
-    { id: 'fas fa-globe-asia', text: 'Globe Asia' },
-    { id: 'fas fa-globe-americas', text: 'Globe Americas' },
-    { id: 'fas fa-globe-europe', text: 'Globe Europe' },
-    { id: 'fas fa-building', text: 'Building' },
-    { id: 'fas fa-city', text: 'City' },
-    { id: 'fas fa-landmark', text: 'Landmark' },
+    { id: 'fa-solid fa-map', text: 'Map' },
+    { id: 'fa-solid fa-map-pin', text: 'Map Pin' },
+    { id: 'fa-solid fa-map-2', text: 'Map Alt' },
+    { id: 'fa-solid fa-map-marker-alt', text: 'Location' },
+    { id: 'fa-solid fa-compass', text: 'Compass' },
+    { id: 'fa-solid fa-globe', text: 'World' },
+    { id: 'fa-solid fa-building', text: 'Building' },
+    { id: 'fa-solid fa-building-skyscraper', text: 'Skyscraper' },
     
     // Communication
-    { id: 'fas fa-envelope', text: 'Envelope' },
-    { id: 'fas fa-envelope-open', text: 'Envelope Open' },
-    { id: 'fas fa-inbox', text: 'Inbox' },
-    { id: 'fas fa-paper-plane', text: 'Paper Plane' },
-    { id: 'fas fa-comment', text: 'Comment' },
-    { id: 'fas fa-comments', text: 'Comments' },
-    { id: 'fas fa-comment-alt', text: 'Comment Alt' },
-    { id: 'fas fa-comment-dots', text: 'Comment Dots' },
-    { id: 'fas fa-phone', text: 'Phone' },
-    { id: 'fas fa-phone-alt', text: 'Phone Alt' },
-    { id: 'fas fa-mobile', text: 'Mobile' },
-    { id: 'fas fa-mobile-alt', text: 'Mobile Alt' },
-    { id: 'fas fa-fax', text: 'Fax' },
-    { id: 'fas fa-bell', text: 'Bell' },
-    { id: 'fas fa-bell-slash', text: 'Bell Slash' },
-    { id: 'fas fa-bullhorn', text: 'Bullhorn' },
-    { id: 'fas fa-broadcast-tower', text: 'Broadcast Tower' },
+    { id: 'fa-solid fa-envelope', text: 'Mail' },
+    { id: 'fa-solid fa-envelope-opened', text: 'Mail Opened' },
+    { id: 'fa-solid fa-inbox', text: 'Inbox' },
+    { id: 'fa-solid fa-paper-plane', text: 'Send' },
+    { id: 'fa-solid fa-comment', text: 'Message' },
+    { id: 'fa-solid fa-comments', text: 'Messages' },
+    { id: 'fa-solid fa-phone', text: 'Phone' },
+    { id: 'fa-solid fa-mobile-screen-button', text: 'Mobile' },
+    { id: 'fa-solid fa-bell', text: 'Bell' },
+    { id: 'fa-solid fa-bell-off', text: 'Bell Off' },
+    { id: 'fa-solid fa-bullhorn', text: 'Speakerphone' },
     
     // Time & Calendar
-    { id: 'fas fa-calendar', text: 'Calendar' },
-    { id: 'fas fa-calendar-alt', text: 'Calendar Alt' },
-    { id: 'fas fa-calendar-check', text: 'Calendar Check' },
-    { id: 'fas fa-calendar-plus', text: 'Calendar Plus' },
-    { id: 'fas fa-calendar-minus', text: 'Calendar Minus' },
-    { id: 'fas fa-calendar-times', text: 'Calendar Times' },
-    { id: 'fas fa-calendar-day', text: 'Calendar Day' },
-    { id: 'fas fa-calendar-week', text: 'Calendar Week' },
-    { id: 'fas fa-clock', text: 'Clock' },
-    { id: 'fas fa-hourglass', text: 'Hourglass' },
-    { id: 'fas fa-hourglass-half', text: 'Hourglass Half' },
-    { id: 'fas fa-hourglass-start', text: 'Hourglass Start' },
-    { id: 'fas fa-hourglass-end', text: 'Hourglass End' },
-    { id: 'fas fa-stopwatch', text: 'Stopwatch' },
-    { id: 'fas fa-history', text: 'History' },
+    { id: 'fa-solid fa-calendar', text: 'Calendar' },
+    { id: 'fa-solid fa-calendar-event', text: 'Calendar Event' },
+    { id: 'fa-solid fa-calendar-plus', text: 'Calendar Plus' },
+    { id: 'fa-solid fa-calendar-time', text: 'Calendar Time' },
+    { id: 'fa-solid fa-clock', text: 'Clock' },
+    { id: 'fa-solid fa-hourglass', text: 'Hourglass' },
+    { id: 'fa-solid fa-alarm-clock', text: 'Alarm' },
+    { id: 'fa-solid fa-history', text: 'History' },
     
     // Security & Access
-    { id: 'fas fa-lock', text: 'Lock' },
-    { id: 'fas fa-lock-open', text: 'Lock Open' },
-    { id: 'fas fa-unlock', text: 'Unlock' },
-    { id: 'fas fa-unlock-alt', text: 'Unlock Alt' },
-    { id: 'fas fa-key', text: 'Key' },
-    { id: 'fas fa-shield-alt', text: 'Shield' },
-    { id: 'fas fa-fingerprint', text: 'Fingerprint' },
-    { id: 'fas fa-eye', text: 'Eye' },
-    { id: 'fas fa-eye-slash', text: 'Eye Slash' },
-    { id: 'fas fa-ban', text: 'Ban' },
-    { id: 'fas fa-user-lock', text: 'User Lock' },
-    { id: 'fas fa-user-secret', text: 'User Secret' },
+    { id: 'fa-solid fa-lock', text: 'Lock' },
+    { id: 'fa-solid fa-lock-open', text: 'Lock Open' },
+    { id: 'fa-solid fa-key', text: 'Key' },
+    { id: 'fa-solid fa-shield-alt', text: 'Shield' },
+    { id: 'fa-solid fa-shield-alt', text: 'Shield Check' },
+    { id: 'fa-solid fa-fingerprint', text: 'Fingerprint' },
+    { id: 'fa-solid fa-eye', text: 'Eye' },
+    { id: 'fa-solid fa-eye-off', text: 'Eye Off' },
+    { id: 'fa-solid fa-ban', text: 'Ban' },
     
     // Actions & Controls
-    { id: 'fas fa-plus', text: 'Plus' },
-    { id: 'fas fa-plus-circle', text: 'Plus Circle' },
-    { id: 'fas fa-plus-square', text: 'Plus Square' },
-    { id: 'fas fa-minus', text: 'Minus' },
-    { id: 'fas fa-minus-circle', text: 'Minus Circle' },
-    { id: 'fas fa-minus-square', text: 'Minus Square' },
-    { id: 'fas fa-times', text: 'Times (Close)' },
-    { id: 'fas fa-times-circle', text: 'Times Circle' },
-    { id: 'fas fa-check', text: 'Check' },
-    { id: 'fas fa-check-circle', text: 'Check Circle' },
-    { id: 'fas fa-check-square', text: 'Check Square' },
-    { id: 'fas fa-edit', text: 'Edit' },
-    { id: 'fas fa-pen', text: 'Pen' },
-    { id: 'fas fa-pencil-alt', text: 'Pencil' },
-    { id: 'fas fa-trash', text: 'Trash' },
-    { id: 'fas fa-trash-alt', text: 'Trash Alt' },
-    { id: 'fas fa-eraser', text: 'Eraser' },
-    { id: 'fas fa-save', text: 'Save' },
-    { id: 'fas fa-download', text: 'Download' },
-    { id: 'fas fa-upload', text: 'Upload' },
-    { id: 'fas fa-sync', text: 'Sync' },
-    { id: 'fas fa-sync-alt', text: 'Sync Alt' },
-    { id: 'fas fa-redo', text: 'Redo' },
-    { id: 'fas fa-undo', text: 'Undo' },
-    { id: 'fas fa-refresh', text: 'Refresh' },
-    { id: 'fas fa-search', text: 'Search' },
-    { id: 'fas fa-search-plus', text: 'Search Plus' },
-    { id: 'fas fa-search-minus', text: 'Search Minus' },
-    { id: 'fas fa-filter', text: 'Filter' },
-    { id: 'fas fa-sort', text: 'Sort' },
-    { id: 'fas fa-sort-up', text: 'Sort Up' },
-    { id: 'fas fa-sort-down', text: 'Sort Down' },
-    { id: 'fas fa-expand', text: 'Expand' },
-    { id: 'fas fa-compress', text: 'Compress' },
-    { id: 'fas fa-arrows-alt', text: 'Arrows Alt' },
-    { id: 'fas fa-external-link-alt', text: 'External Link' },
-    { id: 'fas fa-link', text: 'Link' },
-    { id: 'fas fa-unlink', text: 'Unlink' },
-    { id: 'fas fa-share', text: 'Share' },
-    { id: 'fas fa-share-alt', text: 'Share Alt' },
-    { id: 'fas fa-reply', text: 'Reply' },
-    { id: 'fas fa-reply-all', text: 'Reply All' },
-    { id: 'fas fa-forward', text: 'Forward' },
+    { id: 'fa-solid fa-plus', text: 'Plus' },
+    { id: 'fa-solid fa-circle-plus', text: 'Plus Circle' },
+    { id: 'fa-solid fa-minus', text: 'Minus' },
+    { id: 'fa-solid fa-circle-minus', text: 'Minus Circle' },
+    { id: 'fa-solid fa-xmark', text: 'Close' },
+    { id: 'fa-solid fa-xmark-circle', text: 'Close Circle' },
+    { id: 'fa-solid fa-check', text: 'Check' },
+    { id: 'fa-solid fa-circle-check', text: 'Check Circle' },
+    { id: 'fa-solid fa-pen-to-square', text: 'Edit' },
+    { id: 'fa-solid fa-pencil-alt', text: 'Pencil' },
+    { id: 'fa-solid fa-trash', text: 'Trash' },
+    { id: 'fa-solid fa-eraser', text: 'Eraser' },
+    { id: 'fa-solid fa-floppy-disk', text: 'Save' },
+    { id: 'fa-solid fa-download', text: 'Download' },
+    { id: 'fa-solid fa-upload', text: 'Upload' },
+    { id: 'fa-solid fa-arrows-rotate', text: 'Refresh' },
+    { id: 'fa-solid fa-arrow-rotate-right', text: 'Reload' },
+    { id: 'fa-solid fa-arrows-rotate', text: 'Rotate' },
+    { id: 'fa-solid fa-magnifying-glass', text: 'Search' },
+    { id: 'fa-solid fa-magnifying-glass-plus', text: 'Zoom In' },
+    { id: 'fa-solid fa-magnifying-glass-minus', text: 'Zoom Out' },
+    { id: 'fa-solid fa-filter', text: 'Filter' },
+    { id: 'fa-solid fa-sort-amount-asc', text: 'Sort Ascending' },
+    { id: 'fa-solid fa-sort-amount-desc', text: 'Sort Descending' },
+    { id: 'fa-solid fa-expand', text: 'Maximize' },
+    { id: 'fa-solid fa-compress', text: 'Minimize' },
+    { id: 'fa-solid fa-arrow-up-right-from-square', text: 'External Link' },
+    { id: 'fa-solid fa-link', text: 'Link' },
+    { id: 'fa-solid fa-share-alt', text: 'Share' },
     
     // Status & Indicators
-    { id: 'fas fa-info', text: 'Info' },
-    { id: 'fas fa-info-circle', text: 'Info Circle' },
-    { id: 'fas fa-question', text: 'Question' },
-    { id: 'fas fa-question-circle', text: 'Question Circle' },
-    { id: 'fas fa-exclamation', text: 'Exclamation' },
-    { id: 'fas fa-exclamation-circle', text: 'Exclamation Circle' },
-    { id: 'fas fa-exclamation-triangle', text: 'Exclamation Triangle' },
-    { id: 'fas fa-flag', text: 'Flag' },
-    { id: 'fas fa-flag-checkered', text: 'Flag Checkered' },
-    { id: 'fas fa-star', text: 'Star' },
-    { id: 'fas fa-star-half-alt', text: 'Star Half' },
-    { id: 'fas fa-heart', text: 'Heart' },
-    { id: 'fas fa-thumbs-up', text: 'Thumbs Up' },
-    { id: 'fas fa-thumbs-down', text: 'Thumbs Down' },
-    { id: 'fas fa-bookmark', text: 'Bookmark' },
-    { id: 'fas fa-trophy', text: 'Trophy' },
-    { id: 'fas fa-award', text: 'Award' },
-    { id: 'fas fa-medal', text: 'Medal' },
-    { id: 'fas fa-certificate', text: 'Certificate' },
+    { id: 'fa-solid fa-circle-info', text: 'Info' },
+    { id: 'fa-solid fa-circle-question', text: 'Help' },
+    { id: 'fa-solid fa-circle-exclamation', text: 'Alert' },
+    { id: 'fa-solid fa-exclamation-triangle', text: 'Warning' },
+    { id: 'fa-solid fa-flag', text: 'Flag' },
+    { id: 'fa-solid fa-star', text: 'Star' },
+    { id: 'fa-solid fa-heart', text: 'Heart' },
+    { id: 'fa-solid fa-table-cellsumbs-up', text: 'Thumbs Up' },
+    { id: 'fa-solid fa-table-cellsumbs-down', text: 'Thumbs Down' },
+    { id: 'fa-solid fa-bookmark', text: 'Bookmark' },
+    { id: 'fa-solid fa-trophy', text: 'Trophy' },
+    { id: 'fa-solid fa-award', text: 'Award' },
+    { id: 'fa-solid fa-medal', text: 'Medal' },
+    { id: 'fa-solid fa-certificate', text: 'Certificate' },
     
     // Arrows & Direction
-    { id: 'fas fa-arrow-up', text: 'Arrow Up' },
-    { id: 'fas fa-arrow-down', text: 'Arrow Down' },
-    { id: 'fas fa-arrow-left', text: 'Arrow Left' },
-    { id: 'fas fa-arrow-right', text: 'Arrow Right' },
-    { id: 'fas fa-arrow-circle-up', text: 'Arrow Circle Up' },
-    { id: 'fas fa-arrow-circle-down', text: 'Arrow Circle Down' },
-    { id: 'fas fa-arrow-circle-left', text: 'Arrow Circle Left' },
-    { id: 'fas fa-arrow-circle-right', text: 'Arrow Circle Right' },
-    { id: 'fas fa-chevron-up', text: 'Chevron Up' },
-    { id: 'fas fa-chevron-down', text: 'Chevron Down' },
-    { id: 'fas fa-chevron-left', text: 'Chevron Left' },
-    { id: 'fas fa-chevron-right', text: 'Chevron Right' },
-    { id: 'fas fa-angle-up', text: 'Angle Up' },
-    { id: 'fas fa-angle-down', text: 'Angle Down' },
-    { id: 'fas fa-angle-left', text: 'Angle Left' },
-    { id: 'fas fa-angle-right', text: 'Angle Right' },
-    { id: 'fas fa-angle-double-up', text: 'Angle Double Up' },
-    { id: 'fas fa-angle-double-down', text: 'Angle Double Down' },
-    { id: 'fas fa-angle-double-left', text: 'Angle Double Left' },
-    { id: 'fas fa-angle-double-right', text: 'Angle Double Right' },
+    { id: 'fa-solid fa-arrow-up', text: 'Arrow Up' },
+    { id: 'fa-solid fa-arrow-down', text: 'Arrow Down' },
+    { id: 'fa-solid fa-arrow-left', text: 'Arrow Left' },
+    { id: 'fa-solid fa-arrow-right', text: 'Arrow Right' },
+    { id: 'fa-solid fa-chevron-up', text: 'Chevron Up' },
+    { id: 'fa-solid fa-chevron-down', text: 'Chevron Down' },
+    { id: 'fa-solid fa-chevron-left', text: 'Chevron Left' },
+    { id: 'fa-solid fa-chevron-right', text: 'Chevron Right' },
+    { id: 'fa-solid fa-angles-up', text: 'Chevrons Up' },
+    { id: 'fa-solid fa-angles-down', text: 'Chevrons Down' },
+    { id: 'fa-solid fa-angles-left', text: 'Chevrons Left' },
+    { id: 'fa-solid fa-angles-right', text: 'Chevrons Right' },
     
     // Tasks & Projects
-    { id: 'fas fa-tasks', text: 'Tasks' },
-    { id: 'fas fa-project-diagram', text: 'Project Diagram' },
-    { id: 'fas fa-sitemap', text: 'Sitemap' },
-    { id: 'fas fa-network-wired', text: 'Network' },
-    { id: 'fas fa-code-branch', text: 'Code Branch' },
-    { id: 'fas fa-code', text: 'Code' },
-    { id: 'fas fa-terminal', text: 'Terminal' },
-    { id: 'fas fa-bug', text: 'Bug' },
-    { id: 'fas fa-lightbulb', text: 'Lightbulb' },
-    { id: 'fas fa-magic', text: 'Magic' },
-    { id: 'fas fa-rocket', text: 'Rocket' },
-    { id: 'fas fa-bolt', text: 'Bolt' },
-    { id: 'fas fa-fire', text: 'Fire' },
-    { id: 'fas fa-fire-alt', text: 'Fire Alt' },
+    { id: 'fa-solid fa-checklist', text: 'Checklist' },
+    { id: 'fa-solid fa-list-check', text: 'Subtask' },
+    { id: 'fa-solid fa-sitemap', text: 'Sitemap' },
+    { id: 'fa-solid fa-project-diagram', text: 'Network' },
+    { id: 'fa-solid fa-code-branch', text: 'Git Branch' },
+    { id: 'fa-solid fa-code', text: 'Code' },
+    { id: 'fa-solid fa-terminal', text: 'Terminal' },
+    { id: 'fa-solid fa-bug', text: 'Bug' },
+    { id: 'fa-solid fa-lightbulb', text: 'Lightbulb' },
+    { id: 'fa-solid fa-magic', text: 'Magic' },
+    { id: 'fa-solid fa-rocket', text: 'Rocket' },
+    { id: 'fa-solid fa-bolt', text: 'Bolt' },
+    { id: 'fa-solid fa-fire', text: 'Flame' },
     
     // Media & Content
-    { id: 'fas fa-image', text: 'Image' },
-    { id: 'fas fa-images', text: 'Images' },
-    { id: 'fas fa-camera', text: 'Camera' },
-    { id: 'fas fa-video', text: 'Video' },
-    { id: 'fas fa-film', text: 'Film' },
-    { id: 'fas fa-music', text: 'Music' },
-    { id: 'fas fa-headphones', text: 'Headphones' },
-    { id: 'fas fa-microphone', text: 'Microphone' },
-    { id: 'fas fa-volume-up', text: 'Volume Up' },
-    { id: 'fas fa-volume-down', text: 'Volume Down' },
-    { id: 'fas fa-volume-mute', text: 'Volume Mute' },
-    { id: 'fas fa-play', text: 'Play' },
-    { id: 'fas fa-pause', text: 'Pause' },
-    { id: 'fas fa-stop', text: 'Stop' },
-    { id: 'fas fa-step-forward', text: 'Step Forward' },
-    { id: 'fas fa-step-backward', text: 'Step Backward' },
+    { id: 'fa-solid fa-image', text: 'Photo' },
+    { id: 'fa-solid fa-camera', text: 'Camera' },
+    { id: 'fa-solid fa-video', text: 'Video' },
+    { id: 'fa-solid fa-film', text: 'Movie' },
+    { id: 'fa-solid fa-music', text: 'Music' },
+    { id: 'fa-solid fa-headphones', text: 'Headphones' },
+    { id: 'fa-solid fa-microphone', text: 'Microphone' },
+    { id: 'fa-solid fa-volume-up', text: 'Volume' },
+    { id: 'fa-solid fa-volume-mute', text: 'Volume Off' },
+    { id: 'fa-solid fa-play', text: 'Play' },
+    { id: 'fa-solid fa-pause', text: 'Pause' },
+    { id: 'fa-solid fa-stop', text: 'Stop' },
     
     // Misc
-    { id: 'fas fa-circle', text: 'Circle' },
-    { id: 'fas fa-square', text: 'Square' },
-    { id: 'fas fa-cube', text: 'Cube' },
-    { id: 'fas fa-cubes', text: 'Cubes' },
-    { id: 'fas fa-puzzle-piece', text: 'Puzzle Piece' },
-    { id: 'fas fa-gem', text: 'Gem' },
-    { id: 'fas fa-gift', text: 'Gift' },
-    { id: 'fas fa-crown', text: 'Crown' },
-    { id: 'fas fa-sun', text: 'Sun' },
-    { id: 'fas fa-moon', text: 'Moon' },
-    { id: 'fas fa-cloud', text: 'Cloud' },
-    { id: 'fas fa-cloud-upload-alt', text: 'Cloud Upload' },
-    { id: 'fas fa-cloud-download-alt', text: 'Cloud Download' },
-    { id: 'fas fa-print', text: 'Print' },
-    { id: 'fas fa-desktop', text: 'Desktop' },
-    { id: 'fas fa-laptop', text: 'Laptop' },
-    { id: 'fas fa-tablet-alt', text: 'Tablet' },
-    { id: 'fas fa-keyboard', text: 'Keyboard' },
-    { id: 'fas fa-mouse', text: 'Mouse' },
-    { id: 'fas fa-power-off', text: 'Power Off' },
-    { id: 'fas fa-plug', text: 'Plug' },
-    { id: 'fas fa-battery-full', text: 'Battery Full' },
-    { id: 'fas fa-wifi', text: 'WiFi' },
-    { id: 'fas fa-signal', text: 'Signal' },
-    { id: 'fas fa-bluetooth', text: 'Bluetooth' },
-    { id: 'fas fa-rss', text: 'RSS' },
-    { id: 'fas fa-at', text: 'At' },
-    { id: 'fas fa-hashtag', text: 'Hashtag' },
-    { id: 'fas fa-quote-left', text: 'Quote Left' },
-    { id: 'fas fa-quote-right', text: 'Quote Right' },
-    { id: 'fas fa-paragraph', text: 'Paragraph' },
-    { id: 'fas fa-align-left', text: 'Align Left' },
-    { id: 'fas fa-align-center', text: 'Align Center' },
-    { id: 'fas fa-align-right', text: 'Align Right' },
-    { id: 'fas fa-align-justify', text: 'Align Justify' },
-    { id: 'fas fa-bold', text: 'Bold' },
-    { id: 'fas fa-italic', text: 'Italic' },
-    { id: 'fas fa-underline', text: 'Underline' },
-    { id: 'fas fa-strikethrough', text: 'Strikethrough' },
-    { id: 'fas fa-text-height', text: 'Text Height' },
-    { id: 'fas fa-text-width', text: 'Text Width' },
-    { id: 'fas fa-font', text: 'Font' },
-    { id: 'fas fa-heading', text: 'Heading' },
-    { id: 'fas fa-spell-check', text: 'Spell Check' },
-    { id: 'fas fa-language', text: 'Language' },
-    { id: 'fas fa-palette', text: 'Palette' },
-    { id: 'fas fa-paint-brush', text: 'Paint Brush' },
-    { id: 'fas fa-fill-drip', text: 'Fill Drip' },
-    { id: 'fas fa-tint', text: 'Tint' },
-    { id: 'fas fa-adjust', text: 'Adjust' },
-    { id: 'fas fa-crop', text: 'Crop' },
-    { id: 'fas fa-ruler', text: 'Ruler' },
-    { id: 'fas fa-ruler-combined', text: 'Ruler Combined' },
-    { id: 'fas fa-drafting-compass', text: 'Drafting Compass' },
-    { id: 'fas fa-object-group', text: 'Object Group' },
-    { id: 'fas fa-object-ungroup', text: 'Object Ungroup' },
-    { id: 'fas fa-layer-group', text: 'Layer Group' },
-    { id: 'fas fa-grip-vertical', text: 'Grip Vertical' },
-    { id: 'fas fa-grip-horizontal', text: 'Grip Horizontal' },
-    { id: 'fas fa-ellipsis-h', text: 'Ellipsis Horizontal' },
-    { id: 'fas fa-ellipsis-v', text: 'Ellipsis Vertical' },
+    { id: 'fa-solid fa-circle', text: 'Circle' },
+    { id: 'fa-solid fa-square', text: 'Square' },
+    { id: 'fa-solid fa-cube', text: 'Cube' },
+    { id: 'fa-solid fa-puzzle-piece', text: 'Puzzle' },
+    { id: 'fa-solid fa-gem', text: 'Diamond' },
+    { id: 'fa-solid fa-gift', text: 'Gift' },
+    { id: 'fa-solid fa-crown', text: 'Crown' },
+    { id: 'fa-solid fa-sun', text: 'Sun' },
+    { id: 'fa-solid fa-moon', text: 'Moon' },
+    { id: 'fa-solid fa-cloud', text: 'Cloud' },
+    { id: 'fa-solid fa-cloud-arrow-up', text: 'Cloud Upload' },
+    { id: 'fa-solid fa-cloud-arrow-down', text: 'Cloud Download' },
+    { id: 'fa-solid fa-print', text: 'Printer' },
+    { id: 'fa-solid fa-desktop', text: 'Desktop' },
+    { id: 'fa-solid fa-laptop', text: 'Laptop' },
+    { id: 'fa-solid fa-tablet-screen-button', text: 'Tablet' },
+    { id: 'fa-solid fa-keyboard', text: 'Keyboard' },
+    { id: 'fa-solid fa-mouse', text: 'Mouse' },
+    { id: 'fa-solid fa-power-off', text: 'Power' },
+    { id: 'fa-solid fa-plug', text: 'Plug' },
+    { id: 'fa-solid fa-battery-full', text: 'Battery' },
+    { id: 'fa-solid fa-wifi', text: 'WiFi' },
+    { id: 'fa-solid fa-signal', text: 'Signal' },
+    { id: 'fa-brands fa-bluetooth', text: 'Bluetooth' },
+    { id: 'fa-solid fa-rss', text: 'RSS' },
+    { id: 'fa-solid fa-at', text: 'At' },
+    { id: 'fa-solid fa-hashtag', text: 'Hash' },
+    { id: 'fa-solid fa-quote-right', text: 'Quote' },
+    { id: 'fa-solid fa-align-left', text: 'Align Left' },
+    { id: 'fa-solid fa-align-center', text: 'Align Center' },
+    { id: 'fa-solid fa-align-right', text: 'Align Right' },
+    { id: 'fa-solid fa-align-justify', text: 'Align Justify' },
+    { id: 'fa-solid fa-bold', text: 'Bold' },
+    { id: 'fa-solid fa-italic', text: 'Italic' },
+    { id: 'fa-solid fa-underline', text: 'Underline' },
+    { id: 'fa-solid fa-strikethrough', text: 'Strikethrough' },
+    { id: 'fa-solid fa-palette', text: 'Palette' },
+    { id: 'fa-solid fa-brush', text: 'Brush' },
+    { id: 'fa-solid fa-paint-brush', text: 'Paint' },
+    { id: 'fa-solid fa-crop', text: 'Crop' },
+    { id: 'fa-solid fa-ruler', text: 'Ruler' },
+    { id: 'fa-solid fa-ellipsis', text: 'Dots Horizontal' },
+    { id: 'fa-solid fa-ellipsis-verticalertical', text: 'Dots Vertical' },
 ];
 
 // Format icon option for Select2
@@ -631,17 +529,17 @@ $(function() {
         
         let actions = '';
         if (canUpdate) {
-            actions += '<button type="button" class="btn btn-sm btn-info btn-edit" data-id="' + item.id + '" title="Edit"><i class="fas fa-edit"></i></button>';
+            actions += '<button type="button" class="btn btn-sm btn-info btn-edit" data-id="' + item.id + '" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>';
         }
         if (canDelete) {
-            actions += '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="' + item.id + '" title="Delete"><i class="fas fa-trash"></i></button>';
+            actions += '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="' + item.id + '" title="Delete"><i class="fa-solid fa-trash"></i></button>';
         }
 
         let html = '<li class="menu-item-wrapper" data-id="' + item.id + '">';
         html += '<div class="menu-item">';
         html += '<div class="menu-item-content">';
-        html += '<span class="menu-item-handle"><i class="fas fa-grip-vertical"></i></span>';
-        html += '<span class="menu-item-icon"><i class="' + (item.icon || 'fas fa-circle') + '"></i></span>';
+        html += '<span class="menu-item-handle"><i class="fa-solid fa-grip-vertical"></i></span>';
+        html += '<span class="menu-item-icon"><i class="' + (item.icon || 'fa-solid fa-circle') + '"></i></span>';
         html += '<div class="menu-item-info">';
         html += '<span class="menu-item-name">' + item.name + '</span>';
         html += '<span class="menu-item-code">(' + item.code + ')</span>';
@@ -739,7 +637,7 @@ $(function() {
 
     function showSavingIndicator() {
         if (!$('.saving-indicator').length) {
-            $('body').append('<div class="saving-indicator"><i class="fas fa-spinner fa-spin"></i> Saving...</div>');
+            $('body').append('<div class="saving-indicator"><i class="fa-solid fa-spinner ti-spin"></i> Saving...</div>');
         }
         $('.saving-indicator').addClass('show');
     }
@@ -757,7 +655,7 @@ $(function() {
         
         // Clear and populate options
         $('#icon').html('<option value="">-- Select Icon --</option>');
-        fontAwesomeIcons.forEach(function(icon) {
+        tablerIcons.forEach(function(icon) {
             $('#icon').append('<option value="' + icon.id + '">' + icon.text + '</option>');
         });
         
@@ -790,7 +688,7 @@ $(function() {
         if (selectedValue) {
             // Add option if not exists
             if ($('#icon option[value="' + selectedValue + '"]').length === 0) {
-                var iconText = selectedValue.replace('fas fa-', '').replace(/-/g, ' ');
+                var iconText = selectedValue.replace('fa-solid fa-', '').replace(/-/g, ' ');
                 iconText = iconText.charAt(0).toUpperCase() + iconText.slice(1);
                 $('#icon').append('<option value="' + selectedValue + '">' + iconText + ' (Custom)</option>');
             }

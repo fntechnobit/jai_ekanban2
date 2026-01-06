@@ -1,96 +1,80 @@
-@extends('layout')
+@extends('layouts.master')
 
 @section('title', 'Conveyor Data')
 
-@section('content')
+@section('breadcrumb')
     <x-page-header menu-code="master_conveyor" />
-
-    <section class="content">
-        <div class="container-fluid">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Conveyor Data</h3>
-                    <div class="card-tools">
-                        @if(auth()->user()->hasMenuPermission('master_conveyor', 'can_create'))
-                            <button type="button" class="btn btn-primary btn-sm" id="btn-add">
-                                <i class="fas fa-plus"></i> Add New Data
-                            </button>
-                        @endif
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- Filters -->
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label for="filter_area">Area :</label>
-                            <select class="form-control select2" id="filter_area" style="width: 100%;">
-                                <option value="">- All Area -</option>
-                                @foreach($areas as $area)
-                                    <option value="{{ $area->id }}">{{ $area->area }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="filter_family">Family :</label>
-                            <select class="form-control select2" id="filter_family" style="width: 100%;">
-                                <option value="">- All Family -</option>
-                                @foreach($families as $family)
-                                    <option value="{{ $family->id }}">{{ $family->family }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-
-                    <table id="master-conveyor-table" class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th width="5%">No</th>
-                                <th>Area</th>
-                                <th>Conveyor</th>
-                                <th>Family</th>
-                                <th>Shift/Start</th>
-                                <th>Capacity</th>
-                                <th>Pallet Qty</th>
-                                <th width="10%">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    @include('master_data.master_conveyor.form')
 @endsection
 
-@push('styles')
-    <!-- DataTables -->
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
-    <!-- Select2 -->
-    <link rel="stylesheet" href="{{ asset('plugins/select2/css/select2.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css') }}">
-@endpush
+@section('content')
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Conveyor Data</h5>
+            <div class="card-tools">
+                @if(auth()->user()->hasMenuPermission('master_conveyor', 'can_create'))
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-add">
+                        <i class="fa-solid fa-plus me-1"></i> Add New Data
+                    </button>
+                @endif
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Filters -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label for="filter_area" class="form-label">Area :</label>
+                    <select class="form-select select2" id="filter_area">
+                        <option value="">- All Area -</option>
+                        @foreach($areas as $area)
+                            <option value="{{ $area->id }}">{{ $area->area }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="filter_family" class="form-label">Family :</label>
+                    <select class="form-select select2" id="filter_family">
+                        <option value="">- All Family -</option>
+                        @foreach($families as $family)
+                            <option value="{{ $family->id }}">{{ $family->family }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
 
-@push('scripts')
-    <!-- DataTables -->
-    <script src="{{ asset('plugins/datatables/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
-    <!-- Select2 -->
-    <script src="{{ asset('plugins/select2/js/select2.full.min.js') }}"></script>
-    <!-- SweetAlert2 -->
-    <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
+            <div class="table-responsive">
+                <table id="master-conveyor-table" class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th width="5%">No</th>
+                            <th>Area</th>
+                            <th>Conveyor</th>
+                            <th>Family</th>
+                            <th>Shift/Start</th>
+                            <th>Capacity</th>
+                            <th>Pallet Qty</th>
+                            <th width="10%">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 
+@include('master_data.master_conveyor.form')
+@endsection
+
+@section('script')
     <script>
         $(function () {
             // Initialize Select2 for filters
             $('#filter_area, #filter_family').select2({
-                theme: 'bootstrap4',
+                theme: 'bootstrap-5',
                 allowClear: true,
+                width: '100%',
                 placeholder: function() {
                     return $(this).data('placeholder') || 'Select...';
                 }
@@ -100,6 +84,7 @@
             var table = $('#master-conveyor-table').DataTable({
                 processing: true,
                 serverSide: true,
+                responsive: true,
                 ajax: {
                     url: "{{ route('master-data.master-conveyor.datatable') }}",
                     data: function(d) {
@@ -128,20 +113,20 @@
             // Initialize Select2 for form
             function initFormSelect2() {
                 $('#master_area_id').select2({
-                    theme: 'bootstrap4',
+                    theme: 'bootstrap-5',
                     dropdownParent: $('#masterConveyorModal'),
                     placeholder: 'Select Area'
                 });
 
                 $('#family_ids').select2({
-                    theme: 'bootstrap4',
+                    theme: 'bootstrap-5',
                     dropdownParent: $('#masterConveyorModal'),
                     placeholder: 'Select Family',
                     allowClear: true
                 });
 
                 $('#shift_qty').select2({
-                    theme: 'bootstrap4',
+                    theme: 'bootstrap-5',
                     dropdownParent: $('#masterConveyorModal'),
                     minimumResultsForSearch: Infinity
                 });
@@ -263,4 +248,4 @@
             });
         });
     </script>
-@endpush
+@endsection

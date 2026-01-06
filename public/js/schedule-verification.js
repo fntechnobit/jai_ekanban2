@@ -12,6 +12,9 @@ var routeUrls = {
     csrfToken: ''
 };
 
+// Global table variable
+var scheduleVerificationTable;
+
 $(function () {
     // Initialize Select2
     $('#filter_conveyor_id').select2({
@@ -32,7 +35,7 @@ $(function () {
     });
 
     // DataTable
-    var table = $('#schedule-verification-table').DataTable({
+    scheduleVerificationTable = $('#schedule-verification-table').DataTable({
         processing: true,
         serverSide: true,
         ajax: {
@@ -62,9 +65,14 @@ $(function () {
         order: [[2, 'asc'], [1, 'asc'], [3, 'asc']]
     });
 
-    // Filter button
-    $('#btn-filter').click(function() {
-        table.ajax.reload();
+    // Auto reload when filter changes
+    $('#filter_conveyor_id, #filter_status').on('change', function() {
+        scheduleVerificationTable.ajax.reload();
+    });
+
+    // Auto reload when date range changes
+    $('#filter_dates').on('apply.daterangepicker', function() {
+        scheduleVerificationTable.ajax.reload();
     });
 
     // Reset button
@@ -73,7 +81,7 @@ $(function () {
         $('#filter_status').val('');
         $('#filter_dates').data('daterangepicker').setStartDate(moment().subtract(10, 'days'));
         $('#filter_dates').data('daterangepicker').setEndDate(moment().add(31, 'days'));
-        table.ajax.reload();
+        scheduleVerificationTable.ajax.reload();
     });
 
     // Verify button - opens verification modal in edit mode
@@ -132,7 +140,7 @@ $(function () {
                         });
                     },
                     success: function(response) {
-                        table.ajax.reload();
+                        scheduleVerificationTable.ajax.reload();
                         Swal.fire('Unverified!', response.message, 'success');
                     },
                     error: function(xhr) {
@@ -695,7 +703,7 @@ $(function () {
                     },
                     success: function(response) {
                         $('#verificationModal').modal('hide');
-                        table.ajax.reload();
+                        scheduleVerificationTable.ajax.reload();
                         Swal.fire({
                             icon: 'success',
                             title: 'Verified!',

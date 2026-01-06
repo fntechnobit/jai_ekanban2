@@ -40,18 +40,22 @@ class UserGroupService
             ->addColumn('action', function($row){
                 /** @var \App\Models\User|null $currentUser */
                 $currentUser = Auth::user();
-                $actions = [];
+                $actions = '<div class="btn-group" role="group">';
+                $hasActions = false;
 
                 if ($currentUser && $currentUser->hasMenuPermission('user_groups', 'can_update')) {
-                    $actions[] = '<button type="button" class="btn btn-sm btn-info btn-edit" data-id="'.$row->id.'" title="Edit"><i class="fas fa-edit"></i></button>';
-                    $actions[] = '<button type="button" class="btn btn-sm btn-warning btn-permission" data-id="'.$row->id.'" title="Permissions"><i class="fas fa-key"></i></button>';
+                    $actions .= '<button type="button" class="btn btn-soft-primary btn-sm btn-edit" data-id="'.$row->id.'" title="Edit"><i class="ti ti-pencil"></i></button>';
+                    $actions .= '<button type="button" class="btn btn-soft-warning btn-sm btn-permission" data-id="'.$row->id.'" title="Permissions"><i class="ti ti-key"></i></button>';
+                    $hasActions = true;
                 }
 
                 if ($currentUser && $currentUser->hasMenuPermission('user_groups', 'can_delete')) {
-                    $actions[] = '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="'.$row->id.'" title="Delete"><i class="fas fa-trash"></i></button>';
+                    $actions .= '<button type="button" class="btn btn-soft-danger btn-sm btn-delete" data-id="'.$row->id.'" title="Delete"><i class="ti ti-trash"></i></button>';
+                    $hasActions = true;
                 }
 
-                return !empty($actions) ? implode(' ', $actions) : '-';
+                $actions .= '</div>';
+                return $hasActions ? $actions : '-';
             })
             ->rawColumns(['status', 'action', 'users_link'])
             ->make(true);

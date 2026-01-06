@@ -55,27 +55,23 @@ class MasterShikakeService
             ->addColumn('action', function ($row) {
                 /** @var \App\Models\User|null $currentUser */
                 $currentUser = Auth::user();
-                $actions = [];
+                $actions = '<div class="btn-group" role="group">';
+                $hasActions = false;
 
-                // View/Edit button
+                // View button
                 if ($currentUser && $currentUser->hasMenuPermission('master_shikake', 'can_update')) {
-                    $actions[] = '<button type="button" class="btn btn-info btn-sm btn-view" data-id="' . $row->id . '" title="View">
-                        <i class="fas fa-eye"></i> View
-                    </button>';
+                    $actions .= '<button type="button" class="btn btn-soft-info btn-sm btn-view" data-id="' . $row->id . '" title="View"><i class="ti ti-eye"></i></button>';
+                    $hasActions = true;
                 }
 
                 // Delete button
                 if ($currentUser && $currentUser->hasMenuPermission('master_shikake', 'can_delete')) {
-                    $actions[] = '<button type="button" class="btn btn-danger btn-sm btn-delete" 
-                        data-id="' . $row->id . '" 
-                        data-name="' . htmlspecialchars($row->shikake_no ?? '-', ENT_QUOTES) . '" 
-                        data-barcode="' . htmlspecialchars($row->barcode_kanban ?? '-', ENT_QUOTES) . '" 
-                        title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>';
+                    $actions .= '<button type="button" class="btn btn-soft-danger btn-sm btn-delete" data-id="' . $row->id . '" data-name="' . htmlspecialchars($row->shikake_no ?? '-', ENT_QUOTES) . '" data-barcode="' . htmlspecialchars($row->barcode_kanban ?? '-', ENT_QUOTES) . '" title="Delete"><i class="ti ti-trash"></i></button>';
+                    $hasActions = true;
                 }
 
-                return implode(' ', $actions);
+                $actions .= '</div>';
+                return $hasActions ? $actions : '-';
             })
             ->rawColumns(['action'])
             ->make(true);

@@ -5,7 +5,7 @@ return [
         [
             'title' => 'Dashboard',
             'url' => 'dashboard',
-            'icon' => 'tachometer-alt',
+            'icon' => 'gauge-high',
             'sub_menu' => '#'
         ],
         [
@@ -28,7 +28,7 @@ return [
                 [
                     'title' => 'Parts',
                     'url' => 'kanban/parts',
-                    'icon' => 'cog',
+                    'icon' => 'gear',
                     'sub_menu' => '#'
                 ],
             ]
@@ -41,13 +41,13 @@ return [
                 [
                     'title' => 'Kanban Status',
                     'url' => 'reports/kanban-status',
-                    'icon' => 'file-alt',
+                    'icon' => 'file-lines',
                     'sub_menu' => '#'
                 ],
                 [
                     'title' => 'Inventory Report',
                     'url' => 'reports/inventory',
-                    'icon' => 'file-alt',
+                    'icon' => 'file-lines',
                     'sub_menu' => '#'
                 ],
             ]
@@ -55,7 +55,7 @@ return [
         [
             'title' => 'System',
             'url' => '#',
-            'icon' => 'cog',
+            'icon' => 'gear',
             'sub_menu' => [
                 [
                     'title' => 'Users',
@@ -66,7 +66,7 @@ return [
                 [
                     'title' => 'User Groups',
                     'url' => 'system/user-groups',
-                    'icon' => 'users-cog',
+                    'icon' => 'users-gear',
                     'sub_menu' => '#'
                 ],
                 [

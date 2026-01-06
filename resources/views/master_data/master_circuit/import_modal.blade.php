@@ -1,25 +1,25 @@
 <!-- Import Modal -->
-<div class="modal fade" id="importCircuitModal" tabindex="-1" role="dialog" aria-labelledby="importCircuitModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+<div class="modal fade" id="importCircuitModal" tabindex="-1"  aria-labelledby="importCircuitModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" >
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="importCircuitModalLabel">Import Data Circuit (Cutting)</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                    
                 </button>
             </div>
             <form id="importCircuitForm" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
+                        <i class="fa-solid fa-circle-info"></i>
                         <strong>Important:</strong> Maximum 1000 rows per upload. If you need to import more data, please split it into smaller batches.
                     </div>
 
-                    <div class="form-group row">
+                    <div class="mb-3 row">
                         <label for="import_area_id" class="col-sm-3 col-form-label">Area :</label>
                         <div class="col-sm-9">
-                            <select class="form-control select2" id="import_area_id" name="area_id" style="width: 100%;">
+                            <select class="form-select select2" id="import_area_id" name="area_id" style="width: 100%;">
                                 <option value="">- All Area -</option>
                                 @foreach($areas as $area)
                                     <option value="{{ $area->id }}">{{ $area->area }}</option>
@@ -29,10 +29,10 @@
                         </div>
                     </div>
 
-                    <div class="form-group row">
+                    <div class="mb-3 row">
                         <label for="import_conveyor_id" class="col-sm-3 col-form-label">Conveyor <span class="text-danger">*</span>:</label>
                         <div class="col-sm-9">
-                            <select class="form-control select2" id="import_conveyor_id" name="conveyor_id" style="width: 100%;" required>
+                            <select class="form-select select2" id="import_conveyor_id" name="conveyor_id" style="width: 100%;" required>
                                 <option value="">- Choose Conveyor -</option>
                                 @foreach($conveyors as $conveyor)
                                     <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
@@ -42,7 +42,7 @@
                         </div>
                     </div>
 
-                    <div class="form-group row">
+                    <div class="mb-3 row">
                         <label for="import_file" class="col-sm-3 col-form-label">File Import <span class="text-danger">*</span>:</label>
                         <div class="col-sm-9">
                             <div class="custom-file">
@@ -54,10 +54,10 @@
                         </div>
                     </div>
 
-                    <div class="form-group row">
+                    <div class="mb-3 row">
                         <label for="rows_start" class="col-sm-3 col-form-label">Rows Start :</label>
                         <div class="col-sm-4">
-                            <input type="number" class="form-control" id="rows_start" name="rows_start" value="2" min="1" required>
+                            <input type="number" class="form-control form-control-sm" id="rows_start" name="rows_start" value="2" min="1" required>
                             <small class="form-text text-danger rows_start_error"></small>
                         </div>
                         <div class="col-sm-5">
@@ -66,12 +66,12 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success" id="btn-download-template-circuit">
-                        <i class="fas fa-file-excel"></i> Download Template
+                    <button type="button" class="btn btn-success btn-sm" id="btn-download-template-circuit">
+                        <i class="fa-solid fa-file-spreadsheet"></i> Download Template
                     </button>
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="btn-submit-import">
-                        <i class="fas fa-upload"></i> Import
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm" id="btn-submit-import">
+                        <i class="fa-solid fa-upload"></i> Import
                     </button>
                 </div>
             </form>

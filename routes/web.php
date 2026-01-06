@@ -19,8 +19,11 @@ use App\Http\Controllers\MasterData\MasterCircuitController;
 use App\Http\Controllers\Auth\LoginController;
 
 Route::get('/', function () {
-    return redirect('/dashboard');
-});
+    if (auth()->check()) {
+        return redirect('/dashboard');
+    }
+    return redirect('/login');
+})->name('home');
 
 // Authentication Routes
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');

@@ -1,12 +1,13 @@
-@extends('layout')
+@extends('layouts.master')
 
 @section('title', isset($circuit) ? 'Detail Circuit' : 'Create Circuit')
 
-@section('content')
+@section('breadcrumb')
     <x-page-header menu-code="master_circuit" />
+@endsection
 
-    <section class="content">
-        <div class="container-fluid">
+@section('content')
+    <div class="container-fluid">
             <form id="circuitForm" enctype="multipart/form-data">
                 @csrf
                 @if(isset($circuit))
@@ -18,7 +19,7 @@
                         <h3 class="card-title">{{ isset($circuit) ? 'Detail Circuit' : 'Create New Circuit' }}</h3>
                         <div class="card-tools">
                             <a href="{{ route('master-data.master-circuit.index') }}" class="btn btn-secondary btn-sm">
-                                <i class="fas fa-arrow-left"></i> Back
+                                <i class="fa-solid fa-arrow-left"></i> Back
                             </a>
                         </div>
                     </div>
@@ -26,141 +27,141 @@
                         <div class="row">
                             <!-- Left Column -->
                             <div class="col-md-6">
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Conveyor <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" value="{{ $circuit->getRelation('conveyor') ? $circuit->getRelation('conveyor')->conveyor : $circuit->conveyor }}" readonly>
+                                    <input type="text" class="form-control form-control-sm" value="{{ $circuit->getRelation('conveyor') ? $circuit->getRelation('conveyor')->conveyor : $circuit->conveyor }}" readonly>
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>CCT No</label>
-                                    <input type="text" name="cct_no" class="form-control" value="{{ $circuit->cct_no ?? '' }}">
+                                    <input type="text" name="cct_no" class="form-control form-control-sm" value="{{ $circuit->cct_no ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Family</label>
-                                    <input type="text" name="family" class="form-control" value="{{ $circuit->family ?? '' }}">
+                                    <input type="text" name="family" class="form-control form-control-sm" value="{{ $circuit->family ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>QTY</label>
-                                    <input type="number" name="qty" class="form-control" value="{{ $circuit->qty ?? '' }}">
+                                    <input type="number" name="qty" class="form-control form-control-sm" value="{{ $circuit->qty ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Issue</label>
-                                    <input type="text" name="issue" class="form-control" value="{{ $circuit->issue ?? '' }}">
+                                    <input type="text" name="issue" class="form-control form-control-sm" value="{{ $circuit->issue ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Machine Sequence</label>
-                                    <input type="text" name="machine_sequence" class="form-control" value="{{ $circuit->machine_sequence ?? '' }}">
+                                    <input type="text" name="machine_sequence" class="form-control form-control-sm" value="{{ $circuit->machine_sequence ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Barcode Kanban</label>
-                                    <input type="text" name="barcode_kanban" class="form-control" value="{{ $circuit->barcode_kanban ?? '' }}">
+                                    <input type="text" name="barcode_kanban" class="form-control form-control-sm" value="{{ $circuit->barcode_kanban ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Kanban</label>
-                                    <input type="text" name="kanban" class="form-control" value="{{ $circuit->kanban ?? '' }}">
+                                    <input type="text" name="kanban" class="form-control form-control-sm" value="{{ $circuit->kanban ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Released Date</label>
-                                    <input type="date" name="released_date" class="form-control" value="{{ $circuit->released_date ? $circuit->released_date->format('Y-m-d') : '' }}">
+                                    <input type="date" name="released_date" class="form-control form-control-sm" value="{{ $circuit->released_date ? $circuit->released_date->format('Y-m-d') : '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Released Note</label>
-                                    <textarea name="released_note" class="form-control" rows="3">{{ $circuit->released_note ?? '' }}</textarea>
+                                    <textarea name="released_note" class="form-control form-control-sm" rows="3">{{ $circuit->released_note ?? '' }}</textarea>
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Customer No</label>
-                                    <input type="text" name="cust_no" class="form-control" value="{{ $circuit->cust_no ?? '' }}">
+                                    <input type="text" name="cust_no" class="form-control form-control-sm" value="{{ $circuit->cust_no ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Barcode Mesin</label>
-                                    <input type="text" name="barcode_mesin" class="form-control" value="{{ $circuit->barcode_mesin ?? '' }}">
+                                    <input type="text" name="barcode_mesin" class="form-control form-control-sm" value="{{ $circuit->barcode_mesin ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Address</label>
-                                    <input type="text" name="address" class="form-control" value="{{ $circuit->address ?? '' }}">
+                                    <input type="text" name="address" class="form-control form-control-sm" value="{{ $circuit->address ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>CCT Code</label>
-                                    <input type="text" name="cct_code" class="form-control" value="{{ $circuit->cct_code ?? '' }}">
+                                    <input type="text" name="cct_code" class="form-control form-control-sm" value="{{ $circuit->cct_code ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Kind</label>
-                                    <input type="text" name="kind" class="form-control" value="{{ $circuit->kind ?? '' }}">
+                                    <input type="text" name="kind" class="form-control form-control-sm" value="{{ $circuit->kind ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Size</label>
-                                    <input type="text" name="size" class="form-control" value="{{ $circuit->size ?? '' }}">
+                                    <input type="text" name="size" class="form-control form-control-sm" value="{{ $circuit->size ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Col</label>
-                                    <input type="text" name="col" class="form-control" value="{{ $circuit->col ?? '' }}">
+                                    <input type="text" name="col" class="form-control form-control-sm" value="{{ $circuit->col ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>CL</label>
-                                    <input type="text" name="cl" class="form-control" value="{{ $circuit->cl ?? '' }}">
+                                    <input type="text" name="cl" class="form-control form-control-sm" value="{{ $circuit->cl ?? '' }}">
                                 </div>
 
                                 <!-- Terminal 1 Section -->
                                 <h5 class="mt-3">Terminal 1</h5>
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Terminal 1</label>
-                                    <input type="text" name="terminal_1" class="form-control" value="{{ $circuit->terminal_1 ?? '' }}">
+                                    <input type="text" name="terminal_1" class="form-control form-control-sm" value="{{ $circuit->terminal_1 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Note 1</label>
-                                    <input type="text" name="note_1" class="form-control" value="{{ $circuit->note_1 ?? '' }}">
+                                    <input type="text" name="note_1" class="form-control form-control-sm" value="{{ $circuit->note_1 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Gold 1</label>
-                                    <input type="text" name="gold_1" class="form-control" value="{{ $circuit->gold_1 ?? '' }}">
+                                    <input type="text" name="gold_1" class="form-control form-control-sm" value="{{ $circuit->gold_1 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Strip 1</label>
-                                    <input type="text" name="strip_1" class="form-control" value="{{ $circuit->strip_1 ?? '' }}">
+                                    <input type="text" name="strip_1" class="form-control form-control-sm" value="{{ $circuit->strip_1 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>ACC 1</label>
-                                    <input type="text" name="acc_1" class="form-control" value="{{ $circuit->acc_1 ?? '' }}">
+                                    <input type="text" name="acc_1" class="form-control form-control-sm" value="{{ $circuit->acc_1 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>ACC 1A</label>
-                                    <input type="text" name="acc_1a" class="form-control" value="{{ $circuit->acc_1a ?? '' }}">
+                                    <input type="text" name="acc_1a" class="form-control form-control-sm" value="{{ $circuit->acc_1a ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Tube 1</label>
-                                    <input type="text" name="tube_1" class="form-control" value="{{ $circuit->tube_1 ?? '' }}">
+                                    <input type="text" name="tube_1" class="form-control form-control-sm" value="{{ $circuit->tube_1 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Mark 1</label>
-                                    <input type="text" name="mark_1" class="form-control" value="{{ $circuit->mark_1 ?? '' }}">
+                                    <input type="text" name="mark_1" class="form-control form-control-sm" value="{{ $circuit->mark_1 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Remark 1</label>
-                                    <textarea name="remark_1" class="form-control" rows="2">{{ $circuit->remark_1 ?? '' }}</textarea>
+                                    <textarea name="remark_1" class="form-control form-control-sm" rows="2">{{ $circuit->remark_1 ?? '' }}</textarea>
                                 </div>
                             </div>
 
@@ -168,74 +169,74 @@
                             <div class="col-md-6">
                                 <!-- Terminal 2 Section -->
                                 <h5>Terminal 2</h5>
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Terminal 2</label>
-                                    <input type="text" name="terminal_2" class="form-control" value="{{ $circuit->terminal_2 ?? '' }}">
+                                    <input type="text" name="terminal_2" class="form-control form-control-sm" value="{{ $circuit->terminal_2 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Note 2</label>
-                                    <input type="text" name="note_2" class="form-control" value="{{ $circuit->note_2 ?? '' }}">
+                                    <input type="text" name="note_2" class="form-control form-control-sm" value="{{ $circuit->note_2 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Gold 2</label>
-                                    <input type="text" name="gold_2" class="form-control" value="{{ $circuit->gold_2 ?? '' }}">
+                                    <input type="text" name="gold_2" class="form-control form-control-sm" value="{{ $circuit->gold_2 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Strip 2</label>
-                                    <input type="text" name="strip_2" class="form-control" value="{{ $circuit->strip_2 ?? '' }}">
+                                    <input type="text" name="strip_2" class="form-control form-control-sm" value="{{ $circuit->strip_2 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>ACC 2</label>
-                                    <input type="text" name="acc_2" class="form-control" value="{{ $circuit->acc_2 ?? '' }}">
+                                    <input type="text" name="acc_2" class="form-control form-control-sm" value="{{ $circuit->acc_2 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>ACC 2A</label>
-                                    <input type="text" name="acc_2a" class="form-control" value="{{ $circuit->acc_2a ?? '' }}">
+                                    <input type="text" name="acc_2a" class="form-control form-control-sm" value="{{ $circuit->acc_2a ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Tube 2</label>
-                                    <input type="text" name="tube_2" class="form-control" value="{{ $circuit->tube_2 ?? '' }}">
+                                    <input type="text" name="tube_2" class="form-control form-control-sm" value="{{ $circuit->tube_2 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Mark 2</label>
-                                    <input type="text" name="mark_2" class="form-control" value="{{ $circuit->mark_2 ?? '' }}">
+                                    <input type="text" name="mark_2" class="form-control form-control-sm" value="{{ $circuit->mark_2 ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Remark 2</label>
-                                    <textarea name="remark_2" class="form-control" rows="2">{{ $circuit->remark_2 ?? '' }}</textarea>
+                                    <textarea name="remark_2" class="form-control form-control-sm" rows="2">{{ $circuit->remark_2 ?? '' }}</textarea>
                                 </div>
 
                                 <!-- T Fields -->
                                 <h5 class="mt-3">T Fields</h5>
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>TA</label>
-                                    <input type="text" name="ta" class="form-control" value="{{ $circuit->ta ?? '' }}">
+                                    <input type="text" name="ta" class="form-control form-control-sm" value="{{ $circuit->ta ?? '' }}">
                                 </div>
 
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>TB</label>
-                                    <input type="text" name="tb" class="form-control" value="{{ $circuit->tb ?? '' }}">
+                                    <input type="text" name="tb" class="form-control form-control-sm" value="{{ $circuit->tb ?? '' }}">
                                 </div>
 
                                 @for($i = 1; $i <= 6; $i++)
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>T{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</label>
-                                    <input type="text" name="t{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" class="form-control" value="{{ $circuit->{'t' . str_pad($i, 2, '0', STR_PAD_LEFT)} ?? '' }}">
+                                    <input type="text" name="t{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" class="form-control form-control-sm" value="{{ $circuit->{'t' . str_pad($i, 2, '0', STR_PAD_LEFT)} ?? '' }}">
                                 </div>
                                 @endfor
 
                                 <!-- Image Upload -->
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label>Image</label>
-                                    <input type="file" name="image" id="imageInput" class="form-control" accept="image/*">
+                                    <input type="file" name="image" id="imageInput" class="form-control form-control-sm" accept="image/*">
                                     @if(isset($circuit) && $circuit->image_path)
                                         <div class="mt-2">
                                             <img id="imagePreview" src="{{ asset($circuit->image_path) }}" alt="Circuit Image" class="img-thumbnail" style="max-width: 300px;">
@@ -249,7 +250,7 @@
 
                                 <!-- Assy List -->
                                 @if(isset($circuit))
-                                <div class="form-group">
+                                <div class="mb-3">
                                     <label class="d-block">Assy List</label>
                                     <div class="card">
                                         <div class="card-body">
@@ -268,30 +269,26 @@
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button type="button" class="btn btn-secondary" onclick="window.location='{{ route('master-data.master-circuit.index') }}'">
-                            <i class="fas fa-times"></i> Cancel
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.location='{{ route('master-data.master-circuit.index') }}'">
+                            <i class="fa-solid fa-xmark"></i> Cancel
                         </button>
                         @if(isset($circuit))
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Submit
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fa-solid fa-floppy-disk"></i> Submit
                             </button>
                         @else
-                            <button type="submit" class="btn btn-success">
-                                <i class="fas fa-save"></i> Submit
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="fa-solid fa-floppy-disk"></i> Submit
                             </button>
                         @endif
                     </div>
                 </div>
             </form>
         </div>
-    </section>
+    </div>
 @endsection
 
-@push('styles')
-    <link rel="stylesheet" href="{{ asset('plugins/sweetalert2/sweetalert2.min.css') }}">
-@endpush
-
-@push('scripts')
+@section('script')
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
     <script>
         $(document).ready(function() {
@@ -351,4 +348,4 @@
             });
         });
     </script>
-@endpush
+@endsection
