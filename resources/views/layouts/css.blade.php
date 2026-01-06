@@ -11,7 +11,7 @@
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/vendor/weather/weather-icons-wind.css') }}">
 
 <!--font-awesome-css-->
-<link rel="stylesheet" href="{{ asset('fontawesome-free-6.5.2-web/css/all.min.css') }}">
+<link rel="stylesheet" href="{{ asset('plugins/fontawesome-free-6.5.2-web/css/all.min.css') }}?v=6.5.2">
 
 <!--Flag Icon css-->
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/vendor/flag-icons-master/flag-icon.css') }}">
@@ -183,6 +183,79 @@
     nav.dark-sidebar .app-nav .main-nav > li.no-sub > a.active {
         background: rgba(var(--primary), 1) !important;
         color: var(--white) !important;
+    }
+    
+    /* Font Awesome Icons - CRITICAL FIX for Sidebar and All Elements */
+    /* Override tabler-icons with higher specificity */
+    
+    /* Fix for sidebar menu icons */
+    nav .app-nav .main-nav > li:not(.menu-title) > a i,
+    nav .app-nav .main-nav > li:not(.menu-title) ul li > a i,
+    nav .app-nav .main-nav > li:not(.menu-title) ul li.another-level > a i,
+    nav.dark-sidebar .app-nav .main-nav > li:not(.menu-title) > a i,
+    nav.dark-sidebar .app-nav .main-nav > li:not(.menu-title) ul li > a i {
+        font-family: "Font Awesome 6 Free" !important;
+        font-weight: 900 !important;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        display: inline-block !important;
+        font-style: normal !important;
+        font-variant: normal !important;
+        text-rendering: auto !important;
+        line-height: 1 !important;
+    }
+    
+    /* Global Font Awesome solid icons */
+    i.fa-solid,
+    i.fas,
+    .fa-solid,
+    .fas {
+        font-family: "Font Awesome 6 Free" !important;
+        font-weight: 900 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        display: inline-block !important;
+        font-style: normal !important;
+        font-variant: normal !important;
+        text-rendering: auto !important;
+    }
+    
+    /* Global Font Awesome regular icons */
+    i.fa-regular,
+    i.far,
+    .fa-regular,
+    .far {
+        font-family: "Font Awesome 6 Free" !important;
+        font-weight: 400 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        display: inline-block !important;
+        font-style: normal !important;
+        font-variant: normal !important;
+        text-rendering: auto !important;
+    }
+    
+    /* Global Font Awesome brands icons */
+    i.fa-brands,
+    i.fab,
+    .fa-brands,
+    .fab {
+        font-family: "Font Awesome 6 Brands" !important;
+        font-weight: 400 !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        display: inline-block !important;
+        font-style: normal !important;
+        font-variant: normal !important;
+        text-rendering: auto !important;
+    }
+    
+    /* Make sure Font Awesome overrides any tabler-icon styles */
+    nav i[class*="fa-"],
+    nav i[class^="fa-"],
+    body i[class*="fa-"],
+    body i[class^="fa-"] {
+        font-family: var(--fa-style-family, "Font Awesome 6 Free") !important;
     }
 </style>
 
