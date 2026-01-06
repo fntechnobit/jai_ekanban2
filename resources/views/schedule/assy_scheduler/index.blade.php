@@ -1,72 +1,68 @@
-@extends('layout')
+@extends('layouts.master')
 
 @section('title', 'Assy Scheduler')
 
-@section('content')
+@section('breadcrumb')
     <x-page-header menu-code="assy_scheduler" />
+@endsection
 
-    <section class="content">
-        <div class="container-fluid">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-list"></i> Assy Schedule List</h3>
-                    <div class="card-tools">
-                        @if(auth()->user()->hasMenuPermission('assy_scheduler', 'can_create'))
-                            <button type="button" class="btn btn-primary btn-sm" id="btn-generate">
-                                <i class="fas fa-cogs"></i> Generate
-                            </button>
-                        @endif
+@section('content')
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fa-solid fa-list"></i> Assy Schedule List</h5>
+                <div class="card-tools float-end">
+                    @if(auth()->user()->hasMenuPermission('assy_scheduler', 'can_create'))
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-generate">
+                            <i class="fa-solid fa-gear"></i> Generate
+                        </button>
+                    @endif
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Filters -->
+                <div class="row mb-3">
+                    <div class="col-md-5">
+                        <label for="filter_dates" class="form-label">Dates:</label>
+                        <input type="text" class="form-control form-control-sm" id="filter_dates" readonly
+                               placeholder="Select date range">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="filter_conveyor_id" class="form-label">Conveyor:</label>
+                        <select class="form-select select2" id="filter_conveyor_id" style="width: 100%;">
+                            <option value="">- All Conveyor -</option>
+                            @foreach($conveyors as $conveyor)
+                                <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-reset">
+                            <i class="fa-solid fa-arrows-rotate"></i> Reset
+                        </button>
                     </div>
                 </div>
-                <div class="card-body">
-                    <!-- Filters -->
-                    <div class="row mb-3">
-                        <div class="col-md-5">
-                            <label for="filter_dates">Dates:</label>
-                            <input type="text" class="form-control" id="filter_dates" readonly
-                                   placeholder="Select date range">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="filter_conveyor_id">Conveyor:</label>
-                            <select class="form-control select2" id="filter_conveyor_id" style="width: 100%;">
-                                <option value="">- All Conveyor -</option>
-                                @foreach($conveyors as $conveyor)
-                                    <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label>&nbsp;</label><br>
-                            <button type="button" class="btn btn-info" id="btn-filter">
-                                <i class="fas fa-search"></i> Filter
-                            </button>
-                            <button type="button" class="btn btn-secondary" id="btn-reset">
-                                <i class="fas fa-redo"></i> Reset
-                            </button>
-                        </div>
-                    </div>
 
-                    <div class="table-responsive">
-                        <table id="assy-schedule-table" class="table table-bordered table-striped table-sm">
-                            <thead>
-                                <tr>
-                                    <th width="5%">No.</th>
-                                    <th width="10%">Conveyor</th>
-                                    <th width="12%">Times</th>
-                                    <th width="8%">Shift</th>
-                                    <th width="8%">Cut Off</th>
-                                    <th width="45%">Assy</th>
-                                    <th width="8%">Qty.</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="table-responsive">
+                    <table id="assy-schedule-table" class="table table-bordered table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th width="5%">No.</th>
+                                <th width="10%">Conveyor</th>
+                                <th width="12%">Times</th>
+                                <th width="8%">Shift</th>
+                                <th width="8%">Cut Off</th>
+                                <th width="45%">Assy</th>
+                                <th width="8%">Qty.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 
     @include('schedule.assy_scheduler.generate_modal')
 @endsection
@@ -76,6 +72,7 @@
         $(function () {
             // Initialize Select2
             $('#filter_conveyor_id').select2({
+                theme: 'bootstrap-5',
                 allowClear: true,
                 placeholder: '- All Conveyor -'
             });
@@ -119,8 +116,13 @@
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
             });
 
-            // Filter button
-            $('#btn-filter').click(function() {
+            // Auto reload when filter changes
+            $('#filter_conveyor_id').on('change', function() {
+                table.ajax.reload();
+            });
+
+            // Auto reload when date range changes
+            $('#filter_dates').on('apply.daterangepicker', function() {
                 table.ajax.reload();
             });
 
@@ -139,7 +141,7 @@
 
             // Initialize Select2 in modal
             $('#generate_conveyor_id').select2({
-                theme: 'bootstrap4',
+                theme: 'bootstrap-5',
                 dropdownParent: $('#generateModal'),
                 allowClear: true,
                 placeholder: '- All Conveyor -'
@@ -164,7 +166,7 @@
                 var dates = $('#generate_dates').data('daterangepicker');
                 var submitBtn = $('#btn-submit-generate');
                 
-                submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generating...');
+                submitBtn.prop('disabled', true).html('<i class="fa-solid fa-spinner ti-spin"></i> Generating...');
 
                 $.ajax({
                     url: "{{ route('schedule.assy-scheduler.generate') }}",
@@ -188,7 +190,7 @@
                         Swal.fire('Error!', message, 'error');
                     },
                     complete: function() {
-                        submitBtn.prop('disabled', false).html('<i class="fas fa-cogs"></i> Generate');
+                        submitBtn.prop('disabled', false).html('<i class="fa-solid fa-gear"></i> Generate');
                     }
                 });
             });

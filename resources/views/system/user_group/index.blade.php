@@ -1,19 +1,20 @@
-@extends('layout')
+@extends('layouts.master')
 
 @section('title', 'User Group Management')
 
-@section('content')
-<x-page-header menu-code="user_groups" />
+@section('breadcrumb')
+    <x-page-header menu-code="user_groups" />
+@endsection
 
-<section class="content">
+@section('content')
     <div class="container-fluid">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">User Group List</h3>
-                <div class="card-tools">
+                <h5 class="card-title mb-0">User Group List</h5>
+                <div class="card-tools float-end">
                     @if(auth()->user()->hasMenuPermission('user_groups', 'can_create'))
                         <button type="button" class="btn btn-primary btn-sm" id="btn-add">
-                            <i class="fas fa-plus"></i> Add User Group
+                            <i class="fa-solid fa-plus"></i> Add User Group
                         </button>
                     @endif
                 </div>
@@ -36,43 +37,28 @@
             </div>
         </div>
     </div>
-</section>
 
-@include('system.user_group.form')
-@include('system.user_group.permissions')
+    @include('system.user_group.form')
+    @include('system.user_group.permissions')
 @endsection
 
-@push('styles')
-<!-- DataTables -->
-<link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
-<link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
-@endpush
-
-@push('scripts')
-<!-- DataTables -->
-<script src="{{ asset('plugins/datatables/jquery.dataTables.min.js') }}"></script>
-<script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
-<script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
-<script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
-<!-- SweetAlert2 -->
-<script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
-
-<script>
-$(function() {
-    // DataTable
-    var table = $('#user-groups-table').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: "{{ route('system.user-groups.datatable') }}",
-        columns: [
-            {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
-            {data: 'name', name: 'name'},
-            {data: 'description', name: 'description'},
-            {data: 'users_link', name: 'users_count', orderable: false, searchable: false},
-            {data: 'status', name: 'is_active', orderable: false},
-            {data: 'action', name: 'action', orderable: false, searchable: false}
-        ]
-    });
+@section('script')
+    <script>
+        $(function() {
+            // DataTable
+            var table = $('#user-groups-table').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: "{{ route('system.user-groups.datatable') }}",
+                columns: [
+                    {data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false},
+                    {data: 'name', name: 'name'},
+                    {data: 'description', name: 'description'},
+                    {data: 'users_link', name: 'users_count', orderable: false, searchable: false},
+                    {data: 'status', name: 'is_active', orderable: false},
+                    {data: 'action', name: 'action', orderable: false, searchable: false}
+                ]
+            });
 
     // Add User Group Button
     $('#btn-add').click(function() {
@@ -269,6 +255,6 @@ $(function() {
             }
         });
     });
-});
-</script>
-@endpush
+    });
+    </script>
+@endsection

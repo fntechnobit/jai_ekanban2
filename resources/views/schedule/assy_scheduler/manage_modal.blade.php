@@ -1,13 +1,13 @@
 <!-- Manage Assy Schedule Modal -->
-<div class="modal fade" id="manageModal" tabindex="-1" role="dialog" aria-labelledby="manageModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
+<div class="modal fade" id="manageModal" tabindex="-1"  aria-labelledby="manageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" >
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title" id="manageModalLabel">
-                    <i class="fas fa-cogs"></i> Manage Assy Schedule
+                    <i class="fa-solid fa-gear"></i> Manage Assy Schedule
                 </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close">
+                    
                 </button>
             </div>
             <div class="modal-body">
@@ -15,12 +15,12 @@
                 <div class="row mb-4">
                     <div class="col-12">
                         <div class="info-header d-flex flex-wrap gap-2">
-                            <span class="badge badge-primary p-2" id="manage-conveyor-info">Conveyor AT11</span>
-                            <span class="badge badge-info p-2" id="manage-date-info">3 November 2025</span>
-                            <span class="badge badge-warning p-2" id="manage-shifts-info">2 Shift</span>
-                            <span class="badge badge-success p-2" id="manage-capacity-info">110 Capacity / Shift</span>
-                            <span class="badge badge-secondary p-2" id="manage-assy-count">3 Assy</span>
-                            <span class="badge badge-dark p-2" id="manage-listing-count">220 Listing</span>
+                            <span class="badge bg-primary p-2" id="manage-conveyor-info">Conveyor AT11</span>
+                            <span class="badge bg-info p-2" id="manage-date-info">3 November 2025</span>
+                            <span class="badge bg-warning p-2" id="manage-shifts-info">2 Shift</span>
+                            <span class="badge bg-success p-2" id="manage-capacity-info">110 Capacity / Shift</span>
+                            <span class="badge bg-secondary p-2" id="manage-assy-count">3 Assy</span>
+                            <span class="badge bg-dark p-2" id="manage-listing-count">220 Listing</span>
                         </div>
                     </div>
                 </div>
@@ -42,7 +42,7 @@
                                     <input type="text" id="available-date-range" class="form-control form-control-sm" 
                                            style="width: 180px;" placeholder="Select date range">
                                     <button type="button" id="btn-refresh-available" class="btn btn-sm btn-light ml-2">
-                                        <i class="fas fa-sync"></i>
+                                        <i class="fa-solid fa-arrows-rotate"></i>
                                     </button>
                                 </div>
                             </div>
@@ -54,7 +54,7 @@
                                 
                                 <!-- Loading indicator -->
                                 <div id="available-loading" class="text-center py-3" style="display: none;">
-                                    <i class="fas fa-spinner fa-spin"></i> Loading...
+                                    <i class="fa-solid fa-spinner ti-spin"></i> Loading...
                                 </div>
                                 
                                 <div id="available-assy-container" class="available-drop-zone" style="min-height: 250px;">
@@ -64,11 +64,11 @@
                                 <!-- Pagination controls -->
                                 <div id="available-pagination" class="d-flex justify-content-between align-items-center mt-2" style="display: none !important;">
                                     <button type="button" id="btn-prev-page" class="btn btn-sm btn-outline-primary" disabled>
-                                        <i class="fas fa-chevron-left"></i> Previous
+                                        <i class="fa-solid fa-chevron-left"></i> Previous
                                     </button>
                                     <span id="pagination-info" class="small text-muted">Page 1 of 1</span>
                                     <button type="button" id="btn-next-page" class="btn btn-sm btn-outline-primary" disabled>
-                                        Next <i class="fas fa-chevron-right"></i>
+                                        Next <i class="fa-solid fa-chevron-right"></i>
                                     </button>
                                 </div>
                             </div>
@@ -77,11 +77,11 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-success" id="btn-save-manage">
-                    <i class="fas fa-save"></i> Save Changes
+                <button type="button" class="btn btn-success btn-sm" id="btn-save-manage">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Changes
                 </button>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Close
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-xmark"></i> Close
                 </button>
             </div>
         </div>

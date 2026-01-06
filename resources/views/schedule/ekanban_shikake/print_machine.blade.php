@@ -1,27 +1,28 @@
-@extends('layout')
+@extends('layouts.master')
 
 @section('title', 'eKanban Shikake - Print Per Machine')
 
-@section('content')
+@section('breadcrumb')
     <x-page-header menu-code="ekanban_shikake_print_machine" />
+@endsection
 
-    <section class="content">
-        <div class="container-fluid">
+@section('content')
+    <div class="container-fluid">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">
-                        <i class="fas fa-wrench"></i> eKanban Shikake - Print Per Machine
+                        <i class="fa-solid fa-wrench"></i> eKanban Shikake - Print Per Machine
                     </h3>
                     <div class="card-tools">
                         <button class="btn btn-sm btn-success mr-1" id="btn-connect">
-                            <i class="fas fa-plug"></i> Connect
+                            <i class="fa-solid fa-plug"></i> Connect
                         </button>
                         <button class="btn btn-sm btn-warning mr-2" id="btn-disconnect">
-                            <i class="fas fa-unlink"></i> Disconnect
+                            <i class="fa-solid fa-unlink"></i> Disconnect
                         </button>
                         <span id="qz-status" class="mr-2">QZ: Idle</span>
                         <button type="button" class="btn btn-info btn-sm" id="btn-refresh">
-                            <i class="fas fa-sync-alt"></i> Refresh
+                            <i class="fa-solid fa-arrows-rotate"></i> Refresh
                         </button>
                         <select class="btn btn-sm" id="printer-select" style="max-width: 200px;" disabled>
                             <option>- Choose Printer -</option>
@@ -33,10 +34,10 @@
                     <form class="form-horizontal">
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <div class="form-group row">
+                                <div class="mb-3 row">
                                     <label for="filter_area" class="col-sm-3 col-form-label">Area:</label>
                                     <div class="col-sm-9">
-                                        <select class="form-control select2" id="filter_area">
+                                        <select class="form-select select2" id="filter_area">
                                             <option value="">- All Area -</option>
                                             @foreach($areas as $area)
                                                 <option value="{{ $area->id }}">{{ $area->area }}</option>
@@ -46,10 +47,10 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-group row">
+                                <div class="mb-3 row">
                                     <label for="filter_cutoff" class="col-sm-3 col-form-label">Cut Off: <span class="text-danger">*</span></label>
                                     <div class="col-sm-9">
-                                        <select class="form-control select2" id="filter_cutoff">
+                                        <select class="form-select select2" id="filter_cutoff">
                                             <option value="">- Choose Cut Off -</option>
                                             <option value="1">Cut Off 1</option>
                                             <option value="2">Cut Off 2</option>
@@ -63,10 +64,10 @@
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <div class="form-group row">
+                                <div class="mb-3 row">
                                     <label for="filter_machine" class="col-sm-3 col-form-label">Machine: <span class="text-danger">*</span></label>
                                     <div class="col-sm-9">
-                                        <select class="form-control select2" id="filter_machine" required>
+                                        <select class="form-select select2" id="filter_machine" required>
                                             <option value="">- Choose Machine -</option>
                                             @foreach($machines as $machine)
                                                 <option value="{{ $machine->machine }}">{{ $machine->machine }}</option>
@@ -76,20 +77,20 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-group row">
+                                <div class="mb-3 row">
                                     <label for="filter_date" class="col-sm-3 col-form-label">Date:</label>
                                     <div class="col-sm-9">
-                                        <input type="text" class="form-control" id="filter_date" readonly placeholder="Select date">
+                                        <input type="text" class="form-control form-control-sm" id="filter_date" readonly placeholder="Select date">
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <div class="form-group row">
+                                <div class="mb-3 row">
                                     <label for="filter_shift" class="col-sm-3 col-form-label">Shift:</label>
                                     <div class="col-sm-9">
-                                        <select class="form-control select2" id="filter_shift">
+                                        <select class="form-select select2" id="filter_shift">
                                             <option value="">- All Shift -</option>
                                             <option value="1">Shift 1</option>
                                             <option value="2">Shift 2</option>
@@ -98,10 +99,10 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-group row">
+                                <div class="mb-3 row">
                                     <label for="filter_print_status" class="col-sm-3 col-form-label">Print Status:</label>
                                     <div class="col-sm-9">
-                                        <select class="form-control select2" id="filter_print_status">
+                                        <select class="form-select select2" id="filter_print_status">
                                             <option value="all">All</option>
                                             <option value="not_printed" selected>Not Printed</option>
                                             <option value="printed">Already Printed</option>
@@ -114,14 +115,11 @@
                             <div class="col-md-6">
                             </div>
                             <div class="col-md-6">
-                                <div class="form-group row">
+                                <div class="mb-3 row">
                                     <label class="col-sm-3 col-form-label">&nbsp;</label>
                                     <div class="col-sm-9">
-                                        <button type="button" class="btn btn-info" id="btn-filter">
-                                            <i class="fas fa-search"></i> Filter
-                                        </button>
-                                        <button type="button" class="btn btn-secondary ml-2" id="btn-reset">
-                                            <i class="fas fa-redo"></i> Reset
+                                        <button type="button" class="btn btn-secondary btn-sm" id="btn-reset">
+                                            <i class="fa-solid fa-arrow-rotate-right"></i> Reset
                                         </button>
                                     </div>
                                 </div>
@@ -154,7 +152,7 @@
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 @endsection
 
 @section('script')
@@ -226,7 +224,7 @@
                         orderable: false,
                         render: function(data, type, row) {
                             if (row.is_printed) {
-                                var badge = '<span class="badge badge-success">Printed</span>';
+                                var badge = '<span class="badge bg-success">Printed</span>';
                                 if (row.last_printed_at) {
                                     badge += '<br><small>' + row.last_printed_at + '</small>';
                                 }
@@ -235,7 +233,7 @@
                                 }
                                 return badge;
                             } else {
-                                return '<span class="badge badge-warning">Not Printed</span>';
+                                return '<span class="badge bg-warning">Not Printed</span>';
                             }
                         }
                     },
@@ -246,21 +244,28 @@
                 order: [[3, 'asc']]
             });
 
-            // Filter buttons
-            $('#btn-filter').click(function() {
-                // Validate required filters
-                var machine = $('#filter_machine').val();
-                
-                if (!machine) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Required Field',
-                        text: 'Please select Machine before filtering'
-                    });
-                    return;
+            // Auto-reload when machine is selected
+            $('#filter_machine').on('change', function() {
+                var machine = $(this).val();
+                if (machine) {
+                    table.ajax.reload();
                 }
-                
-                table.ajax.reload();
+            });
+
+            // Auto-reload when date changes
+            $('#filter_date').on('apply.daterangepicker', function() {
+                var machine = $('#filter_machine').val();
+                if (machine) {
+                    table.ajax.reload();
+                }
+            });
+
+            // Auto-reload when print status changes
+            $('#filter_print_status').on('change', function() {
+                var machine = $('#filter_machine').val();
+                if (machine) {
+                    table.ajax.reload();
+                }
             });
 
             $('#btn-reset').click(function() {

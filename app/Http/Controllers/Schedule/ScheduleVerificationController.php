@@ -65,35 +65,35 @@ class ScheduleVerificationController extends Controller
             })
             ->addColumn('status', function ($schedule) {
                 if ($schedule->is_lock == 1) {
-                    return '<span class="badge badge-success">Verified</span>';
+                    return '<span class="badge bg-success">Verified</span>';
                 }
-                return '<span class="badge badge-danger">Pending</span>';
+                return '<span class="badge bg-danger">Pending</span>';
             })
             ->addColumn('action', function ($schedule) {
                 if ($schedule->is_lock == 1) {
                     // Show Detail and Unverify buttons for verified schedules
-                    return '
-                        <button type="button" class="btn btn-info btn-sm btn-detail" 
+                    return '<div class="btn-group" role="group">
+                        <button type="button" class="btn btn-soft-info btn-sm btn-detail" 
                             data-conveyor-id="' . $schedule->conveyor_id . '" 
                             data-date="' . $schedule->schedule_date . '" 
                             data-shift="' . $schedule->shift . '">
-                            <i class="fas fa-eye"></i> Detail
+                            <i class="ti ti-eye"></i> Detail
                         </button>
-                        <button type="button" class="btn btn-warning btn-sm btn-unverify" 
+                        <button type="button" class="btn btn-soft-warning btn-sm btn-unverify" 
                             data-conveyor-id="' . $schedule->conveyor_id . '" 
                             data-date="' . $schedule->schedule_date . '" 
                             data-shift="' . $schedule->shift . '">
-                            <i class="fas fa-unlock"></i> Unverify
+                            <i class="ti ti-lock-open"></i> Unverify
                         </button>
-                    ';
+                    </div>';
                 } else {
                     // Show Verify button for pending schedules
-                    return '<button type="button" class="btn btn-success btn-sm btn-verify" 
+                    return '<div class="btn-group" role="group"><button type="button" class="btn btn-soft-success btn-sm btn-verify" 
                         data-conveyor-id="' . $schedule->conveyor_id . '" 
                         data-date="' . $schedule->schedule_date . '" 
                         data-shift="' . $schedule->shift . '">
-                        <i class="fas fa-check"></i> Verify
-                    </button>';
+                        <i class="ti ti-check"></i> Verify
+                    </button></div>';
                 }
             })
             ->rawColumns(['status', 'action'])

@@ -45,17 +45,21 @@ class UserService
             ->addColumn('action', function($row){
                 /** @var \App\Models\User|null $currentUser */
                 $currentUser = Auth::user();
-                $actions = [];
+                $actions = '<div class="btn-group" role="group">';
+                $hasActions = false;
 
                 if ($currentUser && $currentUser->hasMenuPermission('users', 'can_update')) {
-                    $actions[] = '<button type="button" class="btn btn-sm btn-info btn-edit" data-id="'.$row->id.'" title="Edit"><i class="fas fa-edit"></i></button>';
+                    $actions .= '<button type="button" class="btn btn-soft-primary btn-sm btn-edit" data-id="'.$row->id.'" title="Edit"><i class="ti ti-pencil"></i></button>';
+                    $hasActions = true;
                 }
 
                 if ($currentUser && $currentUser->hasMenuPermission('users', 'can_delete') && $currentUser->id !== $row->id) {
-                    $actions[] = '<button type="button" class="btn btn-sm btn-danger btn-delete" data-id="'.$row->id.'" title="Delete"><i class="fas fa-trash"></i></button>';
+                    $actions .= '<button type="button" class="btn btn-soft-danger btn-sm btn-delete" data-id="'.$row->id.'" title="Delete"><i class="ti ti-trash"></i></button>';
+                    $hasActions = true;
                 }
 
-                return !empty($actions) ? implode(' ', $actions) : '-';
+                $actions .= '</div>';
+                return $hasActions ? $actions : '-';
             })
             ->rawColumns(['status', 'action', 'group_label'])
             ->make(true);

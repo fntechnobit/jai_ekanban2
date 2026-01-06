@@ -90,20 +90,14 @@ class AssySchedulerController extends Controller
             //     return '<span class="badge badge-warning">Pending</span>';
             // })
             ->addColumn('action', function ($schedule) {
-                // Join all IDs with commas for bulk verification
-                //$ids = implode(',', $schedule->group_ids);
-                // $verifyBtn = '<button type="button" class="btn btn-warning btn-sm btn-verify" data-ids="' . $ids . '">
-                //     <i class="fas fa-check"></i> Verify
-                // </button>';
-                
-                $manageBtn = '<button type="button" class="btn btn-info btn-sm btn-manage ml-1" 
+                $manageBtn = '<div class="btn-group" role="group"><button type="button" class="btn btn-soft-primary btn-sm btn-manage" 
                     data-conveyor-id="' . $schedule->conveyor_id . '" 
                     data-conveyor-name="' . ($schedule->conveyor ? $schedule->conveyor->conveyor : '') . '" 
                     data-date="' . $schedule->schedule->format('Y-m-d') . '" 
                     data-capacity="' . ($schedule->conveyor ? $schedule->conveyor->capacity : 0) . '" 
                     data-max-shifts="' . ($schedule->conveyor ? $schedule->conveyor->shift_qty : 0) . '">
-                    <i class="fas fa-cogs"></i> Manage
-                </button>';
+                    <i class="ti ti-settings"></i> Manage
+                </button></div>';
                 
                 return $manageBtn;
             })

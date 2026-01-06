@@ -1,58 +1,44 @@
-@extends('layout')
+@extends('layouts.master')
 
 @section('title', 'Family Data')
 
-@section('content')
+@section('breadcrumb')
     <x-page-header menu-code="master_family" />
+@endsection
 
-    <section class="content">
-        <div class="container-fluid">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Family Data List</h3>
-                    <div class="card-tools">
-                        @if(auth()->user()->hasMenuPermission('master_family', 'can_create'))
-                            <button type="button" class="btn btn-primary btn-sm" id="btn-add">
-                                <i class="fas fa-plus"></i> Add Family Data
-                            </button>
-                        @endif
-                    </div>
-                </div>
-                <div class="card-body">
-                    <table id="master-family-table" class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th width="5%">No</th>
-                                <th>Family</th>
-                                <th width="15%">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        </tbody>
-                    </table>
+@section('content')
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Family Data List</h5>
+                <div class="card-tools float-end">
+                    @if(auth()->user()->hasMenuPermission('master_family', 'can_create'))
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-add">
+                            <i class="fa-solid fa-plus"></i> Add Family Data
+                        </button>
+                    @endif
                 </div>
             </div>
+            <div class="card-body">
+                <table id="master-family-table" class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th width="5%">No</th>
+                            <th>Family</th>
+                            <th width="15%">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </section>
+    </div>
 
     @include('master_data.master_family.form')
 @endsection
 
-@push('styles')
-    <!-- DataTables -->
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-bs4/css/dataTables.bootstrap4.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('plugins/datatables-responsive/css/responsive.bootstrap4.min.css') }}">
-@endpush
-
-@push('scripts')
-    <!-- DataTables -->
-    <script src="{{ asset('plugins/datatables/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-bs4/js/dataTables.bootstrap4.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/dataTables.responsive.min.js') }}"></script>
-    <script src="{{ asset('plugins/datatables-responsive/js/responsive.bootstrap4.min.js') }}"></script>
-    <!-- SweetAlert2 -->
-    <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
-
+@section('script')
     <script>
         $(function () {
             // DataTable
@@ -167,4 +153,4 @@
             });
         });
     </script>
-@endpush
+@endsection
