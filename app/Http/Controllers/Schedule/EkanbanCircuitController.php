@@ -52,7 +52,7 @@ class EkanbanCircuitController extends Controller
 
             // Generate QR codes and barcodes for each circuit
             foreach ($circuits as $circuit) {
-                BarcodeHelper::generateCircuitBarcodes($circuit, 'barcode_kanban', 'cct_no', 'machine', 'cct_code');
+                BarcodeHelper::generateCircuitBarcodes($circuit, 'barcode_kanban', 'cct_no', 'barcode_mesin', 'cct_code');
             }
 
             $html = view('schedule.ekanban_circuit.print_ticket', compact('circuits'))->render();

@@ -10,7 +10,8 @@ class AssyScheduleCircuit extends Model
     
     protected $fillable = [
         'assy_schedule_id',
-        'circuit_id',
+        'cct_no',
+        'cct_code',
         'is_printed',
         'last_printed_at',
         'last_printed_by',
@@ -32,15 +33,7 @@ class AssyScheduleCircuit extends Model
     }
     
     /**
-     * Get the circuit this record belongs to
-     */
-    public function circuit()
-    {
-        return $this->belongsTo(MasterCircuit::class, 'circuit_id');
-    }
-    
-    /**
-     * Get the user who last printed this circuit
+     * Get the user who last printed this circuit group
      */
     public function printedBy()
     {

@@ -9,6 +9,7 @@ class ListingStage extends Model
     protected $table = 'listing_stage';
 
     protected $fillable = [
+        'id_listing',
         'listing_date_time',
         'conveyor',
         'shift',
@@ -21,10 +22,12 @@ class ListingStage extends Model
         'mode',
         'snp',
         'snpa',
+        'synced_at',
     ];
 
     protected $casts = [
         'listing_date_time' => 'datetime',
+        'synced_at' => 'datetime',
         'shift' => 'integer',
         'qty' => 'integer',
         'seq' => 'integer',

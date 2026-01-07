@@ -50,6 +50,7 @@ class ListingSyncService
 
                     // Create new listing_stage record
                     ListingStage::create([
+                        'id_listing' => $listing->id_listing,
                         'listing_date_time' => $listing->time,
                         'conveyor' => $listing->cv ?? '',
                         'shift' => $listing->shift ?? 0,
@@ -62,6 +63,7 @@ class ListingSyncService
                         'mode' => $listing->mode ?? 0,
                         'snp' => $listing->snp ?? 0,
                         'snpa' => $listing->snpa ?? 0,
+                        'synced_at' => now(),
                     ]);
 
                     $syncedCount++;
@@ -112,17 +114,37 @@ class ListingSyncService
             $startDate = Carbon::parse($startDate)->startOfDay();
             $endDate = Carbon::parse($endDate)->endOfDay();
 
-            $deletedCount = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])->delete();
+            // Delete only listing_stage records that do NOT have locked assy_schedules
+            $deletedCount = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])
+                ->whereNotExists(function ($query) {
+                    $query->select(DB::raw(1))
+                        ->from('assy_schedule')
+                        ->whereColumn('assy_schedule.listing_id', 'listing_stage.id')
+                        ->where('assy_schedule.is_lock', '!=', 0);
+                })
+                ->delete();
 
-            Log::info("Deleted {$deletedCount} listing_stage records for date range", [
+            // Count protected records for logging
+            $protectedCount = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])
+                ->whereExists(function ($query) {
+                    $query->select(DB::raw(1))
+                        ->from('assy_schedule')
+                        ->whereColumn('assy_schedule.listing_id', 'listing_stage.id')
+                        ->where('assy_schedule.is_lock', '!=', 0);
+                })
+                ->count();
+
+            Log::info("Deleted listing_stage records (protected locked schedules)", [
                 'start_date' => $startDate->format('Y-m-d'),
                 'end_date' => $endDate->format('Y-m-d'),
-                'deleted_count' => $deletedCount
+                'deleted_count' => $deletedCount,
+                'protected_count' => $protectedCount
             ]);
 
             return [
                 'success' => true,
                 'deleted_count' => $deletedCount,
+                'protected_count' => $protectedCount,
                 'date_range' => [
                     'from' => $startDate->format('Y-m-d'),
                     'to' => $endDate->format('Y-m-d')
