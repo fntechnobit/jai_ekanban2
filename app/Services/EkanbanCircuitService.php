@@ -10,7 +10,7 @@ use Carbon\Carbon;
 class EkanbanCircuitService
 {
     /**
-     * Get circuit data for DataTable
+     * Get circuit data for DataTable - Grouped by cct_no + cct_code
      */
     public function getCircuitDataForTable(Request $request)
     {
@@ -29,21 +29,27 @@ class EkanbanCircuitService
         // Apply filters
         $this->applyFilters($query, $request);
 
-        // DataTable processing
-        $totalRecords = $query->count();
+        // Clone query for counting before search
+        $countQuery = clone $query;
+        $totalRecords = DB::table(DB::raw("({$countQuery->toSql()}) as sub"))
+            ->mergeBindings($countQuery)
+            ->count();
         
         if ($request->filled('search.value')) {
             $searchValue = $request->input('search.value');
-            $query->where(function($q) use ($searchValue) {
-                $q->where('master_circuit.cct_no', 'like', "%{$searchValue}%")
-                  ->orWhere('master_circuit.cct_code', 'like', "%{$searchValue}%")
-                  ->orWhere('master_circuit.machine', 'like', "%{$searchValue}%")
-                  ->orWhere('master_circuit.family', 'like', "%{$searchValue}%")
-                  ->orWhere('master_circuit.barcode_kanban', 'like', "%{$searchValue}%");
+            $query->having(function($q) use ($searchValue) {
+                $q->having('master_circuit.cct_no', 'like', "%{$searchValue}%")
+                  ->orHaving('master_circuit.cct_code', 'like', "%{$searchValue}%")
+                  ->orHaving('master_circuit.machine', 'like', "%{$searchValue}%")
+                  ->orHaving('master_circuit.family', 'like', "%{$searchValue}%")
+                  ->orHaving(DB::raw('GROUP_CONCAT(DISTINCT master_circuit.barcode_kanban ORDER BY master_circuit.issue SEPARATOR ", ")'), 'like', "%{$searchValue}%");
             });
         }
 
-        $filteredRecords = $query->count();
+        $filteredQuery = clone $query;
+        $filteredRecords = DB::table(DB::raw("({$filteredQuery->toSql()}) as sub"))
+            ->mergeBindings($filteredQuery)
+            ->count();
 
         // Order
         $orderColumn = $request->input('order.0.column', 0);
@@ -54,10 +60,9 @@ class EkanbanCircuitService
             'master_circuit.cct_code', 
             'master_circuit.machine', 
             'master_circuit.family', 
-            'master_circuit.kind', 
-            'master_circuit.size', 
-            'master_circuit.col', 
-            'master_circuit.barcode_kanban', 
+            'assy_schedule.qty', 
+            'barcodes',
+            'issue_count',
             'assy_schedule.schedule', 
             'assy_schedule.shift', 
             'assy_schedule.cutoff'
@@ -80,29 +85,32 @@ class EkanbanCircuitService
 
         $result = [];
         foreach ($data as $index => $row) {
-            // Create composite ID for tracking individual circuits
-            $compositeId = $row->assy_schedule_id . '-' . $row->circuit_id;
+            // Group composite ID format: assyScheduleId-cctNo-cctCode (URL encoded)
+            $groupId = $row->assy_schedule_id . '-' . urlencode($row->cct_no) . '-' . urlencode($row->cct_code);
             
             $result[] = [
                 'DT_RowIndex' => $start + $index + 1,
                 'assy_schedule_id' => $row->assy_schedule_id,
-                'circuit_id' => $row->circuit_id,
-                'composite_id' => $compositeId,
+                'group_id' => $groupId,
+                'circuit_ids' => $row->circuit_ids,
                 'cct_no' => $row->cct_no,
                 'cct_code' => $row->cct_code,
+                'conveyor' => $row->conveyor,
                 'machine' => $row->machine,
                 'family' => $row->family,
-                'kind' => $row->kind,
-                'size' => $row->size,
-                'col' => $row->col,
-                'barcode_kanban' => $row->barcode_kanban ?? '-',
+                'qty' => $row->qty,
+                'barcodes' => $row->barcodes ?? '-',
+                'issue_count' => $row->issue_count,
                 'date' => Carbon::parse($row->date)->format('d-m-Y'),
                 'shift' => 'Shift ' . $row->shift,
                 'cutoff' => 'Cut Off ' . $row->cutoff,
                 'is_printed' => $row->is_printed,
                 'last_printed_at' => $row->last_printed_at,
                 'print_count' => $row->print_count ?? 0,
-                'actions' => view('schedule.ekanban_circuit.actions', ['row' => $row])->render()
+                'actions' => view('schedule.ekanban_circuit.actions', [
+                    'row' => $row,
+                    'groupId' => $groupId
+                ])->render()
             ];
         }
 
@@ -115,16 +123,20 @@ class EkanbanCircuitService
     }
 
     /**
-     * Get circuits for printing - using composite IDs
+     * Get circuits for printing - using group IDs (assyScheduleId-cctNo-cctCode)
      */
-    public function getCircuitsForPrint(array $ids)
+    public function getCircuitsForPrint(array $groupIds)
     {
-        // Parse composite IDs (format: "assyScheduleId-circuitId")
+        // Parse group IDs (format: "assyScheduleId-cctNo-cctCode")
         $conditions = [];
-        foreach ($ids as $id) {
-            if (strpos($id, '-') !== false) {
-                [$assyScheduleId, $circuitId] = explode('-', $id);
-                $conditions[] = ['assy_schedule_id' => $assyScheduleId, 'circuit_id' => $circuitId];
+        foreach ($groupIds as $groupId) {
+            $parts = explode('-', $groupId, 3);
+            if (count($parts) === 3) {
+                $conditions[] = [
+                    'assy_schedule_id' => $parts[0],
+                    'cct_no' => urldecode($parts[1]),
+                    'cct_code' => urldecode($parts[2])
+                ];
             }
         }
 
@@ -132,18 +144,20 @@ class EkanbanCircuitService
             return collect([]);
         }
 
-        // Build query with OR conditions for each composite ID
+        // Fetch ALL circuits matching the group criteria
         return DB::table('assy_schedule')
             ->join('master_conveyor', 'assy_schedule.conveyor_id', '=', 'master_conveyor.id')
             ->join('master_assy', 'assy_schedule.assy', '=', 'master_assy.assy')
             ->join('master_circuit_assy', 'master_assy.id', '=', 'master_circuit_assy.master_assy_id')
             ->join('master_circuit', 'master_circuit_assy.master_circuit_id', '=', 'master_circuit.id')
             ->leftJoin('listing_stage', 'assy_schedule.listing_id', '=', 'listing_stage.id')
+            ->where('assy_schedule.is_lock', '!=', 0)
             ->where(function($query) use ($conditions) {
                 foreach ($conditions as $condition) {
                     $query->orWhere(function($q) use ($condition) {
                         $q->where('assy_schedule.id', $condition['assy_schedule_id'])
-                          ->where('master_circuit.id', $condition['circuit_id']);
+                          ->where('master_circuit.cct_no', $condition['cct_no'])
+                          ->where('master_circuit.cct_code', $condition['cct_code']);
                     });
                 }
             })
@@ -197,11 +211,13 @@ class EkanbanCircuitService
                 'master_circuit.remark_2',
                 'master_circuit.barcode_mesin'
             ])
+            ->orderBy('master_circuit.cct_no')
+            ->orderBy('master_circuit.issue')
             ->get();
     }
 
     /**
-     * Get base circuit query - Returns one row per circuit (not grouped)
+     * Get base circuit query - Returns grouped data by cct_no + cct_code
      */
     private function getBaseCircuitQuery()
     {
@@ -212,26 +228,43 @@ class EkanbanCircuitService
             ->join('master_circuit', 'master_circuit_assy.master_circuit_id', '=', 'master_circuit.id')
             ->leftJoin('assy_schedule_circuit', function($join) {
                 $join->on('assy_schedule.id', '=', 'assy_schedule_circuit.assy_schedule_id')
-                     ->on('master_circuit.id', '=', 'assy_schedule_circuit.circuit_id');
+                     ->on('master_circuit.cct_no', '=', 'assy_schedule_circuit.cct_no')
+                     ->on('master_circuit.cct_code', '=', 'assy_schedule_circuit.cct_code');
             })
+            ->where('assy_schedule.is_lock', '!=', 0)
             ->select([
                 'assy_schedule.id as assy_schedule_id',
-                'master_circuit.id as circuit_id',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
                 'master_circuit.machine',
                 'master_circuit.family',
-                'master_circuit.kind',
-                'master_circuit.size',
-                'master_circuit.col',
-                'master_circuit.barcode_kanban',
-                'assy_schedule.schedule as date',
-                'assy_schedule.shift',
-                'assy_schedule.cutoff',
                 'master_conveyor.conveyor',
                 'assy_schedule.assy',
                 'assy_schedule.qty',
-                'master_circuit.issue',
+                'assy_schedule.schedule as date',
+                'assy_schedule.shift',
+                'assy_schedule.cutoff',
+                // Aggregated fields for grouping
+                DB::raw('GROUP_CONCAT(DISTINCT master_circuit.id ORDER BY master_circuit.issue) as circuit_ids'),
+                DB::raw('GROUP_CONCAT(DISTINCT master_circuit.barcode_kanban ORDER BY master_circuit.issue SEPARATOR ", ") as barcodes'),
+                DB::raw('COUNT(DISTINCT master_circuit.id) as issue_count'),
+                // Print status from group table
+                'assy_schedule_circuit.is_printed',
+                'assy_schedule_circuit.last_printed_at',
+                'assy_schedule_circuit.print_count'
+            ])
+            ->groupBy([
+                'assy_schedule.id',
+                'master_circuit.cct_no',
+                'master_circuit.cct_code',
+                'master_circuit.machine',
+                'master_circuit.family',
+                'master_conveyor.conveyor',
+                'assy_schedule.assy',
+                'assy_schedule.qty',
+                'assy_schedule.schedule',
+                'assy_schedule.shift',
+                'assy_schedule.cutoff',
                 'assy_schedule_circuit.is_printed',
                 'assy_schedule_circuit.last_printed_at',
                 'assy_schedule_circuit.print_count'
@@ -243,18 +276,18 @@ class EkanbanCircuitService
     }
 
     /**
-     * Mark circuits as printed
+     * Mark circuit group as printed
      */
-    public function markAsPrinted(array $compositeIds, $userId)
+    public function markAsPrinted(array $groupIds, $userId)
     {
-        foreach ($compositeIds as $compositeId) {
-            if (strpos($compositeId, '-') !== false) {
-                [$assyScheduleId, $circuitId] = explode('-', $compositeId);
-                
+        foreach ($groupIds as $groupId) {
+            $parts = explode('-', $groupId, 3);
+            if (count($parts) === 3) {
                 AssyScheduleCircuit::updateOrCreate(
                     [
-                        'assy_schedule_id' => $assyScheduleId,
-                        'circuit_id' => $circuitId
+                        'assy_schedule_id' => $parts[0],
+                        'cct_no' => urldecode($parts[1]),
+                        'cct_code' => urldecode($parts[2])
                     ],
                     [
                         'is_printed' => true,

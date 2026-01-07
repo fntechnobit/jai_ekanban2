@@ -133,12 +133,12 @@
                                     <th width="5%">Num.</th>
                                     <th>Circuit No</th>
                                     <th>Circuit Code</th>
+                                    <th>Conveyor</th>
                                     <th>Machine</th>
                                     <th>Family</th>
-                                    <th>Kind</th>
-                                    <th>Size</th>
-                                    <th>Color</th>
-                                    <th>Barcode</th>
+                                    <th>Qty</th>
+                                    <th>Issue Qty</th>
+                                    <th>Barcode Kanban</th>
                                     <th>Date</th>
                                     <th>Shift</th>
                                     <th>Cut Off</th>
@@ -232,16 +232,38 @@
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '5%' },
-                    { data: 'cct_no', name: 'cct_no', width: '12%' },
+                    { data: 'cct_no', name: 'cct_no', width: '10%' },
                     { data: 'cct_code', name: 'cct_code', width: '10%' },
-                    { data: 'machine', name: 'machine', width: '10%' },
-                    { data: 'family', name: 'family', width: '10%' },
-                    { data: 'kind', name: 'kind', width: '8%' },
-                    { data: 'size', name: 'size', width: '8%' },
-                    { data: 'col', name: 'col', width: '8%' },
-                    { data: 'barcode_kanban', name: 'barcode_kanban', width: '12%' },
-                    { data: 'date', name: 'date', width: '10%' },
-                    { data: 'shift', name: 'shift', width: '8%' },
+                    { data: 'conveyor', name: 'conveyor', width: '8%' },
+                    { data: 'machine', name: 'machine', width: '8%' },
+                    { data: 'family', name: 'family', width: '8%' },
+                    { data: 'qty', name: 'qty', width: '5%' },
+                    { 
+                        data: 'issue_count', 
+                        name: 'issue_count', 
+                        width: '5%',
+                        orderable: false,
+                        render: function(data, type, row) {
+                            return '<span class="badge badge-info">' + data + ' issue(s)</span>';
+                        }
+                    },
+                    { 
+                        data: 'barcodes', 
+                        name: 'barcodes', 
+                        width: '18%',
+                        orderable: false,
+                        render: function(data, type, row) {
+                            if (data && data !== '-') {
+                                var barcodes = data.split(', ');
+                                return barcodes.map(function(b) {
+                                    return '<code>' + b + '</code>';
+                                }).join('<br>');
+                            }
+                            return '-';
+                        }
+                    },
+                    { data: 'date', name: 'date', width: '8%' },
+                    { data: 'shift', name: 'shift', width: '6%' },
                     { data: 'cutoff', name: 'cutoff', width: '8%' },
                     { 
                         data: 'print_status', 
@@ -342,7 +364,7 @@
 
             // Print button handler
             $(document).on('click', '.btn-preview', function() {
-                var ids = $(this).data('ids');
+                var groupId = $(this).data('group-id');
                 
                 // Show modal with loading indicator
                 $('#previewModal').modal('show');
@@ -352,7 +374,7 @@
                 $.ajax({
                     url: "{{ route('schedule.ekanban-circuit.print-preview') }}",
                     type: 'GET',
-                    data: { ids: ids },
+                    data: { ids: groupId },
                     success: function(response) {
                         $('#previewContent').html(response);
                     },
@@ -363,8 +385,8 @@
             });
 
             $(document).on('click', '.btn-print', function() {
-                var ids = $(this).data('ids');
-                printCircuit(ids);
+                var groupId = $(this).data('group-id');
+                printCircuit(groupId);
             });
         });
 
