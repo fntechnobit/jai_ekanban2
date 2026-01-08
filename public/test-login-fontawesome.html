@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test FontAwesome on Login Page</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="plugins/fontawesome-free-6.5.2-web/css/fontawesome.min.css">
+    <link rel="stylesheet" href="plugins/fontawesome-free-6.5.2-web/css/solid.min.css">
+    <link rel="stylesheet" href="plugins/fontawesome-free-6.5.2-web/css/regular.min.css">
+    <link rel="stylesheet" href="plugins/fontawesome-free-6.5.2-web/css/brands.min.css">
+    
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="assets/vendor/bootstrap/bootstrap.min.css">
+    
+    <style>
+        body {
+            padding: 2rem;
+            font-family: Arial, sans-serif;
+        }
+        
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+        }
+        
+        .icon-test {
+            font-size: 1.5rem;
+            margin: 0.5rem;
+        }
+        
+        .test-result {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            margin: 0.25rem;
+            border-radius: 0.25rem;
+            background: #f8f9fa;
+        }
+        
+        i[class*="fa-"],
+        i[class^="fa-"] {
+            font-family: "Font Awesome 6 Free" !important;
+            font-weight: 900 !important;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            display: inline-block;
+            font-style: normal;
+            font-variant: normal;
+            text-rendering: auto;
+            line-height: 1;
+        }
+
+        .fa-regular {
+            font-weight: 400 !important;
+        }
+
+        .fa-brands {
+            font-family: "Font Awesome 6 Brands" !important;
+            font-weight: 400 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">FontAwesome Test - Login Page Icons</h1>
+        
+        <div class="test-section">
+            <h3>Icons Used in Login Page:</h3>
+            <div class="test-result">
+                <i class="fa-solid fa-user"></i> fa-user (Username icon)
+            </div>
+            <div class="test-result">
+                <i class="fa-solid fa-lock"></i> fa-lock (Password icon)
+            </div>
+            <div class="test-result">
+                <i class="fa-solid fa-eye"></i> fa-eye (Show password)
+            </div>
+            <div class="test-result">
+                <i class="fa-solid fa-eye-slash"></i> fa-eye-slash (Hide password)
+            </div>
+            <div class="test-result">
+                <i class="fa-solid fa-right-to-bracket"></i> fa-right-to-bracket (Sign In)
+            </div>
+            <div class="test-result">
+                <i class="fa-solid fa-circle-info"></i> fa-circle-info (Info)
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Input Group Example (like in login form):</h3>
+            <div class="input-group mb-3">
+                <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                <input type="text" class="form-control" placeholder="Username">
+            </div>
+            
+            <div class="input-group mb-3">
+                <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                <input type="password" class="form-control" placeholder="Password">
+                <button class="btn btn-outline-secondary" type="button">
+                    <i class="fa-solid fa-eye"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Button with Icon:</h3>
+            <button class="btn btn-primary">
+                <i class="fa-solid fa-right-to-bracket me-2"></i> Sign In
+            </button>
+        </div>
+        
+        <div class="test-section">
+            <h3>All Icon Variants:</h3>
+            <div>
+                <strong>Solid Icons (fa-solid):</strong><br>
+                <span class="icon-test"><i class="fa-solid fa-house"></i></span>
+                <span class="icon-test"><i class="fa-solid fa-user"></i></span>
+                <span class="icon-test"><i class="fa-solid fa-heart"></i></span>
+                <span class="icon-test"><i class="fa-solid fa-star"></i></span>
+                <span class="icon-test"><i class="fa-solid fa-check"></i></span>
+            </div>
+            <div class="mt-3">
+                <strong>Regular Icons (fa-regular):</strong><br>
+                <span class="icon-test"><i class="fa-regular fa-house"></i></span>
+                <span class="icon-test"><i class="fa-regular fa-user"></i></span>
+                <span class="icon-test"><i class="fa-regular fa-heart"></i></span>
+                <span class="icon-test"><i class="fa-regular fa-star"></i></span>
+                <span class="icon-test"><i class="fa-regular fa-circle"></i></span>
+            </div>
+            <div class="mt-3">
+                <strong>Brand Icons (fa-brands):</strong><br>
+                <span class="icon-test"><i class="fa-brands fa-facebook"></i></span>
+                <span class="icon-test"><i class="fa-brands fa-twitter"></i></span>
+                <span class="icon-test"><i class="fa-brands fa-github"></i></span>
+                <span class="icon-test"><i class="fa-brands fa-linkedin"></i></span>
+            </div>
+        </div>
+        
+        <div class="alert alert-success">
+            <strong>✓ Test Successful!</strong> If you can see all icons above, FontAwesome is loaded correctly.
+        </div>
+    </div>
+    
+    <script src="assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+</body>
+</html>

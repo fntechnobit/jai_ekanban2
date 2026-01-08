@@ -84,9 +84,11 @@
                 </form>
 
                 <!-- Footer -->
-                <div class="mt-auto pt-4 text-center">
-                    <p class="text-muted small mb-0">
-                        © {{ date('Y') }} <a href="https://technobit.co.id" target="_blank" class="text-decoration-none">Technobit Indonesia</a>. All rights reserved.
+                <div class="auth-footer">
+                    <p class="text-center mb-0">
+                        © {{ date('Y') }} 
+                        <a href="https://technobit.co.id" target="_blank">Technobit Indonesia</a>. 
+                        All rights reserved.
                     </p>
                 </div>
             </div>
@@ -139,10 +141,10 @@
             
             if (input.attr('type') === 'password') {
                 input.attr('type', 'text');
-                icon.removeClass('ti-eye').addClass('ti-eye-off');
+                icon.removeClass('fa-eye').addClass('fa-eye-slash');
             } else {
                 input.attr('type', 'password');
-                icon.removeClass('ti-eye-off').addClass('ti-eye');
+                icon.removeClass('fa-eye-slash').addClass('fa-eye');
             }
         });
     });
