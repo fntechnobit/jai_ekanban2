@@ -11,14 +11,6 @@
                                     <i class="fa-solid fa-table-cells-large"></i>
                                 </span>
 
-                                <div class="header-searchbar d-none d-md-block">
-                                    <form class="me-3 app-form app-icon-form" action="#">
-                                        <div class="position-relative">
-                                            <input type="search" class="form-control form-control-sm" placeholder="Search..." aria-label="Search">
-                                            <i class="fa-solid fa-magnifying-glass text-dark"></i>
-                                        </div>
-                                    </form>
-                                </div>
                             </div>
 
                             <div class="col-6 d-flex align-items-center justify-content-end header-right">
@@ -32,14 +24,6 @@
                                         <div class="offcanvas offcanvas-top search-canvas" tabindex="-1" id="offcanvasTop">
                                             <div class="offcanvas-body">
                                                 <div class="d-flex align-items-center">
-                                                    <div class="flex-grow-1">
-                                                        <form class="me-3 app-form app-icon-form" action="#">
-                                                            <div class="position-relative">
-                                                                <input type="search" class="form-control form-control-sm" placeholder="Search..." aria-label="Search">
-                                                                <i class="fa-solid fa-magnifying-glass f-s-15"></i>
-                                                            </div>
-                                                        </form>
-                                                    </div>
                                                     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                                                 </div>
                                             </div>
