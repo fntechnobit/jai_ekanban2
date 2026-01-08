@@ -19,11 +19,88 @@
     <!-- Tabler icons-->
     <link rel="stylesheet" type="text/css" href="{{ asset('assets/vendor/tabler-icons/tabler-icons.css') }}">
 
+    <!-- Font Awesome -->
+    <link rel="stylesheet" type="text/css" href="{{ asset('plugins/fontawesome-free-6.5.2-web/css/fontawesome.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('plugins/fontawesome-free-6.5.2-web/css/solid.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('plugins/fontawesome-free-6.5.2-web/css/regular.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('plugins/fontawesome-free-6.5.2-web/css/brands.min.css') }}">
+
     <!-- Bootstrap css-->
     <link rel="stylesheet" type="text/css" href="{{ asset('assets/vendor/bootstrap/bootstrap.min.css') }}">
 
     <!-- Main Style css -->
     <link rel="stylesheet" type="text/css" href="{{ asset('assets/css/style.css') }}">
+
+    <style>
+        /* Font Awesome Override untuk Auth Pages */
+        i[class*="fa-"],
+        i[class^="fa-"] {
+            font-family: "Font Awesome 6 Free" !important;
+            font-weight: 900 !important;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            display: inline-block;
+            font-style: normal;
+            font-variant: normal;
+            text-rendering: auto;
+            line-height: 1;
+        }
+
+        .fa-regular {
+            font-weight: 400 !important;
+        }
+
+        .fa-brands {
+            font-family: "Font Awesome 6 Brands" !important;
+            font-weight: 400 !important;
+        }
+
+        /* Login page styles */
+        .form-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .image-contentbox {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .image-contentbox img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Footer styles */
+        .auth-footer {
+            margin-top: auto;
+            padding-top: 2rem;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .auth-footer p {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+
+        .auth-footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .auth-footer a:hover {
+            color: #764ba2;
+        }
+    </style>
 
     @yield('css')
 </head>
