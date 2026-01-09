@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-KANBAN CUTTING</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            padding: 0;
+            margin: 0;
+            background-color: white;
+        }
+        
+        .kanban-container {
+            width: 130mm;
+            max-width: 130mm;
+            height: 70mm;
+            background: white;
+            margin: 10px auto;
+            padding: 0;
+            border: 1px solid #ddd;
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            height: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        
+        th, td {
+            border: 1px solid #000;
+            padding: 1px 2px;
+            text-align: center;
+            vertical-align: middle;
+            line-height: 0;
+            font-size: 12px;
+            height: 4.3mm;
+            box-sizing: border-box;
+        }
+        
+        thead th {
+            background-color: transparent;
+            color: #000;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 4px;
+            border: 1px solid #000;
+            height: 4.3mm;
+        }
+        
+        .section-label {
+            background-color: transparent;
+            color: #000;
+            font-weight: bold;
+            font-size: 12px;
+            width: 20px;
+            padding: 2px;
+        }
+        
+        .section-label.black-bg {
+            background-color: #000;
+            color: white;
+        }
+        
+        .label-cell {
+            background-color: transparent;
+            font-weight: 500;
+            font-size: 10px;
+        }
+        
+        .value-cell {
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .text-left {
+            text-align: left !important;
+        }
+        
+        .qrcode-cell {
+            padding: 3px;
+            vertical-align: middle;
+        }
+        
+        .qrcode-placeholder {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #000;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #000;
+        }
+        
+        .barcode-placeholder {
+            width: 80px;
+            height: 30px;
+            border: 1px solid #000;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #000;
+        }
+        
+        /* Thermal Printer Optimization */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+            
+            .kanban-container {
+                width: auto;
+                height: 80mm;
+                border: none;
+                margin: 0;
+                padding: 0;
+                page-break-after: always;
+                transform: scale(0.5);
+                transform-origin: top left;
+            }
+            
+            table {
+                page-break-inside: avoid;
+                width: 100%;
+                height: 100%;
+            }
+            
+            th, td {
+                border: 1px solid #000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                font-size: 6px !important;
+            }
+            
+            thead th {
+                font-size: 7px !important;
+            }
+            
+            .label-cell {
+                font-size: 5px !important;
+            }
+            
+            .value-cell {
+                font-size: 6px !important;
+            }
+            
+            .section-label {
+                font-size: 7px !important;
+            }
+            
+            .qrcode-placeholder {
+                width: 25px !important;
+                height: 25px !important;
+                font-size: 5px !important;
+            }
+            
+            .barcode-placeholder {
+                width: 40px !important;
+                height: 15px !important;
+                font-size: 4px !important;
+            }
+            
+            .section-label.black-bg {
+                background-color: #000 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            @page {
+                size: auto 80mm;
+                margin: 0;
+                orientation: landscape;
+            }
+        }
+        
+        col:nth-child(1) { width: 5mm; }
+        col:nth-child(2) { width: 10mm; }
+        col:nth-child(3) { width: 15mm; }
+        col:nth-child(4) { width: 12mm; }
+        col:nth-child(5) { width: 12mm; }
+        col:nth-child(6) { width: 12mm; }
+        col:nth-child(7) { width: 20mm; }
+        col:nth-child(8) { width: 30mm; }
+    </style>
+</head>
+<body>
+    <div class="kanban-container">
+        <table>
+            <colgroup>
+                <col style="width: 5mm">
+                <col style="width: 10mm">
+                <col style="width: 15mm">
+                <col style="width: 12mm">
+                <col style="width: 12mm">
+                <col style="width: 12mm">
+                <col style="width: 12mm">
+                <col style="width: 20mm">
+                <col style="width: 30mm">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th colspan="9">EKANBAN CUTTING</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Row 1: Labels -->
+                <tr>
+                    <td colspan="2" class="label-cell">CCT NO</td>
+                    <td class="label-cell">CUST NO</td>
+                    <td class="label-cell">KIND</td>
+                    <td class="label-cell">SIZE</td>
+                    <td class="label-cell">COL</td>
+                    <td class="label-cell">C/L</td>
+                    <td class="label-cell">SEQ</td>
+                    <td class="label-cell">MACHINE</td>
+                </tr>
+                <!-- Row 2: Values -->
+                <tr>
+                    <td colspan="2" class="value-cell">CCT123</td>
+                    <td class="value-cell">1234</td>
+                    <td class="value-cell">AUX</td>
+                    <td class="value-cell">0.35</td>
+                    <td class="value-cell">W</td>
+                    <td class="value-cell">12</td>
+                    <td class="value-cell">1234</td>
+                    <td class="value-cell">MAC-123.130</td>
+                </tr>
+                
+                <!-- Section A - Row 1 -->
+                <tr>
+                    <td rowspan="4" class="section-label">A</td>
+                    <td class="label-cell text-left">TERM.</td>
+                    <td colspan="3" class="value-cell text-left">7114-123-0231</td>
+                    <td class="label-cell"></td>
+                    <td class="value-cell">*</td>
+                    <td class="label-cell text-left">TO 1</td>
+                    <td class="value-cell text-left">111</td>
+                </tr>
+                <!-- Section A - Row 2 -->
+                <tr>
+                    <td class="label-cell text-left">ACC 1</td>
+                    <td colspan="3" class="value-cell text-left">ACC-123</td>
+                    <td class="label-cell text-left">NOTE</td>
+                    <td class="value-cell">A</td>
+                    <td class="label-cell text-left">TO 2</td>
+                    <td class="value-cell text-left">222</td>
+                </tr>
+                <!-- Section A - Row 3 -->
+                <tr>
+                    <td class="label-cell text-left">ACC 2</td>
+                    <td colspan="3" class="value-cell text-left">ACC-234</td>
+                    <td class="label-cell text-left">STRIP</td>
+                    <td class="value-cell">0.40</td>
+                    <td class="label-cell text-left">TO 3</td>
+                    <td class="value-cell text-left">333</td>
+                </tr>
+                <!-- Section A - Row 4 -->
+                <tr>
+                    <td class="label-cell text-left">TUBE</td>
+                    <td colspan="3" class="value-cell text-left">TUBE-123123</td>
+                    <td class="label-cell text-left">MARK</td>
+                    <td class="value-cell">-</td>
+                    <td rowspan="2" class="label-cell text-left">TO STORE</td>
+                    <td rowspan="2" class="value-cell text-left">FAMJ01-A-123,23</td>
+                </tr>
+                
+                <!-- Section B - Row 1 -->
+                <tr>
+                    <td rowspan="4" class="section-label black-bg">B</td>
+                    <td class="label-cell text-left">TERM.</td>
+                    <td colspan="3" class="value-cell text-left">7123-989-123</td>
+                    <td class="label-cell"></td>
+                    <td class="value-cell">*</td>
+                </tr>
+                <!-- Section B - Row 2 -->
+                <tr>
+                    <td class="label-cell text-left">ACC 1</td>
+                    <td colspan="3" class="value-cell text-left">ACC-A1</td>
+                    <td class="label-cell text-left">NOTE</td>
+                    <td class="value-cell">X</td>
+                    <td class="label-cell text-left">CCT CODE</td>
+                    <td class="value-cell text-left">AB098</td>
+                </tr>
+                <!-- Section B - Row 3 -->
+                <tr>
+                    <td class="label-cell text-left">ACC 2</td>
+                    <td colspan="3" class="value-cell text-left">ACC-234</td>
+                    <td class="label-cell text-left">STRIP</td>
+                    <td class="value-cell">0.12</td>
+                    <td class="label-cell text-left">QTY</td>
+                    <td class="value-cell text-left">40</td>
+                </tr>
+                <!-- Section B - Row 4 -->
+                <tr>
+                    <td class="label-cell text-left">TUBE</td>
+                    <td colspan="3" class="value-cell text-left">TUBE-124124</td>
+                    <td class="label-cell text-left">MARK</td>
+                    <td class="value-cell"></td>
+                    <td class="label-cell text-left">ISSUE</td>
+                    <td class="value-cell text-left">002/008</td>
+                </tr>
+                
+                <!-- Bottom Section - Row 1 -->
+                <tr>
+                    <td colspan="3" rowspan="4" class="qrcode-cell">
+                        <div class="label-cell">QRCODE KANBAN</div>
+                        <div class="qrcode-placeholder">QR CODE</div>
+                    </td>
+                    <td colspan="4" class="value-cell text-left">JP65P - PANEL HD</td>
+                    <td colspan="2" rowspan="4" class="qrcode-cell">
+                        <div class="label-cell">BARCODE MESIN</div>
+                        <div class="barcode-placeholder">BARCODE</div>
+                    </td>
+                </tr>
+                <!-- Bottom Section - Row 2 -->
+                <tr>
+                    <td colspan="4" class="value-cell text-left">CV AT11</td>
+                </tr>
+                <!-- Bottom Section - Row 3 -->
+                <tr>
+                    <td colspan="4" class="value-cell text-left">10 JAN 26</td>
+                </tr>
+                <!-- Bottom Section - Row 4 -->
+                <tr>
+                    <td colspan="4" class="label-cell text-left">BARCODE MESIN</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

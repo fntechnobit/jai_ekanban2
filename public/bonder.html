@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-KANBAN BONDER</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            padding: 0;
+            margin: 0;
+            background-color: white;
+        }
+        
+        .kanban-container {
+            width: 130mm;
+            max-width: 130mm;
+            height: 70mm;
+            background: white;
+            margin: 10px auto;
+            padding: 0;
+            border: 1px solid #ddd;
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            height: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        
+        th, td {
+            border: 1px solid #000;
+            padding: 1px 2px;
+            text-align: center;
+            vertical-align: middle;
+            line-height: 0;
+            font-size: 12px;
+            height: 4.1mm;
+            box-sizing: border-box;
+        }
+        
+        thead th {
+            background-color: transparent;
+            color: #000;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 4px;
+            border: 1px solid #000;
+            height: 4.1mm;
+        }
+        
+        .label-cell {
+            background-color: transparent;
+            font-weight: 500;
+            font-size: 10px;
+        }
+        
+        .value-cell {
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .text-left {
+            text-align: left !important;
+        }
+        
+        .qrcode-cell {
+            padding: 3px;
+            vertical-align: middle;
+        }
+        
+        .qrcode-placeholder {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #000;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #000;
+        }
+        
+        .barcode-placeholder {
+            width: 80px;
+            height: 30px;
+            border: 1px solid #000;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #000;
+        }
+        
+        /* Thermal Printer Optimization */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+            
+            .kanban-container {
+                width: auto;
+                height: 80mm;
+                border: none;
+                margin: 0;
+                padding: 0;
+                page-break-after: always;
+                transform: scale(0.5);
+                transform-origin: top left;
+            }
+            
+            table {
+                page-break-inside: avoid;
+                width: 100%;
+                height: 100%;
+            }
+            
+            th, td {
+                border: 1px solid #000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                font-size: 6px !important;
+            }
+            
+            thead th {
+                font-size: 7px !important;
+            }
+            
+            .label-cell {
+                font-size: 5px !important;
+            }
+            
+            .value-cell {
+                font-size: 6px !important;
+            }
+            
+            .qrcode-placeholder {
+                width: 25px !important;
+                height: 25px !important;
+                font-size: 5px !important;
+            }
+            
+            .barcode-placeholder {
+                width: 40px !important;
+                height: 15px !important;
+                font-size: 4px !important;
+            }
+            
+            @page {
+                size: auto 80mm;
+                margin: 0;
+                orientation: landscape;
+            }
+        }
+        
+        col:nth-child(1) { width: 14mm; }
+        col:nth-child(2) { width: 16mm; }
+        col:nth-child(3) { width: 14mm; }
+        col:nth-child(4) { width: 16mm; }
+        col:nth-child(5) { width: 20mm; }
+        col:nth-child(6) { width: 20mm; }
+        col:nth-child(7) { width: 20mm; }
+    </style>
+</head>
+<body>
+    <div class="kanban-container">
+        <table>
+            <colgroup>
+                <col style="width: 14mm">
+                <col style="width: 16mm">
+                <col style="width: 14mm">
+                <col style="width: 16mm">
+                <col style="width: 20mm">
+                <col style="width: 20mm">
+                <col style="width: 20mm">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th colspan="7">EKANBAN BONDER</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Row 1: Labels -->
+                <tr>
+                    <td colspan="4" class="label-cell">BONDER NO</td>
+                    <td colspan="3" class="label-cell">ADDRESS</td>
+                </tr>
+                <!-- Row 2: Values -->
+                <tr>
+                    <td colspan="4" class="value-cell">B-ABC123</td>
+                    <td colspan="3" class="value-cell">FAM123-0977</td>
+                </tr>
+                
+                <!-- Row 3: Labels -->
+                <tr>
+                    <td class="label-cell">CCT NO</td>
+                    <td class="label-cell">BONDER NO</td>
+                    <td class="label-cell">CCT NO</td>
+                    <td class="label-cell">BONDER NO</td>
+                    <td colspan="3" class="label-cell">BARCODE PROCESS</td>
+                </tr>
+                <!-- Row 4-6: Data with Barcode -->
+                <tr>
+                    <td class="value-cell">0012</td>
+                    <td class="value-cell">BD030</td>
+                    <td class="value-cell">0235</td>
+                    <td class="value-cell">BN123</td>
+                    <td colspan="3" rowspan="3" class="qrcode-cell">
+                        <div class="barcode-placeholder">BARCODE</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="value-cell">0042</td>
+                    <td class="value-cell">BD041</td>
+                    <td class="value-cell">0098</td>
+                    <td class="value-cell">BND33</td>
+                </tr>
+                <tr>
+                    <td class="value-cell"></td>
+                    <td class="value-cell"></td>
+                    <td class="value-cell"></td>
+                    <td class="value-cell"></td>
+                </tr>
+                
+                <!-- Row 7-10: Machine Info -->
+                <tr>
+                    <td class="label-cell"></td>
+                    <td class="label-cell"></td>
+                    <td class="label-cell"></td>
+                    <td class="label-cell"></td>
+                    <td colspan="2" class="label-cell">MACHINE</td>
+                    <td class="label-cell">DIES</td>
+                </tr>
+                <tr>
+                    <td class="value-cell"></td>
+                    <td class="value-cell"></td>
+                    <td class="value-cell"></td>
+                    <td class="value-cell"></td>
+                    <td colspan="2" class="value-cell">ABC-MAC023</td>
+                    <td class="value-cell">4.5</td>
+                </tr>
+                <tr>
+                    <td class="label-cell"></td>
+                    <td class="label-cell"></td>
+                    <td class="label-cell"></td>
+                    <td class="label-cell"></td>
+                    <td colspan="2" class="label-cell">TO MACHINE</td>
+                    <td class="label-cell">SEQ</td>
+                </tr>
+                <tr>
+                    <td class="value-cell"></td>
+                    <td class="value-cell"></td>
+                    <td class="value-cell"></td>
+                    <td class="value-cell"></td>
+                    <td colspan="2" class="value-cell">XBG-123</td>
+                    <td class="value-cell">1113</td>
+                </tr>
+                
+                <!-- Bottom Section -->
+                <tr>
+                    <td colspan="3" rowspan="3" class="qrcode-cell">
+                        <div class="label-cell">BARCODE NAVIGASI</div>
+                        <div class="barcode-placeholder">BARCODE</div>
+                    </td>
+                    <td class="label-cell">QTY</td>
+                    <td class="label-cell">ISSUE</td>
+                    <td colspan="2" rowspan="4" class="qrcode-cell">
+                        <div class="label-cell">QRCODE KANBAN</div>
+                        <div class="qrcode-placeholder">QR CODE</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="value-cell">40</td>
+                    <td class="value-cell">001/008</td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="value-cell">J69 LHD PANEL</td>
+                </tr>
+                <tr>
+                    <td class="value-cell">CV AT11</td>
+                    <td class="value-cell">1 JAN 26</td>
+                    <td colspan="3" class="value-cell">NEW RELEASE</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

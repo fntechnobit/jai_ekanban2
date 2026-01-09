@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-KANBAN CUTTING TWIST</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            padding: 0;
+            margin: 0;
+            background-color: white;
+        }
+        
+        .kanban-container {
+            width: 120mm;
+            max-width: 120mm;
+            height: 70mm;
+            background: white;
+            margin: 10px auto;
+            padding: 0;
+            border: 1px solid #ddd;
+            overflow: hidden;
+        }
+        
+        table {
+            width: 100%;
+            height: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        
+        th, td {
+            border: 1px solid #000;
+            padding: 1px 2px;
+            text-align: center;
+            vertical-align: middle;
+            line-height: 0;
+            font-size: 12px;
+            height: 4.5mm;
+            box-sizing: border-box;
+        }
+        
+        thead th {
+            background-color: transparent;
+            color: #000;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 4px;
+            border: 1px solid #000;
+            height: 4.5mm;
+        }
+        
+        .section-label {
+            background-color: transparent;
+            color: #000;
+            font-weight: bold;
+            font-size: 12px;
+            width: 20px;
+            padding: 2px;
+        }
+        
+        .section-label.black-bg {
+            background-color: #000;
+            color: white;
+        }
+        
+        .label-cell {
+            background-color: transparent;
+            font-weight: 500;
+            font-size: 10px;
+        }
+        
+        .value-cell {
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .text-left {
+            text-align: left !important;
+        }
+        
+        .qrcode-cell {
+            padding: 3px;
+            vertical-align: middle;
+        }
+        
+        .qrcode-placeholder {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #000;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #000;
+        }
+        
+        /* Thermal Printer Optimization */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+            
+            .kanban-container {
+                width: auto;
+                height: 80mm;
+                border: none;
+                margin: 0;
+                padding: 0;
+                page-break-after: always;
+                transform: scale(0.5);
+                transform-origin: top left;
+            }
+            
+            table {
+                page-break-inside: avoid;
+                width: 100%;
+                height: 100%;
+            }
+            
+            th, td {
+                border: 1px solid #000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                font-size: 6px !important;
+            }
+            
+            thead th {
+                font-size: 7px !important;
+            }
+            
+            .label-cell {
+                font-size: 5px !important;
+            }
+            
+            .value-cell {
+                font-size: 6px !important;
+            }
+            
+            .section-label {
+                font-size: 7px !important;
+            }
+            
+            .qrcode-placeholder {
+                width: 25px !important;
+                height: 25px !important;
+                font-size: 5px !important;
+            }
+            
+            .section-label.black-bg {
+                background-color: #000 !important;
+                color: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            @page {
+                size: auto 80mm;
+                margin: 0;
+                orientation: landscape;
+            }
+        }
+        
+        col:nth-child(1) { width: 6mm; }
+        col:nth-child(2) { width: 12mm; }
+        col:nth-child(3) { width: 12mm; }
+        col:nth-child(4) { width: 12mm; }
+        col:nth-child(5) { width: 12mm; }
+        col:nth-child(6) { width: 12mm; }
+        col:nth-child(7) { width: 12mm; }
+        col:nth-child(8) { width: 12mm; }
+        col:nth-child(9) { width: 23mm; }
+    </style>
+</head>
+<body>
+    <div class="kanban-container">
+        <table>
+            <colgroup>
+                <col style="width: 6mm">
+                <col style="width: 12mm">
+                <col style="width: 12mm">
+                <col style="width: 12mm">
+                <col style="width: 12mm">
+                <col style="width: 12mm">
+                <col style="width: 12mm">
+                <col style="width: 12mm">
+                <col style="width: 23mm">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th colspan="9">EKANBAN CUTTING TWIST</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Row 1: Labels -->
+                <tr>
+                    <td colspan="2" class="label-cell">CCT CODE</td>
+                    <td class="label-cell">CCT NO</td>
+                    <td colspan="2" class="label-cell">MACHINE</td>
+                    <td class="label-cell">SEQ</td>
+                    <td colspan="3" rowspan="2" class="label-cell">BARCODE</td>
+                </tr>
+                <!-- Row 2: Values -->
+                <tr>
+                    <td colspan="2" class="value-cell">SA31</td>
+                    <td class="value-cell">188</td>
+                    <td colspan="2" class="value-cell">AC98.J72-04</td>
+                    <td class="value-cell">999</td>
+                </tr>
+                
+                <!-- Row 3: Customer Info Labels -->
+                <tr>
+                    <td colspan="2" class="label-cell">CUST NO</td>
+                    <td class="label-cell">KIND</td>
+                    <td class="label-cell">SIZE</td>
+                    <td class="label-cell">COLOR</td>
+                    <td class="label-cell">C/L</td>
+                    <td class="label-cell">QTY</td>
+                    <td colspan="2" class="label-cell">ISSUE</td>
+                </tr>
+                <!-- Row 4: Customer Info Values -->
+                <tr>
+                    <td colspan="2" class="value-cell">123B</td>
+                    <td class="value-cell">CIVUS</td>
+                    <td class="value-cell">00.35</td>
+                    <td class="value-cell">Y</td>
+                    <td class="value-cell">1789</td>
+                    <td class="value-cell">40</td>
+                    <td colspan="2" class="value-cell">001/009</td>
+                </tr>
+                
+                <!-- Section A - Row 1 -->
+                <tr>
+                    <td rowspan="3" class="section-label">A</td>
+                    <td class="label-cell text-left">TERM.</td>
+                    <td colspan="2" class="value-cell text-left">1234-456-789</td>
+                    <td class="label-cell text-left">NOTE</td>
+                    <td class="value-cell text-left">A</td>
+                    <td colspan="2" class="label-cell">MACH. TWIST</td>
+                    <td class="label-cell">SEQ</td>
+                </tr>
+                <!-- Section A - Row 2 -->
+                <tr>
+                    <td class="label-cell text-left">ACC 1</td>
+                    <td colspan="2" class="value-cell text-left">TWIST 123123</td>
+                    <td class="label-cell text-left">STRIP</td>
+                    <td class="value-cell text-left">04.00</td>
+                    <td colspan="2" class="value-cell">XYZ.123-09</td>
+                    <td class="value-cell">19987</td>
+                </tr>
+                <!-- Section A - Row 3 -->
+                <tr>
+                    <td class="label-cell text-left">TUBE</td>
+                    <td colspan="2" class="value-cell text-left">-</td>
+                    <td class="label-cell text-left">MARK</td>
+                    <td class="value-cell text-left">-</td>
+                    <td colspan="3" rowspan="2" class="label-cell">BARCODE</td>
+                </tr>
+                
+                <!-- Section B - Row 1 -->
+                <tr>
+                    <td rowspan="3" class="section-label black-bg">B</td>
+                    <td class="label-cell text-left">TERM.</td>
+                    <td colspan="2" class="value-cell text-left">1234-543-123</td>
+                    <td class="label-cell text-left">NOTE</td>
+                    <td class="value-cell text-left">A</td>
+                </tr>
+                <!-- Section B - Row 2 -->
+                <tr>
+                    <td class="label-cell text-left">ACC 1</td>
+                    <td colspan="2" class="value-cell text-left">TWIST-ACC</td>
+                    <td class="label-cell text-left">STRIP</td>
+                    <td class="value-cell text-left">04.00</td>
+                    <td colspan="3" class="label-cell">TO STORE</td>
+                </tr>
+                <!-- Section B - Row 3 -->
+                <tr>
+                    <td class="label-cell text-left">TUBE</td>
+                    <td colspan="2" class="value-cell text-left">-</td>
+                    <td class="label-cell text-left">MARK</td>
+                    <td class="value-cell text-left">-</td>
+                    <td colspan="3" class="value-cell">FAM999-01,123,23</td>
+                </tr>
+                
+                <!-- Bottom Section - Row 1 -->
+                <tr>
+                    <td colspan="3" rowspan="4" class="qrcode-cell">
+                        <div class="label-cell">QRCODE KANBAN</div>
+                        <div class="qrcode-placeholder">QR CODE</div>
+                    </td>
+                    <td class="label-cell text-left">CV NO</td>
+                    <td colspan="3" class="value-cell text-left">CV AB8</td>
+                    <td colspan="2" rowspan="4" class="qrcode-cell">
+                        <div class="label-cell">QRCODE SHIKAKE</div>
+                        <div class="qrcode-placeholder">QR CODE</div>
+                    </td>
+                </tr>
+                <!-- Bottom Section - Row 2 -->
+                <tr>
+                    <td class="label-cell text-left">FAMILY</td>
+                    <td colspan="3" class="value-cell text-left">FAMILY 12308</td>
+                </tr>
+                <!-- Bottom Section - Row 3 -->
+                <tr>
+                    <td class="label-cell text-left">DATE</td>
+                    <td colspan="3" class="value-cell text-left">01-Jan-26</td>
+                </tr>
+                <!-- Bottom Section - Row 4 -->
+                <tr>
+                    <td class="label-cell text-left">NOTE</td>
+                    <td colspan="3" class="value-cell text-left">INI TEMPLATE KANBAN</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
