@@ -39,7 +39,12 @@
 
                             <div class="mb-3">
                                 <label>Process</label>
-                                <input type="text" name="barcode_proses" id="barcode_proses" class="form-control form-control-sm">
+                                <select name="process" id="process" class="form-select form-control-sm">
+                                    <option value="">- Choose Process -</option>
+                                    @foreach($processTypes as $processType)
+                                        <option value="{{ $processType->value }}">{{ $processType->value }}</option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <div class="mb-3">

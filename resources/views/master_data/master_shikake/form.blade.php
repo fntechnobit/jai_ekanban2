@@ -49,7 +49,14 @@
 
                                 <div class="mb-3">
                                     <label>Process</label>
-                                    <input type="text" name="process" class="form-control form-control-sm" value="{{ $shikake->process ?? '' }}" readonly>
+                                    <select name="process" class="form-select form-control-sm">
+                                        <option value="">- Choose Process -</option>
+                                        @foreach($processTypes as $processType)
+                                            <option value="{{ $processType->value }}" {{ isset($shikake) && $shikake->process == $processType->value ? 'selected' : '' }}>
+                                                {{ $processType->value }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </div>
 
                                 <div class="mb-3">

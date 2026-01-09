@@ -45,6 +45,15 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div class="col-md-4">
+                            <label for="filter_process">Process :</label>
+                            <select class="form-select select2" id="filter_process" style="width: 100%;">
+                                <option value="">- All Process -</option>
+                                @foreach($processTypes as $processType)
+                                    <option value="{{ $processType->value }}">{{ $processType->value }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
                     <table id="master-shikake-table" class="table table-bordered table-striped">
@@ -77,7 +86,7 @@
     <script>
         $(function () {
             // Initialize Select2 for filters
-            $('#filter_area, #filter_conveyor').select2({
+            $('#filter_area, #filter_conveyor, #filter_process').select2({
                 theme: 'bootstrap-5',
                 allowClear: true,
                 placeholder: function() {
@@ -94,6 +103,7 @@
                     data: function(d) {
                         d.area_id = $('#filter_area').val();
                         d.conveyor_id = $('#filter_conveyor').val();
+                        d.process = $('#filter_process').val();
                     }
                 },
                 columns: [
@@ -111,7 +121,7 @@
             });
 
             // Filter change events
-            $('#filter_area, #filter_conveyor').on('change', function() {
+            $('#filter_area, #filter_conveyor, #filter_process').on('change', function() {
                 table.ajax.reload();
             });
 
@@ -280,6 +290,7 @@
                             $('#shikake_no').val(data.shikake_no);
                             $('#barcode_kanban').val(data.barcode_kanban);
                             $('#family').val(data.family);
+                            $('#process').val(data.process);
                             $('#barcode_proses').val(data.barcode_proses);
                             $('#qty').val(data.qty);
                             $('#issue').val(data.issue);

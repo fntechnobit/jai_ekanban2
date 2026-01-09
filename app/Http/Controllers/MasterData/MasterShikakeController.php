@@ -8,6 +8,7 @@ use App\Helpers\ResponseHelper;
 use App\Helpers\ImageHelper;
 use App\Models\MasterArea;
 use App\Models\MasterConveyor;
+use App\Enums\ProcessType;
 use Illuminate\Http\Request;
 
 class MasterShikakeController extends Controller
@@ -28,7 +29,8 @@ class MasterShikakeController extends Controller
     {
         $areas = MasterArea::orderBy('area')->get();
         $conveyors = MasterConveyor::orderBy('conveyor')->get();
-        return view('master_data.master_shikake.index', compact('areas', 'conveyors'));
+        $processTypes = ProcessType::cases();
+        return view('master_data.master_shikake.index', compact('areas', 'conveyors', 'processTypes'));
     }
 
     public function datatable(Request $request)
@@ -36,7 +38,8 @@ class MasterShikakeController extends Controller
         if ($request->ajax()) {
             $areaId = $request->get('area_id');
             $conveyorId = $request->get('conveyor_id');
-            return $this->masterShikakeService->getDatatable($areaId, $conveyorId);
+            $process = $request->get('process');
+            return $this->masterShikakeService->getDatatable($areaId, $conveyorId, $process);
         }
     }
 
@@ -44,7 +47,8 @@ class MasterShikakeController extends Controller
     {
         $areas = MasterArea::orderBy('area')->get();
         $conveyors = MasterConveyor::orderBy('conveyor')->get();
-        return view('master_data.master_shikake.form', compact('areas', 'conveyors'));
+        $processTypes = ProcessType::cases();
+        return view('master_data.master_shikake.form', compact('areas', 'conveyors', 'processTypes'));
     }
 
     public function store(Request $request)
@@ -84,7 +88,8 @@ class MasterShikakeController extends Controller
         $shikake->load('assemblies');
         $areas = MasterArea::orderBy('area')->get();
         $conveyors = MasterConveyor::orderBy('conveyor')->get();
-        return view('master_data.master_shikake.form', compact('shikake', 'areas', 'conveyors'));
+        $processTypes = ProcessType::cases();
+        return view('master_data.master_shikake.form', compact('shikake', 'areas', 'conveyors', 'processTypes'));
     }
 
     public function update(Request $request, $id)

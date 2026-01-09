@@ -14,7 +14,7 @@ class MasterShikakeService
         return MasterShikake::with(['conveyor'])->select('master_shikake.*');
     }
 
-    public function getDatatable($areaId = null, $conveyorId = null)
+    public function getDatatable($areaId = null, $conveyorId = null, $process = null)
     {
         $query = MasterShikake::with(['conveyor'])
             ->select('master_shikake.*');
@@ -29,6 +29,11 @@ class MasterShikakeService
         // Filter by conveyor
         if ($conveyorId) {
             $query->where('conveyor_id', $conveyorId);
+        }
+
+        // Filter by process
+        if ($process) {
+            $query->where('process', 'LIKE', '%' . $process . '%');
         }
 
         return DataTables::of($query)

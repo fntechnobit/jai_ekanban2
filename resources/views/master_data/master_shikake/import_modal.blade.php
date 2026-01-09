@@ -47,11 +47,9 @@
                         <div class="col-sm-9">
                             <select class="form-select select2" id="import_process" name="process" style="width: 100%;" required>
                                 <option value="">- Choose Process -</option>
-                                <option value="BONDER">BONDER</option>
-                                <option value="DBL CRIMP">DBL CRIMP</option>
-                                <option value="JOINT">JOINT</option>
-                                <option value="SHIELD">SHIELD</option>
-                                <option value="TWIST">TWIST</option>
+                                @foreach(\App\Enums\ProcessType::cases() as $processType)
+                                    <option value="{{ $processType->value }}">{{ $processType->value }}</option>
+                                @endforeach
                             </select>
                             <small class="form-text text-danger import_process_error"></small>
                         </div>
