@@ -11,7 +11,7 @@ class AssyScheduleShikake extends Model
 
     protected $fillable = [
         'assy_schedule_id',
-        'shikake_id',
+        'master_shikake_id',
         'is_printed',
         'last_printed_at',
         'last_printed_by',
@@ -37,7 +37,7 @@ class AssyScheduleShikake extends Model
      */
     public function shikake(): BelongsTo
     {
-        return $this->belongsTo(MasterShikake::class, 'shikake_id');
+        return $this->belongsTo(MasterShikake::class, 'master_shikake_id');
     }
 
     /**

@@ -3,6 +3,11 @@
 namespace App\Services;
 
 use App\Models\AssyScheduleShikake;
+use App\Models\MasterShikakeTwist;
+use App\Models\MasterShikakeBonder;
+use App\Models\MasterShikakeJoint;
+use App\Models\MasterShikakeShield;
+use App\Models\MasterShikakeDblCrimp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -11,7 +16,7 @@ use Carbon\Carbon;
 class EkanbanShikakeService
 {
     /**
-     * Get shikake data for DataTable
+     * Get shikake data for DataTable - Grouped by identifier (like Circuit groups by cct_no + cct_code)
      */
     public function getShikakeDataForTable(Request $request)
     {
@@ -30,32 +35,63 @@ class EkanbanShikakeService
         // Apply filters
         $this->applyFilters($query, $request);
 
-        // DataTable processing
-        $totalRecords = $query->count();
-        
+        // Clone query for counting before search (subquery counting like Circuit service)
+        $countQuery = clone $query;
+        $totalRecords = DB::table(DB::raw("({$countQuery->toSql()}) as sub"))
+            ->mergeBindings($countQuery)
+            ->count();
+
         if ($request->filled('search.value')) {
             $searchValue = $request->input('search.value');
-            $query->where(function($q) use ($searchValue) {
-                $q->where('tas.assy', 'like', "%{$searchValue}%")
-                  ->orWhere('cv.conveyor', 'like', "%{$searchValue}%")
-                  ->orWhere('master_shikake.shikake_no', 'like', "%{$searchValue}%");
-            });
+            $escapedSearch = '%' . addcslashes($searchValue, '%_') . '%';
+            $query->havingRaw("(
+                COALESCE(
+                    master_shikake_twist.cct_no,
+                    master_shikake_bonder.bonder_no,
+                    master_shikake_joint.bonder_no,
+                    master_shikake_shield.shield_no,
+                    master_shikake_dbl_crimp.shield_no,
+                    '-'
+                ) LIKE ?
+                OR master_conveyor.conveyor LIKE ?
+                OR GROUP_CONCAT(DISTINCT master_shikake.barcode_kanban ORDER BY master_shikake.issue SEPARATOR ', ') LIKE ?
+                OR master_shikake.family LIKE ?
+                OR master_shikake.process LIKE ?
+            )", [$escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch]);
         }
 
-        $filteredRecords = $query->count();
+        $filteredQuery = clone $query;
+        $filteredRecords = DB::table(DB::raw("({$filteredQuery->toSql()}) as sub"))
+            ->mergeBindings($filteredQuery)
+            ->count();
 
         // Order
         $orderColumn = $request->input('order.0.column', 0);
         $orderDir = $request->input('order.0.dir', 'asc');
+        
+        // Define the identifier expression for ordering
+        $identifierExpr = DB::raw("COALESCE(
+            master_shikake_twist.cct_no,
+            master_shikake_bonder.bonder_no,
+            master_shikake_joint.bonder_no,
+            master_shikake_shield.shield_no,
+            master_shikake_dbl_crimp.shield_no,
+            '-'
+        )");
+        
         $columns = [
-            'assy_schedule_id',
-            'master_shikake.shikake_no',
-            'master_shikake.machine',
-            'master_conveyor.conveyor',
-            'assy_schedule.schedule',
-            'assy_schedule.shift',
-            'assy_schedule.assy',
-            'assy_schedule.qty'
+            'assy_schedule.id',              // 0 - Num (DT_RowIndex)
+            'master_shikake.process',        // 1 - Process
+            $identifierExpr,                 // 2 - Identifier
+            'master_conveyor.conveyor',      // 3 - Conveyor
+            'master_shikake.machine',        // 4 - Machine
+            'master_shikake.family',         // 5 - Family
+            'assy_schedule.qty',             // 6 - Qty
+            DB::raw('COUNT(DISTINCT master_shikake.id)'), // 7 - Issue count
+            DB::raw("GROUP_CONCAT(DISTINCT master_shikake.barcode_kanban ORDER BY master_shikake.issue SEPARATOR ', ')"), // 8 - Barcode Kanban
+            'assy_schedule.schedule',        // 9 - Date
+            'assy_schedule.shift',           // 10 - Shift
+            'assy_schedule.cutoff'           // 11 - Cut Off
         ];
         
         if (isset($columns[$orderColumn])) {
@@ -75,27 +111,29 @@ class EkanbanShikakeService
 
         $result = [];
         foreach ($data as $index => $row) {
-            // Create composite ID for tracking individual shikakes
-            $compositeId = $row->assy_schedule_id . '-' . $row->shikake_id;
+            // Group ID format: assyScheduleId-process-identifier (URL encoded)
+            $groupId = $row->assy_schedule_id . '-' . urlencode($row->process) . '-' . urlencode($row->identifier);
             
             $result[] = [
                 'DT_RowIndex' => $start + $index + 1,
                 'assy_schedule_id' => $row->assy_schedule_id,
-                'shikake_id' => $row->shikake_id,
-                'composite_id' => $compositeId,
-                'shikake_no' => $row->shikake_no,
-                'shikake_code' => $row->shikake_code,
-                'machine' => $row->machine,
+                'group_id' => $groupId,
+                'shikake_ids' => $row->shikake_ids,
+                'process' => $row->process,
+                'identifier' => $row->identifier,
                 'conveyor' => $row->conveyor,
+                'machine' => $row->machine,
+                'family' => $row->family ?? '-',
+                'qty' => $row->qty,
+                'issue_count' => $row->issue_count,
+                'barcodes' => $row->barcodes ?? '-',
                 'date' => Carbon::parse($row->date)->format('d-m-Y'),
                 'shift' => 'Shift ' . $row->shift,
                 'cutoff' => $row->cutoff ? 'Cut Off ' . $row->cutoff : '-',
-                'assy' => $row->assy,
-                'qty' => $row->qty,
                 'is_printed' => $row->is_printed,
                 'last_printed_at' => $row->last_printed_at,
                 'print_count' => $row->print_count ?? 0,
-                'actions' => view('schedule.ekanban_shikake.actions', ['row' => $row])->render()
+                'actions' => view('schedule.ekanban_shikake.actions', ['row' => $row, 'groupId' => $groupId])->render()
             ];
         }
 
@@ -108,16 +146,20 @@ class EkanbanShikakeService
     }
 
     /**
-     * Get shikakes for printing - using composite IDs
+     * Get shikakes for printing - using group IDs (assyScheduleId-process-identifier)
      */
-    public function getShikakesForPrint(array $ids)
+    public function getShikakesForPrint(array $groupIds)
     {
-        // Parse composite IDs (format: "assyScheduleId-shikakeId")
+        // Parse group IDs (format: "assyScheduleId-process-identifier")
         $conditions = [];
-        foreach ($ids as $id) {
-            if (strpos($id, '-') !== false) {
-                [$assyScheduleId, $shikakeId] = explode('-', $id);
-                $conditions[] = ['assy_schedule_id' => $assyScheduleId, 'shikake_id' => $shikakeId];
+        foreach ($groupIds as $groupId) {
+            $parts = explode('-', $groupId, 3);
+            if (count($parts) === 3) {
+                $conditions[] = [
+                    'assy_schedule_id' => $parts[0],
+                    'process' => urldecode($parts[1]),
+                    'identifier' => urldecode($parts[2])
+                ];
             }
         }
 
@@ -125,17 +167,33 @@ class EkanbanShikakeService
             return collect([]);
         }
 
-        // Build query with OR conditions for each composite ID
-        return DB::table('assy_schedule')
+        // Fetch ALL shikakes matching the group criteria
+        $shikakes = DB::table('assy_schedule')
             ->join('master_conveyor', 'assy_schedule.conveyor_id', '=', 'master_conveyor.id')
             ->join('master_assy', 'assy_schedule.assy', '=', 'master_assy.assy')
             ->join('master_shikake_assy', 'master_assy.id', '=', 'master_shikake_assy.master_assy_id')
             ->join('master_shikake', 'master_shikake_assy.master_shikake_id', '=', 'master_shikake.id')
+            ->leftJoin('listing_stage', 'assy_schedule.listing_id', '=', 'listing_stage.id')
+            // Left join child tables to get identifiers
+            ->leftJoin('master_shikake_twist', 'master_shikake.id', '=', 'master_shikake_twist.master_shikake_id')
+            ->leftJoin('master_shikake_bonder', 'master_shikake.id', '=', 'master_shikake_bonder.master_shikake_id')
+            ->leftJoin('master_shikake_joint', 'master_shikake.id', '=', 'master_shikake_joint.master_shikake_id')
+            ->leftJoin('master_shikake_shield', 'master_shikake.id', '=', 'master_shikake_shield.master_shikake_id')
+            ->leftJoin('master_shikake_dbl_crimp', 'master_shikake.id', '=', 'master_shikake_dbl_crimp.master_shikake_id')
+            ->where('assy_schedule.is_lock', '!=', 0)
             ->where(function($query) use ($conditions) {
                 foreach ($conditions as $condition) {
                     $query->orWhere(function($q) use ($condition) {
                         $q->where('assy_schedule.id', $condition['assy_schedule_id'])
-                          ->where('master_shikake.id', $condition['shikake_id']);
+                          ->where('master_shikake.process', $condition['process'])
+                          ->where(function($innerQ) use ($condition) {
+                              // Match by identifier based on process type
+                              $innerQ->where('master_shikake_twist.cct_no', $condition['identifier'])
+                                     ->orWhere('master_shikake_bonder.bonder_no', $condition['identifier'])
+                                     ->orWhere('master_shikake_joint.bonder_no', $condition['identifier'])
+                                     ->orWhere('master_shikake_shield.shield_no', $condition['identifier'])
+                                     ->orWhere('master_shikake_dbl_crimp.shield_no', $condition['identifier']);
+                          });
                     });
                 }
             })
@@ -143,17 +201,84 @@ class EkanbanShikakeService
                 'assy_schedule.*',
                 'assy_schedule.id as assy_schedule_id',
                 'master_conveyor.conveyor',
-                'master_shikake.id as shikake_id',
-                'master_shikake.shikake_no',
-                'master_shikake.shikake_no as shikake_code',
                 'master_conveyor.pallet_qty',
+                'listing_stage.carline',
+                'master_shikake.id as shikake_id',
+                'master_shikake.process',
+                'master_shikake.conveyor as shikake_conveyor',
+                'master_shikake.machine',
+                'master_shikake.qty as shikake_qty',
+                'master_shikake.issue',
+                'master_shikake.barcode_kanban',
+                'master_shikake.family',
+                'master_shikake.released_note',
+                'master_shikake.sequence',
+                'master_shikake.image_path',
+                // Identifier fields from child tables
+                'master_shikake_twist.cct_no as twist_cct_no',
+                'master_shikake_bonder.bonder_no',
+                'master_shikake_joint.bonder_no as joint_bonder_no',
+                'master_shikake_shield.shield_no',
+                'master_shikake_dbl_crimp.shield_no as dbl_crimp_shield_no',
                 DB::raw('CEIL(assy_schedule.qty / NULLIF(master_conveyor.pallet_qty, 0)) as pallet_count')
             ])
+            ->orderBy('master_shikake.process')
+            ->orderBy('master_shikake.issue')
             ->get();
+
+        // Load process-specific details for each shikake
+        foreach ($shikakes as $shikake) {
+            $shikake->details = $this->loadProcessDetails($shikake->shikake_id, $shikake->process);
+            $shikake->identifier = $this->getIdentifierByProcess($shikake);
+        }
+
+        return $shikakes;
     }
 
     /**
-     * Get base shikake query - Returns one row per shikake (no grouping)
+     * Get identifier based on process type
+     */
+    private function getIdentifierByProcess($row)
+    {
+        switch ($row->process) {
+            case 'TWIST':
+                return $row->twist_cct_no ?? '-';
+            case 'BONDER':
+                return $row->bonder_no ?? '-';
+            case 'JOINT':
+                return $row->joint_bonder_no ?? '-';
+            case 'SHIELD':
+                return $row->shield_no ?? '-';
+            case 'DBL CRIMP':
+                return $row->dbl_crimp_shield_no ?? '-';
+            default:
+                return '-';
+        }
+    }
+
+    /**
+     * Load process-specific details from child tables
+     */
+    public function loadProcessDetails($shikakeId, $process)
+    {
+        switch ($process) {
+            case 'TWIST':
+                return MasterShikakeTwist::where('master_shikake_id', $shikakeId)->first();
+            case 'BONDER':
+                return MasterShikakeBonder::where('master_shikake_id', $shikakeId)->first();
+            case 'JOINT':
+                return MasterShikakeJoint::where('master_shikake_id', $shikakeId)->first();
+            case 'SHIELD':
+                return MasterShikakeShield::where('master_shikake_id', $shikakeId)->first();
+            case 'DBL CRIMP':
+                return MasterShikakeDblCrimp::where('master_shikake_id', $shikakeId)->first();
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Get base shikake query - Returns grouped data by identifier (like Circuit)
      */
     private function getBaseShikakeQuery()
     {
@@ -164,53 +289,137 @@ class EkanbanShikakeService
             ->join('master_shikake', 'master_shikake_assy.master_shikake_id', '=', 'master_shikake.id')
             ->leftJoin('assy_schedule_shikake', function($join) {
                 $join->on('assy_schedule.id', '=', 'assy_schedule_shikake.assy_schedule_id')
-                     ->on('master_shikake.id', '=', 'assy_schedule_shikake.shikake_id');
+                     ->on('master_shikake.id', '=', 'assy_schedule_shikake.master_shikake_id');
             })
+            // Left join child tables to get identifiers
+            ->leftJoin('master_shikake_twist', 'master_shikake.id', '=', 'master_shikake_twist.master_shikake_id')
+            ->leftJoin('master_shikake_bonder', 'master_shikake.id', '=', 'master_shikake_bonder.master_shikake_id')
+            ->leftJoin('master_shikake_joint', 'master_shikake.id', '=', 'master_shikake_joint.master_shikake_id')
+            ->leftJoin('master_shikake_shield', 'master_shikake.id', '=', 'master_shikake_shield.master_shikake_id')
+            ->leftJoin('master_shikake_dbl_crimp', 'master_shikake.id', '=', 'master_shikake_dbl_crimp.master_shikake_id')
+            ->where('assy_schedule.is_lock', '!=', 0)
             ->select([
                 'assy_schedule.id as assy_schedule_id',
-                'master_shikake.id as shikake_id',
-                'master_shikake.shikake_no',
-                'master_shikake.shikake_no as shikake_code',
+                'master_shikake.process',
                 'master_shikake.machine',
+                'master_shikake.family',
                 'master_conveyor.conveyor',
+                'master_conveyor.pallet_qty',
+                'assy_schedule.assy',
+                'assy_schedule.qty',
                 'assy_schedule.schedule as date',
                 'assy_schedule.shift',
                 'assy_schedule.cutoff',
+                // Computed identifier based on process type
+                DB::raw("COALESCE(
+                    master_shikake_twist.cct_no,
+                    master_shikake_bonder.bonder_no,
+                    master_shikake_joint.bonder_no,
+                    master_shikake_shield.shield_no,
+                    master_shikake_dbl_crimp.shield_no,
+                    '-'
+                ) as identifier"),
+                // Aggregated fields for grouping (like Circuit)
+                DB::raw('GROUP_CONCAT(DISTINCT master_shikake.id ORDER BY master_shikake.issue) as shikake_ids'),
+                DB::raw('GROUP_CONCAT(DISTINCT master_shikake.barcode_kanban ORDER BY master_shikake.issue SEPARATOR ", ") as barcodes'),
+                DB::raw('COUNT(DISTINCT master_shikake.id) as issue_count'),
+                // Print status from tracking table
+                DB::raw('MAX(assy_schedule_shikake.is_printed) as is_printed'),
+                DB::raw('MAX(assy_schedule_shikake.last_printed_at) as last_printed_at'),
+                DB::raw('MAX(assy_schedule_shikake.print_count) as print_count')
+            ])
+            ->groupBy([
+                'assy_schedule.id',
+                'master_shikake.process',
+                'master_shikake.machine',
+                'master_shikake.family',
+                'master_conveyor.conveyor',
+                'master_conveyor.pallet_qty',
                 'assy_schedule.assy',
                 'assy_schedule.qty',
-                'master_conveyor.pallet_qty',
-                'assy_schedule_shikake.is_printed',
-                'assy_schedule_shikake.last_printed_at',
-                'assy_schedule_shikake.print_count'
+                'assy_schedule.schedule',
+                'assy_schedule.shift',
+                'assy_schedule.cutoff',
+                DB::raw("COALESCE(
+                    master_shikake_twist.cct_no,
+                    master_shikake_bonder.bonder_no,
+                    master_shikake_joint.bonder_no,
+                    master_shikake_shield.shield_no,
+                    master_shikake_dbl_crimp.shield_no,
+                    '-'
+                )")
             ])
-            ->orderBy('master_shikake.shikake_no', 'ASC')
+            ->orderBy('master_shikake.process', 'ASC')
+            ->orderBy(DB::raw("COALESCE(
+                master_shikake_twist.cct_no,
+                master_shikake_bonder.bonder_no,
+                master_shikake_joint.bonder_no,
+                master_shikake_shield.shield_no,
+                master_shikake_dbl_crimp.shield_no,
+                '-'
+            )"), 'ASC')
             ->orderBy('assy_schedule.schedule', 'ASC')
             ->orderBy('assy_schedule.shift', 'ASC');
     }
 
     /**
-     * Mark shikakes as printed
+     * Mark shikake group as printed
      */
-    public function markAsPrinted(array $compositeIds, $userId)
+    public function markAsPrinted(array $groupIds, $userId)
     {
-        foreach ($compositeIds as $compositeId) {
-            if (strpos($compositeId, '-') !== false) {
-                [$assyScheduleId, $shikakeId] = explode('-', $compositeId);
+        foreach ($groupIds as $groupId) {
+            $parts = explode('-', $groupId, 3);
+            if (count($parts) === 3) {
+                $assyScheduleId = $parts[0];
+                $process = urldecode($parts[1]);
+                $identifier = urldecode($parts[2]);
                 
-                AssyScheduleShikake::updateOrCreate(
-                    [
-                        'assy_schedule_id' => $assyScheduleId,
-                        'shikake_id' => $shikakeId
-                    ],
-                    [
-                        'is_printed' => true,
-                        'last_printed_at' => now(),
-                        'last_printed_by' => $userId,
-                        'print_count' => DB::raw('print_count + 1')
-                    ]
-                );
+                // Get all shikake IDs for this group
+                $shikakeIds = $this->getShikakeIdsByGroup($assyScheduleId, $process, $identifier);
+                
+                foreach ($shikakeIds as $shikakeId) {
+                    AssyScheduleShikake::updateOrCreate(
+                        [
+                            'assy_schedule_id' => $assyScheduleId,
+                            'master_shikake_id' => $shikakeId
+                        ],
+                        [
+                            'is_printed' => true,
+                            'last_printed_at' => now(),
+                            'last_printed_by' => $userId,
+                            'print_count' => DB::raw('COALESCE(print_count, 0) + 1')
+                        ]
+                    );
+                }
             }
         }
+    }
+
+    /**
+     * Get shikake IDs by group identifier
+     */
+    private function getShikakeIdsByGroup($assyScheduleId, $process, $identifier)
+    {
+        return DB::table('assy_schedule')
+            ->join('master_assy', 'assy_schedule.assy', '=', 'master_assy.assy')
+            ->join('master_shikake_assy', 'master_assy.id', '=', 'master_shikake_assy.master_assy_id')
+            ->join('master_shikake', 'master_shikake_assy.master_shikake_id', '=', 'master_shikake.id')
+            ->leftJoin('master_shikake_twist', 'master_shikake.id', '=', 'master_shikake_twist.master_shikake_id')
+            ->leftJoin('master_shikake_bonder', 'master_shikake.id', '=', 'master_shikake_bonder.master_shikake_id')
+            ->leftJoin('master_shikake_joint', 'master_shikake.id', '=', 'master_shikake_joint.master_shikake_id')
+            ->leftJoin('master_shikake_shield', 'master_shikake.id', '=', 'master_shikake_shield.master_shikake_id')
+            ->leftJoin('master_shikake_dbl_crimp', 'master_shikake.id', '=', 'master_shikake_dbl_crimp.master_shikake_id')
+            ->where('assy_schedule.id', $assyScheduleId)
+            ->where('master_shikake.process', $process)
+            ->where(function($q) use ($identifier) {
+                $q->where('master_shikake_twist.cct_no', $identifier)
+                  ->orWhere('master_shikake_bonder.bonder_no', $identifier)
+                  ->orWhere('master_shikake_joint.bonder_no', $identifier)
+                  ->orWhere('master_shikake_shield.shield_no', $identifier)
+                  ->orWhere('master_shikake_dbl_crimp.shield_no', $identifier);
+            })
+            ->pluck('master_shikake.id')
+            ->toArray();
     }
 
     /**
@@ -218,12 +427,20 @@ class EkanbanShikakeService
      */
     private function applyFilters($query, Request $request)
     {
+        // Machine filter (required)
         $query->where('master_shikake.machine', $request->machine);
 
+        // Process type filter
+        if ($request->filled('process')) {
+            $query->where('master_shikake.process', $request->process);
+        }
+
+        // Area filter
         if ($request->filled('area_id')) {
             $query->where('master_conveyor.master_area_id', $request->area_id);
         }
 
+        // Cut off filter
         if ($request->filled('cutoff')) {
             $query->where('assy_schedule.cutoff', $request->cutoff);
         }
@@ -236,17 +453,14 @@ class EkanbanShikakeService
             $query->where('assy_schedule.shift', $request->shift);
         }
 
-        // Print status filter
+        // Print status filter - use HAVING for aggregated column
         if ($request->filled('print_status')) {
             switch ($request->print_status) {
                 case 'printed':
-                    $query->where('assy_schedule_shikake.is_printed', 1);
+                    $query->havingRaw('MAX(assy_schedule_shikake.is_printed) = 1');
                     break;
                 case 'not_printed':
-                    $query->where(function($q) {
-                        $q->whereNull('assy_schedule_shikake.is_printed')
-                          ->orWhere('assy_schedule_shikake.is_printed', 0);
-                    });
+                    $query->havingRaw('MAX(assy_schedule_shikake.is_printed) IS NULL OR MAX(assy_schedule_shikake.is_printed) = 0');
                     break;
                 case 'all':
                 default:

@@ -52,6 +52,7 @@
                                 @endforeach
                             </select>
                             <small class="form-text text-danger import_process_error"></small>
+                            <small class="form-text text-muted">Select a process to download the appropriate template</small>
                         </div>
                     </div>
 
@@ -79,7 +80,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success btn-sm" id="btn-download-template-shikake">
+                    <button type="button" class="btn btn-success btn-sm" id="btn-download-template-shikake" disabled>
                         <i class="fa-solid fa-file-spreadsheet"></i> Download Template
                     </button>
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>

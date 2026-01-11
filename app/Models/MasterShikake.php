@@ -14,49 +14,16 @@ class MasterShikake extends Model
 
     protected $fillable = [
         'conveyor_id',
-        'conveyor',
         'process',
-        'shikake_no',
-        'family',
+        'conveyor',
+        'machine',
         'qty',
         'issue',
-        'machine',
-        'sequence',
         'barcode_kanban',
+        'family',
         'released_date',
         'released_note',
-        'store',
-        'barcode_mesin',
-        'address',
-        'cct_a',
-        'address_a',
-        'cct_b',
-        'address_b',
-        'cct_c',
-        'address_c',
-        'cct_4',
-        'address_4',
-        'cct_5',
-        'address_5',
-        'cct_6',
-        'address_6',
-        'cct_7',
-        'address_7',
-        'barcode_proses',
-        'barcode_navigasi',
-        'dies',
-        'jumlah_kombinasi',
-        'blade',
-        't01',
-        't02',
-        't03',
-        't04',
-        't05',
-        't06',
-        't07',
-        't08',
-        't09',
-        'joint',
+        'sequence',
         'image_path',
         'created_by',
         'updated_by',
@@ -64,10 +31,9 @@ class MasterShikake extends Model
     ];
 
     protected $casts = [
-        'released_date' => 'date',
         'qty' => 'integer',
         'sequence' => 'integer',
-        'jumlah_kombinasi' => 'integer',
+        'released_date' => 'date',
         'deleted_at' => 'datetime',
     ];
 
@@ -85,6 +51,86 @@ class MasterShikake extends Model
     public function assemblies()
     {
         return $this->belongsToMany(MasterAssy::class, 'master_shikake_assy', 'master_shikake_id', 'master_assy_id');
+    }
+
+    /**
+     * Get the twist records associated with this shikake
+     */
+    public function twists()
+    {
+        return $this->hasMany(MasterShikakeTwist::class, 'master_shikake_id');
+    }
+
+    /**
+     * Get the single twist record associated with this shikake
+     */
+    public function twistData()
+    {
+        return $this->hasOne(MasterShikakeTwist::class, 'master_shikake_id');
+    }
+
+    /**
+     * Get the bonder records associated with this shikake
+     */
+    public function bonders()
+    {
+        return $this->hasMany(MasterShikakeBonder::class, 'master_shikake_id');
+    }
+
+    /**
+     * Get the single bonder record associated with this shikake
+     */
+    public function bonderData()
+    {
+        return $this->hasOne(MasterShikakeBonder::class, 'master_shikake_id');
+    }
+
+    /**
+     * Get the joint records associated with this shikake
+     */
+    public function joints()
+    {
+        return $this->hasMany(MasterShikakeJoint::class, 'master_shikake_id');
+    }
+
+    /**
+     * Get the single joint record associated with this shikake
+     */
+    public function jointData()
+    {
+        return $this->hasOne(MasterShikakeJoint::class, 'master_shikake_id');
+    }
+
+    /**
+     * Get the shield records associated with this shikake
+     */
+    public function shields()
+    {
+        return $this->hasMany(MasterShikakeShield::class, 'master_shikake_id');
+    }
+
+    /**
+     * Get the single shield record associated with this shikake
+     */
+    public function shieldData()
+    {
+        return $this->hasOne(MasterShikakeShield::class, 'master_shikake_id');
+    }
+
+    /**
+     * Get the dbl crimp records associated with this shikake
+     */
+    public function dblCrimps()
+    {
+        return $this->hasMany(MasterShikakeDblCrimp::class, 'master_shikake_id');
+    }
+
+    /**
+     * Get the single dbl crimp record associated with this shikake
+     */
+    public function dblCrimpData()
+    {
+        return $this->hasOne(MasterShikakeDblCrimp::class, 'master_shikake_id');
     }
 
     /**

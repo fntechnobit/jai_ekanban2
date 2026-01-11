@@ -61,7 +61,7 @@
                             <tr>
                                 <th width="5%">No</th>
                                 <th>Conveyor</th>
-                                <th>Shikake Number</th>
+                                <th>Identifier</th>
                                 <th>Barcode</th>
                                 <th>Family</th>
                                 <th>Process</th>
@@ -109,10 +109,10 @@
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                     { data: 'conveyor_name', name: 'conveyor' },
-                    { data: 'shikake_no', name: 'shikake_no' },
+                    { data: 'identifier', name: 'identifier', orderable: false, searchable: false },
                     { data: 'barcode_kanban', name: 'barcode_kanban' },
                     { data: 'family', name: 'family' },
-                    { data: 'process', name: 'barcode_proses' },
+                    { data: 'process', name: 'process', orderable: false },
                     { data: 'qty', name: 'qty' },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
                 ],
@@ -162,9 +162,25 @@
                 $(this).next('.custom-file-label').html(fileName || 'Browse File');
             });
 
-            // Download Template
+            // Enable/disable download template button based on process selection
+            $('#import_process').on('change', function() {
+                var process = $(this).val();
+                var downloadBtn = $('#btn-download-template-shikake');
+                if (process) {
+                    downloadBtn.prop('disabled', false);
+                } else {
+                    downloadBtn.prop('disabled', true);
+                }
+            });
+
+            // Download Template based on selected process
             $('#btn-download-template-shikake').click(function() {
-                window.location.href = "{{ route('master-data.master-shikake.download-template') }}";
+                var process = $('#import_process').val();
+                if (!process) {
+                    Swal.fire('Warning', 'Please select a process type first', 'warning');
+                    return;
+                }
+                window.location.href = "{{ route('master-data.master-shikake.download-template') }}?process=" + encodeURIComponent(process);
             });
 
             // Submit Import Form
@@ -270,90 +286,207 @@
             $('#master-shikake-table').on('click', '.btn-view', function() {
                 const id = $(this).data('id');
                 
+                // Show loading indicator
+                showLoadingSpinner();
+                
                 // Show modal
                 $('#detailShikakeModal').modal('show');
+                
+                // Clear any previous validation errors
+                clearValidationErrors();
                 
                 // Fetch data via AJAX
                 $.ajax({
                     url: "{{ route('master-data.master-shikake.index') }}/" + id,
                     type: 'GET',
                     dataType: 'json',
+                    beforeSend: function() {
+                        $('#loading-indicator').show();
+                    },
                     success: function(response) {
                         if (response.success) {
                             const data = response.data;
                             console.log('Shikake data:', data);
-                            console.log('Released date:', data.released_date);
                             
-                            // Populate form fields
-                            $('#shikake_id').val(data.id);
-                            $('#conveyor').val(data.conveyor ? data.conveyor.conveyor : '');
-                            $('#shikake_no').val(data.shikake_no);
-                            $('#barcode_kanban').val(data.barcode_kanban);
-                            $('#family').val(data.family);
-                            $('#process').val(data.process);
-                            $('#barcode_proses').val(data.barcode_proses);
-                            $('#qty').val(data.qty);
-                            $('#issue').val(data.issue);
-                            $('#machine').val(data.machine);
-                            $('#sequence').val(data.sequence);
-                            $('#released_date').val(data.released_date || '');
-                            $('#released_note').val(data.released_note);
-                            $('#store').val(data.store);
-                            $('#barcode_mesin').val(data.barcode_mesin);
-                            $('#address').val(data.address);
+                            // Populate main form fields
+                            populateMainFields(data);
                             
-                            // CCT and Address fields
-                            $('#cct_a').val(data.cct_a);
-                            $('#address_a').val(data.address_a);
-                            $('#cct_b').val(data.cct_b);
-                            $('#address_b').val(data.address_b);
-                            $('#cct_c').val(data.cct_c);
-                            $('#address_c').val(data.address_c);
-                            $('#cct_4').val(data.cct_4);
-                            $('#address_4').val(data.address_4);
-                            $('#cct_5').val(data.cct_5);
-                            $('#address_5').val(data.address_5);
-                            $('#cct_6').val(data.cct_6);
-                            $('#address_6').val(data.address_6);
-                            $('#cct_7').val(data.cct_7);
-                            $('#address_7').val(data.address_7);
+                            // Populate process-specific fields
+                            populateProcessFields(data.process, data.process_data || {});
                             
-                            $('#barcode_navigasi').val(data.barcode_navigasi);
-                            $('#dies').val(data.dies);
-                            $('#jumlah_kombinasi').val(data.jumlah_kombinasi);
-                            $('#blade').val(data.blade);
+                            // Show appropriate process section
+                            toggleProcessSections();
                             
-                            // T fields
-                            for(let i = 1; i <= 9; i++) {
-                                const fieldName = 't' + String(i).padStart(2, '0');
-                                $('#' + fieldName).val(data[fieldName]);
-                            }
+                            // Handle image preview
+                            handleImagePreview(data.image_path);
                             
-                            $('#joint').val(data.joint);
-                            
-                            // Image preview
-                            if (data.image_path) {
-                                $('#imagePreview').attr('src', '{{ asset("") }}' + data.image_path);
-                                $('#imagePreviewContainer').show();
-                            } else {
-                                $('#imagePreviewContainer').hide();
-                            }
-                            
-                            // Assy list
-                            if (data.assemblies && data.assemblies.length > 0) {
-                                const assyText = data.assemblies.map(a => a.assy).join(', ');
-                                $('#assyList').html('<p class="mb-0 small">' + assyText + '</p>');
-                            } else {
-                                $('#assyList').html('<p class="text-muted mb-0 small">No assembly data</p>');
-                            }
+                            // Handle assembly list
+                            handleAssemblyList(data.assemblies);
                         }
                     },
                     error: function(xhr) {
+                        console.error('Error loading shikake details:', xhr);
                         Swal.fire('Error!', xhr.responseJSON?.message || 'Failed to load data', 'error');
                         $('#detailShikakeModal').modal('hide');
+                    },
+                    complete: function() {
+                        hideLoadingSpinner();
+                        $('#loading-indicator').hide();
                     }
                 });
             });
+
+            // Helper function to populate main fields
+            function populateMainFields(data) {
+                $('#shikake_id').val(data.id);
+                $('#conveyor').val(data.conveyor ? data.conveyor.conveyor : '');
+                $('#process').val(data.process);
+                $('#machine').val(data.machine);
+                $('#family').val(data.family);
+                $('#sequence').val(data.sequence);
+                $('#qty').val(data.qty);
+                $('#issue').val(data.issue);
+                $('#barcode_kanban').val(data.barcode_kanban);
+                $('#released_date').val(data.released_date || '');
+                $('#released_note').val(data.released_note);
+            }
+
+            // Helper function to populate process-specific fields
+            function populateProcessFields(process, processData) {
+                if (!process || !processData) return;
+                
+                const prefix = process.toLowerCase().replace(' ', '_');
+                
+                // Clear all process fields first
+                $('.process-section input').val('');
+                
+                // Populate based on process type
+                switch(process) {
+                    case 'TWIST':
+                        populateTwistFields(processData);
+                        break;
+                    case 'BONDER':
+                        populateBonderFields(processData);
+                        break;
+                    case 'JOINT':
+                        populateJointFields(processData);
+                        break;
+                    case 'SHIELD':
+                        populateShieldFields(processData);
+                        break;
+                    case 'DBL CRIMP':
+                        populateDblCrimpFields(processData);
+                        break;
+                }
+            }
+
+            function populateTwistFields(data) {
+                $('#twist_cct_no').val(data.cct_no);
+                $('#twist_cct_code').val(data.cct_code);
+                $('#twist_machine_twist').val(data.machine_twist);
+                $('#twist_sequence_2').val(data.sequence_2);
+                $('#twist_barcode_navigasi').val(data.barcode_navigasi);
+                $('#twist_barcode_process').val(data.barcode_process);
+                $('#twist_barcode_shikake').val(data.barcode_shikake);
+                $('#twist_to_store').val(data.to_store);
+                $('#twist_cust_no').val(data.cust_no);
+                $('#twist_kind').val(data.kind);
+                $('#twist_size').val(data.size);
+                $('#twist_color').val(data.color);
+                $('#twist_cl').val(data.cl);
+                $('#twist_terminal_a').val(data.terminal_a);
+                $('#twist_acc_1_a').val(data.acc_1_a);
+                $('#twist_tube_a').val(data.tube_a);
+                $('#twist_note_a').val(data.note_a);
+                $('#twist_strip_a').val(data.strip_a);
+                $('#twist_mark_a').val(data.mark_a);
+                $('#twist_terminal_b').val(data.terminal_b);
+                $('#twist_acc_1_ab').val(data.acc_1_ab);
+                $('#twist_tube_b').val(data.tube_b);
+                $('#twist_note_b').val(data.note_b);
+                $('#twist_strip_b').val(data.strip_b);
+                $('#twist_mark_b').val(data.mark_b);
+            }
+
+            function populateBonderFields(data) {
+                $('#bonder_bonder_no').val(data.bonder_no);
+                
+                // Populate CCT & Bonder pairs
+                for(let i = 1; i <= 14; i++) {
+                    $('#bonder_cct_' + i).val(data['cct_' + i]);
+                    $('#bonder_bonder_' + i).val(data['bonder_' + i]);
+                }
+            }
+
+            function populateJointFields(data) {
+                $('#joint_bonder_no').val(data.bonder_no);
+                $('#joint_address').val(data.address);
+                
+                // Populate CCT & Bonder pairs
+                for(let i = 1; i <= 10; i++) {
+                    $('#joint_cct_' + i).val(data['cct_' + i]);
+                    $('#joint_bonder_' + i).val(data['bonder_' + i]);
+                }
+            }
+
+            function populateShieldFields(data) {
+                $('#shield_shield_no').val(data.shield_no);
+                
+                // Populate TO fields
+                for(let i = 1; i <= 9; i++) {
+                    $('#shield_to_' + i).val(data['to_' + i]);
+                }
+                
+                // Populate CCT & Bonder pairs
+                for(let i = 1; i <= 4; i++) {
+                    $('#shield_cct_' + i).val(data['cct_' + i]);
+                    $('#shield_bonder_' + i).val(data['bonder_' + i]);
+                }
+            }
+
+            function populateDblCrimpFields(data) {
+                $('#dbl_crimp_shield_no').val(data.shield_no);
+                $('#dbl_crimp_dbl_crimp').val(data.dbl_crimp);
+            }
+
+            function handleImagePreview(imagePath) {
+                if (imagePath) {
+                    $('#imagePreview').attr('src', '{{ asset("") }}' + imagePath);
+                    $('#imagePreviewContainer').show();
+                } else {
+                    $('#imagePreviewContainer').hide();
+                }
+            }
+
+            function handleAssemblyList(assemblies) {
+                if (assemblies && assemblies.length > 0) {
+                    const assyText = assemblies.map(a => a.assy).join(', ');
+                    $('#assyList').html('<p class="mb-0 small">' + assyText + '</p>');
+                } else {
+                    $('#assyList').html('<p class="text-muted mb-0 small">No assembly data</p>');
+                }
+            }
+
+            function showLoadingSpinner() {
+                $('#loading-indicator').show();
+                $('#submit-spinner').show();
+                $('#submit-icon').hide();
+                $('#submit-text').text('Loading...');
+                $('#submit-btn').prop('disabled', true);
+            }
+
+            function hideLoadingSpinner() {
+                $('#loading-indicator').hide();
+                $('#submit-spinner').hide();
+                $('#submit-icon').show();
+                $('#submit-text').text('Update');
+                $('#submit-btn').prop('disabled', false);
+            }
+
+            function clearValidationErrors() {
+                $('.form-control, .form-select').removeClass('is-invalid');
+                $('.invalid-feedback').text('').hide();
+            }
 
             // Handle image preview on file select
             $('#imageInput').on('change', function(e) {
@@ -376,9 +509,11 @@
                 const id = $('#shikake_id').val();
                 formData.append('_method', 'PUT');
                 
-                // Disable form inputs during upload
-                $('#detailShikakeForm input, #detailShikakeForm textarea, #detailShikakeForm select').prop('disabled', true);
-                $('#detailShikakeModal .btn-primary').prop('disabled', true).html('<i class="fa-solid fa-spinner ti-spin"></i> Saving...');
+                // Clear previous validation errors
+                clearValidationErrors();
+                
+                // Show loading state
+                showSubmissionLoading();
                 
                 $.ajax({
                     url: "{{ route('master-data.master-shikake.index') }}/" + id,
@@ -386,23 +521,106 @@
                     data: formData,
                     processData: false,
                     contentType: false,
+                    beforeSend: function() {
+                        // Disable form during submission
+                        $('#shikakeDetailForm input, #shikakeDetailForm textarea, #shikakeDetailForm select').prop('disabled', true);
+                    },
                     success: function(response) {
                         if (response.success) {
                             $('#detailShikakeModal').modal('hide');
                             table.ajax.reload();
-                            Swal.fire('Success!', response.message, 'success');
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success!',
+                                text: response.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
                         }
                     },
                     error: function(xhr) {
-                        Swal.fire('Error!', xhr.responseJSON?.message || 'Failed to update data', 'error');
+                        console.error('Form submission error:', xhr);
+                        
+                        if (xhr.status === 422) {
+                            // Handle validation errors
+                            const errors = xhr.responseJSON.errors;
+                            displayValidationErrors(errors);
+                            
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Validation Error',
+                                text: 'Please check the form for errors and try again.',
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error!',
+                                text: xhr.responseJSON?.message || 'Failed to update shikake data',
+                                showConfirmButton: true
+                            });
+                        }
                     },
                     complete: function() {
                         // Re-enable form inputs
-                        $('#detailShikakeForm input, #detailShikakeForm textarea, #detailShikakeForm select').prop('disabled', false);
-                        $('#detailShikakeModal .btn-primary').prop('disabled', false).html('<i class="fa-solid fa-floppy-disk"></i> Save');
+                        $('#shikakeDetailForm input, #shikakeDetailForm textarea, #shikakeDetailForm select').prop('disabled', false);
+                        hideSubmissionLoading();
                     }
                 });
             });
+
+            function showSubmissionLoading() {
+                $('#submit-spinner').show();
+                $('#submit-icon').hide();
+                $('#submit-text').text('Updating...');
+                $('#submit-btn').prop('disabled', true);
+            }
+
+            function hideSubmissionLoading() {
+                $('#submit-spinner').hide();
+                $('#submit-icon').show();
+                $('#submit-text').text('Update');
+                $('#submit-btn').prop('disabled', false);
+            }
+
+            function displayValidationErrors(errors) {
+                for (const [field, messages] of Object.entries(errors)) {
+                    const fieldElement = $(`[name="${field}"]`);
+                    const errorElement = $(`#${field.replace(/\./g, '_').replace(/\[/g, '_').replace(/\]/g, '')}-error`);
+                    
+                    if (fieldElement.length) {
+                        fieldElement.addClass('is-invalid');
+                    }
+                    
+                    if (errorElement.length) {
+                        errorElement.text(messages[0]).show();
+                    }
+                    
+                    // Handle process_data fields specifically
+                    if (field.includes('process_data.')) {
+                        const processField = field.replace('process_data.', '');
+                        const process = $('#process').val().toLowerCase().replace(' ', '_');
+                        const processFieldElement = $(`#${process}_${processField}`);
+                        const processErrorElement = $(`#${process}_${processField}-error`);
+                        
+                        if (processFieldElement.length) {
+                            processFieldElement.addClass('is-invalid');
+                        }
+                        
+                        if (processErrorElement.length) {
+                            processErrorElement.text(messages[0]).show();
+                        }
+                    }
+                }
+                
+                // Scroll to first error
+                const firstError = $('.is-invalid').first();
+                if (firstError.length) {
+                    firstError[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstError.focus();
+                }
+            }
 
             // Remove Data button click
             $('#btn-remove-data').click(function() {

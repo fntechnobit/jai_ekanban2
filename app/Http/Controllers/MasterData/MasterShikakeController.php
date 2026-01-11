@@ -9,7 +9,15 @@ use App\Helpers\ImageHelper;
 use App\Models\MasterArea;
 use App\Models\MasterConveyor;
 use App\Enums\ProcessType;
+use App\Http\Requests\UpdateTwistShikakeRequest;
+use App\Http\Requests\UpdateBonderShikakeRequest;
+use App\Http\Requests\UpdateJointShikakeRequest;
+use App\Http\Requests\UpdateShieldShikakeRequest;
+use App\Http\Requests\UpdateDblCrimpShikakeRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class MasterShikakeController extends Controller
 {
@@ -23,6 +31,107 @@ class MasterShikakeController extends Controller
         $this->middleware('check.menu:master_shikake,can_create')->only(['create', 'store', 'importForm', 'import']);
         $this->middleware('check.menu:master_shikake,can_update')->only(['edit', 'update']);
         $this->middleware('check.menu:master_shikake,can_delete')->only(['destroy', 'removeByConveyor']);
+    }
+
+    /**
+     * Validate request based on process type
+     */
+    private function validateByProcess(Request $request, $process)
+    {
+        try {
+            $validator = null;
+            $rules = [];
+            $messages = [];
+
+            switch ($process) {
+                case 'TWIST':
+                    $twistRequest = new UpdateTwistShikakeRequest();
+                    $rules = $twistRequest->rules();
+                    $messages = $twistRequest->messages();
+                    break;
+                case 'BONDER':
+                    $bonderRequest = new UpdateBonderShikakeRequest();
+                    $rules = $bonderRequest->rules();
+                    $messages = $bonderRequest->messages();
+                    break;
+                case 'JOINT':
+                    $jointRequest = new UpdateJointShikakeRequest();
+                    $rules = $jointRequest->rules();
+                    $messages = $jointRequest->messages();
+                    break;
+                case 'SHIELD':
+                    $shieldRequest = new UpdateShieldShikakeRequest();
+                    $rules = $shieldRequest->rules();
+                    $messages = $shieldRequest->messages();
+                    break;
+                case 'DBL CRIMP':
+                    $dblCrimpRequest = new UpdateDblCrimpShikakeRequest();
+                    $rules = $dblCrimpRequest->rules();
+                    $messages = $dblCrimpRequest->messages();
+                    break;
+                default:
+                    return ResponseHelper::error('Invalid process type: ' . $process, 422);
+            }
+
+            // Create validator instance
+            $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules, $messages);
+
+            if ($validator->fails()) {
+                throw new \Illuminate\Validation\ValidationException($validator);
+            }
+
+            return true;
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        }
+    }
+
+    /**
+     * Update process-specific child table data
+     */
+    private function updateProcessData($shikake, $process, $processData)
+    {
+        switch ($process) {
+            case 'TWIST':
+                if ($shikake->twistData) {
+                    $shikake->twistData->update($processData);
+                } else {
+                    $shikake->twistData()->create($processData);
+                }
+                break;
+            case 'BONDER':
+                if ($shikake->bonderData) {
+                    $shikake->bonderData->update($processData);
+                } else {
+                    $shikake->bonderData()->create($processData);
+                }
+                break;
+            case 'JOINT':
+                if ($shikake->jointData) {
+                    $shikake->jointData->update($processData);
+                } else {
+                    $shikake->jointData()->create($processData);
+                }
+                break;
+            case 'SHIELD':
+                if ($shikake->shieldData) {
+                    $shikake->shieldData->update($processData);
+                } else {
+                    $shikake->shieldData()->create($processData);
+                }
+                break;
+            case 'DBL CRIMP':
+                if ($shikake->dblCrimpData) {
+                    $shikake->dblCrimpData->update($processData);
+                } else {
+                    $shikake->dblCrimpData()->create($processData);
+                }
+                break;
+        }
     }
 
     public function index()
@@ -64,18 +173,58 @@ class MasterShikakeController extends Controller
     public function show($id)
     {
         if (request()->ajax()) {
-            $shikake = $this->masterShikakeService->findById($id);
-            $shikake->load('assemblies', 'conveyor');
-            
-            // Convert to array to prevent auto-serialization
-            $data = $shikake->toArray();
-            
-            // Format date for HTML date input
-            if ($shikake->released_date) {
-                $data['released_date'] = $shikake->released_date->format('Y-m-d');
+            try {
+                $shikake = $this->masterShikakeService->findById($id);
+                $shikake->load('assemblies', 'conveyor');
+                
+                // Convert to array to prevent auto-serialization
+                $data = $shikake->toArray();
+                
+                // Format date for HTML date input
+                if ($shikake->released_date) {
+                    $data['released_date'] = $shikake->released_date->format('Y-m-d');
+                }
+                
+                // Load process-specific child table data
+                $data['process_data'] = [];
+                switch ($shikake->process) {
+                    case 'TWIST':
+                        $childData = $shikake->twistData;
+                        if ($childData) {
+                            $data['process_data'] = $childData->toArray();
+                        }
+                        break;
+                    case 'BONDER':
+                        $childData = $shikake->bonderData;
+                        if ($childData) {
+                            $data['process_data'] = $childData->toArray();
+                        }
+                        break;
+                    case 'JOINT':
+                        $childData = $shikake->jointData;
+                        if ($childData) {
+                            $data['process_data'] = $childData->toArray();
+                        }
+                        break;
+                    case 'SHIELD':
+                        $childData = $shikake->shieldData;
+                        if ($childData) {
+                            $data['process_data'] = $childData->toArray();
+                        }
+                        break;
+                    case 'DBL CRIMP':
+                        $childData = $shikake->dblCrimpData;
+                        if ($childData) {
+                            $data['process_data'] = $childData->toArray();
+                        }
+                        break;
+                }
+                
+                return ResponseHelper::success($data);
+            } catch (\Exception $e) {
+                Log::error('Error loading shikake details: ' . $e->getMessage());
+                return ResponseHelper::error('Failed to load shikake details');
             }
-            
-            return ResponseHelper::success($data);
         }
         
         $shikake = $this->masterShikakeService->findById($id);
@@ -94,8 +243,17 @@ class MasterShikakeController extends Controller
 
     public function update(Request $request, $id)
     {
+        DB::beginTransaction();
+        
         try {
             $shikake = $this->masterShikakeService->findById($id);
+            $process = $request->input('process', $shikake->process);
+            
+            // Validate based on process type using appropriate FormRequest
+            $validationResult = $this->validateByProcess($request, $process);
+            if ($validationResult !== true) {
+                return $validationResult;
+            }
             
             $data = $request->all();
             
@@ -111,10 +269,26 @@ class MasterShikakeController extends Controller
                 }
             }
             
+            // Update main shikake record
             $this->masterShikakeService->update($shikake, $data);
+            
+            // Update process-specific child table data
+            $processData = $request->input('process_data', []);
+            if (!empty($processData)) {
+                $this->updateProcessData($shikake, $process, $processData);
+            }
+            
+            DB::commit();
+            
+            // Reload the updated data
+            $shikake->refresh();
+            $shikake->load('assemblies', 'conveyor');
+            
             return ResponseHelper::success($shikake, 'Shikake updated successfully');
         } catch (\Exception $e) {
-            return ResponseHelper::error($e->getMessage());
+            DB::rollBack();
+            Log::error('Error updating shikake: ' . $e->getMessage());
+            return ResponseHelper::error('Failed to update shikake: ' . $e->getMessage());
         }
     }
 
@@ -181,15 +355,28 @@ class MasterShikakeController extends Controller
         }
     }
 
-    public function downloadTemplate()
+    public function downloadTemplate(Request $request)
     {
-        $filePath = public_path('docs/Template_Shikake.xlsx');
+        $process = $request->get('process');
+        
+        // Map process types to template files
+        $templateMap = [
+            'TWIST' => 'Template_Shikake_Twist.xlsx',
+            'BONDER' => 'Template_Shikake_Bonder.xlsx',
+            'JOINT' => 'Template_Shikake_Joint.xlsx',
+            'SHIELD' => 'Template_Shikake_Shield.xlsx',
+            'DBL CRIMP' => 'Template_Shikake_Dbl_Crimp.xlsx',
+        ];
+
+        // Default to base template if no process specified
+        $templateFile = $templateMap[$process] ?? 'Template_Shikake.xlsx';
+        $filePath = public_path('docs/' . $templateFile);
         
         if (!file_exists($filePath)) {
-            return ResponseHelper::error('Template file not found', 404);
+            return ResponseHelper::error('Template file not found for process: ' . ($process ?? 'default'), 404);
         }
         
-        return response()->download($filePath, 'Template_Shikake.xlsx');
+        return response()->download($filePath, $templateFile);
     }
 
     public function removeByConveyor(Request $request)

@@ -78,6 +78,21 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3 row">
+                                    <label for="filter_process" class="col-sm-3 col-form-label">Process:</label>
+                                    <div class="col-sm-9">
+                                        <select class="form-select select2" id="filter_process">
+                                            <option value="">- All Process -</option>
+                                            @foreach($processTypes as $processType)
+                                                <option value="{{ $processType->value }}">{{ $processType->value }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="mb-3 row">
                                     <label for="filter_date" class="col-sm-3 col-form-label">Date:</label>
                                     <div class="col-sm-9">
                                         <input type="text" class="form-control form-control-sm" id="filter_date" readonly placeholder="Select date">
@@ -132,15 +147,17 @@
                             <thead>
                                 <tr>
                                     <th width="5%">Num.</th>
-                                    <th>Shikake No</th>
-                                    <th>Shikake Code</th>
-                                    <th>Machine</th>
+                                    <th>Process</th>
+                                    <th>Identifier</th>
                                     <th>Conveyor</th>
+                                    <th>Machine</th>
+                                    <th>Family</th>
+                                    <th>Qty</th>
+                                    <th>Issue</th>
+                                    <th>Barcode Kanban</th>
                                     <th>Date</th>
                                     <th>Shift</th>
                                     <th>Cut Off</th>
-                                    <th>Assy</th>
-                                    <th>Qty</th>
                                     <th>Print Status</th>
                                     <th width="8%">#</th>
                                 </tr>
@@ -149,6 +166,28 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="previewModalLabel">Print Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                    </button>
+                </div>
+                <div class="modal-body" id="previewContent" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="text-center">
+                        <i class="fa-solid fa-spinner ti-spin" style="font-size: 3rem;"></i>
+                        <p>Loading preview...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -191,7 +230,7 @@
                 scrollX: true,
                 scrollCollapse: true,
                 fixedColumns: {
-                    leftColumns: 4,  // Freeze: Num, Shikake No, Shikake Code, Machine
+                    leftColumns: 4,  // Freeze: Num, Process, Identifier, Conveyor
                     rightColumns: 1   // Freeze: Actions
                 },
                 ajax: {
@@ -201,6 +240,7 @@
                         d.area_id = $('#filter_area').val();
                         d.cutoff = $('#filter_cutoff').val();
                         d.machine = $('#filter_machine').val();
+                        d.process = $('#filter_process').val();
                         d.date = date.startDate.format('YYYY-MM-DD');
                         d.shift = $('#filter_shift').val();
                         d.print_status = $('#filter_print_status').val();
@@ -208,15 +248,53 @@
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '5%' },
-                    { data: 'shikake_no', name: 'shikake_no', width: '10%' },
-                    { data: 'shikake_code', name: 'shikake_code', width: '10%' },
-                    { data: 'machine', name: 'machine', width: '8%' },
+                    { 
+                        data: 'process', 
+                        name: 'process', 
+                        width: '8%',
+                        render: function(data, type, row) {
+                            var badgeClass = {
+                                'TWIST': 'bg-primary',
+                                'BONDER': 'bg-success',
+                                'JOINT': 'bg-info',
+                                'SHIELD': 'bg-warning',
+                                'DBL CRIMP': 'bg-secondary'
+                            };
+                            return '<span class="badge ' + (badgeClass[data] || 'bg-dark') + '">' + data + '</span>';
+                        }
+                    },
+                    { data: 'identifier', name: 'identifier', width: '10%' },
                     { data: 'conveyor', name: 'conveyor', width: '8%' },
+                    { data: 'machine', name: 'machine', width: '8%' },
+                    { data: 'family', name: 'family', width: '8%' },
+                    { data: 'qty', name: 'qty', width: '5%' },
+                    { 
+                        data: 'issue_count', 
+                        name: 'issue_count', 
+                        width: '5%',
+                        render: function(data, type, row) {
+                            if (data && data > 0) {
+                                return '<span class="badge bg-secondary fw-bold">' + data + '</span>';
+                            } else {
+                                return '<span class="badge bg-light text-dark border">-</span>';
+                            }
+                        }
+                    },
+                    { 
+                        data: 'barcodes', 
+                        name: 'barcodes', 
+                        width: '12%',
+                        orderable: false,
+                        render: function(data, type, row) {
+                            if (data && data !== '-') {
+                                return '<code>' + data + '</code>';
+                            }
+                            return '-';
+                        }
+                    },
                     { data: 'date', name: 'date', width: '8%' },
                     { data: 'shift', name: 'shift', width: '6%' },
-                    { data: 'cutoff', name: 'cutoff', width: '6%' },
-                    { data: 'assy', name: 'assy', width: '12%' },
-                    { data: 'qty', name: 'qty', width: '6%' },
+                    { data: 'cutoff', name: 'cutoff', width: '8%' },
                     { 
                         data: 'print_status', 
                         name: 'print_status',
@@ -247,6 +325,14 @@
             // Auto-reload when machine is selected
             $('#filter_machine').on('change', function() {
                 var machine = $(this).val();
+                if (machine) {
+                    table.ajax.reload();
+                }
+            });
+
+            // Auto-reload when process changes
+            $('#filter_process').on('change', function() {
+                var machine = $('#filter_machine').val();
                 if (machine) {
                     table.ajax.reload();
                 }
@@ -298,10 +384,32 @@
                 }
             });
 
+            // Preview button handler (like Circuit)
+            $(document).on('click', '.btn-preview', function() {
+                var groupId = $(this).data('group-id');
+                
+                // Show modal with loading indicator
+                $('#previewModal').modal('show');
+                $('#previewContent').html('<div class="text-center"><i class="fa-solid fa-spinner ti-spin" style="font-size: 3rem;"></i><p>Loading preview...</p></div>');
+                
+                // Fetch preview HTML
+                $.ajax({
+                    url: "{{ route('schedule.ekanban-shikake.print-preview') }}",
+                    type: 'GET',
+                    data: { ids: groupId },
+                    success: function(response) {
+                        $('#previewContent').html(response);
+                    },
+                    error: function(xhr, status, error) {
+                        $('#previewContent').html('<div class="alert alert-danger">Failed to load preview: ' + error + '</div>');
+                    }
+                });
+            });
+
             // Print button handler
             $(document).on('click', '.btn-print', function() {
-                var ids = $(this).data('ids');
-                printShikake(ids);
+                var groupId = $(this).data('group-id');
+                printShikake(groupId);
             });
         });
 

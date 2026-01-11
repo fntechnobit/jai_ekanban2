@@ -242,7 +242,11 @@
                         width: '5%',
                         orderable: false,
                         render: function(data, type, row) {
-                            return '<span class="badge badge-info">' + data + ' issue(s)</span>';
+                            if (data > 0) {
+                                return '<span class="badge bg-secondary fw-bold">' + data + ' issue(s)</span>';
+                            } else {
+                                return '<span class="badge bg-light text-dark border">0 issue(s)</span>';
+                            }
                         }
                     },
                     { 
