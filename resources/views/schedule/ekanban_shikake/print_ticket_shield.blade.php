@@ -193,6 +193,9 @@
                     <strong>Blade:</strong> {{ $processData->blade ?? '' }}<br>
                     <strong>Machine:</strong> {{ $shikake->machine ?? '' }}
                 </div>
+                @if($shikake->released_date)
+                    <div style="margin-top: 4px; font-size: 10px;">Released: {{ \Carbon\Carbon::parse($shikake->released_date)->format('d M Y') }}</div>
+                @endif
                 @if($shikake->released_note)
                     <div style="margin-top: 4px; font-size: 10px;">{{ $shikake->released_note }}</div>
                 @endif

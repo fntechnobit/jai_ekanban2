@@ -13,8 +13,20 @@ class MasterShikakeDblCrimp extends Model
 
     protected $fillable = [
         'master_shikake_id',
-        'shield_no',
-        'dbl_crimp',
+        'drawing_no',
+        'address',
+        'barcode_mesin',
+        'to_machine',
+        'cct_no_1',
+        'address_1',
+        'cct_no_2',
+        'address_2',
+        'cct_no_3',
+        'address_3',
+        'cct_no_4',
+        'address_4',
+        'cct_no_5',
+        'address_5',
     ];
 
     /**

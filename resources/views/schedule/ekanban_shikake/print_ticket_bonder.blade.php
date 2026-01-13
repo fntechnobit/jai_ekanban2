@@ -251,7 +251,7 @@
             </td>
         </tr>
         <tr>
-            <td style="text-align: left; font-size: 10px;">{{ $processData->released_date ? \Carbon\Carbon::parse($processData->released_date)->format('d M Y') : '' }}</td>
+            <td style="text-align: left; font-size: 10px;">{{ $shikake->released_date ? \Carbon\Carbon::parse($shikake->released_date)->format('d M Y') : '' }}</td>
         </tr>
         <tr>
             <td style="text-align: left; font-size: 10px;">{{ $shikake->released_note ?? '' }}</td>

@@ -28,27 +28,41 @@ class MasterShikakeShieldImport extends BaseShikakeImport
         return 24; // After To 9 column (index 23)
     }
 
-    protected function mapProcessData(array $rowData, int $shikakeId): array
+    /**
+     * Get field mapping: database column => Excel header name
+     * @return array
+     */
+    protected function getFieldMapping(): array
     {
         return [
-            'master_shikake_id' => $shikakeId,
-            'shield_no' => ImportHelper::cleanValue($rowData[8] ?? null),
-            'address' => ImportHelper::cleanValue($rowData[9] ?? null),
-            'blade' => ImportHelper::cleanValue($rowData[10] ?? null),
-            'cct_no_1' => ImportHelper::cleanValue($rowData[11] ?? null),
-            'bonder_no_1' => ImportHelper::cleanValue($rowData[12] ?? null),
-            'cct_no_2' => ImportHelper::cleanValue($rowData[13] ?? null),
-            'bonder_no_2' => ImportHelper::cleanValue($rowData[14] ?? null),
-            'to_1' => ImportHelper::cleanValue($rowData[15] ?? null),
-            'to_2' => ImportHelper::cleanValue($rowData[16] ?? null),
-            'to_3' => ImportHelper::cleanValue($rowData[17] ?? null),
-            'to_4' => ImportHelper::cleanValue($rowData[18] ?? null),
-            'to_5' => ImportHelper::cleanValue($rowData[19] ?? null),
-            'to_6' => ImportHelper::cleanValue($rowData[20] ?? null),
-            'to_7' => ImportHelper::cleanValue($rowData[21] ?? null),
-            'to_8' => ImportHelper::cleanValue($rowData[22] ?? null),
-            'to_9' => ImportHelper::cleanValue($rowData[23] ?? null),
+            'shield_no' => 'Shield No',
+            'address' => 'Address',
+            'blade' => 'Blade',
+            'cct_no_1' => 'CCT No 1',
+            'bonder_no_1' => 'Bonder No 1',
+            'cct_no_2' => 'CCT No 2',
+            'bonder_no_2' => 'Bonder No 2',
+            'to_1' => 'To 1',
+            'to_2' => 'To 2',
+            'to_3' => 'To 3',
+            'to_4' => 'To 4',
+            'to_5' => 'To 5',
+            'to_6' => 'To 6',
+            'to_7' => 'To 7',
+            'to_8' => 'To 8',
+            'to_9' => 'To 9',
         ];
+    }
+
+    protected function mapProcessData(array $rowData, int $shikakeId): array
+    {
+        $data = ['master_shikake_id' => $shikakeId];
+        
+        foreach ($this->getFieldMapping() as $dbColumn => $headerName) {
+            $data[$dbColumn] = ImportHelper::cleanValue($this->getValueByHeader($rowData, $headerName));
+        }
+        
+        return $data;
     }
 
     protected function createProcessRecord(array $processData): void

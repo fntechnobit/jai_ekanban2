@@ -192,7 +192,7 @@
         </tr>
         <tr>
             <td colspan="2" style="text-align: center; font-size: 10px;">
-                {{ $processData->released_date ? 'Released: ' . \Carbon\Carbon::parse($processData->released_date)->format('d M Y') : '' }}
+                {{ $shikake->released_date ? 'Released: ' . \Carbon\Carbon::parse($shikake->released_date)->format('d M Y') : '' }}
                 @if($shikake->released_note)
                     | {{ $shikake->released_note }}
                 @endif

@@ -27,16 +27,27 @@ class UpdateDblCrimpShikakeRequest extends FormRequest
             'sequence' => 'nullable|integer|min:0',
             
             // DBL CRIMP process-specific fields
-            'process_data.shield_no' => 'required|string|max:255',
-            'process_data.dbl_crimp' => 'required|string|max:255',
+            'process_data.drawing_no' => 'nullable|string|max:255',
+            'process_data.address' => 'nullable|string|max:255',
+            'process_data.barcode_mesin' => 'nullable|string|max:255',
+            'process_data.to_machine' => 'nullable|string|max:255',
+            'process_data.cct_no_1' => 'nullable|string|max:255',
+            'process_data.address_1' => 'nullable|string|max:255',
+            'process_data.cct_no_2' => 'nullable|string|max:255',
+            'process_data.address_2' => 'nullable|string|max:255',
+            'process_data.cct_no_3' => 'nullable|string|max:255',
+            'process_data.address_3' => 'nullable|string|max:255',
+            'process_data.cct_no_4' => 'nullable|string|max:255',
+            'process_data.address_4' => 'nullable|string|max:255',
+            'process_data.cct_no_5' => 'nullable|string|max:255',
+            'process_data.address_5' => 'nullable|string|max:255',
         ];
     }
 
     public function messages()
     {
         return [
-            'process_data.shield_no.required' => 'Shield No is required for DBL CRIMP process.',
-            'process_data.dbl_crimp.required' => 'DBL Crimp is required for DBL CRIMP process.',
+            //
         ];
     }
 }

@@ -423,18 +423,54 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label fw-semibold">Shield No <span class="text-danger">*</span></label>
-                                        <input type="text" name="process_data[shield_no]" id="dbl_crimp_shield_no" class="form-control form-control-sm">
-                                        <div class="invalid-feedback" id="dbl_crimp_shield_no-error"></div>
+                                        <label class="form-label fw-semibold">Drawing No</label>
+                                        <input type="text" name="process_data[drawing_no]" id="dbl_crimp_drawing_no" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="dbl_crimp_drawing_no-error"></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label fw-semibold">DBL Crimp <span class="text-danger">*</span></label>
-                                        <input type="text" name="process_data[dbl_crimp]" id="dbl_crimp_dbl_crimp" class="form-control form-control-sm">
-                                        <div class="invalid-feedback" id="dbl_crimp_dbl_crimp-error"></div>
+                                        <label class="form-label fw-semibold">Address</label>
+                                        <input type="text" name="process_data[address]" id="dbl_crimp_address" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="dbl_crimp_address-error"></div>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Barcode Mesin</label>
+                                        <input type="text" name="process_data[barcode_mesin]" id="dbl_crimp_barcode_mesin" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="dbl_crimp_barcode_mesin-error"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">To Machine</label>
+                                        <input type="text" name="process_data[to_machine]" id="dbl_crimp_to_machine" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="dbl_crimp_to_machine-error"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- CCT & Address pairs -->
+                            <div class="row">
+                                @for($i = 1; $i <= 5; $i++)
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">CCT No {{ $i }}</label>
+                                            <input type="text" name="process_data[cct_no_{{ $i }}]" id="dbl_crimp_cct_no_{{ $i }}" class="form-control form-control-sm">
+                                            <div class="invalid-feedback" id="dbl_crimp_cct_no_{{ $i }}-error"></div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">Address {{ $i }}</label>
+                                            <input type="text" name="process_data[address_{{ $i }}]" id="dbl_crimp_address_{{ $i }}" class="form-control form-control-sm">
+                                            <div class="invalid-feedback" id="dbl_crimp_address_{{ $i }}-error"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endfor
                             </div>
                         </div>
                     </div>

@@ -18,7 +18,6 @@ class MasterShikakeJoint extends Model
         'address_store',
         'to_machine',
         'barcode_process',
-        'released_date',
         'cct_no_1',
         'bonder_no_1',
         'cct_no_2',
@@ -32,7 +31,7 @@ class MasterShikakeJoint extends Model
     ];
 
     protected $casts = [
-        'released_date' => 'date',
+        //
     ];
 
     /**

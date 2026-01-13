@@ -19,7 +19,6 @@ class MasterShikakeBonder extends Model
         'to_machine',
         'barcode_navigasi',
         'barcode_process',
-        'released_date',
         'cct_no_a_1',
         'bonder_no_a_1',
         'cct_no_a_2',
@@ -51,7 +50,7 @@ class MasterShikakeBonder extends Model
     ];
 
     protected $casts = [
-        'released_date' => 'date',
+        //
     ];
 
     /**

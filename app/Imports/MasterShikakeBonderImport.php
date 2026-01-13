@@ -25,49 +25,62 @@ class MasterShikakeBonderImport extends BaseShikakeImport
 
     protected function getAssyStartColumn(): int
     {
-        return 43; // After Bonder No B 7 column (index 42)
+        return 42; // After Bonder No B 7 column (index 41)
+    }
+
+    /**
+     * Get field mapping: database column => Excel header name
+     * @return array
+     */
+    protected function getFieldMapping(): array
+    {
+        return [
+            'bonder_no' => 'Bonder No',
+            'address' => 'Address',
+            'dies' => 'Dies',
+            'to_machine' => 'To Machine',
+            'barcode_navigasi' => 'Barcode Navigasi',
+            'barcode_process' => 'Barcode Process',
+            'cct_no_a_1' => 'CCT No A 1',
+            'bonder_no_a_1' => 'Bonder No A 1',
+            'cct_no_a_2' => 'CCT No A 2',
+            'bonder_no_a_2' => 'Bonder No A 2',
+            'cct_no_a_3' => 'CCT No A 3',
+            'bonder_no_a_3' => 'Bonder No A 3',
+            'cct_no_a_4' => 'CCT No A 4',
+            'bonder_no_a_4' => 'Bonder No A 4',
+            'cct_no_a_5' => 'CCT No A 5',
+            'bonder_no_a_5' => 'Bonder No A 5',
+            'cct_no_a_6' => 'CCT No A 6',
+            'bonder_no_a_6' => 'Bonder No A 6',
+            'cct_no_a_7' => 'CCT No A 7',
+            'bonder_no_a_7' => 'Bonder No A 7',
+            'cct_no_b_1' => 'CCT No B 1',
+            'bonder_no_b_1' => 'Bonder No B 1',
+            'cct_no_b_2' => 'CCT No B 2',
+            'bonder_no_b_2' => 'Bonder No B 2',
+            'cct_no_b_3' => 'CCT No B 3',
+            'bonder_no_b_3' => 'Bonder No B 3',
+            'cct_no_b_4' => 'CCT No B 4',
+            'bonder_no_b_4' => 'Bonder No B 4',
+            'cct_no_b_5' => 'CCT No B 5',
+            'bonder_no_b_5' => 'Bonder No B 5',
+            'cct_no_b_6' => 'CCT No B 6',
+            'bonder_no_b_6' => 'Bonder No B 6',
+            'cct_no_b_7' => 'CCT No B 7',
+            'bonder_no_b_7' => 'Bonder No B 7',
+        ];
     }
 
     protected function mapProcessData(array $rowData, int $shikakeId): array
     {
-        return [
-            'master_shikake_id' => $shikakeId,
-            'bonder_no' => ImportHelper::cleanValue($rowData[8] ?? null),
-            'address' => ImportHelper::cleanValue($rowData[9] ?? null),
-            'dies' => ImportHelper::cleanValue($rowData[10] ?? null),
-            'to_machine' => ImportHelper::cleanValue($rowData[11] ?? null),
-            'barcode_navigasi' => ImportHelper::cleanValue($rowData[12] ?? null),
-            'barcode_process' => ImportHelper::cleanValue($rowData[13] ?? null),
-            'released_date' => ImportHelper::cleanDate($rowData[14] ?? null),
-            'cct_no_a_1' => ImportHelper::cleanValue($rowData[15] ?? null),
-            'bonder_no_a_1' => ImportHelper::cleanValue($rowData[16] ?? null),
-            'cct_no_a_2' => ImportHelper::cleanValue($rowData[17] ?? null),
-            'bonder_no_a_2' => ImportHelper::cleanValue($rowData[18] ?? null),
-            'cct_no_a_3' => ImportHelper::cleanValue($rowData[19] ?? null),
-            'bonder_no_a_3' => ImportHelper::cleanValue($rowData[20] ?? null),
-            'cct_no_a_4' => ImportHelper::cleanValue($rowData[21] ?? null),
-            'bonder_no_a_4' => ImportHelper::cleanValue($rowData[22] ?? null),
-            'cct_no_a_5' => ImportHelper::cleanValue($rowData[23] ?? null),
-            'bonder_no_a_5' => ImportHelper::cleanValue($rowData[24] ?? null),
-            'cct_no_a_6' => ImportHelper::cleanValue($rowData[25] ?? null),
-            'bonder_no_a_6' => ImportHelper::cleanValue($rowData[26] ?? null),
-            'cct_no_a_7' => ImportHelper::cleanValue($rowData[27] ?? null),
-            'bonder_no_a_7' => ImportHelper::cleanValue($rowData[28] ?? null),
-            'cct_no_b_1' => ImportHelper::cleanValue($rowData[29] ?? null),
-            'bonder_no_b_1' => ImportHelper::cleanValue($rowData[30] ?? null),
-            'cct_no_b_2' => ImportHelper::cleanValue($rowData[31] ?? null),
-            'bonder_no_b_2' => ImportHelper::cleanValue($rowData[32] ?? null),
-            'cct_no_b_3' => ImportHelper::cleanValue($rowData[33] ?? null),
-            'bonder_no_b_3' => ImportHelper::cleanValue($rowData[34] ?? null),
-            'cct_no_b_4' => ImportHelper::cleanValue($rowData[35] ?? null),
-            'bonder_no_b_4' => ImportHelper::cleanValue($rowData[36] ?? null),
-            'cct_no_b_5' => ImportHelper::cleanValue($rowData[37] ?? null),
-            'bonder_no_b_5' => ImportHelper::cleanValue($rowData[38] ?? null),
-            'cct_no_b_6' => ImportHelper::cleanValue($rowData[39] ?? null),
-            'bonder_no_b_6' => ImportHelper::cleanValue($rowData[40] ?? null),
-            'cct_no_b_7' => ImportHelper::cleanValue($rowData[41] ?? null),
-            'bonder_no_b_7' => ImportHelper::cleanValue($rowData[42] ?? null),
-        ];
+        $data = ['master_shikake_id' => $shikakeId];
+        
+        foreach ($this->getFieldMapping() as $dbColumn => $headerName) {
+            $data[$dbColumn] = ImportHelper::cleanValue($this->getValueByHeader($rowData, $headerName));
+        }
+        
+        return $data;
     }
 
     protected function createProcessRecord(array $processData): void

@@ -84,6 +84,25 @@
     font-size: 14px;
     line-height: 1.6;
 }
+
+.ticket-dbl-crimp .cct-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+    margin-bottom: 4px;
+}
+
+.ticket-dbl-crimp .cct-table th,
+.ticket-dbl-crimp .cct-table td {
+    border: 1px solid #000;
+    padding: 3px;
+    text-align: center;
+}
+
+.ticket-dbl-crimp .cct-table th {
+    background: #d6d8db;
+    font-weight: bold;
+}
 </style>
 
 <div class="ticket-dbl-crimp">
@@ -94,16 +113,60 @@
     <table class="info-table">
         <thead>
             <tr>
-                <th style="width: 40%;">SHIELD NO</th>
-                <th style="width: 30%;">DBL CRIMP</th>
-                <th style="width: 30%;">MACHINE</th>
+                <th style="width: 30%;">DRAWING NO</th>
+                <th style="width: 25%;">ADDRESS</th>
+                <th style="width: 25%;">BARCODE MESIN</th>
+                <th style="width: 20%;">TO MACHINE</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td><strong style="font-size: 16px;">{{ $processData->shield_no ?? '' }}</strong></td>
-                <td><strong style="font-size: 16px;">{{ $processData->dbl_crimp ?? '' }}</strong></td>
-                <td><strong>{{ $shikake->machine ?? '' }}</strong></td>
+                <td><strong style="font-size: 14px;">{{ $processData->drawing_no ?? '' }}</strong></td>
+                <td><strong style="font-size: 14px;">{{ $processData->address ?? '' }}</strong></td>
+                <td><strong style="font-size: 12px;">{{ $processData->barcode_mesin ?? '' }}</strong></td>
+                <td><strong>{{ $processData->to_machine ?? '' }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- CCT & Address Section -->
+    <table class="cct-table">
+        <thead>
+            <tr>
+                <th>CCT No 1</th>
+                <th>Address 1</th>
+                <th>CCT No 2</th>
+                <th>Address 2</th>
+                <th>CCT No 3</th>
+                <th>Address 3</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ $processData->cct_no_1 ?? '' }}</td>
+                <td>{{ $processData->address_1 ?? '' }}</td>
+                <td>{{ $processData->cct_no_2 ?? '' }}</td>
+                <td>{{ $processData->address_2 ?? '' }}</td>
+                <td>{{ $processData->cct_no_3 ?? '' }}</td>
+                <td>{{ $processData->address_3 ?? '' }}</td>
+            </tr>
+        </tbody>
+    </table>
+    <table class="cct-table">
+        <thead>
+            <tr>
+                <th>CCT No 4</th>
+                <th>Address 4</th>
+                <th>CCT No 5</th>
+                <th>Address 5</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ $processData->cct_no_4 ?? '' }}</td>
+                <td>{{ $processData->address_4 ?? '' }}</td>
+                <td>{{ $processData->cct_no_5 ?? '' }}</td>
+                <td>{{ $processData->address_5 ?? '' }}</td>
             </tr>
         </tbody>
     </table>
@@ -117,16 +180,22 @@
             <td class="value" style="width: 25%;">{{ $shikake->family ?? '' }}</td>
         </tr>
         <tr>
-            <td class="label">Qty</td>
-            <td class="value">{{ $shikake->qty ?? '' }}</td>
+            <td class="label">Machine</td>
+            <td class="value">{{ $shikake->machine ?? '' }}</td>
             <td class="label">Issue</td>
             <td class="value">{{ $shikake->issue ?? '' }}</td>
         </tr>
         <tr>
+            <td class="label">Qty</td>
+            <td class="value">{{ $shikake->qty ?? '' }}</td>
             <td class="label">Sequence</td>
             <td class="value">{{ $shikake->sequence ?? '' }}</td>
-            <td class="label">Released Note</td>
-            <td class="value">{{ $shikake->released_note ?? '' }}</td>
+        </tr>
+        <tr>
+            <td class="label">Released Date</td>
+            <td class="value">{{ $shikake->released_date ? \Carbon\Carbon::parse($shikake->released_date)->format('d M Y') : '' }}</td>
+            <td class="label" colspan="1">Released Note</td>
+            <td class="value" colspan="1">{{ $shikake->released_note ?? '' }}</td>
         </tr>
     </table>
 
@@ -147,9 +216,10 @@
             </td>
             <td style="text-align: left; vertical-align: middle; padding: 12px;">
                 <div class="summary-text">
-                    <div><strong>Shield No:</strong> {{ $processData->shield_no ?? '-' }}</div>
-                    <div><strong>DBL Crimp:</strong> {{ $processData->dbl_crimp ?? '-' }}</div>
-                    <div><strong>Machine:</strong> {{ $shikake->machine ?? '-' }}</div>
+                    <div><strong>Drawing No:</strong> {{ $processData->drawing_no ?? '-' }}</div>
+                    <div><strong>Address:</strong> {{ $processData->address ?? '-' }}</div>
+                    <div><strong>Barcode Mesin:</strong> {{ $processData->barcode_mesin ?? '-' }}</div>
+                    <div><strong>To Machine:</strong> {{ $processData->to_machine ?? '-' }}</div>
                     <div><strong>Conveyor:</strong> {{ $shikake->conveyor ?? '-' }}</div>
                     <div><strong>Family:</strong> {{ $shikake->family ?? '-' }}</div>
                     <div><strong>Qty:</strong> {{ $shikake->qty ?? 0 }}</div>

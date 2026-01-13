@@ -33,7 +33,6 @@ class UpdateBonderShikakeRequest extends FormRequest
             'process_data.to_machine' => 'nullable|string|max:255',
             'process_data.barcode_navigasi' => 'nullable|string|max:255',
             'process_data.barcode_process' => 'nullable|string|max:255',
-            'process_data.released_date' => 'nullable|date',
             
             // Side A CCT/Bonder pairs (1-7)
             'process_data.cct_no_a_1' => 'nullable|string|max:255',

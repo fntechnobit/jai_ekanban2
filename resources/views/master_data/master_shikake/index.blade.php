@@ -445,8 +445,16 @@
             }
 
             function populateDblCrimpFields(data) {
-                $('#dbl_crimp_shield_no').val(data.shield_no);
-                $('#dbl_crimp_dbl_crimp').val(data.dbl_crimp);
+                $('#dbl_crimp_drawing_no').val(data.drawing_no);
+                $('#dbl_crimp_address').val(data.address);
+                $('#dbl_crimp_barcode_mesin').val(data.barcode_mesin);
+                $('#dbl_crimp_to_machine').val(data.to_machine);
+                
+                // Populate CCT No & Address pairs
+                for(let i = 1; i <= 5; i++) {
+                    $('#dbl_crimp_cct_no_' + i).val(data['cct_no_' + i]);
+                    $('#dbl_crimp_address_' + i).val(data['address_' + i]);
+                }
             }
 
             function handleImagePreview(imagePath) {

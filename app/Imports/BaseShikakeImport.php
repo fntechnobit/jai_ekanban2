@@ -20,6 +20,12 @@ abstract class BaseShikakeImport
     protected $successCount = 0;
     protected $failedCount = 0;
     protected $totalRows = 0;
+    
+    /**
+     * Header name to column index mapping
+     * @var array
+     */
+    protected $headerIndexMap = [];
 
     public function __construct($conveyorId, $process)
     {
@@ -60,6 +66,39 @@ abstract class BaseShikakeImport
      */
     abstract protected function createProcessRecord(array $processData): void;
 
+    /**
+     * Build header name to column index mapping
+     * @param array $headerRow
+     * @return void
+     */
+    protected function buildHeaderIndexMap(array $headerRow): void
+    {
+        $this->headerIndexMap = [];
+        foreach ($headerRow as $index => $header) {
+            $headerName = trim($header ?? '');
+            if ($headerName !== '') {
+                $this->headerIndexMap[$headerName] = $index;
+            }
+        }
+    }
+
+    /**
+     * Get cell value by header name
+     * @param array $rowData
+     * @param string $headerName
+     * @return mixed
+     * @throws \Exception
+     */
+    protected function getValueByHeader(array $rowData, string $headerName)
+    {
+        if (!isset($this->headerIndexMap[$headerName])) {
+            throw new \Exception("Unknown header: '{$headerName}'. Please ensure the template has the correct column headers.");
+        }
+        
+        $index = $this->headerIndexMap[$headerName];
+        return $rowData[$index] ?? null;
+    }
+
     public function import($filePath, $startRow = 2)
     {
         try {
@@ -76,6 +115,9 @@ abstract class BaseShikakeImport
             if (!$validationResult['valid']) {
                 throw new \Exception($validationResult['message']);
             }
+            
+            // Build header index map for header-based value lookup
+            $this->buildHeaderIndexMap($headerRow);
             
             // Calculate total rows to import
             $this->totalRows = $highestRow - $startRow + 1;
@@ -195,14 +237,14 @@ abstract class BaseShikakeImport
         return [
             'conveyor_id' => $this->conveyorId,
             'process' => $this->process,
-            'conveyor' => ImportHelper::cleanValue($rowData[0] ?? null),
-            'machine' => ImportHelper::cleanValue($rowData[1] ?? null),
-            'qty' => ImportHelper::cleanNumeric($rowData[2] ?? null),
-            'issue' => ImportHelper::cleanValue($rowData[3] ?? null),
-            'barcode_kanban' => ImportHelper::cleanValue($rowData[4] ?? null),
-            'family' => ImportHelper::cleanValue($rowData[5] ?? null),
-            'released_note' => ImportHelper::cleanValue($rowData[6] ?? null),
-            'sequence' => ImportHelper::cleanNumeric($rowData[7] ?? null),
+            'conveyor' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Conveyor')),
+            'machine' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Machine')),
+            'qty' => ImportHelper::cleanNumeric($this->getValueByHeader($rowData, 'QTY')),
+            'issue' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Issue')),
+            'barcode_kanban' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Barcode Kanban')),
+            'family' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Family')),
+            'released_note' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Released Note')),
+            'sequence' => ImportHelper::cleanNumeric($this->getValueByHeader($rowData, 'Sequence')),
             'created_by' => Auth::id(),
         ];
     }

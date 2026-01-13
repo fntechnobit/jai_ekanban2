@@ -38,11 +38,9 @@ class MasterShikakeTwist extends Model
         'note_b',
         'strip_b',
         'mark_b',
-        'released_date',
     ];
 
     protected $casts = [
-        'released_date' => 'date',
         'sequence_2' => 'integer',
     ];
 

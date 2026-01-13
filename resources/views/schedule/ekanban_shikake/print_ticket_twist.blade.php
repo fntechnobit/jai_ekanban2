@@ -328,7 +328,7 @@
             <tr>
                 <td class="twist-label-cell text-left">DATE</td>
                 <td colspan="3" class="twist-value-cell text-left">
-                    {{ $processData->released_date ? \Carbon\Carbon::parse($processData->released_date)->format('d-M-y') : '-' }}
+                    {{ $shikake->released_date ? \Carbon\Carbon::parse($shikake->released_date)->format('d-M-y') : '-' }}
                 </td>
             </tr>
             <!-- Bottom Section - Row 4 -->

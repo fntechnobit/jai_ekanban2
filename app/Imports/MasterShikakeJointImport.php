@@ -25,30 +25,43 @@ class MasterShikakeJointImport extends BaseShikakeImport
 
     protected function getAssyStartColumn(): int
     {
-        return 24; // After Bonder No 5 column (index 23)
+        return 23; // After Bonder No 5 column (index 22)
+    }
+
+    /**
+     * Get field mapping: database column => Excel header name
+     * @return array
+     */
+    protected function getFieldMapping(): array
+    {
+        return [
+            'bonder_no' => 'Bonder No',
+            'address' => 'Address',
+            'address_store' => 'Address Store',
+            'to_machine' => 'To Machine',
+            'barcode_process' => 'Barcode Process',
+            'cct_no_1' => 'CCT No 1',
+            'bonder_no_1' => 'Bonder No 1',
+            'cct_no_2' => 'CCT No 2',
+            'bonder_no_2' => 'Bonder No 2',
+            'cct_no_3' => 'CCT No 3',
+            'bonder_no_3' => 'Bonder No 3',
+            'cct_no_4' => 'CCT No 4',
+            'bonder_no_4' => 'Bonder No 4',
+            'cct_no_5' => 'CCT No 5',
+            'bonder_no_5' => 'Bonder No 5',
+        ];
     }
 
     protected function mapProcessData(array $rowData, int $shikakeId): array
     {
-        return [
-            'master_shikake_id' => $shikakeId,
-            'bonder_no' => ImportHelper::cleanValue($rowData[8] ?? null),
-            'address' => ImportHelper::cleanValue($rowData[9] ?? null),
-            'address_store' => ImportHelper::cleanValue($rowData[10] ?? null),
-            'to_machine' => ImportHelper::cleanValue($rowData[11] ?? null),
-            'barcode_process' => ImportHelper::cleanValue($rowData[12] ?? null),
-            'released_date' => ImportHelper::cleanDate($rowData[13] ?? null),
-            'cct_no_1' => ImportHelper::cleanValue($rowData[14] ?? null),
-            'bonder_no_1' => ImportHelper::cleanValue($rowData[15] ?? null),
-            'cct_no_2' => ImportHelper::cleanValue($rowData[16] ?? null),
-            'bonder_no_2' => ImportHelper::cleanValue($rowData[17] ?? null),
-            'cct_no_3' => ImportHelper::cleanValue($rowData[18] ?? null),
-            'bonder_no_3' => ImportHelper::cleanValue($rowData[19] ?? null),
-            'cct_no_4' => ImportHelper::cleanValue($rowData[20] ?? null),
-            'bonder_no_4' => ImportHelper::cleanValue($rowData[21] ?? null),
-            'cct_no_5' => ImportHelper::cleanValue($rowData[22] ?? null),
-            'bonder_no_5' => ImportHelper::cleanValue($rowData[23] ?? null),
-        ];
+        $data = ['master_shikake_id' => $shikakeId];
+        
+        foreach ($this->getFieldMapping() as $dbColumn => $headerName) {
+            $data[$dbColumn] = ImportHelper::cleanValue($this->getValueByHeader($rowData, $headerName));
+        }
+        
+        return $data;
     }
 
     protected function createProcessRecord(array $processData): void

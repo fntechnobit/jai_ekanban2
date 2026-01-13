@@ -65,7 +65,6 @@ class ShikakeTemplateConfig
             'Note B',             // 30
             'Strip B',            // 31
             'Mark B',             // 32
-            'Released Date',      // 33
         ]);
     }
 
@@ -81,9 +80,8 @@ class ShikakeTemplateConfig
             'To Machine',         // 11
             'Barcode Navigasi',   // 12
             'Barcode Process',    // 13
-            'Released Date',      // 14
-            'CCT No A 1',         // 15
-            'Bonder No A 1',      // 16
+            'CCT No A 1',         // 14
+            'Bonder No A 1',      // 15
             'CCT No A 2',         // 17
             'Bonder No A 2',      // 18
             'CCT No A 3',         // 19
@@ -124,17 +122,16 @@ class ShikakeTemplateConfig
             'Address Store',      // 10
             'To Machine',         // 11
             'Barcode Process',    // 12
-            'Released Date',      // 13
-            'CCT No 1',           // 14
-            'Bonder No 1',        // 15
-            'CCT No 2',           // 16
-            'Bonder No 2',        // 17
-            'CCT No 3',           // 18
-            'Bonder No 3',        // 19
-            'CCT No 4',           // 20
-            'Bonder No 4',        // 21
-            'CCT No 5',           // 22
-            'Bonder No 5',        // 23
+            'CCT No 1',           // 13
+            'Bonder No 1',        // 14
+            'CCT No 2',           // 15
+            'Bonder No 2',        // 16
+            'CCT No 3',           // 17
+            'Bonder No 3',        // 18
+            'CCT No 4',           // 19
+            'Bonder No 4',        // 20
+            'CCT No 5',           // 21
+            'Bonder No 5',        // 22
         ]);
     }
 
@@ -169,8 +166,20 @@ class ShikakeTemplateConfig
     public static function getDblCrimpHeaders(): array
     {
         return array_merge(self::getBaseHeaders(), [
-            'Shield No',          // 8
-            'Dbl Crimp',          // 9
+            'Drawing No',         // 8
+            'Address',            // 9
+            'Barcode Mesin',      // 10
+            'To Machine',         // 11
+            'CCT No 1',           // 12
+            'Address 1',          // 13
+            'CCT No 2',           // 14
+            'Address 2',          // 15
+            'CCT No 3',           // 16
+            'Address 3',          // 17
+            'CCT No 4',           // 18
+            'Address 4',          // 19
+            'CCT No 5',           // 20
+            'Address 5',          // 21
         ]);
     }
 
