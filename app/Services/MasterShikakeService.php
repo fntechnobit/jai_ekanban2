@@ -40,7 +40,7 @@ class MasterShikakeService
                 'master_shikake_bonder.bonder_no',
                 'master_shikake_joint.bonder_no as joint_bonder_no', 
                 'master_shikake_shield.shield_no',
-                'master_shikake_dbl_crimp.shield_no as dbl_crimp_shield_no'
+                'master_shikake_dbl_crimp.drawing_no as dbl_crimp_drawing_no'
             ])
             ->leftJoin('master_conveyor', 'master_shikake.conveyor_id', '=', 'master_conveyor.id')
             ->leftJoin('master_area', 'master_conveyor.master_area_id', '=', 'master_area.id')
@@ -119,7 +119,7 @@ class MasterShikakeService
             'BONDER' => $row->bonder_no ?? '-',
             'JOINT' => $row->joint_bonder_no ?? '-',
             'SHIELD' => $row->shield_no ?? '-',
-            'DBL CRIMP' => $row->dbl_crimp_shield_no ?? '-',
+            'DBL CRIMP' => $row->dbl_crimp_drawing_no ?? '-',
             default => '-'
         };
     }

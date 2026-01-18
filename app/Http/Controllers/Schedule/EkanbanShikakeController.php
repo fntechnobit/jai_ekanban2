@@ -52,8 +52,8 @@ class EkanbanShikakeController extends Controller
             
             $shikakes = $this->ekanbanShikakeService->getShikakesForPrint($ids);
 
-            // Render process-specific templates
-            $html = $this->renderPrintTickets($shikakes);
+            // Render process-specific templates in PREVIEW mode (larger, 576px)
+            $html = $this->renderPrintTickets($shikakes, 'preview');
             
             return response($html);
         }
@@ -81,8 +81,8 @@ class EkanbanShikakeController extends Controller
         
         $shikakes = $this->ekanbanShikakeService->getShikakesForPrint($ids);
 
-        // Render process-specific templates
-        $html = $this->renderPrintTickets($shikakes);
+        // Render process-specific templates in PRINT mode (120mm x 70mm for thermal)
+        $html = $this->renderPrintTickets($shikakes, 'print');
 
         // Mark shikakes as printed
         $this->ekanbanShikakeService->markAsPrinted($ids, Auth::id());
@@ -95,10 +95,13 @@ class EkanbanShikakeController extends Controller
 
     /**
      * Render print tickets for shikakes - each process type has its own standalone template
+     * @param Collection $shikakes - Shikake records to render
+     * @param string $mode - 'preview' for screen display (576px), 'print' for thermal printer (120mm)
      */
-    private function renderPrintTickets($shikakes)
+    private function renderPrintTickets($shikakes, $mode = 'print')
     {
         $htmlParts = [];
+        $suffix = $mode === 'preview' ? '_preview' : '_print';
         
         foreach ($shikakes as $shikake) {
             $process = $shikake->process ?? null;
@@ -107,19 +110,21 @@ class EkanbanShikakeController extends Controller
             // Generate barcodes/QR codes based on process type
             $this->generateShikakeBarcodes($shikake, $processData, $process);
             
+            // Template map with mode suffix (_preview or _print)
             $templateMap = [
-                'TWIST' => 'schedule.ekanban_shikake.print_ticket_twist',
-                'BONDER' => 'schedule.ekanban_shikake.print_ticket_bonder',
-                'JOINT' => 'schedule.ekanban_shikake.print_ticket_joint',
-                'SHIELD' => 'schedule.ekanban_shikake.print_ticket_shield',
-                'DBL CRIMP' => 'schedule.ekanban_shikake.print_ticket_dbl_crimp',
+                'TWIST' => 'schedule.ekanban_shikake.print_ticket_twist' . $suffix,
+                'BONDER' => 'schedule.ekanban_shikake.print_ticket_bonder' . $suffix,
+                'JOINT' => 'schedule.ekanban_shikake.print_ticket_joint' . $suffix,
+                'SHIELD' => 'schedule.ekanban_shikake.print_ticket_shield' . $suffix,
+                'DBL CRIMP' => 'schedule.ekanban_shikake.print_ticket_dbl_crimp' . $suffix,
             ];
             
             $template = $templateMap[$process] ?? 'schedule.ekanban_shikake.print_ticket_generic';
             
             $htmlParts[] = view($template, [
                 'shikake' => $shikake,
-                'processData' => $processData
+                'processData' => $processData,
+                'mode' => $mode
             ])->render();
         }
         

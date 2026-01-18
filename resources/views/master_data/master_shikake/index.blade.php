@@ -201,8 +201,14 @@
                     contentType: false,
                     success: function(response) {
                         $('#importShikakeModal').modal('hide');
+                        
+                        // Reset form including Select2 dropdowns
                         $('#importShikakeForm')[0].reset();
+                        $('#import_area_id').val('').trigger('change');
+                        $('#import_conveyor_id').val('').trigger('change');
+                        $('#import_process').val('').trigger('change');
                         $('.custom-file-label').html('Browse File');
+                        
                         table.ajax.reload();
                         
                         var result = response.data.result;
@@ -410,38 +416,86 @@
 
             function populateBonderFields(data) {
                 $('#bonder_bonder_no').val(data.bonder_no);
+                $('#bonder_address').val(data.address);
+                $('#bonder_dies').val(data.dies);
+                $('#bonder_to_machine').val(data.to_machine);
+                $('#bonder_barcode_navigasi').val(data.barcode_navigasi);
+                $('#bonder_barcode_process').val(data.barcode_process);
                 
-                // Populate CCT & Bonder pairs
-                for(let i = 1; i <= 14; i++) {
-                    $('#bonder_cct_' + i).val(data['cct_' + i]);
-                    $('#bonder_bonder_' + i).val(data['bonder_' + i]);
-                }
+                // Populate Side A CCT & Bonder pairs
+                $('#bonder_cct_no_a_1').val(data.cct_no_a_1);
+                $('#bonder_bonder_no_a_1').val(data.bonder_no_a_1);
+                $('#bonder_cct_no_a_2').val(data.cct_no_a_2);
+                $('#bonder_bonder_no_a_2').val(data.bonder_no_a_2);
+                $('#bonder_cct_no_a_3').val(data.cct_no_a_3);
+                $('#bonder_bonder_no_a_3').val(data.bonder_no_a_3);
+                $('#bonder_cct_no_a_4').val(data.cct_no_a_4);
+                $('#bonder_bonder_no_a_4').val(data.bonder_no_a_4);
+                $('#bonder_cct_no_a_5').val(data.cct_no_a_5);
+                $('#bonder_bonder_no_a_5').val(data.bonder_no_a_5);
+                $('#bonder_cct_no_a_6').val(data.cct_no_a_6);
+                $('#bonder_bonder_no_a_6').val(data.bonder_no_a_6);
+                $('#bonder_cct_no_a_7').val(data.cct_no_a_7);
+                $('#bonder_bonder_no_a_7').val(data.bonder_no_a_7);
+                
+                // Populate Side B CCT & Bonder pairs
+                $('#bonder_cct_no_b_1').val(data.cct_no_b_1);
+                $('#bonder_bonder_no_b_1').val(data.bonder_no_b_1);
+                $('#bonder_cct_no_b_2').val(data.cct_no_b_2);
+                $('#bonder_bonder_no_b_2').val(data.bonder_no_b_2);
+                $('#bonder_cct_no_b_3').val(data.cct_no_b_3);
+                $('#bonder_bonder_no_b_3').val(data.bonder_no_b_3);
+                $('#bonder_cct_no_b_4').val(data.cct_no_b_4);
+                $('#bonder_bonder_no_b_4').val(data.bonder_no_b_4);
+                $('#bonder_cct_no_b_5').val(data.cct_no_b_5);
+                $('#bonder_bonder_no_b_5').val(data.bonder_no_b_5);
+                $('#bonder_cct_no_b_6').val(data.cct_no_b_6);
+                $('#bonder_bonder_no_b_6').val(data.bonder_no_b_6);
+                $('#bonder_cct_no_b_7').val(data.cct_no_b_7);
+                $('#bonder_bonder_no_b_7').val(data.bonder_no_b_7);
             }
 
             function populateJointFields(data) {
                 $('#joint_bonder_no').val(data.bonder_no);
                 $('#joint_address').val(data.address);
+                $('#joint_address_store').val(data.address_store);
+                $('#joint_to_machine').val(data.to_machine);
+                $('#joint_barcode_process').val(data.barcode_process);
                 
-                // Populate CCT & Bonder pairs
-                for(let i = 1; i <= 10; i++) {
-                    $('#joint_cct_' + i).val(data['cct_' + i]);
-                    $('#joint_bonder_' + i).val(data['bonder_' + i]);
-                }
+                // Populate CCT & Bonder pairs (1-5)
+                $('#joint_cct_no_1').val(data.cct_no_1);
+                $('#joint_bonder_no_1').val(data.bonder_no_1);
+                $('#joint_cct_no_2').val(data.cct_no_2);
+                $('#joint_bonder_no_2').val(data.bonder_no_2);
+                $('#joint_cct_no_3').val(data.cct_no_3);
+                $('#joint_bonder_no_3').val(data.bonder_no_3);
+                $('#joint_cct_no_4').val(data.cct_no_4);
+                $('#joint_bonder_no_4').val(data.bonder_no_4);
+                $('#joint_cct_no_5').val(data.cct_no_5);
+                $('#joint_bonder_no_5').val(data.bonder_no_5);
             }
 
             function populateShieldFields(data) {
                 $('#shield_shield_no').val(data.shield_no);
+                $('#shield_address').val(data.address);
+                $('#shield_blade').val(data.blade);
                 
                 // Populate TO fields
-                for(let i = 1; i <= 9; i++) {
-                    $('#shield_to_' + i).val(data['to_' + i]);
-                }
+                $('#shield_to_1').val(data.to_1);
+                $('#shield_to_2').val(data.to_2);
+                $('#shield_to_3').val(data.to_3);
+                $('#shield_to_4').val(data.to_4);
+                $('#shield_to_5').val(data.to_5);
+                $('#shield_to_6').val(data.to_6);
+                $('#shield_to_7').val(data.to_7);
+                $('#shield_to_8').val(data.to_8);
+                $('#shield_to_9').val(data.to_9);
                 
-                // Populate CCT & Bonder pairs
-                for(let i = 1; i <= 4; i++) {
-                    $('#shield_cct_' + i).val(data['cct_' + i]);
-                    $('#shield_bonder_' + i).val(data['bonder_' + i]);
-                }
+                // Populate CCT & Bonder pairs (only 2 pairs)
+                $('#shield_cct_no_1').val(data.cct_no_1);
+                $('#shield_bonder_no_1').val(data.bonder_no_1);
+                $('#shield_cct_no_2').val(data.cct_no_2);
+                $('#shield_bonder_no_2').val(data.bonder_no_2);
             }
 
             function populateDblCrimpFields(data) {
@@ -451,10 +505,16 @@
                 $('#dbl_crimp_to_machine').val(data.to_machine);
                 
                 // Populate CCT No & Address pairs
-                for(let i = 1; i <= 5; i++) {
-                    $('#dbl_crimp_cct_no_' + i).val(data['cct_no_' + i]);
-                    $('#dbl_crimp_address_' + i).val(data['address_' + i]);
-                }
+                $('#dbl_crimp_cct_no_1').val(data.cct_no_1);
+                $('#dbl_crimp_address_1').val(data.address_1);
+                $('#dbl_crimp_cct_no_2').val(data.cct_no_2);
+                $('#dbl_crimp_address_2').val(data.address_2);
+                $('#dbl_crimp_cct_no_3').val(data.cct_no_3);
+                $('#dbl_crimp_address_3').val(data.address_3);
+                $('#dbl_crimp_cct_no_4').val(data.cct_no_4);
+                $('#dbl_crimp_address_4').val(data.address_4);
+                $('#dbl_crimp_cct_no_5').val(data.cct_no_5);
+                $('#dbl_crimp_address_5').val(data.address_5);
             }
 
             function handleImagePreview(imagePath) {

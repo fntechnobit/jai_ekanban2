@@ -13,7 +13,7 @@ class ImageHelper
      * @param int $height
      * @return string filename
      */
-    public static function resizeAndSave($image, $path, $width = 200, $height = 100)
+    public static function resizeAndSave($image, $path, $width = 400, $height = 233)
     {
         // Create directory if not exists
         $fullPath = public_path($path);

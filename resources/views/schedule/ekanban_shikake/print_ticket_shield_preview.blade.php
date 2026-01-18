@@ -1,16 +1,41 @@
-{{-- SHIELD Process Print Template - Standalone --}}
+{{-- SHIELD Process Print Template - PREVIEW VERSION --}}
 <style>
-/* SHIELD Template Styles - 80mm ≈ 576 dots */
-.ticket-shield {
-    width: 576px;
-    box-sizing: border-box;
-    font-family: Arial, sans-serif;
-    page-break-after: always;
-    background: white;
-    padding: 8px;
+/* SHIELD Preview Template - Wrapper for Image + Ticket */
+.shield-preview-wrapper {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0;
+    margin: 15px auto;
+    justify-content: center;
+    align-items: flex-start;
 }
 
-.ticket-shield .header {
+.shield-preview-wrapper .shikake-image-section {
+    flex-shrink: 0;
+}
+
+.shield-preview-wrapper .shikake-image-section img {
+    height: 290px;
+    width: auto;
+    object-fit: contain;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* SHIELD Template Styles - 80mm ≈ 576 dots */
+.ticket-shield-preview {
+    width: 576px;
+    min-width: 576px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+    background: white;
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+
+.ticket-shield-preview .header {
     text-align: center;
     font-size: 20px;
     font-weight: bold;
@@ -20,49 +45,49 @@
     background: #f8d7da;
 }
 
-.ticket-shield .info-table {
+.ticket-shield-preview .info-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 11px;
     margin-bottom: 4px;
 }
 
-.ticket-shield .info-table th,
-.ticket-shield .info-table td {
+.ticket-shield-preview .info-table th,
+.ticket-shield-preview .info-table td {
     border: 1px solid #000;
     padding: 3px;
     text-align: center;
 }
 
-.ticket-shield .info-table th {
+.ticket-shield-preview .info-table th {
     background: #f5c6cb;
     font-weight: bold;
     font-size: 10px;
 }
 
-.ticket-shield .detail-table {
+.ticket-shield-preview .detail-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
     margin-bottom: 3px;
 }
 
-.ticket-shield .detail-table td {
+.ticket-shield-preview .detail-table td {
     border: 1px solid #000;
     padding: 2px 4px;
 }
 
-.ticket-shield .detail-table .label {
+.ticket-shield-preview .detail-table .label {
     font-weight: 600;
     background: #f0f0f0;
     text-align: center;
 }
 
-.ticket-shield .detail-table .value {
+.ticket-shield-preview .detail-table .value {
     text-align: center;
 }
 
-.ticket-shield .section-header {
+.ticket-shield-preview .section-header {
     background: #000;
     color: #fff;
     font-weight: bold;
@@ -71,25 +96,35 @@
     font-size: 11px;
 }
 
-.ticket-shield .barcode-section {
+.ticket-shield-preview .barcode-section {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
 }
 
-.ticket-shield .barcode-section td {
+.ticket-shield-preview .barcode-section td {
     border: 1px solid #000;
     padding: 3px;
 }
 
-.ticket-shield .barcode-header {
+.ticket-shield-preview .barcode-header {
     text-align: center;
     font-weight: bold;
     background: #f5c6cb;
 }
 </style>
 
-<div class="ticket-shield">
+{{-- Wrapper with flexbox for image + ticket --}}
+<div class="shield-preview-wrapper">
+    {{-- Image section (LEFT) - only if image exists --}}
+    @if(!empty($shikake->image_path))
+    <div class="shikake-image-section">
+        <img src="{{ asset($shikake->image_path) }}" alt="Shikake Image">
+    </div>
+    @endif
+    
+    {{-- Ticket section (RIGHT) --}}
+    <div class="ticket-shield-preview">
     <div class="header">
         E-KANBAN SHIKAKE - SHIELD
     </div>
@@ -202,4 +237,6 @@
             </td>
         </tr>
     </table>
+    </div>
 </div>
+{{-- End of shield-preview-wrapper --}}

@@ -50,7 +50,7 @@ class EkanbanShikakeService
                     master_shikake_bonder.bonder_no,
                     master_shikake_joint.bonder_no,
                     master_shikake_shield.shield_no,
-                    master_shikake_dbl_crimp.shield_no,
+                    master_shikake_dbl_crimp.drawing_no,
                     '-'
                 ) LIKE ?
                 OR master_conveyor.conveyor LIKE ?
@@ -75,7 +75,7 @@ class EkanbanShikakeService
             master_shikake_bonder.bonder_no,
             master_shikake_joint.bonder_no,
             master_shikake_shield.shield_no,
-            master_shikake_dbl_crimp.shield_no,
+            master_shikake_dbl_crimp.drawing_no,
             '-'
         )");
         
@@ -192,7 +192,7 @@ class EkanbanShikakeService
                                      ->orWhere('master_shikake_bonder.bonder_no', $condition['identifier'])
                                      ->orWhere('master_shikake_joint.bonder_no', $condition['identifier'])
                                      ->orWhere('master_shikake_shield.shield_no', $condition['identifier'])
-                                     ->orWhere('master_shikake_dbl_crimp.shield_no', $condition['identifier']);
+                                     ->orWhere('master_shikake_dbl_crimp.drawing_no', $condition['identifier']);
                           });
                     });
                 }
@@ -211,6 +211,7 @@ class EkanbanShikakeService
                 'master_shikake.issue',
                 'master_shikake.barcode_kanban',
                 'master_shikake.family',
+                'master_shikake.released_date',
                 'master_shikake.released_note',
                 'master_shikake.sequence',
                 'master_shikake.image_path',
@@ -219,7 +220,7 @@ class EkanbanShikakeService
                 'master_shikake_bonder.bonder_no',
                 'master_shikake_joint.bonder_no as joint_bonder_no',
                 'master_shikake_shield.shield_no',
-                'master_shikake_dbl_crimp.shield_no as dbl_crimp_shield_no',
+                'master_shikake_dbl_crimp.drawing_no as dbl_crimp_drawing_no',
                 DB::raw('CEIL(assy_schedule.qty / NULLIF(master_conveyor.pallet_qty, 0)) as pallet_count')
             ])
             ->orderBy('master_shikake.process')
@@ -250,7 +251,7 @@ class EkanbanShikakeService
             case 'SHIELD':
                 return $row->shield_no ?? '-';
             case 'DBL CRIMP':
-                return $row->dbl_crimp_shield_no ?? '-';
+                return $row->dbl_crimp_drawing_no ?? '-';
             default:
                 return '-';
         }
@@ -316,7 +317,7 @@ class EkanbanShikakeService
                     master_shikake_bonder.bonder_no,
                     master_shikake_joint.bonder_no,
                     master_shikake_shield.shield_no,
-                    master_shikake_dbl_crimp.shield_no,
+                    master_shikake_dbl_crimp.drawing_no,
                     '-'
                 ) as identifier"),
                 // Aggregated fields for grouping (like Circuit)
@@ -345,7 +346,7 @@ class EkanbanShikakeService
                     master_shikake_bonder.bonder_no,
                     master_shikake_joint.bonder_no,
                     master_shikake_shield.shield_no,
-                    master_shikake_dbl_crimp.shield_no,
+                    master_shikake_dbl_crimp.drawing_no,
                     '-'
                 )")
             ])
@@ -355,7 +356,7 @@ class EkanbanShikakeService
                 master_shikake_bonder.bonder_no,
                 master_shikake_joint.bonder_no,
                 master_shikake_shield.shield_no,
-                master_shikake_dbl_crimp.shield_no,
+                master_shikake_dbl_crimp.drawing_no,
                 '-'
             )"), 'ASC')
             ->orderBy('assy_schedule.schedule', 'ASC')
@@ -416,7 +417,7 @@ class EkanbanShikakeService
                   ->orWhere('master_shikake_bonder.bonder_no', $identifier)
                   ->orWhere('master_shikake_joint.bonder_no', $identifier)
                   ->orWhere('master_shikake_shield.shield_no', $identifier)
-                  ->orWhere('master_shikake_dbl_crimp.shield_no', $identifier);
+                  ->orWhere('master_shikake_dbl_crimp.drawing_no', $identifier);
             })
             ->pluck('master_shikake.id')
             ->toArray();

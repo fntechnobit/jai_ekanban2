@@ -1,7 +1,29 @@
-{{-- DBL CRIMP Process Print Template - Standalone --}}
+{{-- DBL CRIMP Process Print Template - PRINT VERSION --}}
 <style>
+/* DBL CRIMP Print Template - Wrapper for Image + Ticket */
+.dbl-crimp-print-wrapper {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0;
+    margin: 10px auto;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.dbl-crimp-print-wrapper .shikake-image-section {
+    flex-shrink: 0;
+}
+
+.dbl-crimp-print-wrapper .shikake-image-section img {
+    height: 300px;
+    width: auto;
+    object-fit: contain;
+    border: 1px solid #ccc;
+}
+
 /* DBL CRIMP Template Styles - 80mm ≈ 576 dots */
-.ticket-dbl-crimp {
+.ticket-dbl-crimp-print {
     width: 576px;
     box-sizing: border-box;
     font-family: Arial, sans-serif;
@@ -10,7 +32,7 @@
     padding: 8px;
 }
 
-.ticket-dbl-crimp .header {
+.ticket-dbl-crimp-print .header {
     text-align: center;
     font-size: 20px;
     font-weight: bold;
@@ -20,92 +42,102 @@
     background: #e2e3e5;
 }
 
-.ticket-dbl-crimp .info-table {
+.ticket-dbl-crimp-print .info-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 12px;
     margin-bottom: 4px;
 }
 
-.ticket-dbl-crimp .info-table th,
-.ticket-dbl-crimp .info-table td {
+.ticket-dbl-crimp-print .info-table th,
+.ticket-dbl-crimp-print .info-table td {
     border: 1px solid #000;
     padding: 4px;
     text-align: center;
 }
 
-.ticket-dbl-crimp .info-table th {
+.ticket-dbl-crimp-print .info-table th {
     background: #d6d8db;
     font-weight: bold;
     font-size: 11px;
 }
 
-.ticket-dbl-crimp .detail-table {
+.ticket-dbl-crimp-print .detail-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 11px;
     margin-bottom: 4px;
 }
 
-.ticket-dbl-crimp .detail-table td {
+.ticket-dbl-crimp-print .detail-table td {
     border: 1px solid #000;
     padding: 3px 5px;
 }
 
-.ticket-dbl-crimp .detail-table .label {
+.ticket-dbl-crimp-print .detail-table .label {
     font-weight: 600;
     background: #f0f0f0;
     text-align: left;
     width: 25%;
 }
 
-.ticket-dbl-crimp .detail-table .value {
+.ticket-dbl-crimp-print .detail-table .value {
     text-align: left;
 }
 
-.ticket-dbl-crimp .barcode-section {
+.ticket-dbl-crimp-print .barcode-section {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
 }
 
-.ticket-dbl-crimp .barcode-section td {
+.ticket-dbl-crimp-print .barcode-section td {
     border: 1px solid #000;
     padding: 5px;
 }
 
-.ticket-dbl-crimp .barcode-header {
+.ticket-dbl-crimp-print .barcode-header {
     text-align: center;
     font-weight: bold;
     background: #d6d8db;
 }
 
-.ticket-dbl-crimp .summary-text {
+.ticket-dbl-crimp-print .summary-text {
     font-size: 14px;
     line-height: 1.6;
 }
 
-.ticket-dbl-crimp .cct-table {
+.ticket-dbl-crimp-print .cct-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
     margin-bottom: 4px;
 }
 
-.ticket-dbl-crimp .cct-table th,
-.ticket-dbl-crimp .cct-table td {
+.ticket-dbl-crimp-print .cct-table th,
+.ticket-dbl-crimp-print .cct-table td {
     border: 1px solid #000;
     padding: 3px;
     text-align: center;
 }
 
-.ticket-dbl-crimp .cct-table th {
+.ticket-dbl-crimp-print .cct-table th {
     background: #d6d8db;
     font-weight: bold;
 }
 </style>
 
-<div class="ticket-dbl-crimp">
+{{-- Wrapper with flexbox for image + ticket --}}
+<div class="dbl-crimp-print-wrapper">
+    {{-- Image section (LEFT) - only if image exists --}}
+    @if(!empty($shikake->image_path))
+    <div class="shikake-image-section">
+        <img src="{{ asset($shikake->image_path) }}" alt="Shikake Image">
+    </div>
+    @endif
+    
+    {{-- Ticket section (RIGHT) --}}
+    <div class="ticket-dbl-crimp-print">
     <div class="header">
         E-KANBAN SHIKAKE - DBL CRIMP
     </div>
@@ -227,4 +259,6 @@
             </td>
         </tr>
     </table>
+    </div>
 </div>
+{{-- End of dbl-crimp-print-wrapper --}}

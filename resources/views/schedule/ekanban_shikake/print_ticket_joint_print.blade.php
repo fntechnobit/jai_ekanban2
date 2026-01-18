@@ -1,7 +1,29 @@
-{{-- JOINT Process Print Template - Standalone --}}
+{{-- JOINT Process Print Template - PRINT VERSION --}}
 <style>
+/* JOINT Print Template - Wrapper for Image + Ticket */
+.joint-print-wrapper {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0;
+    margin: 10px auto;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.joint-print-wrapper .shikake-image-section {
+    flex-shrink: 0;
+}
+
+.joint-print-wrapper .shikake-image-section img {
+    height: 280px;
+    width: auto;
+    object-fit: contain;
+    border: 1px solid #ccc;
+}
+
 /* JOINT Template Styles - 80mm ≈ 576 dots */
-.ticket-joint {
+.ticket-joint-print {
     width: 576px;
     box-sizing: border-box;
     font-family: Arial, sans-serif;
@@ -10,7 +32,7 @@
     padding: 8px;
 }
 
-.ticket-joint .header {
+.ticket-joint-print .header {
     text-align: center;
     font-size: 20px;
     font-weight: bold;
@@ -20,49 +42,49 @@
     background: #d1ecf1;
 }
 
-.ticket-joint .info-table {
+.ticket-joint-print .info-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 11px;
     margin-bottom: 4px;
 }
 
-.ticket-joint .info-table th,
-.ticket-joint .info-table td {
+.ticket-joint-print .info-table th,
+.ticket-joint-print .info-table td {
     border: 1px solid #000;
     padding: 3px;
     text-align: center;
 }
 
-.ticket-joint .info-table th {
+.ticket-joint-print .info-table th {
     background: #bee5eb;
     font-weight: bold;
     font-size: 10px;
 }
 
-.ticket-joint .detail-table {
+.ticket-joint-print .detail-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
     margin-bottom: 3px;
 }
 
-.ticket-joint .detail-table td {
+.ticket-joint-print .detail-table td {
     border: 1px solid #000;
     padding: 2px 4px;
 }
 
-.ticket-joint .detail-table .label {
+.ticket-joint-print .detail-table .label {
     font-weight: 600;
     background: #f0f0f0;
     text-align: center;
 }
 
-.ticket-joint .detail-table .value {
+.ticket-joint-print .detail-table .value {
     text-align: center;
 }
 
-.ticket-joint .section-header {
+.ticket-joint-print .section-header {
     background: #000;
     color: #fff;
     font-weight: bold;
@@ -71,25 +93,35 @@
     font-size: 11px;
 }
 
-.ticket-joint .barcode-section {
+.ticket-joint-print .barcode-section {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
 }
 
-.ticket-joint .barcode-section td {
+.ticket-joint-print .barcode-section td {
     border: 1px solid #000;
     padding: 3px;
 }
 
-.ticket-joint .barcode-header {
+.ticket-joint-print .barcode-header {
     text-align: center;
     font-weight: bold;
     background: #bee5eb;
 }
 </style>
 
-<div class="ticket-joint">
+{{-- Wrapper with flexbox for image + ticket --}}
+<div class="joint-print-wrapper">
+    {{-- Image section (LEFT) - only if image exists --}}
+    @if(!empty($shikake->image_path))
+    <div class="shikake-image-section">
+        <img src="{{ asset($shikake->image_path) }}" alt="Shikake Image">
+    </div>
+    @endif
+    
+    {{-- Ticket section (RIGHT) --}}
+    <div class="ticket-joint-print">
     <div class="header">
         E-KANBAN SHIKAKE - JOINT
     </div>
@@ -199,4 +231,6 @@
             </td>
         </tr>
     </table>
+    </div>
 </div>
+{{-- End of joint-print-wrapper --}}

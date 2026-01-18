@@ -37,7 +37,7 @@ class GenerateShikakeTemplates extends Command
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Data');
 
-        // Set headers
+        // Set required headers
         $col = 1;
         foreach ($headers as $header) {
             $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
@@ -45,11 +45,20 @@ class GenerateShikakeTemplates extends Command
             $col++;
         }
 
-        // Style the header row
-        $lastColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
-        $headerRange = "A1:{$lastColumn}1";
+        // Add example assy columns
+        $exampleAssyColumns = ['ASSY-001', 'ASSY-002', 'ASSY-003'];
+        $assyStartCol = $col;
+        foreach ($exampleAssyColumns as $assyHeader) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+            $sheet->setCellValue($colLetter . '1', $assyHeader);
+            $col++;
+        }
 
-        $sheet->getStyle($headerRange)->applyFromArray([
+        // Style required header columns (blue background)
+        $lastRequiredColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
+        $requiredHeaderRange = "A1:{$lastRequiredColumn}1";
+
+        $sheet->getStyle($requiredHeaderRange)->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -70,8 +79,36 @@ class GenerateShikakeTemplates extends Command
             ],
         ]);
 
-        // Auto-size columns
-        foreach (range(1, count($headers)) as $colIndex) {
+        // Style example assy columns (light green background)
+        $firstAssyColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($assyStartCol);
+        $lastAssyColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($assyStartCol + count($exampleAssyColumns) - 1);
+        $assyHeaderRange = "{$firstAssyColumn}1:{$lastAssyColumn}1";
+
+        $sheet->getStyle($assyHeaderRange)->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'italic' => true,
+                'color' => ['rgb' => '000000'],
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '92D050'], // Light green
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+
+        // Auto-size all columns (required + assy)
+        $totalColumns = count($headers) + count($exampleAssyColumns);
+        foreach (range(1, $totalColumns) as $colIndex) {
             $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
             $sheet->getColumnDimension($colLetter)->setAutoSize(true);
         }

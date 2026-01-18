@@ -242,6 +242,11 @@ abstract class BaseShikakeImport
             'machine' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Machine')),
             'qty' => ImportHelper::cleanNumeric($this->getValueByHeader($rowData, 'QTY')),
             'family' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Family')),
+<<<<<<< HEAD
+=======
+            'released_date' => ImportHelper::cleanDate($this->getValueByHeader($rowData, 'Released Date')),
+            'released_note' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Released Note')),
+>>>>>>> 376e26d (Update Changes)
             'sequence' => ImportHelper::cleanNumeric($this->getValueByHeader($rowData, 'Sequence')),
             'created_by' => Auth::id(),
         ];

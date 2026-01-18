@@ -128,7 +128,7 @@
                         
                     </button>
                 </div>
-                <div class="modal-body" id="preview-content">
+                <div class="modal-body" id="preview-content" style="max-height: 70vh; overflow: auto;">
                     <!-- Preview content will be loaded here -->
                 </div>
                 <div class="modal-footer">

@@ -1,16 +1,41 @@
-{{-- BONDER Process Print Template - Standalone --}}
+{{-- BONDER Process Print Template - PREVIEW VERSION --}}
 <style>
-/* BONDER Template Styles - 80mm ≈ 576 dots */
-.ticket-bonder {
-    width: 576px;
-    box-sizing: border-box;
-    font-family: Arial, sans-serif;
-    page-break-after: always;
-    background: white;
-    padding: 8px;
+/* BONDER Preview Template - Wrapper for Image + Ticket */
+.bonder-preview-wrapper {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0;
+    margin: 15px auto;
+    justify-content: center;
+    align-items: flex-start;
 }
 
-.ticket-bonder .header {
+.bonder-preview-wrapper .shikake-image-section {
+    flex-shrink: 0;
+}
+
+.bonder-preview-wrapper .shikake-image-section img {
+    height: 320px;
+    width: auto;
+    object-fit: contain;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+/* BONDER Template Styles - 80mm ≈ 576 dots */
+.ticket-bonder-preview {
+    width: 576px;
+    min-width: 576px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+    background: white;
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+
+.ticket-bonder-preview .header {
     text-align: center;
     font-size: 20px;
     font-weight: bold;
@@ -20,49 +45,49 @@
     background: #fff3cd;
 }
 
-.ticket-bonder .info-table {
+.ticket-bonder-preview .info-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 11px;
     margin-bottom: 4px;
 }
 
-.ticket-bonder .info-table th,
-.ticket-bonder .info-table td {
+.ticket-bonder-preview .info-table th,
+.ticket-bonder-preview .info-table td {
     border: 1px solid #000;
     padding: 3px;
     text-align: center;
 }
 
-.ticket-bonder .info-table th {
+.ticket-bonder-preview .info-table th {
     background: #ffeeba;
     font-weight: bold;
     font-size: 10px;
 }
 
-.ticket-bonder .detail-table {
+.ticket-bonder-preview .detail-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
     margin-bottom: 3px;
 }
 
-.ticket-bonder .detail-table td {
+.ticket-bonder-preview .detail-table td {
     border: 1px solid #000;
     padding: 2px 4px;
 }
 
-.ticket-bonder .detail-table .label {
+.ticket-bonder-preview .detail-table .label {
     font-weight: 600;
     background: #f0f0f0;
     text-align: center;
 }
 
-.ticket-bonder .detail-table .value {
+.ticket-bonder-preview .detail-table .value {
     text-align: center;
 }
 
-.ticket-bonder .section-a {
+.ticket-bonder-preview .section-a {
     background: #000;
     color: #fff;
     font-weight: bold;
@@ -71,7 +96,7 @@
     font-size: 11px;
 }
 
-.ticket-bonder .section-b {
+.ticket-bonder-preview .section-b {
     background: #555;
     color: #fff;
     font-weight: bold;
@@ -80,25 +105,35 @@
     font-size: 11px;
 }
 
-.ticket-bonder .barcode-section {
+.ticket-bonder-preview .barcode-section {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
 }
 
-.ticket-bonder .barcode-section td {
+.ticket-bonder-preview .barcode-section td {
     border: 1px solid #000;
     padding: 3px;
 }
 
-.ticket-bonder .barcode-header {
+.ticket-bonder-preview .barcode-header {
     text-align: center;
     font-weight: bold;
     background: #ffeeba;
 }
 </style>
 
-<div class="ticket-bonder">
+{{-- Wrapper with flexbox for image + ticket --}}
+<div class="bonder-preview-wrapper">
+    {{-- Image section (LEFT) - only if image exists --}}
+    @if(!empty($shikake->image_path))
+    <div class="shikake-image-section">
+        <img src="{{ asset($shikake->image_path) }}" alt="Shikake Image">
+    </div>
+    @endif
+    
+    {{-- Ticket section (RIGHT) --}}
+    <div class="ticket-bonder-preview">
     <div class="header">
         E-KANBAN SHIKAKE - BONDER
     </div>
@@ -257,4 +292,6 @@
             <td style="text-align: left; font-size: 10px;">{{ $shikake->released_note ?? '' }}</td>
         </tr>
     </table>
+    </div>
 </div>
+{{-- End of bonder-preview-wrapper --}}

@@ -27,8 +27,8 @@ class UpdateJointShikakeRequest extends FormRequest
             'sequence' => 'nullable|integer|min:0',
             
             // JOINT process-specific fields
-            'process_data.bonder_no' => 'required|string|max:255',
-            'process_data.address' => 'required|string|max:255',
+            'process_data.bonder_no' => 'nullable|string|max:255',
+            'process_data.address' => 'nullable|string|max:255',
             'process_data.address_store' => 'nullable|string|max:255',
             'process_data.to_machine' => 'nullable|string|max:255',
             'process_data.barcode_process' => 'nullable|string|max:255',

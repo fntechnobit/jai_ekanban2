@@ -1,194 +1,156 @@
-{{-- Standalone E-KANBAN CUTTING TWIST Template --}}
-{{-- Container: 120mm x 70mm - Portrait preview, Landscape print --}}
+{{-- Standalone E-KANBAN CUTTING TWIST Template - PREVIEW VERSION --}}
+{{-- Container: 576px width - For screen display in preview modal --}}
 <style>
     /* ========================================
-       TWIST Template - Screen Styles (Portrait Preview)
+       TWIST Preview Template - Wrapper for Image + Ticket
        ======================================== */
-    .twist-kanban-container {
-        width: 120mm;
-        max-width: 120mm;
-        height: 70mm;
+    .twist-preview-wrapper {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 0;
+        margin: 15px auto;
+        justify-content: center;
+        align-items: flex-start;
+    }
+    
+    .twist-preview-wrapper .shikake-image-section {
+        flex-shrink: 0;
+    }
+    
+    .twist-preview-wrapper .shikake-image-section img {
+        height: 420px;
+        width: auto;
+        object-fit: contain;
+        border: 1px solid #ccc;
+    }
+    
+    /* ========================================
+       TWIST Preview Template - Screen Styles (576px)
+       ======================================== */
+    .twist-preview-container {
+        width: 576px;
+        min-width: 576px;
+        flex-shrink: 0;
         background: white;
-        margin: 10px auto;
         padding: 0;
         border: 1px solid #ddd;
         overflow: hidden;
         font-family: Arial, sans-serif;
     }
     
-    .twist-kanban-container table {
+    .twist-preview-container table {
         width: 100%;
-        height: 100%;
         border-collapse: collapse;
         table-layout: fixed;
     }
     
-    .twist-kanban-container th,
-    .twist-kanban-container td {
+    .twist-preview-container th,
+    .twist-preview-container td {
         border: 1px solid #000;
-        padding: 1px 2px;
+        padding: 4px 6px;
         text-align: center;
         vertical-align: middle;
-        line-height: 1.1;
-        font-size: 9px;
-        height: 4.5mm;
-        box-sizing: border-box;
+        line-height: 1.2;
+        font-size: 14px;
     }
     
-    .twist-kanban-container thead th {
+    .twist-preview-container thead th {
+        background-color: #f0f0f0;
+        color: #000;
+        font-weight: bold;
+        font-size: 18px;
+        padding: 10px;
+        border: 2px solid #000;
+    }
+    
+    .twist-preview-container .twist-section-label {
         background-color: transparent;
         color: #000;
         font-weight: bold;
-        font-size: 11px;
+        font-size: 16px;
+        width: 30px;
         padding: 4px;
-        border: 1px solid #000;
-        height: 4.5mm;
     }
     
-    .twist-kanban-container .twist-section-label {
-        background-color: transparent;
-        color: #000;
-        font-weight: bold;
-        font-size: 10px;
-        width: 5.5mm;
-        padding: 2px;
-    }
-    
-    .twist-kanban-container .twist-section-label.black-bg {
+    .twist-preview-container .twist-section-label.black-bg {
         background-color: #000;
         color: white;
     }
     
-    .twist-kanban-container .twist-label-cell {
-        background-color: transparent;
-        font-weight: 500;
-        font-size: 8px;
+    .twist-preview-container .twist-label-cell {
+        background-color: #f5f5f5;
+        font-weight: 600;
+        font-size: 12px;
     }
     
-    .twist-kanban-container .twist-value-cell {
+    .twist-preview-container .twist-value-cell {
         font-weight: bold;
-        font-size: 9px;
+        font-size: 14px;
     }
     
-    .twist-kanban-container .text-left {
+    .twist-preview-container .text-left {
         text-align: left !important;
-        padding-left: 2px;
+        padding-left: 6px;
     }
     
-    .twist-kanban-container .twist-qrcode-cell {
-        padding: 2px;
+    .twist-preview-container .twist-qrcode-cell {
+        padding: 8px;
         vertical-align: middle;
         text-align: center;
     }
     
-    .twist-kanban-container .twist-qrcode-cell img {
+    .twist-preview-container .twist-qrcode-cell img {
         max-width: 100%;
         height: auto;
     }
     
-    .twist-kanban-container .twist-barcode-cell {
-        padding: 1px;
+    .twist-preview-container .twist-barcode-cell {
+        padding: 4px;
         vertical-align: middle;
         text-align: center;
     }
     
-    .twist-kanban-container .twist-barcode-cell img {
-        max-width: 80%;
+    .twist-preview-container .twist-barcode-cell img {
+        max-width: 90%;
         width: auto;
-        height: 5mm;
+        height: 40px;
     }
     
-    .twist-kanban-container .twist-qr-label {
-        font-size: 6px;
+    .twist-preview-container .twist-qr-label {
+        font-size: 10px;
         font-weight: bold;
-        margin-bottom: 1px;
+        margin-bottom: 4px;
     }
     
-    .twist-kanban-container .twist-qr-img {
-        width: 13mm;
-        height: 13mm;
-    }
-    
-    /* ========================================
-       TWIST Template - Print Styles (Landscape)
-       ======================================== */
-    @media print {
-        @page {
-            size: landscape;
-            margin: 1mm;
-        }
-        
-        .twist-kanban-container {
-            width: 100%;
-            max-width: none;
-            height: auto;
-            margin: 0;
-            padding: 0;
-            border: none;
-            page-break-after: always;
-            page-break-inside: avoid;
-        }
-        
-        .twist-kanban-container table {
-            width: 100%;
-            page-break-inside: avoid;
-        }
-        
-        .twist-kanban-container th,
-        .twist-kanban-container td {
-            border: 1px solid #000 !important;
-            font-size: 9px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-        
-        .twist-kanban-container thead th {
-            font-size: 11px;
-        }
-        
-        .twist-kanban-container .twist-label-cell {
-            font-size: 8px;
-        }
-        
-        .twist-kanban-container .twist-value-cell {
-            font-size: 9px;
-        }
-        
-        .twist-kanban-container .twist-section-label {
-            font-size: 10px;
-        }
-        
-        .twist-kanban-container .twist-section-label.black-bg {
-            background-color: #000 !important;
-            color: white !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-        
-        .twist-kanban-container .twist-qr-img {
-            width: 15mm;
-            height: 15mm;
-        }
-        
-        .twist-kanban-container .twist-barcode-cell img {
-            max-width: 80%;
-            height: 6mm;
-        }
+    .twist-preview-container .twist-qr-img {
+        width: 100px;
+        height: 100px;
     }
 </style>
 
-<div class="twist-kanban-container">
+{{-- Wrapper with flexbox for image + ticket --}}
+<div class="twist-preview-wrapper">
+    {{-- Image section (LEFT) - only if image exists --}}
+    @if(!empty($shikake->image_path))
+    <div class="shikake-image-section">
+        <img src="{{ asset($shikake->image_path) }}" alt="Shikake Image">
+    </div>
+    @endif
+    
+    {{-- Ticket section (RIGHT) --}}
+    <div class="twist-preview-container">
     <table>
         <colgroup>
-            <col style="width: 5.5mm">
-            <col style="width: 12.3mm">
-            <col style="width: 10.3mm">
-            <col style="width: 12.3mm">
-            <col style="width: 12.3mm">
-            <col style="width: 12.3mm">
-            <col style="width: 12.3mm">
-            <col style="width: 12.3mm">
-            <col style="width: 23.5mm">
+            <col style="width: 5%">   {{-- SEQ --}}
+            <col style="width: 12%">  {{-- SA --}}
+            <col style="width: 10%">  {{-- DATE --}}
+            <col style="width: 12%">  {{-- SHIKAKE --}}
+            <col style="width: 12%">  {{-- CIRCUIT --}}
+            <col style="width: 12%">  {{-- COLOR --}}
+            <col style="width: 12%">  {{-- SIZE --}}
+            <col style="width: 12%">  {{-- LENGTH --}}
+            <col style="width: 13%">  {{-- QR --}}
         </colgroup>
         <thead>
             <tr>
@@ -206,7 +168,7 @@
                     @if(isset($processData->barcode_navigasi_path))
                         <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode">
                     @else
-                        <span style="font-size:7px;">{{ $processData->barcode_navigasi ?? '-' }}</span>
+                        <span style="font-size:10px;">{{ $processData->barcode_navigasi ?? '-' }}</span>
                     @endif
                 </td>
             </tr>
@@ -268,7 +230,7 @@
                     @if(isset($processData->barcode_process_path))
                         <img src="{{ $processData->barcode_process_path }}" alt="Barcode">
                     @else
-                        <span style="font-size:7px;">{{ $processData->barcode_process ?? '-' }}</span>
+                        <span style="font-size:10px;">{{ $processData->barcode_process ?? '-' }}</span>
                     @endif
                 </td>
             </tr>
@@ -305,7 +267,7 @@
                     @if(isset($shikake->qr_code_path))
                         <img src="{{ $shikake->qr_code_path }}" alt="QR Kanban" class="twist-qr-img">
                     @else
-                        <div style="width:13mm;height:13mm;border:1px solid #000;margin:0 auto;font-size:6px;display:flex;align-items:center;justify-content:center;">QR</div>
+                        <div style="width:100px;height:100px;border:1px solid #000;margin:0 auto;font-size:10px;display:flex;align-items:center;justify-content:center;">QR</div>
                     @endif
                 </td>
                 <td class="twist-label-cell text-left">CV NO</td>
@@ -338,4 +300,6 @@
             </tr>
         </tbody>
     </table>
+    </div>
 </div>
+{{-- End of twist-preview-wrapper --}}

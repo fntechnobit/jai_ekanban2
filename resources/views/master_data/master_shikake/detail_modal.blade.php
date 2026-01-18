@@ -285,32 +285,284 @@
                             <h6 class="mb-0"><i class="fas fa-link me-2"></i>BONDER Process Details</h6>
                         </div>
                         <div class="card-body p-3">
-                            <div class="row">
-                                <div class="col-md-12">
+                            <!-- Header Fields -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
                                     <div class="mb-3">
                                         <label class="form-label fw-semibold">Bonder No <span class="text-danger">*</span></label>
                                         <input type="text" name="process_data[bonder_no]" id="bonder_bonder_no" class="form-control form-control-sm">
                                         <div class="invalid-feedback" id="bonder_bonder_no-error"></div>
                                     </div>
-                                    
-                                    <!-- CCT & Bonder pairs in 2 columns -->
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Address</label>
+                                        <input type="text" name="process_data[address]" id="bonder_address" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="bonder_address-error"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Dies</label>
+                                        <input type="text" name="process_data[dies]" id="bonder_dies" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="bonder_dies-error"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">To Machine</label>
+                                        <input type="text" name="process_data[to_machine]" id="bonder_to_machine" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="bonder_to_machine-error"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Side A Section -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-dark text-white py-2">
+                                    <h6 class="mb-0">SIDE A</h6>
+                                </div>
+                                <div class="card-body p-2">
                                     <div class="row">
-                                        @for($i = 1; $i <= 14; $i++)
+                                        <!-- Pair 1 -->
                                         <div class="col-md-6">
                                             <div class="row mb-2">
                                                 <div class="col-6">
-                                                    <label class="form-label small fw-semibold">CCT {{ $i }}</label>
-                                                    <input type="text" name="process_data[cct_{{ $i }}]" id="bonder_cct_{{ $i }}" class="form-control form-control-sm">
-                                                    <div class="invalid-feedback" id="bonder_cct_{{ $i }}-error"></div>
+                                                    <label class="form-label small fw-semibold">CCT No 1</label>
+                                                    <input type="text" name="process_data[cct_no_a_1]" id="bonder_cct_no_a_1" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_a_1-error"></div>
                                                 </div>
                                                 <div class="col-6">
-                                                    <label class="form-label small fw-semibold">Bonder {{ $i }}</label>
-                                                    <input type="text" name="process_data[bonder_{{ $i }}]" id="bonder_bonder_{{ $i }}" class="form-control form-control-sm">
-                                                    <div class="invalid-feedback" id="bonder_bonder_{{ $i }}-error"></div>
+                                                    <label class="form-label small fw-semibold">Bonder 1</label>
+                                                    <input type="text" name="process_data[bonder_no_a_1]" id="bonder_bonder_no_a_1" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_a_1-error"></div>
                                                 </div>
                                             </div>
                                         </div>
-                                        @endfor
+                                        <!-- Pair 2 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 2</label>
+                                                    <input type="text" name="process_data[cct_no_a_2]" id="bonder_cct_no_a_2" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_a_2-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 2</label>
+                                                    <input type="text" name="process_data[bonder_no_a_2]" id="bonder_bonder_no_a_2" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_a_2-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 3 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 3</label>
+                                                    <input type="text" name="process_data[cct_no_a_3]" id="bonder_cct_no_a_3" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_a_3-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 3</label>
+                                                    <input type="text" name="process_data[bonder_no_a_3]" id="bonder_bonder_no_a_3" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_a_3-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 4 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 4</label>
+                                                    <input type="text" name="process_data[cct_no_a_4]" id="bonder_cct_no_a_4" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_a_4-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 4</label>
+                                                    <input type="text" name="process_data[bonder_no_a_4]" id="bonder_bonder_no_a_4" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_a_4-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 5 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 5</label>
+                                                    <input type="text" name="process_data[cct_no_a_5]" id="bonder_cct_no_a_5" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_a_5-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 5</label>
+                                                    <input type="text" name="process_data[bonder_no_a_5]" id="bonder_bonder_no_a_5" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_a_5-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 6 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 6</label>
+                                                    <input type="text" name="process_data[cct_no_a_6]" id="bonder_cct_no_a_6" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_a_6-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 6</label>
+                                                    <input type="text" name="process_data[bonder_no_a_6]" id="bonder_bonder_no_a_6" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_a_6-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 7 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 7</label>
+                                                    <input type="text" name="process_data[cct_no_a_7]" id="bonder_cct_no_a_7" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_a_7-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 7</label>
+                                                    <input type="text" name="process_data[bonder_no_a_7]" id="bonder_bonder_no_a_7" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_a_7-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Side B Section -->
+                            <div class="card mb-3">
+                                <div class="card-header bg-secondary text-white py-2">
+                                    <h6 class="mb-0">SIDE B</h6>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="row">
+                                        <!-- Pair 1 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 1</label>
+                                                    <input type="text" name="process_data[cct_no_b_1]" id="bonder_cct_no_b_1" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_b_1-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 1</label>
+                                                    <input type="text" name="process_data[bonder_no_b_1]" id="bonder_bonder_no_b_1" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_b_1-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 2 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 2</label>
+                                                    <input type="text" name="process_data[cct_no_b_2]" id="bonder_cct_no_b_2" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_b_2-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 2</label>
+                                                    <input type="text" name="process_data[bonder_no_b_2]" id="bonder_bonder_no_b_2" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_b_2-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 3 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 3</label>
+                                                    <input type="text" name="process_data[cct_no_b_3]" id="bonder_cct_no_b_3" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_b_3-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 3</label>
+                                                    <input type="text" name="process_data[bonder_no_b_3]" id="bonder_bonder_no_b_3" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_b_3-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 4 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 4</label>
+                                                    <input type="text" name="process_data[cct_no_b_4]" id="bonder_cct_no_b_4" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_b_4-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 4</label>
+                                                    <input type="text" name="process_data[bonder_no_b_4]" id="bonder_bonder_no_b_4" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_b_4-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 5 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 5</label>
+                                                    <input type="text" name="process_data[cct_no_b_5]" id="bonder_cct_no_b_5" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_b_5-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 5</label>
+                                                    <input type="text" name="process_data[bonder_no_b_5]" id="bonder_bonder_no_b_5" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_b_5-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 6 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 6</label>
+                                                    <input type="text" name="process_data[cct_no_b_6]" id="bonder_cct_no_b_6" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_b_6-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 6</label>
+                                                    <input type="text" name="process_data[bonder_no_b_6]" id="bonder_bonder_no_b_6" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_b_6-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 7 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 7</label>
+                                                    <input type="text" name="process_data[cct_no_b_7]" id="bonder_cct_no_b_7" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_cct_no_b_7-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder 7</label>
+                                                    <input type="text" name="process_data[bonder_no_b_7]" id="bonder_bonder_no_b_7" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="bonder_bonder_no_b_7-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Barcode Fields -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Barcode Navigasi</label>
+                                        <input type="text" name="process_data[barcode_navigasi]" id="bonder_barcode_navigasi" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="bonder_barcode_navigasi-error"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Barcode Process</label>
+                                        <input type="text" name="process_data[barcode_process]" id="bonder_barcode_process" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="bonder_barcode_process-error"></div>
                                     </div>
                                 </div>
                             </div>
@@ -323,43 +575,127 @@
                             <h6 class="mb-0"><i class="fas fa-compress-alt me-2"></i>JOINT Process Details</h6>
                         </div>
                         <div class="card-body p-3">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-semibold">Bonder No <span class="text-danger">*</span></label>
-                                                <input type="text" name="process_data[bonder_no]" id="joint_bonder_no" class="form-control form-control-sm">
-                                                <div class="invalid-feedback" id="joint_bonder_no-error"></div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-semibold">Address <span class="text-danger">*</span></label>
-                                                <input type="text" name="process_data[address]" id="joint_address" class="form-control form-control-sm">
-                                                <div class="invalid-feedback" id="joint_address-error"></div>
-                                            </div>
-                                        </div>
+                            <!-- Header Fields -->
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Bonder No <span class="text-danger">*</span></label>
+                                        <input type="text" name="process_data[bonder_no]" id="joint_bonder_no" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="joint_bonder_no-error"></div>
                                     </div>
-                                    
-                                    <!-- CCT & Bonder pairs in 2 columns -->
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Address <span class="text-danger">*</span></label>
+                                        <input type="text" name="process_data[address]" id="joint_address" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="joint_address-error"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Address Store</label>
+                                        <input type="text" name="process_data[address_store]" id="joint_address_store" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="joint_address_store-error"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">To Machine</label>
+                                        <input type="text" name="process_data[to_machine]" id="joint_to_machine" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="joint_to_machine-error"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Barcode Process</label>
+                                        <input type="text" name="process_data[barcode_process]" id="joint_barcode_process" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="joint_barcode_process-error"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- CCT & Bonder pairs -->
+                            <div class="card">
+                                <div class="card-header bg-info text-white py-2">
+                                    <h6 class="mb-0">CCT No & Bonder No Pairs</h6>
+                                </div>
+                                <div class="card-body p-3">
                                     <div class="row">
-                                        @for($i = 1; $i <= 10; $i++)
+                                        <!-- Pair 1 -->
                                         <div class="col-md-6">
                                             <div class="row mb-2">
                                                 <div class="col-6">
-                                                    <label class="form-label small fw-semibold">CCT {{ $i }}</label>
-                                                    <input type="text" name="process_data[cct_{{ $i }}]" id="joint_cct_{{ $i }}" class="form-control form-control-sm">
-                                                    <div class="invalid-feedback" id="joint_cct_{{ $i }}-error"></div>
+                                                    <label class="form-label small fw-semibold">CCT No 1</label>
+                                                    <input type="text" name="process_data[cct_no_1]" id="joint_cct_no_1" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="joint_cct_no_1-error"></div>
                                                 </div>
                                                 <div class="col-6">
-                                                    <label class="form-label small fw-semibold">Bonder {{ $i }}</label>
-                                                    <input type="text" name="process_data[bonder_{{ $i }}]" id="joint_bonder_{{ $i }}" class="form-control form-control-sm">
-                                                    <div class="invalid-feedback" id="joint_bonder_{{ $i }}-error"></div>
+                                                    <label class="form-label small fw-semibold">Bonder No 1</label>
+                                                    <input type="text" name="process_data[bonder_no_1]" id="joint_bonder_no_1" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="joint_bonder_no_1-error"></div>
                                                 </div>
                                             </div>
                                         </div>
-                                        @endfor
+                                        <!-- Pair 2 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 2</label>
+                                                    <input type="text" name="process_data[cct_no_2]" id="joint_cct_no_2" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="joint_cct_no_2-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder No 2</label>
+                                                    <input type="text" name="process_data[bonder_no_2]" id="joint_bonder_no_2" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="joint_bonder_no_2-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 3 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 3</label>
+                                                    <input type="text" name="process_data[cct_no_3]" id="joint_cct_no_3" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="joint_cct_no_3-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder No 3</label>
+                                                    <input type="text" name="process_data[bonder_no_3]" id="joint_bonder_no_3" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="joint_bonder_no_3-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 4 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 4</label>
+                                                    <input type="text" name="process_data[cct_no_4]" id="joint_cct_no_4" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="joint_cct_no_4-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder No 4</label>
+                                                    <input type="text" name="process_data[bonder_no_4]" id="joint_bonder_no_4" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="joint_bonder_no_4-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Pair 5 -->
+                                        <div class="col-md-6">
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 5</label>
+                                                    <input type="text" name="process_data[cct_no_5]" id="joint_cct_no_5" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="joint_cct_no_5-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder No 5</label>
+                                                    <input type="text" name="process_data[bonder_no_5]" id="joint_bonder_no_5" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="joint_bonder_no_5-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -372,43 +708,143 @@
                             <h6 class="mb-0"><i class="fas fa-shield-alt me-2"></i>SHIELD Process Details</h6>
                         </div>
                         <div class="card-body p-3">
-                            <div class="row">
-                                <div class="col-md-6">
+                            <!-- Header Fields -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
                                     <div class="mb-3">
                                         <label class="form-label fw-semibold">Shield No <span class="text-danger">*</span></label>
                                         <input type="text" name="process_data[shield_no]" id="shield_shield_no" class="form-control form-control-sm">
                                         <div class="invalid-feedback" id="shield_shield_no-error"></div>
                                     </div>
-                                    
-                                    <!-- TO fields in grid -->
-                                    <div class="row">
-                                        @for($i = 1; $i <= 9; $i++)
-                                        <div class="col-4">
-                                            <div class="mb-3">
-                                                <label class="form-label small fw-semibold">TO {{ $i }}</label>
-                                                <input type="text" name="process_data[to_{{ $i }}]" id="shield_to_{{ $i }}" class="form-control form-control-sm">
-                                                <div class="invalid-feedback" id="shield_to_{{ $i }}-error"></div>
-                                            </div>
-                                        </div>
-                                        @endfor
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Address</label>
+                                        <input type="text" name="process_data[address]" id="shield_address" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="shield_address-error"></div>
                                     </div>
                                 </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Blade</label>
+                                        <input type="text" name="process_data[blade]" id="shield_blade" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="shield_blade-error"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <!-- Left Column: TO fields -->
                                 <div class="col-md-6">
-                                    <!-- CCT & Bonder pairs -->
-                                    @for($i = 1; $i <= 4; $i++)
-                                    <div class="row mb-2">
-                                        <div class="col-6">
-                                            <label class="form-label small fw-semibold">CCT {{ $i }}</label>
-                                            <input type="text" name="process_data[cct_{{ $i }}]" id="shield_cct_{{ $i }}" class="form-control form-control-sm">
-                                            <div class="invalid-feedback" id="shield_cct_{{ $i }}-error"></div>
+                                    <div class="card">
+                                        <div class="card-header bg-secondary text-white py-2">
+                                            <h6 class="mb-0">TO Fields</h6>
                                         </div>
-                                        <div class="col-6">
-                                            <label class="form-label small fw-semibold">Bonder {{ $i }}</label>
-                                            <input type="text" name="process_data[bonder_{{ $i }}]" id="shield_bonder_{{ $i }}" class="form-control form-control-sm">
-                                            <div class="invalid-feedback" id="shield_bonder_{{ $i }}-error"></div>
+                                        <div class="card-body p-2">
+                                            <div class="row">
+                                                <div class="col-4">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-semibold">TO 1</label>
+                                                        <input type="text" name="process_data[to_1]" id="shield_to_1" class="form-control form-control-sm">
+                                                        <div class="invalid-feedback" id="shield_to_1-error"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-semibold">TO 2</label>
+                                                        <input type="text" name="process_data[to_2]" id="shield_to_2" class="form-control form-control-sm">
+                                                        <div class="invalid-feedback" id="shield_to_2-error"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-semibold">TO 3</label>
+                                                        <input type="text" name="process_data[to_3]" id="shield_to_3" class="form-control form-control-sm">
+                                                        <div class="invalid-feedback" id="shield_to_3-error"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-semibold">TO 4</label>
+                                                        <input type="text" name="process_data[to_4]" id="shield_to_4" class="form-control form-control-sm">
+                                                        <div class="invalid-feedback" id="shield_to_4-error"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-semibold">TO 5</label>
+                                                        <input type="text" name="process_data[to_5]" id="shield_to_5" class="form-control form-control-sm">
+                                                        <div class="invalid-feedback" id="shield_to_5-error"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-semibold">TO 6</label>
+                                                        <input type="text" name="process_data[to_6]" id="shield_to_6" class="form-control form-control-sm">
+                                                        <div class="invalid-feedback" id="shield_to_6-error"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-semibold">TO 7</label>
+                                                        <input type="text" name="process_data[to_7]" id="shield_to_7" class="form-control form-control-sm">
+                                                        <div class="invalid-feedback" id="shield_to_7-error"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-semibold">TO 8</label>
+                                                        <input type="text" name="process_data[to_8]" id="shield_to_8" class="form-control form-control-sm">
+                                                        <div class="invalid-feedback" id="shield_to_8-error"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-semibold">TO 9</label>
+                                                        <input type="text" name="process_data[to_9]" id="shield_to_9" class="form-control form-control-sm">
+                                                        <div class="invalid-feedback" id="shield_to_9-error"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    @endfor
+                                </div>
+                                
+                                <!-- Right Column: CCT & Bonder pairs -->
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-info text-white py-2">
+                                            <h6 class="mb-0">CCT No & Bonder No Pairs</h6>
+                                        </div>
+                                        <div class="card-body p-2">
+                                            <!-- Pair 1 -->
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 1</label>
+                                                    <input type="text" name="process_data[cct_no_1]" id="shield_cct_no_1" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="shield_cct_no_1-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder No 1</label>
+                                                    <input type="text" name="process_data[bonder_no_1]" id="shield_bonder_no_1" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="shield_bonder_no_1-error"></div>
+                                                </div>
+                                            </div>
+                                            <!-- Pair 2 -->
+                                            <div class="row mb-2">
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">CCT No 2</label>
+                                                    <input type="text" name="process_data[cct_no_2]" id="shield_cct_no_2" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="shield_cct_no_2-error"></div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <label class="form-label small fw-semibold">Bonder No 2</label>
+                                                    <input type="text" name="process_data[bonder_no_2]" id="shield_bonder_no_2" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="shield_bonder_no_2-error"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -455,22 +891,81 @@
                             
                             <!-- CCT & Address pairs -->
                             <div class="row">
-                                @for($i = 1; $i <= 5; $i++)
+                                <!-- Pair 1 -->
                                 <div class="col-md-6">
                                     <div class="row mb-2">
                                         <div class="col-6">
-                                            <label class="form-label small fw-semibold">CCT No {{ $i }}</label>
-                                            <input type="text" name="process_data[cct_no_{{ $i }}]" id="dbl_crimp_cct_no_{{ $i }}" class="form-control form-control-sm">
-                                            <div class="invalid-feedback" id="dbl_crimp_cct_no_{{ $i }}-error"></div>
+                                            <label class="form-label small fw-semibold">CCT No 1</label>
+                                            <input type="text" name="process_data[cct_no_1]" id="dbl_crimp_cct_no_1" class="form-control form-control-sm">
+                                            <div class="invalid-feedback" id="dbl_crimp_cct_no_1-error"></div>
                                         </div>
                                         <div class="col-6">
-                                            <label class="form-label small fw-semibold">Address {{ $i }}</label>
-                                            <input type="text" name="process_data[address_{{ $i }}]" id="dbl_crimp_address_{{ $i }}" class="form-control form-control-sm">
-                                            <div class="invalid-feedback" id="dbl_crimp_address_{{ $i }}-error"></div>
+                                            <label class="form-label small fw-semibold">Address 1</label>
+                                            <input type="text" name="process_data[address_1]" id="dbl_crimp_address_1" class="form-control form-control-sm">
+                                            <div class="invalid-feedback" id="dbl_crimp_address_1-error"></div>
                                         </div>
                                     </div>
                                 </div>
-                                @endfor
+                                <!-- Pair 2 -->
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">CCT No 2</label>
+                                            <input type="text" name="process_data[cct_no_2]" id="dbl_crimp_cct_no_2" class="form-control form-control-sm">
+                                            <div class="invalid-feedback" id="dbl_crimp_cct_no_2-error"></div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">Address 2</label>
+                                            <input type="text" name="process_data[address_2]" id="dbl_crimp_address_2" class="form-control form-control-sm">
+                                            <div class="invalid-feedback" id="dbl_crimp_address_2-error"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Pair 3 -->
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">CCT No 3</label>
+                                            <input type="text" name="process_data[cct_no_3]" id="dbl_crimp_cct_no_3" class="form-control form-control-sm">
+                                            <div class="invalid-feedback" id="dbl_crimp_cct_no_3-error"></div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">Address 3</label>
+                                            <input type="text" name="process_data[address_3]" id="dbl_crimp_address_3" class="form-control form-control-sm">
+                                            <div class="invalid-feedback" id="dbl_crimp_address_3-error"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Pair 4 -->
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">CCT No 4</label>
+                                            <input type="text" name="process_data[cct_no_4]" id="dbl_crimp_cct_no_4" class="form-control form-control-sm">
+                                            <div class="invalid-feedback" id="dbl_crimp_cct_no_4-error"></div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">Address 4</label>
+                                            <input type="text" name="process_data[address_4]" id="dbl_crimp_address_4" class="form-control form-control-sm">
+                                            <div class="invalid-feedback" id="dbl_crimp_address_4-error"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Pair 5 -->
+                                <div class="col-md-6">
+                                    <div class="row mb-2">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">CCT No 5</label>
+                                            <input type="text" name="process_data[cct_no_5]" id="dbl_crimp_cct_no_5" class="form-control form-control-sm">
+                                            <div class="invalid-feedback" id="dbl_crimp_cct_no_5-error"></div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">Address 5</label>
+                                            <input type="text" name="process_data[address_5]" id="dbl_crimp_address_5" class="form-control form-control-sm">
+                                            <div class="invalid-feedback" id="dbl_crimp_address_5-error"></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -573,17 +1068,25 @@ function toggleProcessSections() {
     const process = document.getElementById('process').value;
     const sections = document.querySelectorAll('.process-section');
     
-    // Hide all sections
+    // Hide all sections and disable their inputs
     sections.forEach(section => {
         section.style.display = 'none';
+        // Disable all inputs in hidden sections so they don't submit
+        section.querySelectorAll('input, select, textarea').forEach(input => {
+            input.disabled = true;
+        });
     });
     
-    // Show specific section based on process
+    // Show specific section based on process and enable its inputs
     if (process) {
         const sectionId = process.toLowerCase().replace(' ', '-') + '-section';
         const targetSection = document.getElementById(sectionId);
         if (targetSection) {
             targetSection.style.display = 'block';
+            // Enable inputs in the visible section
+            targetSection.querySelectorAll('input, select, textarea').forEach(input => {
+                input.disabled = false;
+            });
         }
     }
 }
