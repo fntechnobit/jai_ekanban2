@@ -237,16 +237,14 @@ abstract class BaseShikakeImport
         return [
             'conveyor_id' => $this->conveyorId,
             'process' => $this->process,
-            'carline' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Carline')),
             'conveyor' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Conveyor')),
             'machine' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Machine')),
             'qty' => ImportHelper::cleanNumeric($this->getValueByHeader($rowData, 'QTY')),
+            'issue' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Issue')),
+            'barcode_kanban' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Barcode Kanban')),
             'family' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Family')),
-<<<<<<< HEAD
-=======
             'released_date' => ImportHelper::cleanDate($this->getValueByHeader($rowData, 'Released Date')),
             'released_note' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Released Note')),
->>>>>>> 376e26d (Update Changes)
             'sequence' => ImportHelper::cleanNumeric($this->getValueByHeader($rowData, 'Sequence')),
             'created_by' => Auth::id(),
         ];
