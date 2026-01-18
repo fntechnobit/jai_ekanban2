@@ -25,7 +25,7 @@ class MasterShikakeTwistImport extends BaseShikakeImport
 
     protected function getAssyStartColumn(): int
     {
-        return 33; // After Mark B column (index 32)
+        return 31; // After Mark B column (index 30)
     }
 
     /**

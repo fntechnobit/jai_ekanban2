@@ -119,52 +119,49 @@ class MasterCircuitImport
 
     protected function validateHeaders($headerRow)
     {
-        // Expected headers for Circuit template (columns A-AR, 44 columns)
+        // Expected headers for Circuit template (columns A-AO, 41 columns)
         $expectedHeaders = [
-            'Conveyor',           // A - 0
-            'CCT No.',            // B - 1
-            'Family',             // C - 2
-            'Qty.',               // D - 3
-            'Issue',              // E - 4
+            'Carline',            // A - 0
+            'Conveyor',           // B - 1
+            'CCT No.',            // C - 2
+            'Family',             // D - 3
+            'Qty.',               // E - 4
             'Machine',            // F - 5
             'Sequence',           // G - 6
-            'Barcode Kanban',     // H - 7
-            'Released Date',      // I - 8
-            'Released Note',      // J - 9
-            'Cust No.',           // K - 10
-            'Barcode Mesin',      // L - 11
-            'Address',            // M - 12
-            'CCT Code',           // N - 13
-            'Kind',               // O - 14
-            'Size',               // P - 15
-            'Col',                // Q - 16
-            'C/L',                // R - 17
-            'Terminal 1',         // S - 18
-            'Note 1',             // T - 19
-            'Gold 1',             // U - 20
-            'Strip 1',            // V - 21
-            'Acc. 1',             // W - 22
-            'Acc. 1A',            // X - 23
-            'Tube 1',             // Y - 24
-            'Mark 1',             // Z - 25
-            'Remark 1',           // AA - 26
-            'Terminal 2',         // AB - 27
-            'Note 2',             // AC - 28
-            'Gold 2',             // AD - 29
-            'Strip 2',            // AE - 30
-            'Acc 2',              // AF - 31
-            'Acc 2A',             // AG - 32
-            'Tube 2',             // AH - 33
-            'Mark 2',             // AI - 34
-            'Remark 2',           // AJ - 35
-            'TA',                 // AK - 36
-            'TB',                 // AL - 37
-            'T01',                // AM - 38
-            'T02',                // AN - 39
-            'T03',                // AO - 40
-            'T04',                // AP - 41
-            'T05',                // AQ - 42
-            'T06',                // AR - 43
+            'Cust No.',           // H - 7
+            'Barcode Mesin',      // I - 8
+            'Address',            // J - 9
+            'CCT Code',           // K - 10
+            'Kind',               // L - 11
+            'Size',               // M - 12
+            'Col',                // N - 13
+            'C/L',                // O - 14
+            'Terminal 1',         // P - 15
+            'Note 1',             // Q - 16
+            'Gold 1',             // R - 17
+            'Strip 1',            // S - 18
+            'Acc. 1',             // T - 19
+            'Acc. 1A',            // U - 20
+            'Tube 1',             // V - 21
+            'Mark 1',             // W - 22
+            'Remark 1',           // X - 23
+            'Terminal 2',         // Y - 24
+            'Note 2',             // Z - 25
+            'Gold 2',             // AA - 26
+            'Strip 2',            // AB - 27
+            'Acc 2',              // AC - 28
+            'Acc 2A',             // AD - 29
+            'Tube 2',             // AE - 30
+            'Mark 2',             // AF - 31
+            'Remark 2',           // AG - 32
+            'TA',                 // AH - 33
+            'TB',                 // AI - 34
+            'T01',                // AJ - 35
+            'T02',                // AK - 36
+            'T03',                // AL - 37
+            'T04',                // AM - 38
+            'T05',                // AN - 39
+            'T06',                // AO - 40
         ];
 
         // Check if we have at least the required columns
@@ -175,7 +172,7 @@ class MasterCircuitImport
             ];
         }
 
-        // Validate first 44 columns match expected headers
+        // Validate first 41 columns match expected headers
         $mismatches = [];
         for ($i = 0; $i < count($expectedHeaders); $i++) {
             $uploadedHeader = trim($headerRow[$i] ?? '');
@@ -241,50 +238,47 @@ class MasterCircuitImport
         // Map Excel columns to database fields based on Template_Cutting.xlsx structure
         return [
             'conveyor_id' => $this->conveyorId,
-            'conveyor' => ImportHelper::cleanValue($rowData[0] ?? null),        // Column A - Conveyor
-            'cct_no' => ImportHelper::cleanValue($rowData[1] ?? null),          // Column B - CCT No.
-            'family' => ImportHelper::cleanValue($rowData[2] ?? null),          // Column C - Family
-            'qty' => ImportHelper::cleanNumeric($rowData[3] ?? null),           // Column D - Qty.
-            'issue' => ImportHelper::cleanValue($rowData[4] ?? null),           // Column E - Issue
+            'carline' => ImportHelper::cleanValue($rowData[0] ?? null),         // Column A - Carline
+            'conveyor' => ImportHelper::cleanValue($rowData[1] ?? null),        // Column B - Conveyor
+            'cct_no' => ImportHelper::cleanValue($rowData[2] ?? null),          // Column C - CCT No.
+            'family' => ImportHelper::cleanValue($rowData[3] ?? null),          // Column D - Family
+            'qty' => ImportHelper::cleanNumeric($rowData[4] ?? null),           // Column E - Qty.
             'machine' => ImportHelper::cleanValue($rowData[5] ?? null),         // Column F - Machine
             'sequence' => ImportHelper::cleanValue($rowData[6] ?? null),        // Column G - Sequence
-            'barcode_kanban' => ImportHelper::cleanValue($rowData[7] ?? null),  // Column H - Barcode Kanban
-            'released_date' => ImportHelper::cleanDate($rowData[8] ?? null),    // Column I - Released Date
-            'released_note' => ImportHelper::cleanValue($rowData[9] ?? null),   // Column J - Released Note
-            'cust_no' => ImportHelper::cleanValue($rowData[10] ?? null),        // Column K - Cust No.
-            'barcode_mesin' => ImportHelper::cleanValue($rowData[11] ?? null),  // Column L - Barcode Mesin
-            'address' => ImportHelper::cleanValue($rowData[12] ?? null),        // Column M - Address
-            'cct_code' => ImportHelper::cleanValue($rowData[13] ?? null),       // Column N - CCT Code
-            'kind' => ImportHelper::cleanValue($rowData[14] ?? null),           // Column O - Kind
-            'size' => ImportHelper::cleanValue($rowData[15] ?? null),           // Column P - Size
-            'col' => ImportHelper::cleanValue($rowData[16] ?? null),            // Column Q - Col
-            'cl' => ImportHelper::cleanValue($rowData[17] ?? null),             // Column R - C/L
-            'terminal_1' => ImportHelper::cleanValue($rowData[18] ?? null),     // Column S - Terminal 1
-            'note_1' => ImportHelper::cleanValue($rowData[19] ?? null),         // Column T - Note 1
-            'gold_1' => ImportHelper::cleanValue($rowData[20] ?? null),         // Column U - Gold 1
-            'strip_1' => ImportHelper::cleanValue($rowData[21] ?? null),        // Column V - Strip 1
-            'acc_1' => ImportHelper::cleanValue($rowData[22] ?? null),          // Column W - Acc. 1
-            'acc_1a' => ImportHelper::cleanValue($rowData[23] ?? null),         // Column X - Acc. 1A
-            'tube_1' => ImportHelper::cleanValue($rowData[24] ?? null),         // Column Y - Tube 1
-            'mark_1' => ImportHelper::cleanValue($rowData[25] ?? null),         // Column Z - Mark 1
-            'remark_1' => ImportHelper::cleanValue($rowData[26] ?? null),       // Column AA - Remark 1
-            'terminal_2' => ImportHelper::cleanValue($rowData[27] ?? null),     // Column AB - Terminal 2
-            'note_2' => ImportHelper::cleanValue($rowData[28] ?? null),         // Column AC - Note 2
-            'gold_2' => ImportHelper::cleanValue($rowData[29] ?? null),         // Column AD - Gold 2
-            'strip_2' => ImportHelper::cleanValue($rowData[30] ?? null),        // Column AE - Strip 2
-            'acc_2' => ImportHelper::cleanValue($rowData[31] ?? null),          // Column AF - Acc 2
-            'acc_2a' => ImportHelper::cleanValue($rowData[32] ?? null),         // Column AG - Acc 2A
-            'tube_2' => ImportHelper::cleanValue($rowData[33] ?? null),         // Column AH - Tube 2
-            'mark_2' => ImportHelper::cleanValue($rowData[34] ?? null),         // Column AI - Mark 2
-            'remark_2' => ImportHelper::cleanValue($rowData[35] ?? null),       // Column AJ - Remark 2
-            'ta' => ImportHelper::cleanValue($rowData[36] ?? null),             // Column AK - TA
-            'tb' => ImportHelper::cleanValue($rowData[37] ?? null),             // Column AL - TB
-            't01' => ImportHelper::cleanValue($rowData[38] ?? null),            // Column AM - T01
-            't02' => ImportHelper::cleanValue($rowData[39] ?? null),            // Column AN - T02
-            't03' => ImportHelper::cleanValue($rowData[40] ?? null),            // Column AO - T03
-            't04' => ImportHelper::cleanValue($rowData[41] ?? null),            // Column AP - T04
-            't05' => ImportHelper::cleanValue($rowData[42] ?? null),            // Column AQ - T05
-            't06' => ImportHelper::cleanValue($rowData[43] ?? null),            // Column AR - T06
+            'cust_no' => ImportHelper::cleanValue($rowData[7] ?? null),         // Column H - Cust No.
+            'barcode_mesin' => ImportHelper::cleanValue($rowData[8] ?? null),   // Column I - Barcode Mesin
+            'address' => ImportHelper::cleanValue($rowData[9] ?? null),         // Column J - Address
+            'cct_code' => ImportHelper::cleanValue($rowData[10] ?? null),       // Column K - CCT Code
+            'kind' => ImportHelper::cleanValue($rowData[11] ?? null),           // Column L - Kind
+            'size' => ImportHelper::cleanValue($rowData[12] ?? null),           // Column M - Size
+            'col' => ImportHelper::cleanValue($rowData[13] ?? null),            // Column N - Col
+            'cl' => ImportHelper::cleanValue($rowData[14] ?? null),             // Column O - C/L
+            'terminal_1' => ImportHelper::cleanValue($rowData[15] ?? null),     // Column P - Terminal 1
+            'note_1' => ImportHelper::cleanValue($rowData[16] ?? null),         // Column Q - Note 1
+            'gold_1' => ImportHelper::cleanValue($rowData[17] ?? null),         // Column R - Gold 1
+            'strip_1' => ImportHelper::cleanValue($rowData[18] ?? null),        // Column S - Strip 1
+            'acc_1' => ImportHelper::cleanValue($rowData[19] ?? null),          // Column T - Acc. 1
+            'acc_1a' => ImportHelper::cleanValue($rowData[20] ?? null),         // Column U - Acc. 1A
+            'tube_1' => ImportHelper::cleanValue($rowData[21] ?? null),         // Column V - Tube 1
+            'mark_1' => ImportHelper::cleanValue($rowData[22] ?? null),         // Column W - Mark 1
+            'remark_1' => ImportHelper::cleanValue($rowData[23] ?? null),       // Column X - Remark 1
+            'terminal_2' => ImportHelper::cleanValue($rowData[24] ?? null),     // Column Y - Terminal 2
+            'note_2' => ImportHelper::cleanValue($rowData[25] ?? null),         // Column Z - Note 2
+            'gold_2' => ImportHelper::cleanValue($rowData[26] ?? null),         // Column AA - Gold 2
+            'strip_2' => ImportHelper::cleanValue($rowData[27] ?? null),        // Column AB - Strip 2
+            'acc_2' => ImportHelper::cleanValue($rowData[28] ?? null),          // Column AC - Acc 2
+            'acc_2a' => ImportHelper::cleanValue($rowData[29] ?? null),         // Column AD - Acc 2A
+            'tube_2' => ImportHelper::cleanValue($rowData[30] ?? null),         // Column AE - Tube 2
+            'mark_2' => ImportHelper::cleanValue($rowData[31] ?? null),         // Column AF - Mark 2
+            'remark_2' => ImportHelper::cleanValue($rowData[32] ?? null),       // Column AG - Remark 2
+            'ta' => ImportHelper::cleanValue($rowData[33] ?? null),             // Column AH - TA
+            'tb' => ImportHelper::cleanValue($rowData[34] ?? null),             // Column AI - TB
+            't01' => ImportHelper::cleanValue($rowData[35] ?? null),            // Column AJ - T01
+            't02' => ImportHelper::cleanValue($rowData[36] ?? null),            // Column AK - T02
+            't03' => ImportHelper::cleanValue($rowData[37] ?? null),            // Column AL - T03
+            't04' => ImportHelper::cleanValue($rowData[38] ?? null),            // Column AM - T04
+            't05' => ImportHelper::cleanValue($rowData[39] ?? null),            // Column AN - T05
+            't06' => ImportHelper::cleanValue($rowData[40] ?? null),            // Column AO - T06
             'created_by' => Auth::id(),
         ];
     }

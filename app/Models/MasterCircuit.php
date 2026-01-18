@@ -14,16 +14,13 @@ class MasterCircuit extends Model
 
     protected $fillable = [
         'conveyor_id',
+        'carline',
         'conveyor',
         'cct_no',
         'family',
         'qty',
-        'issue',
         'machine',
         'sequence',
-        'barcode_kanban',
-        'released_date',
-        'released_note',
         'cust_no',
         'barcode_mesin',
         'address',

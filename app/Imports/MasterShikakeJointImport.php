@@ -25,7 +25,7 @@ class MasterShikakeJointImport extends BaseShikakeImport
 
     protected function getAssyStartColumn(): int
     {
-        return 23; // After Bonder No 5 column (index 22)
+        return 21; // After Bonder No 5 column (index 20)
     }
 
     /**

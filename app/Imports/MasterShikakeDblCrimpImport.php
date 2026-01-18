@@ -25,7 +25,7 @@ class MasterShikakeDblCrimpImport extends BaseShikakeImport
 
     protected function getAssyStartColumn(): int
     {
-        return 22; // After Address 5 column (index 21)
+        return 20; // After Address 5 column (index 19)
     }
 
     /**
