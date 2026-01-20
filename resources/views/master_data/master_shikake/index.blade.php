@@ -491,11 +491,11 @@
                 $('#shield_to_8').val(data.to_8);
                 $('#shield_to_9').val(data.to_9);
                 
-                // Populate CCT & Bonder pairs (only 2 pairs)
+                // Populate CCT & Address pairs (only 2 pairs)
                 $('#shield_cct_no_1').val(data.cct_no_1);
-                $('#shield_bonder_no_1').val(data.bonder_no_1);
+                $('#shield_address_no_1_1').val(data.address_no_1_1);
                 $('#shield_cct_no_2').val(data.cct_no_2);
-                $('#shield_bonder_no_2').val(data.bonder_no_2);
+                $('#shield_address_no_1_2').val(data.address_no_1_2);
             }
 
             function populateDblCrimpFields(data) {

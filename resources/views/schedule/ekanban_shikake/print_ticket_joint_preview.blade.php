@@ -1,4 +1,4 @@
-{{-- JOINT Process Print Template - PREVIEW VERSION --}}
+{{-- JOINT Process Print Template - PREVIEW VERSION (576px for screen) --}}
 <style>
 /* JOINT Preview Template - Wrapper for Image + Ticket */
 .joint-preview-wrapper {
@@ -23,94 +23,99 @@
     border-radius: 4px;
 }
 
-/* JOINT Template Styles - 80mm ≈ 576 dots */
+/* JOINT Preview Template - 576px for screen readability */
 .ticket-joint-preview {
     width: 576px;
     min-width: 576px;
     flex-shrink: 0;
-    box-sizing: border-box;
-    font-family: Arial, sans-serif;
     background: white;
+    margin: 0;
+    padding: 0;
+    border: 2px solid #ddd;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+.ticket-joint-preview table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.ticket-joint-preview th,
+.ticket-joint-preview td {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1.2;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.ticket-joint-preview thead th {
+    background-color: #d1ecf1;
+    color: #000;
+    font-weight: bold;
+    font-size: 18px;
     padding: 8px;
-    border: 1px solid #ddd;
-}
-
-.ticket-joint-preview .header {
-    text-align: center;
-    font-size: 20px;
-    font-weight: bold;
     border: 2px solid #000;
-    padding: 6px;
-    margin-bottom: 4px;
-    background: #d1ecf1;
 }
 
-.ticket-joint-preview .info-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 11px;
-    margin-bottom: 4px;
-}
-
-.ticket-joint-preview .info-table th,
-.ticket-joint-preview .info-table td {
-    border: 1px solid #000;
-    padding: 3px;
-    text-align: center;
-}
-
-.ticket-joint-preview .info-table th {
-    background: #bee5eb;
-    font-weight: bold;
-    font-size: 10px;
-}
-
-.ticket-joint-preview .detail-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 10px;
-    margin-bottom: 3px;
-}
-
-.ticket-joint-preview .detail-table td {
-    border: 1px solid #000;
-    padding: 2px 4px;
-}
-
-.ticket-joint-preview .detail-table .label {
-    font-weight: 600;
-    background: #f0f0f0;
-    text-align: center;
-}
-
-.ticket-joint-preview .detail-table .value {
-    text-align: center;
-}
-
-.ticket-joint-preview .section-header {
-    background: #000;
-    color: #fff;
-    font-weight: bold;
-    text-align: center;
-    padding: 3px;
+.ticket-joint-preview .label-cell {
+    background-color: #f8f9fa;
+    font-weight: 500;
     font-size: 11px;
 }
 
-.ticket-joint-preview .barcode-section {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 10px;
-}
-
-.ticket-joint-preview .barcode-section td {
-    border: 1px solid #000;
-    padding: 3px;
-}
-
-.ticket-joint-preview .barcode-header {
-    text-align: center;
+.ticket-joint-preview .value-cell {
     font-weight: bold;
-    background: #bee5eb;
+    font-size: 14px;
+}
+
+.ticket-joint-preview .qrcode-cell {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+.ticket-joint-preview .qrcode-cell img {
+    max-width: 90px;
+    max-height: 90px;
+    display: block;
+    margin: 0 auto;
+}
+
+.ticket-joint-preview .barcode-cell {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+.ticket-joint-preview .barcode-cell img {
+    max-width: 130px;
+    max-height: 50px;
+    display: block;
+    margin: 0 auto;
+}
+
+.ticket-joint-preview .qrcode-placeholder,
+.ticket-joint-preview .barcode-placeholder {
+    border: 1px solid #000;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #000;
+}
+
+.ticket-joint-preview .qrcode-placeholder {
+    width: 90px;
+    height: 90px;
+}
+
+.ticket-joint-preview .barcode-placeholder {
+    width: 130px;
+    height: 50px;
 }
 </style>
 
@@ -123,117 +128,117 @@
     </div>
     @endif
     
-    {{-- Ticket section (RIGHT) --}}
+    {{-- Ticket section (RIGHT) - 576px for screen readability --}}
     <div class="ticket-joint-preview">
-    <div class="header">
-        E-KANBAN SHIKAKE - JOINT
-    </div>
-
-    <table class="info-table">
-        <thead>
-            <tr>
-                <th>BONDER NO</th>
-                <th>ADDRESS</th>
-                <th>ADDRESS STORE</th>
-                <th>TO MACHINE</th>
-                <th>MACHINE</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>{{ $processData->bonder_no ?? '' }}</strong></td>
-                <td>{{ $processData->address ?? '' }}</td>
-                <td>{{ $processData->address_store ?? '' }}</td>
-                <td>{{ $processData->to_machine ?? '' }}</td>
-                <td>{{ $shikake->machine ?? '' }}</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <!-- CCT/Bonder Pairs Section -->
-    <table class="detail-table">
-        <tr>
-            <td colspan="4" class="section-header">CCT / BONDER PAIRS</td>
-        </tr>
-        <tr>
-            <td class="label" style="width: 25%;">CCT No 1</td>
-            <td class="value" style="width: 25%;">{{ $processData->cct_no_1 ?? '' }}</td>
-            <td class="label" style="width: 25%;">Bonder No 1</td>
-            <td class="value" style="width: 25%;">{{ $processData->bonder_no_1 ?? '' }}</td>
-        </tr>
-        <tr>
-            <td class="label">CCT No 2</td>
-            <td class="value">{{ $processData->cct_no_2 ?? '' }}</td>
-            <td class="label">Bonder No 2</td>
-            <td class="value">{{ $processData->bonder_no_2 ?? '' }}</td>
-        </tr>
-        <tr>
-            <td class="label">CCT No 3</td>
-            <td class="value">{{ $processData->cct_no_3 ?? '' }}</td>
-            <td class="label">Bonder No 3</td>
-            <td class="value">{{ $processData->bonder_no_3 ?? '' }}</td>
-        </tr>
-        <tr>
-            <td class="label">CCT No 4</td>
-            <td class="value">{{ $processData->cct_no_4 ?? '' }}</td>
-            <td class="label">Bonder No 4</td>
-            <td class="value">{{ $processData->bonder_no_4 ?? '' }}</td>
-        </tr>
-        <tr>
-            <td class="label">CCT No 5</td>
-            <td class="value">{{ $processData->cct_no_5 ?? '' }}</td>
-            <td class="label">Bonder No 5</td>
-            <td class="value">{{ $processData->bonder_no_5 ?? '' }}</td>
-        </tr>
-    </table>
-
-    <!-- Info Row -->
-    <table class="detail-table" style="margin-top: 3px;">
-        <tr>
-            <td class="label" style="width: 15%;">Conveyor</td>
-            <td class="value" style="width: 20%;">{{ $shikake->conveyor ?? '' }}</td>
-            <td class="label" style="width: 15%;">Family</td>
-            <td class="value" style="width: 15%;">{{ $shikake->family ?? '' }}</td>
-            <td class="label" style="width: 10%;">Qty</td>
-            <td class="value" style="width: 10%;">{{ $shikake->qty ?? '' }}</td>
-            <td class="label" style="width: 10%;">Issue</td>
-            <td class="value" style="width: 5%;">{{ $shikake->issue ?? '' }}</td>
-        </tr>
-    </table>
-
-    <!-- BARCODE SECTION -->
-    <table class="barcode-section" style="margin-top: 3px;">
-        <tr>
-            <td class="barcode-header" style="width: 50%;">BARCODE KANBAN</td>
-            <td class="barcode-header" style="width: 50%;">BARCODE PROCESS</td>
-        </tr>
-        <tr>
-            <td style="text-align: center; vertical-align: middle; padding: 8px;">
-                @if(isset($shikake->qr_code_path))
-                    <img src="{{ $shikake->qr_code_path }}" style="width: 100px; height: 100px;" alt="QR Code">
-                    <div style="font-size: 9px; margin-top: 2px;">{{ $shikake->barcode_kanban ?? "" }}</div>
-                @else
-                    <div style="width: 80px; height: 80px; margin: 3px auto; border: 1px solid #000;"></div>
-                @endif
-            </td>
-            <td style="text-align: center; vertical-align: middle; padding: 8px;">
-                @if(isset($processData->barcode_process_path))
-                    <img src="{{ $processData->barcode_process_path }}" style="max-width: 140px; height: auto;" alt="Barcode">
-                    <div style="font-size: 9px; margin-top: 2px;">{{ $processData->barcode_process ?? "" }}</div>
-                @else
-                    <div style="width: 120px; height: 60px; margin: 3px auto; border: 1px solid #000;"></div>
-                @endif
-            </td>
-        </tr>
-        <tr>
-            <td colspan="2" style="text-align: center; font-size: 10px;">
-                {{ $shikake->released_date ? 'Released: ' . \Carbon\Carbon::parse($shikake->released_date)->format('d M Y') : '' }}
-                @if($shikake->released_note)
-                    | {{ $shikake->released_note }}
-                @endif
-            </td>
-        </tr>
-    </table>
+        <table>
+            <colgroup>
+                <col style="width: 25%">
+                <col style="width: 25%">
+                <col style="width: 25%">
+                <col style="width: 25%">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th colspan="4">EKANBAN JOINT</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Row 1: BONDER / ADDRESS Labels -->
+                <tr>
+                    <td colspan="2" class="label-cell">BONDER</td>
+                    <td colspan="2" class="label-cell">ADDRESS</td>
+                </tr>
+                <!-- Row 2: BONDER / ADDRESS Values -->
+                <tr>
+                    <td colspan="2" class="value-cell">{{ $processData->bonder_no ?? '' }}</td>
+                    <td colspan="2" class="value-cell">{{ $processData->address ?? '' }}</td>
+                </tr>
+                
+                <!-- Row 3: CCT NO / BONDER NO / BARCODE MESIN Labels -->
+                <tr>
+                    <td class="label-cell">CCT NO</td>
+                    <td class="label-cell">BONDER NO</td>
+                    <td colspan="2" class="label-cell">BARCODE MESIN</td>
+                </tr>
+                <!-- Row 4-8: CCT NO and Bonder values with Barcode (5 pairs, rowspan=5) -->
+                <tr>
+                    <td class="value-cell">{{ $processData->cct_no_1 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->bonder_no_1 ?? '' }}</td>
+                    <td colspan="2" rowspan="5" class="barcode-cell">
+                        @if(isset($processData->barcode_process_path))
+                            <img src="{{ $processData->barcode_process_path }}" alt="Barcode">
+                            <div style="font-size: 10px; text-align: center; margin-top: 4px;">{{ $processData->barcode_process ?? '' }}</div>
+                        @else
+                            <div class="barcode-placeholder">BARCODE</div>
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="value-cell">{{ $processData->cct_no_2 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->bonder_no_2 ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="value-cell">{{ $processData->cct_no_3 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->bonder_no_3 ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="value-cell">{{ $processData->cct_no_4 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->bonder_no_4 ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="value-cell">{{ $processData->cct_no_5 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->bonder_no_5 ?? '' }}</td>
+                </tr>
+                
+                <!-- Row 9-10: Machine Label/Value -->
+                <tr>
+                    <td class="label-cell"></td>
+                    <td class="label-cell"></td>
+                    <td colspan="2" class="label-cell">MACHINE</td>
+                </tr>
+                <tr>
+                    <td class="value-cell"></td>
+                    <td class="value-cell"></td>
+                    <td colspan="2" class="value-cell">{{ $shikake->machine ?? '' }}</td>
+                </tr>
+                
+                <!-- Row 11-15: QR Code section (rowspan=5) with SEQ/TO MACHINE/QTY/ISSUE/FAMILY -->
+                <tr>
+                    <td colspan="2" rowspan="5" class="qrcode-cell">
+                        <div class="label-cell" style="font-size: 10px; margin-bottom: 4px; background: transparent;">QRCODE KANBAN</div>
+                        @if(isset($shikake->qr_code_path))
+                            <img src="{{ $shikake->qr_code_path }}" alt="QR Code">
+                        @else
+                            <div class="qrcode-placeholder">QR</div>
+                        @endif
+                    </td>
+                    <td class="label-cell">SEQ</td>
+                    <td class="label-cell">TO MACHINE</td>
+                </tr>
+                <tr>
+                    <td class="value-cell">{{ $shikake->sequence ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->to_machine ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">QTY</td>
+                    <td class="label-cell">ISSUE</td>
+                </tr>
+                <tr>
+                    <td class="value-cell">{{ $shikake->qty ?? '' }}</td>
+                    <td class="value-cell">{{ $shikake->issue ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="value-cell">{{ $shikake->family ?? '' }}</td>
+                </tr>
+                
+                <!-- Row 16: Footer - SENT TO STORE / CV / DATE -->
+                <tr>
+                    <td colspan="2" class="value-cell">{{ $processData->address_store ?? '' }}</td>
+                    <td class="value-cell">{{ $shikake->conveyor ?? '' }}</td>
+                    <td class="value-cell">{{ $shikake->released_date ? \Carbon\Carbon::parse($shikake->released_date)->format('d M y') : '' }}</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </div>
 {{-- End of joint-preview-wrapper --}}

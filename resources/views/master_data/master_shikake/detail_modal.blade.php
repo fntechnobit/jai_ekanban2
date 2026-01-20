@@ -825,9 +825,9 @@
                                                     <div class="invalid-feedback" id="shield_cct_no_1-error"></div>
                                                 </div>
                                                 <div class="col-6">
-                                                    <label class="form-label small fw-semibold">Bonder No 1</label>
-                                                    <input type="text" name="process_data[bonder_no_1]" id="shield_bonder_no_1" class="form-control form-control-sm">
-                                                    <div class="invalid-feedback" id="shield_bonder_no_1-error"></div>
+                                                    <label class="form-label small fw-semibold">Address 1</label>
+                                                    <input type="text" name="process_data[address_no_1_1]" id="shield_address_no_1_1" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="shield_address_no_1_1-error"></div>
                                                 </div>
                                             </div>
                                             <!-- Pair 2 -->
@@ -838,9 +838,9 @@
                                                     <div class="invalid-feedback" id="shield_cct_no_2-error"></div>
                                                 </div>
                                                 <div class="col-6">
-                                                    <label class="form-label small fw-semibold">Bonder No 2</label>
-                                                    <input type="text" name="process_data[bonder_no_2]" id="shield_bonder_no_2" class="form-control form-control-sm">
-                                                    <div class="invalid-feedback" id="shield_bonder_no_2-error"></div>
+                                                    <label class="form-label small fw-semibold">Address 2</label>
+                                                    <input type="text" name="process_data[address_no_1_2]" id="shield_address_no_1_2" class="form-control form-control-sm">
+                                                    <div class="invalid-feedback" id="shield_address_no_1_2-error"></div>
                                                 </div>
                                             </div>
                                         </div>

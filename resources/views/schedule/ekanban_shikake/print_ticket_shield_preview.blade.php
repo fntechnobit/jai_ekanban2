@@ -1,4 +1,4 @@
-{{-- SHIELD Process Print Template - PREVIEW VERSION --}}
+{{-- SHIELD Process Print Template - PREVIEW VERSION (576px for screen) --}}
 <style>
 /* SHIELD Preview Template - Wrapper for Image + Ticket */
 .shield-preview-wrapper {
@@ -16,101 +16,85 @@
 }
 
 .shield-preview-wrapper .shikake-image-section img {
-    height: 290px;
+    height: 320px;
     width: auto;
     object-fit: contain;
     border: 1px solid #ccc;
     border-radius: 4px;
 }
 
-/* SHIELD Template Styles - 80mm ≈ 576 dots */
+/* SHIELD Preview Template - 576px for screen readability */
 .ticket-shield-preview {
     width: 576px;
     min-width: 576px;
     flex-shrink: 0;
-    box-sizing: border-box;
-    font-family: Arial, sans-serif;
     background: white;
+    margin: 0;
+    padding: 0;
+    border: 2px solid #ddd;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+.ticket-shield-preview table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.ticket-shield-preview th,
+.ticket-shield-preview td {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1.2;
+    font-size: 12px;
+    box-sizing: border-box;
+}
+
+.ticket-shield-preview thead th {
+    background-color: transparent;
+    color: #000;
+    font-weight: bold;
+    font-size: 18px;
     padding: 8px;
-    border: 1px solid #ddd;
-}
-
-.ticket-shield-preview .header {
-    text-align: center;
-    font-size: 20px;
-    font-weight: bold;
     border: 2px solid #000;
-    padding: 6px;
-    margin-bottom: 4px;
-    background: #f8d7da;
 }
 
-.ticket-shield-preview .info-table {
-    width: 100%;
-    border-collapse: collapse;
+.ticket-shield-preview .label-cell {
+    background-color: #f8f9fa;
+    font-weight: 500;
+    font-size: 10px;
+}
+
+.ticket-shield-preview .value-cell {
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.ticket-shield-preview .qrcode-cell {
+    padding: 8px;
+    vertical-align: middle;
+}
+
+.ticket-shield-preview .qrcode-cell img {
+    max-width: 70px;
+    max-height: 70px;
+    display: block;
+    margin: 0 auto;
+}
+
+.ticket-shield-preview .qrcode-placeholder {
+    width: 70px;
+    height: 70px;
+    border: 1px solid #000;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 11px;
-    margin-bottom: 4px;
-}
-
-.ticket-shield-preview .info-table th,
-.ticket-shield-preview .info-table td {
-    border: 1px solid #000;
-    padding: 3px;
-    text-align: center;
-}
-
-.ticket-shield-preview .info-table th {
-    background: #f5c6cb;
-    font-weight: bold;
-    font-size: 10px;
-}
-
-.ticket-shield-preview .detail-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 10px;
-    margin-bottom: 3px;
-}
-
-.ticket-shield-preview .detail-table td {
-    border: 1px solid #000;
-    padding: 2px 4px;
-}
-
-.ticket-shield-preview .detail-table .label {
-    font-weight: 600;
-    background: #f0f0f0;
-    text-align: center;
-}
-
-.ticket-shield-preview .detail-table .value {
-    text-align: center;
-}
-
-.ticket-shield-preview .section-header {
-    background: #000;
-    color: #fff;
-    font-weight: bold;
-    text-align: center;
-    padding: 3px;
-    font-size: 11px;
-}
-
-.ticket-shield-preview .barcode-section {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 10px;
-}
-
-.ticket-shield-preview .barcode-section td {
-    border: 1px solid #000;
-    padding: 3px;
-}
-
-.ticket-shield-preview .barcode-header {
-    text-align: center;
-    font-weight: bold;
-    background: #f5c6cb;
+    color: #000;
 }
 </style>
 
@@ -123,120 +107,131 @@
     </div>
     @endif
     
-    {{-- Ticket section (RIGHT) --}}
+    {{-- Ticket section (RIGHT) - 576px for screen readability --}}
     <div class="ticket-shield-preview">
-    <div class="header">
-        E-KANBAN SHIKAKE - SHIELD
-    </div>
-
-    <table class="info-table">
-        <thead>
-            <tr>
-                <th>SHIELD NO</th>
-                <th>ADDRESS</th>
-                <th>BLADE</th>
-                <th>MACHINE</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>{{ $processData->shield_no ?? '' }}</strong></td>
-                <td>{{ $processData->address ?? '' }}</td>
-                <td>{{ $processData->blade ?? '' }}</td>
-                <td>{{ $shikake->machine ?? '' }}</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <!-- CCT/Bonder Pairs Section -->
-    <table class="detail-table">
-        <tr>
-            <td class="label" style="width: 20%;">CCT No 1</td>
-            <td class="value" style="width: 30%;">{{ $processData->cct_no_1 ?? '' }}</td>
-            <td class="label" style="width: 20%;">Bonder No 1</td>
-            <td class="value" style="width: 30%;">{{ $processData->bonder_no_1 ?? '' }}</td>
-        </tr>
-        <tr>
-            <td class="label">CCT No 2</td>
-            <td class="value">{{ $processData->cct_no_2 ?? '' }}</td>
-            <td class="label">Bonder No 2</td>
-            <td class="value">{{ $processData->bonder_no_2 ?? '' }}</td>
-        </tr>
-    </table>
-
-    <!-- TO Section -->
-    <table class="detail-table" style="margin-top: 3px;">
-        <tr>
-            <td colspan="9" class="section-header">TO DESTINATIONS</td>
-        </tr>
-        <tr>
-            <td class="label" style="width: 11%;">To 1</td>
-            <td class="label" style="width: 11%;">To 2</td>
-            <td class="label" style="width: 11%;">To 3</td>
-            <td class="label" style="width: 11%;">To 4</td>
-            <td class="label" style="width: 12%;">To 5</td>
-            <td class="label" style="width: 11%;">To 6</td>
-            <td class="label" style="width: 11%;">To 7</td>
-            <td class="label" style="width: 11%;">To 8</td>
-            <td class="label" style="width: 11%;">To 9</td>
-        </tr>
-        <tr>
-            <td class="value">{{ $processData->to_1 ?? '' }}</td>
-            <td class="value">{{ $processData->to_2 ?? '' }}</td>
-            <td class="value">{{ $processData->to_3 ?? '' }}</td>
-            <td class="value">{{ $processData->to_4 ?? '' }}</td>
-            <td class="value">{{ $processData->to_5 ?? '' }}</td>
-            <td class="value">{{ $processData->to_6 ?? '' }}</td>
-            <td class="value">{{ $processData->to_7 ?? '' }}</td>
-            <td class="value">{{ $processData->to_8 ?? '' }}</td>
-            <td class="value">{{ $processData->to_9 ?? '' }}</td>
-        </tr>
-    </table>
-
-    <!-- Info Row -->
-    <table class="detail-table" style="margin-top: 3px;">
-        <tr>
-            <td class="label" style="width: 15%;">Conveyor</td>
-            <td class="value" style="width: 20%;">{{ $shikake->conveyor ?? '' }}</td>
-            <td class="label" style="width: 15%;">Family</td>
-            <td class="value" style="width: 15%;">{{ $shikake->family ?? '' }}</td>
-            <td class="label" style="width: 10%;">Qty</td>
-            <td class="value" style="width: 10%;">{{ $shikake->qty ?? '' }}</td>
-            <td class="label" style="width: 10%;">Issue</td>
-            <td class="value" style="width: 5%;">{{ $shikake->issue ?? '' }}</td>
-        </tr>
-    </table>
-
-    <!-- BARCODE SECTION -->
-    <table class="barcode-section" style="margin-top: 3px;">
-        <tr>
-            <td class="barcode-header" style="width: 50%;">BARCODE KANBAN</td>
-            <td class="barcode-header" style="width: 50%;">INFO</td>
-        </tr>
-        <tr>
-            <td style="text-align: center; vertical-align: middle; padding: 8px;">
-                @if(isset($shikake->qr_code_path))
-                    <img src="{{ $shikake->qr_code_path }}" style="width: 100px; height: 100px;" alt="QR Code">
-                    <div style="font-size: 9px; margin-top: 2px;">{{ $shikake->barcode_kanban ?? "" }}</div>
-                @else
-                    <div style="width: 80px; height: 80px; margin: 3px auto; border: 1px solid #000;"></div>
-                @endif
-            </td>
-            <td style="text-align: center; vertical-align: middle; padding: 8px;">
-                <div style="font-size: 12px; line-height: 1.5;">
-                    <strong>Shield No:</strong> {{ $processData->shield_no ?? '' }}<br>
-                    <strong>Blade:</strong> {{ $processData->blade ?? '' }}<br>
-                    <strong>Machine:</strong> {{ $shikake->machine ?? '' }}
-                </div>
-                @if($shikake->released_date)
-                    <div style="margin-top: 4px; font-size: 10px;">Released: {{ \Carbon\Carbon::parse($shikake->released_date)->format('d M Y') }}</div>
-                @endif
-                @if($shikake->released_note)
-                    <div style="margin-top: 4px; font-size: 10px;">{{ $shikake->released_note }}</div>
-                @endif
-            </td>
-        </tr>
-    </table>
+        <table>
+            <colgroup>
+                <col style="width: 25%">
+                <col style="width: 25%">
+                <col style="width: 25%">
+                <col style="width: 25%">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th colspan="4">EKANBAN SHIELD WIRE</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Row 1: DRAWING NO / ADDRESS Labels -->
+                <tr>
+                    <td colspan="2" class="label-cell">DRAWING NO</td>
+                    <td colspan="2" class="label-cell">ADDRESS</td>
+                </tr>
+                <!-- Row 2: DRAWING NO / ADDRESS Values -->
+                <tr>
+                    <td colspan="2" class="value-cell">{{ $processData->shield_no ?? '' }}</td>
+                    <td colspan="2" class="value-cell">{{ $processData->address ?? '' }}</td>
+                </tr>
+                
+                <!-- Row 3: CCT NO 1 / ADDRESS 1 / QTY / ISSUE Labels -->
+                <tr>
+                    <td class="label-cell">CCT NO 1</td>
+                    <td class="label-cell">ADDRESS 1</td>
+                    <td class="label-cell">QTY</td>
+                    <td class="label-cell">ISSUE</td>
+                </tr>
+                <!-- Row 4: CCT NO 1 / ADDRESS 1 / QTY / ISSUE Values -->
+                <tr>
+                    <td class="value-cell">{{ $processData->cct_no_1 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->address_no_1_1 ?? '' }}</td>
+                    <td class="value-cell">{{ $shikake->qty ?? '' }}</td>
+                    <td class="value-cell">{{ $shikake->issue ?? '' }}</td>
+                </tr>
+                
+                <!-- Row 5: CCT NO 2 / ADDRESS 2 + QRCODE KANBAN Label -->
+                <tr>
+                    <td class="value-cell">{{ $processData->cct_no_2 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->address_no_1_2 ?? '' }}</td>
+                    <td colspan="2" class="label-cell">QRCODE KANBAN</td>
+                </tr>
+                
+                <!-- Row 6: MACHINE Label + QR Code (rowspan=4) -->
+                <tr>
+                    <td colspan="2" class="label-cell">MACHINE</td>
+                    <td colspan="2" rowspan="4" class="qrcode-cell">
+                        @if(isset($shikake->qr_code_path))
+                            <img src="{{ $shikake->qr_code_path }}" alt="QR Code">
+                        @else
+                            <div class="qrcode-placeholder">QR CODE</div>
+                        @endif
+                    </td>
+                </tr>
+                <!-- Row 7: MACHINE Value -->
+                <tr>
+                    <td colspan="2" class="value-cell">{{ $shikake->machine ?? '' }}</td>
+                </tr>
+                <!-- Row 8: SEQ / BLADE Labels -->
+                <tr>
+                    <td class="label-cell">SEQ</td>
+                    <td class="label-cell">BLADE</td>
+                </tr>
+                <!-- Row 9: SEQ / BLADE Values -->
+                <tr>
+                    <td class="value-cell">{{ $shikake->sequence ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->blade ?? '' }}</td>
+                </tr>
+                
+                <!-- Row 10: TO 1-4 Labels -->
+                <tr>
+                    <td class="label-cell">TO 1</td>
+                    <td class="label-cell">TO 2</td>
+                    <td class="label-cell">TO 3</td>
+                    <td class="label-cell">TO 4</td>
+                </tr>
+                <!-- Row 11: TO 1-4 Values -->
+                <tr>
+                    <td class="value-cell">{{ $processData->to_1 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->to_2 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->to_3 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->to_4 ?? '' }}</td>
+                </tr>
+                <!-- Row 12: TO 5-8 Labels -->
+                <tr>
+                    <td class="label-cell">TO 5</td>
+                    <td class="label-cell">TO 6</td>
+                    <td class="label-cell">TO 7</td>
+                    <td class="label-cell">TO 8</td>
+                </tr>
+                <!-- Row 13: TO 5-8 Values -->
+                <tr>
+                    <td class="value-cell">{{ $processData->to_5 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->to_6 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->to_7 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->to_8 ?? '' }}</td>
+                </tr>
+                
+                <!-- Row 14: TO 9 / DATE / CV / FAMILY Labels -->
+                <tr>
+                    <td class="label-cell">TO 9</td>
+                    <td class="label-cell">DATE</td>
+                    <td class="label-cell">CV</td>
+                    <td class="label-cell">FAMILY</td>
+                </tr>
+                <!-- Row 15: TO 9 / DATE / CV / FAMILY Values -->
+                <tr>
+                    <td class="value-cell">{{ $processData->to_9 ?? '' }}</td>
+                    <td class="value-cell">{{ $shikake->released_date ? \Carbon\Carbon::parse($shikake->released_date)->format('d-M-y') : '' }}</td>
+                    <td class="value-cell">{{ $shikake->conveyor ?? '' }}</td>
+                    <td class="value-cell">{{ $shikake->family ?? '' }}</td>
+                </tr>
+                
+                <!-- Row 16: NOTE / RELEASED NOTE -->
+                <tr>
+                    <td class="label-cell">NOTE</td>
+                    <td colspan="3" class="value-cell">{{ $shikake->released_note ?? '' }}</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </div>
 {{-- End of shield-preview-wrapper --}}

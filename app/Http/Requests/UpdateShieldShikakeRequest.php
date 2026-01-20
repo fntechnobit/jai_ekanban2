@@ -31,11 +31,11 @@ class UpdateShieldShikakeRequest extends FormRequest
             'process_data.address' => 'nullable|string|max:255',
             'process_data.blade' => 'nullable|string|max:255',
             
-            // CCT/Bonder pairs
+            // CCT/Address pairs
             'process_data.cct_no_1' => 'nullable|string|max:255',
-            'process_data.bonder_no_1' => 'nullable|string|max:255',
+            'process_data.address_no_1_1' => 'nullable|string|max:255',
             'process_data.cct_no_2' => 'nullable|string|max:255',
-            'process_data.bonder_no_2' => 'nullable|string|max:255',
+            'process_data.address_no_1_2' => 'nullable|string|max:255',
             
             // To fields (1-9)
             'process_data.to_1' => 'nullable|string|max:255',

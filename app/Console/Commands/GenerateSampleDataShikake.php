@@ -440,9 +440,9 @@ class GenerateSampleDataShikake extends Command
                 $shared['address'] = 'ADDR-' . chr(65 + ($identifierIndex % 5));
                 $shared['blade'] = 'BLADE-' . str_pad(rand(1, 10), 2, '0', STR_PAD_LEFT);
                 $shared['cct_no_1'] = 'CCT-1-' . $identifierIndex;
-                $shared['bonder_no_1'] = 'BND-1-' . $identifierIndex;
+                $shared['address_no_1_1'] = 'ADDR-1-' . $identifierIndex;
                 $shared['cct_no_2'] = 'CCT-2-' . $identifierIndex;
-                $shared['bonder_no_2'] = 'BND-2-' . $identifierIndex;
+                $shared['address_no_1_2'] = 'ADDR-2-' . $identifierIndex;
                 for ($i = 1; $i <= 9; $i++) {
                     $shared["to_{$i}"] = 'TO-' . $i . '-' . chr(65 + (($identifierIndex + $i) % 5));
                 }
@@ -601,9 +601,9 @@ class GenerateSampleDataShikake extends Command
                     $sharedData['address'],
                     $sharedData['blade'],
                     $sharedData['cct_no_1'],
-                    $sharedData['bonder_no_1'],
+                    $sharedData['address_no_1_1'],
                     $sharedData['cct_no_2'],
-                    $sharedData['bonder_no_2'],
+                    $sharedData['address_no_1_2'],
                 ];
                 for ($i = 1; $i <= 9; $i++) {
                     $data[] = $sharedData["to_{$i}"];

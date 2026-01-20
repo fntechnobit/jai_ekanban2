@@ -146,10 +146,10 @@ class ShikakeTemplateConfig
             'Address',            // 10
             'Blade',              // 11
             'CCT No 1',           // 12
-            'Bonder No 1',        // 13
-            'CCT No 2',           // 13
-            'Bonder No 2',        // 14
-            'To 1',               // 15
+            'Address 1',          // 13
+            'CCT No 2',           // 14
+            'Address 2',          // 15
+            'To 1',               // 16
             'To 2',               // 16
             'To 3',               // 17
             'To 4',               // 18
