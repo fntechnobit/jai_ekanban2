@@ -19,11 +19,7 @@ class UpdateTwistShikakeRequest extends FormRequest
             'process' => 'required|string',
             'machine' => 'nullable|string|max:255',
             'qty' => 'nullable|integer|min:0',
-            'issue' => 'nullable|string|max:255',
-            'barcode_kanban' => 'nullable|string|max:255',
             'family' => 'nullable|string|max:255',
-            'released_date' => 'nullable|date',
-            'released_note' => 'nullable|string|max:500',
             'sequence' => 'nullable|integer|min:0',
             
             // TWIST process-specific fields

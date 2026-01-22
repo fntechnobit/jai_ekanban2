@@ -38,11 +38,6 @@
                             </div>
 
                             <div class="mb-3">
-                                <label>Issue</label>
-                                <input type="text" name="issue" id="issue" class="form-control form-control-sm">
-                            </div>
-
-                            <div class="mb-3">
                                 <label>Machine</label>
                                 <input type="text" name="machine" id="machine" class="form-control form-control-sm">
                             </div>
@@ -50,21 +45,6 @@
                             <div class="mb-3">
                                 <label>Sequence</label>
                                 <input type="text" name="sequence" id="sequence" class="form-control form-control-sm">
-                            </div>
-
-                            <div class="mb-3">
-                                <label>Barcode Kanban</label>
-                                <input type="text" name="barcode_kanban" id="barcode_kanban" class="form-control form-control-sm">
-                            </div>
-
-                            <div class="mb-3">
-                                <label>Released Date</label>
-                                <input type="date" name="released_date" id="released_date" class="form-control form-control-sm">
-                            </div>
-
-                            <div class="mb-3">
-                                <label>Released Note</label>
-                                <textarea name="released_note" id="released_note" class="form-control form-control-sm" rows="2"></textarea>
                             </div>
 
                             <div class="mb-3">

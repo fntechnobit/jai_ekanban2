@@ -291,7 +291,7 @@
         </td>
       </tr>
       <tr>
-        <td style="text-align: left;">{{ $circuit->released_date ? \Carbon\Carbon::parse($circuit->released_date)->format('d M Y') : '' }}</td>
+        <td style="text-align: left;">{{ $circuit->release_date ? \Carbon\Carbon::parse($circuit->release_date)->format('d M Y') : '' }}</td>
       </tr>
       <tr>
         <td style="text-align: left;">{{ $circuit->released_note ?? '' }}</td>

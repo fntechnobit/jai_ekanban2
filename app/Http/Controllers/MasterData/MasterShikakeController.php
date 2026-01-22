@@ -180,11 +180,6 @@ class MasterShikakeController extends Controller
                 // Convert to array to prevent auto-serialization
                 $data = $shikake->toArray();
                 
-                // Format date for HTML date input
-                if ($shikake->released_date) {
-                    $data['released_date'] = $shikake->released_date->format('Y-m-d');
-                }
-                
                 // Load process-specific child table data
                 $data['process_data'] = [];
                 switch ($shikake->process) {

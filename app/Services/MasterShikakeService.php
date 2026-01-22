@@ -28,8 +28,6 @@ class MasterShikakeService
                 'master_shikake.conveyor as shikake_conveyor',
                 'master_shikake.machine',
                 'master_shikake.qty',
-                'master_shikake.issue',
-                'master_shikake.barcode_kanban',
                 'master_shikake.family',
                 'master_shikake.sequence',
                 'master_conveyor.conveyor',

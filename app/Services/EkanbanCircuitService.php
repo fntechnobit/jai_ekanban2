@@ -42,7 +42,7 @@ class EkanbanCircuitService
                   ->orHaving('master_circuit.cct_code', 'like', "%{$searchValue}%")
                   ->orHaving('master_circuit.machine', 'like', "%{$searchValue}%")
                   ->orHaving('master_circuit.family', 'like', "%{$searchValue}%")
-                  ->orHaving(DB::raw('GROUP_CONCAT(DISTINCT master_circuit.barcode_kanban ORDER BY master_circuit.issue SEPARATOR ", ")'), 'like', "%{$searchValue}%");
+                  ->orHaving(DB::raw('GROUP_CONCAT(DISTINCT assy_schedule_circuit.barcode_kanban ORDER BY assy_schedule_circuit.issue SEPARATOR ", ")'), 'like', "%{$searchValue}%");
             });
         }
 
@@ -150,6 +150,11 @@ class EkanbanCircuitService
             ->join('master_assy', 'assy_schedule.assy', '=', 'master_assy.assy')
             ->join('master_circuit_assy', 'master_assy.id', '=', 'master_circuit_assy.master_assy_id')
             ->join('master_circuit', 'master_circuit_assy.master_circuit_id', '=', 'master_circuit.id')
+            ->leftJoin('assy_schedule_circuit', function($join) {
+                $join->on('assy_schedule.id', '=', 'assy_schedule_circuit.assy_schedule_id')
+                     ->on('master_circuit.cct_no', '=', 'assy_schedule_circuit.cct_no')
+                     ->on('master_circuit.cct_code', '=', 'assy_schedule_circuit.cct_code');
+            })
             ->leftJoin('listing_stage', 'assy_schedule.listing_id', '=', 'listing_stage.id')
             ->where('assy_schedule.is_lock', '!=', 0)
             ->where(function($query) use ($conditions) {
@@ -177,9 +182,6 @@ class EkanbanCircuitService
                 'master_circuit.cl',
                 'master_circuit.machine',
                 'master_circuit.sequence',
-                'master_circuit.barcode_kanban',
-                'master_circuit.released_date',
-                'master_circuit.released_note',
                 'master_circuit.terminal_1',
                 'master_circuit.note_1',
                 'master_circuit.gold_1',
@@ -199,7 +201,6 @@ class EkanbanCircuitService
                 'master_circuit.ta',
                 'master_circuit.tb',
                 'master_circuit.qty',
-                'master_circuit.issue',
                 'master_circuit.address',
                 'master_circuit.t01',
                 'master_circuit.t02',
@@ -209,10 +210,15 @@ class EkanbanCircuitService
                 'master_circuit.t06',
                 'master_circuit.remark_1',
                 'master_circuit.remark_2',
-                'master_circuit.barcode_mesin'
+                'master_circuit.barcode_mesin',
+                'master_circuit.released_note',
+                // Kanban fields from assy_schedule_circuit (strict mode)
+                'assy_schedule_circuit.issue',
+                'assy_schedule_circuit.barcode_kanban',
+                'assy_schedule_circuit.release_date'
             ])
             ->orderBy('master_circuit.cct_no')
-            ->orderBy('master_circuit.issue')
+            ->orderBy('assy_schedule_circuit.issue')
             ->get();
     }
 
@@ -245,8 +251,8 @@ class EkanbanCircuitService
                 'assy_schedule.shift',
                 'assy_schedule.cutoff',
                 // Aggregated fields for grouping
-                DB::raw('GROUP_CONCAT(DISTINCT master_circuit.id ORDER BY master_circuit.issue) as circuit_ids'),
-                DB::raw('GROUP_CONCAT(DISTINCT master_circuit.barcode_kanban ORDER BY master_circuit.issue SEPARATOR ", ") as barcodes'),
+                DB::raw('GROUP_CONCAT(DISTINCT master_circuit.id ORDER BY assy_schedule_circuit.issue) as circuit_ids'),
+                DB::raw('GROUP_CONCAT(DISTINCT assy_schedule_circuit.barcode_kanban ORDER BY assy_schedule_circuit.issue SEPARATOR ", ") as barcodes'),
                 DB::raw('COUNT(DISTINCT master_circuit.id) as issue_count'),
                 // Print status from group table
                 'assy_schedule_circuit.is_printed',

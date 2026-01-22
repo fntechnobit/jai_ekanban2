@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ProcessType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -16,12 +17,27 @@ class AssyScheduleShikake extends Model
         'last_printed_at',
         'last_printed_by',
         'print_count',
+        // Kanban generation fields
+        'issue',
+        'nomor_urut',
+        'barcode_kanban',
+        'release_date',
+        'qty_listing',
+        'qty_kanban',
+        'cutoff',
+        'process',
     ];
 
     protected $casts = [
         'is_printed' => 'boolean',
         'last_printed_at' => 'datetime',
         'print_count' => 'integer',
+        'release_date' => 'date',
+        'qty_listing' => 'integer',
+        'qty_kanban' => 'integer',
+        'cutoff' => 'integer',
+        'nomor_urut' => 'integer',
+        'process' => ProcessType::class,
     ];
 
     /**
@@ -46,5 +62,53 @@ class AssyScheduleShikake extends Model
     public function printedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'last_printed_by');
+    }
+    
+    /**
+     * Format issue as XXX/YYY
+     */
+    public function getFormattedIssueAttribute(): string
+    {
+        return $this->issue ?? '';
+    }
+    
+    /**
+     * Format nomor urut as 4-digit padded
+     */
+    public function getFormattedNomorUrutAttribute(): string
+    {
+        return str_pad($this->nomor_urut ?? 0, 4, '0', STR_PAD_LEFT);
+    }
+    
+    /**
+     * Scope for specific cutoff
+     */
+    public function scopeCutoff($query, int $cutoff)
+    {
+        return $query->where('cutoff', $cutoff);
+    }
+    
+    /**
+     * Scope for specific process type
+     */
+    public function scopeProcess($query, ProcessType $process)
+    {
+        return $query->where('process', $process->value);
+    }
+    
+    /**
+     * Scope for printed
+     */
+    public function scopePrinted($query)
+    {
+        return $query->where('is_printed', true);
+    }
+    
+    /**
+     * Scope for not printed
+     */
+    public function scopeNotPrinted($query)
+    {
+        return $query->where('is_printed', false);
     }
 }

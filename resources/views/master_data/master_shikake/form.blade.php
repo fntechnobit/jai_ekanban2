@@ -38,11 +38,6 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label>Barcode</label>
-                                    <input type="text" name="barcode_kanban" class="form-control form-control-sm" value="{{ $shikake->barcode_kanban ?? '' }}">
-                                </div>
-
-                                <div class="mb-3">
                                     <label>Family</label>
                                     <input type="text" name="family" class="form-control form-control-sm" value="{{ $shikake->family ?? '' }}">
                                 </div>
@@ -70,11 +65,6 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label>Issue</label>
-                                    <input type="text" name="issue" class="form-control form-control-sm" value="{{ $shikake->issue ?? '' }}">
-                                </div>
-
-                                <div class="mb-3">
                                     <label>Machine</label>
                                     <input type="text" name="machine" class="form-control form-control-sm" value="{{ $shikake->machine ?? '' }}">
                                 </div>
@@ -82,16 +72,6 @@
                                 <div class="mb-3">
                                     <label>Sequence</label>
                                     <input type="number" name="sequence" class="form-control form-control-sm" value="{{ $shikake->sequence ?? '' }}">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label>Released Date</label>
-                                    <input type="date" name="released_date" class="form-control form-control-sm" value="{{ $shikake->released_date ? $shikake->released_date->format('Y-m-d') : '' }}">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label>Released Note</label>
-                                    <textarea name="released_note" class="form-control form-control-sm" rows="3">{{ $shikake->released_note ?? '' }}</textarea>
                                 </div>
 
                                 <div class="mb-3">

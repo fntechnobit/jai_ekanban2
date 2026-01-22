@@ -231,6 +231,9 @@ class MasterShikakeImport
     protected function mapRowToData($rowData, $conveyor)
     {
         // Map Excel columns to database fields based on Template_Shikake.xlsx structure
+        // Note: issue, barcode_kanban, released_date are no longer imported
+        // These fields are now generated dynamically in assy_schedule_shikake table
+        // released_note remains in master_shikake as it's a static field
         return [
             'conveyor_id' => $this->conveyorId,
             'conveyor' => ImportHelper::cleanValue($rowData[0] ?? null),           // Column A
@@ -238,12 +241,8 @@ class MasterShikakeImport
             'shikake_no' => ImportHelper::cleanValue($rowData[1] ?? null),         // Column B
             'family' => ImportHelper::cleanValue($rowData[2] ?? null),             // Column C
             'qty' => ImportHelper::cleanNumeric($rowData[3] ?? null),              // Column D
-            'issue' => ImportHelper::cleanValue($rowData[4] ?? null),              // Column E
             'machine' => ImportHelper::cleanValue($rowData[5] ?? null),            // Column F
             'sequence' => ImportHelper::cleanNumeric($rowData[6] ?? null),         // Column G
-            'barcode_kanban' => ImportHelper::cleanValue($rowData[7] ?? null),     // Column H
-            'released_date' => ImportHelper::cleanDate($rowData[8] ?? null),       // Column I
-            'released_note' => ImportHelper::cleanValue($rowData[9] ?? null),      // Column J
             'store' => ImportHelper::cleanValue($rowData[10] ?? null),             // Column K
             'barcode_mesin' => ImportHelper::cleanValue($rowData[11] ?? null),     // Column L
             'address' => ImportHelper::cleanValue($rowData[12] ?? null),           // Column M

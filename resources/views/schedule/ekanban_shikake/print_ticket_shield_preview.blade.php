@@ -220,7 +220,7 @@
                 <!-- Row 15: TO 9 / DATE / CV / FAMILY Values -->
                 <tr>
                     <td class="value-cell">{{ $processData->to_9 ?? '' }}</td>
-                    <td class="value-cell">{{ $shikake->released_date ? \Carbon\Carbon::parse($shikake->released_date)->format('d-M-y') : '' }}</td>
+                    <td class="value-cell">{{ $shikake->release_date ? \Carbon\Carbon::parse($shikake->release_date)->format('d-M-y') : '' }}</td>
                     <td class="value-cell">{{ $shikake->conveyor ?? '' }}</td>
                     <td class="value-cell">{{ $shikake->family ?? '' }}</td>
                 </tr>

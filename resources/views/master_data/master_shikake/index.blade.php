@@ -62,7 +62,6 @@
                                 <th width="5%">No</th>
                                 <th>Conveyor</th>
                                 <th>Identifier</th>
-                                <th>Barcode</th>
                                 <th>Family</th>
                                 <th>Process</th>
                                 <th>Qty.</th>
@@ -110,7 +109,6 @@
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                     { data: 'conveyor_name', name: 'conveyor' },
                     { data: 'identifier', name: 'identifier', orderable: false, searchable: false },
-                    { data: 'barcode_kanban', name: 'barcode_kanban' },
                     { data: 'family', name: 'family' },
                     { data: 'process', name: 'process', orderable: false },
                     { data: 'qty', name: 'qty' },
@@ -351,10 +349,6 @@
                 $('#family').val(data.family);
                 $('#sequence').val(data.sequence);
                 $('#qty').val(data.qty);
-                $('#issue').val(data.issue);
-                $('#barcode_kanban').val(data.barcode_kanban);
-                $('#released_date').val(data.released_date || '');
-                $('#released_note').val(data.released_note);
             }
 
             // Helper function to populate process-specific fields

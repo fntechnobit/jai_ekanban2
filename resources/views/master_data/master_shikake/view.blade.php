@@ -43,28 +43,12 @@
                                     <td>{{ $shikake->qty ?? '-' }}</td>
                                 </tr>
                                 <tr>
-                                    <th>Issue:</th>
-                                    <td>{{ $shikake->issue ?? '-' }}</td>
-                                </tr>
-                                <tr>
                                     <th>Machine:</th>
                                     <td>{{ $shikake->machine ?? '-' }}</td>
                                 </tr>
                                 <tr>
                                     <th>Sequence:</th>
                                     <td>{{ $shikake->sequence ?? '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Barcode Kanban:</th>
-                                    <td>{{ $shikake->barcode_kanban ?? '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Released Date:</th>
-                                    <td>{{ $shikake->released_date ? $shikake->released_date->format('Y-m-d') : '-' }}</td>
-                                </tr>
-                                <tr>
-                                    <th>Released Note:</th>
-                                    <td>{{ $shikake->released_note ?? '-' }}</td>
                                 </tr>
                                 <tr>
                                     <th>Store:</th>

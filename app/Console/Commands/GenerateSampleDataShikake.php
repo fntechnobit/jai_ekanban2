@@ -375,13 +375,13 @@ class GenerateSampleDataShikake extends Command
      */
     protected function generateSharedShikakeData($processType, $identifierIndex)
     {
+        // Note: released_date, released_note are no longer in master tables
+        // These fields are now generated dynamically in assy_schedule_shikake table
         $shared = [
             'conveyor' => 'CONV-' . str_pad($identifierIndex, 3, '0', STR_PAD_LEFT),
             'machine' => $this->machineList[($identifierIndex - 1) % count($this->machineList)],
             'qty' => rand(50, 500),
             'family' => 'FAM-' . chr(65 + ($identifierIndex % 5)),
-            'released_date' => date('Y-m-d', strtotime('+' . rand(1, 30) . ' days')),
-            'released_note' => 'Note for group ' . $identifierIndex,
         ];
 
         // Add process-specific shared data (identifiers)
@@ -467,13 +467,14 @@ class GenerateSampleDataShikake extends Command
      */
     protected function generateSharedCircuitData($identifierIndex)
     {
+        // Note: released_note is no longer in master tables
+        // This field is now generated dynamically in assy_schedule_circuit table
         return [
             'conveyor' => 'CONV-' . str_pad($identifierIndex, 3, '0', STR_PAD_LEFT),
             'cct_no' => 'CCT-' . str_pad($identifierIndex, 4, '0', STR_PAD_LEFT),
             'family' => 'FAM-' . chr(65 + ($identifierIndex % 5)),
             'qty' => rand(50, 500),
             'machine' => $this->machineList[($identifierIndex - 1) % count($this->machineList)],
-            'released_note' => 'Note for group ' . $identifierIndex,
             'cust_no' => 'CUST-' . str_pad(rand(1, 100), 3, '0', STR_PAD_LEFT),
             'address' => 'ADDR-' . chr(65 + ($identifierIndex % 5)),
             'cct_code' => 'CODE-' . str_pad($identifierIndex, 3, '0', STR_PAD_LEFT),
@@ -515,20 +516,16 @@ class GenerateSampleDataShikake extends Command
      */
     protected function generateShikakeRowData($processType, $sharedData, $issueNum, $issueCount, $globalRowIndex)
     {
-        $issue = $this->generateIssueFormat($issueNum, $issueCount);
         $uniqueSuffix = str_pad($globalRowIndex, 6, '0', STR_PAD_LEFT);
 
-        // Base data (columns 0-8)
+        // Base data (columns 0-6) - NEW STRUCTURE
         $baseData = [
-            $sharedData['conveyor'],           // Conveyor
-            $sharedData['machine'],            // Machine
-            $sharedData['qty'],                // QTY
-            $issue,                            // Issue
-            'BK-' . $uniqueSuffix,             // Barcode Kanban (unique)
-            $sharedData['family'],             // Family
-            $sharedData['released_date'],      // Released Date
-            $sharedData['released_note'],      // Released Note
-            $issueNum,                         // Sequence (reset per group)
+            $sharedData['carline'] ?? 'CL-' . rand(1, 5),  // Carline
+            $sharedData['conveyor'],                       // Conveyor
+            $sharedData['machine'],                        // Machine
+            $sharedData['qty'],                            // QTY
+            $sharedData['family'],                         // Family
+            $issueNum,                                     // Sequence (reset per group)
         ];
 
         // Process-specific data

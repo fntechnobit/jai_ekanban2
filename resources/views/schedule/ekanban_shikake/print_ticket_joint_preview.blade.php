@@ -235,7 +235,7 @@
                 <tr>
                     <td colspan="2" class="value-cell">{{ $processData->address_store ?? '' }}</td>
                     <td class="value-cell">{{ $shikake->conveyor ?? '' }}</td>
-                    <td class="value-cell">{{ $shikake->released_date ? \Carbon\Carbon::parse($shikake->released_date)->format('d M y') : '' }}</td>
+                    <td class="value-cell">{{ $shikake->release_date ? \Carbon\Carbon::parse($shikake->release_date)->format('d M y') : '' }}</td>
                 </tr>
             </tbody>
         </table>

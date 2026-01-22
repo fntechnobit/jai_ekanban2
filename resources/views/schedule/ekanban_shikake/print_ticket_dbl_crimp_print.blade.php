@@ -225,7 +225,7 @@
         </tr>
         <tr>
             <td class="label">Released Date</td>
-            <td class="value">{{ $shikake->released_date ? \Carbon\Carbon::parse($shikake->released_date)->format('d M Y') : '' }}</td>
+            <td class="value">{{ $shikake->release_date ? \Carbon\Carbon::parse($shikake->release_date)->format('d M Y') : '' }}</td>
             <td class="label" colspan="1">Released Note</td>
             <td class="value" colspan="1">{{ $shikake->released_note ?? '' }}</td>
         </tr>

@@ -48,33 +48,13 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label>Issue</label>
-                                    <input type="text" name="issue" class="form-control form-control-sm" value="{{ $circuit->issue ?? '' }}">
-                                </div>
-
-                                <div class="mb-3">
                                     <label>Machine Sequence</label>
                                     <input type="text" name="machine_sequence" class="form-control form-control-sm" value="{{ $circuit->machine_sequence ?? '' }}">
                                 </div>
 
                                 <div class="mb-3">
-                                    <label>Barcode Kanban</label>
-                                    <input type="text" name="barcode_kanban" class="form-control form-control-sm" value="{{ $circuit->barcode_kanban ?? '' }}">
-                                </div>
-
-                                <div class="mb-3">
                                     <label>Kanban</label>
                                     <input type="text" name="kanban" class="form-control form-control-sm" value="{{ $circuit->kanban ?? '' }}">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label>Released Date</label>
-                                    <input type="date" name="released_date" class="form-control form-control-sm" value="{{ $circuit->released_date ? $circuit->released_date->format('Y-m-d') : '' }}">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label>Released Note</label>
-                                    <textarea name="released_note" class="form-control form-control-sm" rows="3">{{ $circuit->released_note ?? '' }}</textarea>
                                 </div>
 
                                 <div class="mb-3">

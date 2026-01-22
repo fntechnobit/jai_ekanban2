@@ -66,30 +66,6 @@
                                         <input type="number" name="qty" id="qty" class="form-control form-control-sm">
                                         <div class="invalid-feedback" id="qty-error"></div>
                                     </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Issue</label>
-                                        <input type="text" name="issue" id="issue" class="form-control form-control-sm">
-                                        <div class="invalid-feedback" id="issue-error"></div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Barcode Kanban</label>
-                                        <input type="text" name="barcode_kanban" id="barcode_kanban" class="form-control form-control-sm">
-                                        <div class="invalid-feedback" id="barcode_kanban-error"></div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Released Date</label>
-                                        <input type="date" name="released_date" id="released_date" class="form-control form-control-sm">
-                                        <div class="invalid-feedback" id="released_date-error"></div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">Released Note</label>
-                                        <textarea name="released_note" id="released_note" class="form-control form-control-sm" rows="2"></textarea>
-                                        <div class="invalid-feedback" id="released_note-error"></div>
-                                    </div>
                                 </div>
                             </div>
                         </div>

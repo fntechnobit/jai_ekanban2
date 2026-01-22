@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DefectController;
 use App\Http\Controllers\System\UserController;
 use App\Http\Controllers\System\UserGroupController;
 use App\Http\Controllers\System\MenuController;
@@ -128,5 +129,24 @@ Route::middleware('auth')->group(function () {
         Route::get('ekanban-shikake/print-preview', [EkanbanShikakeController::class, 'printPreview'])->name('ekanban-shikake.print-preview');
         Route::post('ekanban-shikake/print', [EkanbanShikakeController::class, 'print'])->name('ekanban-shikake.print');
         Route::get('ekanban-shikake/machines-by-conveyor', [EkanbanShikakeController::class, 'getMachinesByConveyor'])->name('ekanban-shikake.machines-by-conveyor');
+    });
+
+    // Defect Module Routes
+    Route::prefix('defect')->name('defect.')->group(function () {
+        // Defect Cutting
+        Route::get('cutting', [DefectController::class, 'cuttingIndex'])->name('cutting.index');
+        Route::post('cutting', [DefectController::class, 'cuttingStore'])->name('cutting.store');
+        Route::get('cutting/circuits', [DefectController::class, 'getCircuits'])->name('cutting.circuits');
+        Route::get('cutting/balance', [DefectController::class, 'getCircuitBalance'])->name('cutting.balance');
+        
+        // Defect Shikake
+        Route::get('shikake', [DefectController::class, 'shikakeIndex'])->name('shikake.index');
+        Route::post('shikake', [DefectController::class, 'shikakeStore'])->name('shikake.store');
+        Route::get('shikake/list', [DefectController::class, 'getShikakes'])->name('shikake.list');
+        Route::get('shikake/balance', [DefectController::class, 'getShikakeBalance'])->name('shikake.balance');
+        
+        // Defect History
+        Route::get('history', [DefectController::class, 'history'])->name('history');
+        Route::get('summary', [DefectController::class, 'getSummary'])->name('summary');
     });
 });

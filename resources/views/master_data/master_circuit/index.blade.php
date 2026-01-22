@@ -55,10 +55,8 @@
                             <th>CCT No</th>
                             <th>Family</th>
                             <th>QTY</th>
-                            <th>Issue</th>
                             <th>Machine</th>
                             <th>Sequence</th>
-                            <th>Barcode Kanban</th>
                             <th width="12%">Action</th>
                         </tr>
                     </thead>
@@ -103,10 +101,8 @@
                     { data: 'cct_no', name: 'cct_no' },
                     { data: 'family', name: 'family' },
                     { data: 'qty', name: 'qty' },
-                    { data: 'issue', name: 'issue' },
                     { data: 'machine', name: 'machine' },
                     { data: 'sequence', name: 'sequence' },
-                    { data: 'barcode_kanban', name: 'barcode_kanban' },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
                 ],
                 pageLength: 100,
@@ -276,7 +272,6 @@
                         if (response.success) {
                             const data = response.data;
                             console.log('Circuit data:', data);
-                            console.log('Released date:', data.released_date);
                             
                             // Populate form fields
                             $('#circuit_id').val(data.id);
@@ -284,12 +279,8 @@
                             $('#cct_no').val(data.cct_no);
                             $('#family').val(data.family);
                             $('#qty').val(data.qty);
-                            $('#issue').val(data.issue);
                             $('#machine').val(data.machine);
                             $('#sequence').val(data.sequence);
-                            $('#barcode_kanban').val(data.barcode_kanban);
-                            $('#released_date').val(data.released_date || '');
-                            $('#released_note').val(data.released_note);
                             $('#cust_no').val(data.cust_no);
                             $('#barcode_mesin').val(data.barcode_mesin);
                             $('#address').val(data.address);

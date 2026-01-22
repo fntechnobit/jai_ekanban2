@@ -66,11 +66,6 @@ class MasterCircuitController extends Controller
             // Convert to array to prevent auto-serialization
             $data = $circuit->toArray();
             
-            // Format date for HTML date input
-            if ($circuit->released_date) {
-                $data['released_date'] = $circuit->released_date->format('Y-m-d');
-            }
-            
             return ResponseHelper::success($data);
         }
         

@@ -287,7 +287,7 @@
                 <!-- Row 18: Footer - CV / DATE / RELEASED NOTE -->
                 <tr>
                     <td class="value-cell">{{ $shikake->conveyor ? 'CV ' . $shikake->conveyor : '' }}</td>
-                    <td class="value-cell">{{ $shikake->released_date ? \Carbon\Carbon::parse($shikake->released_date)->format('d M y') : '' }}</td>
+                    <td class="value-cell">{{ $shikake->release_date ? \Carbon\Carbon::parse($shikake->release_date)->format('d M y') : '' }}</td>
                     <td colspan="3" class="value-cell">{{ $shikake->released_note ?? '' }}</td>
                 </tr>
             </tbody>

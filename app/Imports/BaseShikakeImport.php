@@ -234,18 +234,18 @@ abstract class BaseShikakeImport
 
     protected function mapShikakeData($rowData, $conveyor)
     {
+        // Note: issue, barcode_kanban, released_date are generated dynamically in assy_schedule_shikake table
+        // released_note remains in master_shikake as a static field
         return [
             'conveyor_id' => $this->conveyorId,
             'process' => $this->process,
+            'carline' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Carline')),
             'conveyor' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Conveyor')),
             'machine' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Machine')),
             'qty' => ImportHelper::cleanNumeric($this->getValueByHeader($rowData, 'QTY')),
-            'issue' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Issue')),
-            'barcode_kanban' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Barcode Kanban')),
             'family' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Family')),
-            'released_date' => ImportHelper::cleanDate($this->getValueByHeader($rowData, 'Released Date')),
-            'released_note' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Released Note')),
             'sequence' => ImportHelper::cleanNumeric($this->getValueByHeader($rowData, 'Sequence')),
+            'released_note' => ImportHelper::cleanValue($this->getValueByHeader($rowData, 'Released Note')),
             'created_by' => Auth::id(),
         ];
     }

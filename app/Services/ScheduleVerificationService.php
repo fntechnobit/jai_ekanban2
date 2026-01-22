@@ -11,6 +11,13 @@ use Carbon\Carbon;
 
 class ScheduleVerificationService
 {
+    protected KanbanGeneratorService $kanbanGenerator;
+
+    public function __construct(KanbanGeneratorService $kanbanGenerator)
+    {
+        $this->kanbanGenerator = $kanbanGenerator;
+    }
+
     /**
      * Get datatable query for schedule verification
      */
@@ -491,12 +498,31 @@ class ScheduleVerificationService
                     'updated_at' => now()
                 ]);
 
+            // Step 3: Generate kanban data for circuits and shikakes
+            $kanbanResult = $this->kanbanGenerator->generateKanbanForSchedule(
+                $conveyorId,
+                $date->format('Y-m-d'),
+                $shift
+            );
+
+            if (!$kanbanResult['success']) {
+                Log::warning("Kanban generation failed but schedule is locked", [
+                    'message' => $kanbanResult['message']
+                ]);
+            }
+
             DB::commit();
+
+            $message = "Schedule verified successfully. {$affected} records locked.";
+            if ($kanbanResult['success']) {
+                $message .= " Generated {$kanbanResult['circuit_count']} circuit and {$kanbanResult['shikake_count']} shikake kanbans.";
+            }
 
             return [
                 'success' => true,
-                'message' => "Schedule verified successfully. {$affected} records locked.",
-                'affected' => $affected
+                'message' => $message,
+                'affected' => $affected,
+                'kanban_data' => $kanbanResult
             ];
 
         } catch (\Exception $e) {

@@ -15,15 +15,13 @@ class ShikakeTemplateConfig
     public static function getBaseHeaders(): array
     {
         return [
-            'Conveyor',           // 0
-            'Machine',            // 1
-            'QTY',                // 2
-            'Issue',              // 3
-            'Barcode Kanban',     // 4
-            'Family',             // 5
-            'Released Date',      // 6
-            'Released Note',      // 7
-            'Sequence',           // 8
+            'Carline',            // 0
+            'Conveyor',           // 1
+            'Machine',            // 2
+            'QTY',                // 3
+            'Family',             // 4
+            'Sequence',       // 5,
+            'Released Note',     // 6
         ];
     }
 
@@ -41,31 +39,31 @@ class ShikakeTemplateConfig
     public static function getTwistHeaders(): array
     {
         return array_merge(self::getBaseHeaders(), [
-            'CCT Code',           // 9
-            'CCT No',             // 10
-            'Machine Twist',      // 11
-            'Sequence 2',         // 12
-            'Barcode Navigasi',   // 13
-            'Barcode Process',    // 14
-            'Barcode Shikake',    // 15
-            'To Store',           // 16
-            'Cust No',            // 17
-            'Kind',               // 18
-            'Size',               // 19
-            'Color',              // 20
-            'CL',                 // 21
-            'Terminal A',         // 22
-            'Acc 1 A',            // 23
-            'Tube A',             // 24
-            'Note A',             // 25
-            'Strip A',            // 26
-            'Mark A',             // 27
-            'Terminal B',         // 28
-            'Acc 1 AB',           // 29
-            'Tube B',             // 30
-            'Note B',             // 31
-            'Strip B',            // 32
-            'Mark B',             // 33
+            'CCT Code',           // 7
+            'CCT No',             // 8
+            'Machine Twist',      // 9
+            'Sequence 2',         // 10
+            'Barcode Navigasi',   // 11
+            'Barcode Process',    // 12
+            'Barcode Shikake',    // 13
+            'To Store',           // 14
+            'Cust No',            // 15
+            'Kind',               // 16
+            'Size',               // 17
+            'Color',              // 18
+            'CL',                 // 19
+            'Terminal A',         // 20
+            'Acc 1 A',            // 21
+            'Tube A',             // 22
+            'Note A',             // 23
+            'Strip A',            // 24
+            'Mark A',             // 25
+            'Terminal B',         // 26
+            'Acc 1 AB',           // 27
+            'Tube B',             // 28
+            'Note B',             // 29
+            'Strip B',            // 30
+            'Mark B',             // 31
         ]);
     }
 
@@ -75,40 +73,40 @@ class ShikakeTemplateConfig
     public static function getBonderHeaders(): array
     {
         return array_merge(self::getBaseHeaders(), [
-            'Bonder No',          // 9
-            'Address',            // 10
-            'Dies',               // 11
-            'To Machine',         // 12
-            'Barcode Navigasi',   // 13
-            'Barcode Process',    // 14
-            'CCT No A 1',         // 14
-            'Bonder No A 1',      // 15
-            'CCT No A 2',         // 17
-            'Bonder No A 2',      // 18
-            'CCT No A 3',         // 19
-            'Bonder No A 3',      // 20
-            'CCT No A 4',         // 21
-            'Bonder No A 4',      // 22
-            'CCT No A 5',         // 23
-            'Bonder No A 5',      // 24
-            'CCT No A 6',         // 25
-            'Bonder No A 6',      // 26
-            'CCT No A 7',         // 27
-            'Bonder No A 7',      // 28
-            'CCT No B 1',         // 29
-            'Bonder No B 1',      // 30
-            'CCT No B 2',         // 31
-            'Bonder No B 2',      // 32
-            'CCT No B 3',         // 33
-            'Bonder No B 3',      // 34
-            'CCT No B 4',         // 35
-            'Bonder No B 4',      // 36
-            'CCT No B 5',         // 37
-            'Bonder No B 5',      // 38
-            'CCT No B 6',         // 39
-            'Bonder No B 6',      // 40
-            'CCT No B 7',         // 41
-            'Bonder No B 7',      // 42
+            'Bonder No',          // 7
+            'Address',            // 8
+            'Dies',               // 9
+            'To Machine',         // 10
+            'Barcode Navigasi',   // 11
+            'Barcode Process',    // 12
+            'CCT No A 1',         // 13
+            'Bonder No A 1',      // 14
+            'CCT No A 2',         // 15
+            'Bonder No A 2',      // 16
+            'CCT No A 3',         // 17
+            'Bonder No A 3',      // 18
+            'CCT No A 4',         // 19
+            'Bonder No A 4',      // 20
+            'CCT No A 5',         // 21
+            'Bonder No A 5',      // 22
+            'CCT No A 6',         // 23
+            'Bonder No A 6',      // 24
+            'CCT No A 7',         // 25
+            'Bonder No A 7',      // 26
+            'CCT No B 1',         // 27
+            'Bonder No B 1',      // 28
+            'CCT No B 2',         // 29
+            'Bonder No B 2',      // 30
+            'CCT No B 3',         // 31
+            'Bonder No B 3',      // 32
+            'CCT No B 4',         // 33
+            'Bonder No B 4',      // 34
+            'CCT No B 5',         // 35
+            'Bonder No B 5',      // 36
+            'CCT No B 6',         // 37
+            'Bonder No B 6',      // 38
+            'CCT No B 7',         // 39
+            'Bonder No B 7',      // 40
         ]);
     }
 
@@ -118,21 +116,21 @@ class ShikakeTemplateConfig
     public static function getJointHeaders(): array
     {
         return array_merge(self::getBaseHeaders(), [
-            'Bonder No',          // 9
-            'Address',            // 10
-            'Address Store',      // 11
-            'To Machine',         // 12
-            'Barcode Process',    // 13
-            'CCT No 1',           // 13
-            'Bonder No 1',        // 14
-            'CCT No 2',           // 15
-            'Bonder No 2',        // 16
-            'CCT No 3',           // 17
-            'Bonder No 3',        // 18
-            'CCT No 4',           // 19
-            'Bonder No 4',        // 20
-            'CCT No 5',           // 21
-            'Bonder No 5',        // 22
+            'Bonder No',          // 7
+            'Address',            // 8
+            'Address Store',      // 9
+            'To Machine',         // 10
+            'Barcode Process',    // 11
+            'CCT No 1',           // 12
+            'Bonder No 1',        // 13
+            'CCT No 2',           // 14
+            'Bonder No 2',        // 15
+            'CCT No 3',           // 16
+            'Bonder No 3',        // 17
+            'CCT No 4',           // 18
+            'Bonder No 4',        // 19
+            'CCT No 5',           // 20
+            'Bonder No 5',        // 21
         ]);
     }
 
@@ -142,22 +140,22 @@ class ShikakeTemplateConfig
     public static function getShieldHeaders(): array
     {
         return array_merge(self::getBaseHeaders(), [
-            'Shield No',          // 9
-            'Address',            // 10
-            'Blade',              // 11
-            'CCT No 1',           // 12
-            'Address 1',          // 13
-            'CCT No 2',           // 14
-            'Address 2',          // 15
-            'To 1',               // 16
-            'To 2',               // 16
-            'To 3',               // 17
-            'To 4',               // 18
-            'To 5',               // 19
-            'To 6',               // 20
-            'To 7',               // 21
-            'To 8',               // 22
-            'To 9',               // 23
+            'Shield No',          // 7
+            'Address',            // 8
+            'Blade',              // 9
+            'CCT No 1',           // 10
+            'Address 1',          // 11
+            'CCT No 2',           // 12
+            'Address 2',          // 13
+            'To 1',               // 14
+            'To 2',               // 15
+            'To 3',               // 16
+            'To 4',               // 17
+            'To 5',               // 18
+            'To 6',               // 19
+            'To 7',               // 20
+            'To 8',               // 21
+            'To 9',               // 22
         ]);
     }
 
@@ -167,20 +165,20 @@ class ShikakeTemplateConfig
     public static function getDblCrimpHeaders(): array
     {
         return array_merge(self::getBaseHeaders(), [
-            'Drawing No',         // 9
-            'Address',            // 10
-            'Barcode Mesin',      // 11
-            'To Machine',         // 12
-            'CCT No 1',           // 13
-            'Address 1',          // 13
-            'CCT No 2',           // 14
-            'Address 2',          // 15
-            'CCT No 3',           // 16
-            'Address 3',          // 17
-            'CCT No 4',           // 18
-            'Address 4',          // 19
-            'CCT No 5',           // 20
-            'Address 5',          // 21
+            'Drawing No',         // 7
+            'Address',            // 8
+            'Barcode Mesin',      // 9
+            'To Machine',         // 10
+            'CCT No 1',           // 11
+            'Address 1',          // 12
+            'CCT No 2',           // 13
+            'Address 2',          // 14
+            'CCT No 3',           // 15
+            'Address 3',          // 16
+            'CCT No 4',           // 17
+            'Address 4',          // 18
+            'CCT No 5',           // 19
+            'Address 5',          // 20
         ]);
     }
 

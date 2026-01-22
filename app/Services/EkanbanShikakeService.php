@@ -54,7 +54,7 @@ class EkanbanShikakeService
                     '-'
                 ) LIKE ?
                 OR master_conveyor.conveyor LIKE ?
-                OR GROUP_CONCAT(DISTINCT master_shikake.barcode_kanban ORDER BY master_shikake.issue SEPARATOR ', ') LIKE ?
+                OR GROUP_CONCAT(DISTINCT assy_schedule_shikake.barcode_kanban ORDER BY assy_schedule_shikake.issue SEPARATOR ', ') LIKE ?
                 OR master_shikake.family LIKE ?
                 OR master_shikake.process LIKE ?
             )", [$escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch]);
@@ -88,7 +88,7 @@ class EkanbanShikakeService
             'master_shikake.family',         // 5 - Family
             'assy_schedule.qty',             // 6 - Qty
             DB::raw('COUNT(DISTINCT master_shikake.id)'), // 7 - Issue count
-            DB::raw("GROUP_CONCAT(DISTINCT master_shikake.barcode_kanban ORDER BY master_shikake.issue SEPARATOR ', ')"), // 8 - Barcode Kanban
+            DB::raw("GROUP_CONCAT(DISTINCT assy_schedule_shikake.barcode_kanban ORDER BY assy_schedule_shikake.issue SEPARATOR ', ')"), // 8 - Barcode Kanban
             'assy_schedule.schedule',        // 9 - Date
             'assy_schedule.shift',           // 10 - Shift
             'assy_schedule.cutoff'           // 11 - Cut Off
@@ -173,6 +173,10 @@ class EkanbanShikakeService
             ->join('master_assy', 'assy_schedule.assy', '=', 'master_assy.assy')
             ->join('master_shikake_assy', 'master_assy.id', '=', 'master_shikake_assy.master_assy_id')
             ->join('master_shikake', 'master_shikake_assy.master_shikake_id', '=', 'master_shikake.id')
+            ->leftJoin('assy_schedule_shikake', function($join) {
+                $join->on('assy_schedule.id', '=', 'assy_schedule_shikake.assy_schedule_id')
+                     ->on('master_shikake.id', '=', 'assy_schedule_shikake.master_shikake_id');
+            })
             ->leftJoin('listing_stage', 'assy_schedule.listing_id', '=', 'listing_stage.id')
             // Left join child tables to get identifiers
             ->leftJoin('master_shikake_twist', 'master_shikake.id', '=', 'master_shikake_twist.master_shikake_id')
@@ -208,13 +212,14 @@ class EkanbanShikakeService
                 'master_shikake.conveyor as shikake_conveyor',
                 'master_shikake.machine',
                 'master_shikake.qty as shikake_qty',
-                'master_shikake.issue',
-                'master_shikake.barcode_kanban',
                 'master_shikake.family',
-                'master_shikake.released_date',
-                'master_shikake.released_note',
                 'master_shikake.sequence',
                 'master_shikake.image_path',
+                'master_shikake.released_note',
+                // Kanban fields from assy_schedule_shikake (strict mode)
+                'assy_schedule_shikake.issue',
+                'assy_schedule_shikake.barcode_kanban',
+                'assy_schedule_shikake.release_date',
                 // Identifier fields from child tables
                 'master_shikake_twist.cct_no as twist_cct_no',
                 'master_shikake_bonder.bonder_no',
@@ -224,7 +229,7 @@ class EkanbanShikakeService
                 DB::raw('CEIL(assy_schedule.qty / NULLIF(master_conveyor.pallet_qty, 0)) as pallet_count')
             ])
             ->orderBy('master_shikake.process')
-            ->orderBy('master_shikake.issue')
+            ->orderBy('assy_schedule_shikake.issue')
             ->get();
 
         // Load process-specific details for each shikake
@@ -321,8 +326,8 @@ class EkanbanShikakeService
                     '-'
                 ) as identifier"),
                 // Aggregated fields for grouping (like Circuit)
-                DB::raw('GROUP_CONCAT(DISTINCT master_shikake.id ORDER BY master_shikake.issue) as shikake_ids'),
-                DB::raw('GROUP_CONCAT(DISTINCT master_shikake.barcode_kanban ORDER BY master_shikake.issue SEPARATOR ", ") as barcodes'),
+                DB::raw('GROUP_CONCAT(DISTINCT master_shikake.id ORDER BY assy_schedule_shikake.issue) as shikake_ids'),
+                DB::raw('GROUP_CONCAT(DISTINCT assy_schedule_shikake.barcode_kanban ORDER BY assy_schedule_shikake.issue SEPARATOR ", ") as barcodes'),
                 DB::raw('COUNT(DISTINCT master_shikake.id) as issue_count'),
                 // Print status from tracking table
                 DB::raw('MAX(assy_schedule_shikake.is_printed) as is_printed'),

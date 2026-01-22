@@ -20,8 +20,8 @@ class MasterShikake extends Model
         'machine',
         'qty',
         'family',
-        'released_date',
         'sequence',
+        'released_note',
         'image_path',
         'created_by',
         'updated_by',
@@ -31,7 +31,6 @@ class MasterShikake extends Model
     protected $casts = [
         'qty' => 'integer',
         'sequence' => 'integer',
-        'released_date' => 'date',
         'deleted_at' => 'datetime',
     ];
 

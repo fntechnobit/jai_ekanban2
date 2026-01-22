@@ -21,6 +21,7 @@ class MasterCircuit extends Model
         'qty',
         'machine',
         'sequence',
+        'released_note',
         'cust_no',
         'barcode_mesin',
         'address',
@@ -62,7 +63,6 @@ class MasterCircuit extends Model
     ];
 
     protected $casts = [
-        'released_date' => 'date',
         'qty' => 'integer',
         'deleted_at' => 'datetime',
     ];
