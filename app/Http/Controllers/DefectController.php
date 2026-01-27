@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\MasterConveyor;
 use App\Models\MasterShikake;
-use App\Models\KanbanBalance;
+use App\Models\MasterCircuit;
+use App\Models\KanbanBalanceCircuit;
+use App\Models\KanbanBalanceShikake;
 use App\Services\DefectService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -37,8 +39,7 @@ class DefectController extends Controller
     {
         $validated = $request->validate([
             'conveyor_id' => 'required|exists:master_conveyor,id',
-            'cct_no' => 'required|string',
-            'cct_code' => 'required|string',
+            'master_circuit_id' => 'required|exists:master_circuit,id',
             'defect_date' => 'required|date|before_or_equal:today',
             'shift' => 'required|integer|in:1,2,3',
             'qty_defect' => 'required|integer|min:1',
@@ -49,8 +50,7 @@ class DefectController extends Controller
             'circuit',
             $validated['conveyor_id'],
             [
-                'cct_no' => $validated['cct_no'],
-                'cct_code' => $validated['cct_code'],
+                'master_circuit_id' => $validated['master_circuit_id'],
             ],
             $validated['qty_defect'],
             [
@@ -84,11 +84,13 @@ class DefectController extends Controller
         $circuits = $this->defectService->getCircuitsWithBalance($conveyorId);
 
         return response()->json($circuits->map(function ($balance) {
+            $circuit = $balance->masterCircuit;
             return [
-                'cct_no' => $balance->cct_no,
-                'cct_code' => $balance->cct_code,
+                'master_circuit_id' => $balance->master_circuit_id,
+                'cct_no' => $circuit ? $circuit->cct_no : 'Unknown',
+                'cct_code' => $circuit ? $circuit->cct_code : 'Unknown',
                 'sisa' => $balance->sisa,
-                'display' => "{$balance->cct_no} - {$balance->cct_code} (Balance: {$balance->sisa})",
+                'display' => ($circuit ? "{$circuit->cct_no} - {$circuit->cct_code}" : "Circuit #{$balance->master_circuit_id}") . " (Balance: {$balance->sisa})",
             ];
         }));
     }
@@ -99,10 +101,9 @@ class DefectController extends Controller
     public function getCircuitBalance(Request $request)
     {
         $conveyorId = $request->input('conveyor_id');
-        $cctNo = $request->input('cct_no');
-        $cctCode = $request->input('cct_code');
+        $masterCircuitId = $request->input('master_circuit_id');
 
-        $balance = $this->defectService->getCircuitBalance($conveyorId, $cctNo, $cctCode);
+        $balance = $this->defectService->getCircuitBalance($conveyorId, $masterCircuitId);
 
         if (!$balance) {
             return response()->json(['error' => 'Balance not found'], 404);
@@ -187,7 +188,7 @@ class DefectController extends Controller
         $shikakes = $this->defectService->getShikakesWithBalance($conveyorId, $shikakeType);
 
         return response()->json($shikakes->map(function ($balance) {
-            $shikake = $balance->shikake;
+            $shikake = $balance->masterShikake;
             $code = $shikake ? ($shikake->machine ?? "SHK-{$shikake->id}") : "Unknown";
             $process = $shikake ? $shikake->process : 'Unknown';
             
@@ -225,20 +226,36 @@ class DefectController extends Controller
     {
         $conveyors = MasterConveyor::orderBy('conveyor')->get();
         
+        $type = $request->input('type', 'circuit'); // Default to circuit
+        
         $filters = [
             'date_from' => $request->input('date_from'),
             'date_to' => $request->input('date_to'),
             'conveyor_id' => $request->input('conveyor_id'),
-            'type' => $request->input('type'),
             'shift' => $request->input('shift'),
         ];
 
-        $history = $this->defectService->getDefectHistory($filters, 20);
+        // Add shikake_type filter only for shikake
+        if ($type === 'shikake') {
+            $filters['shikake_type'] = $request->input('shikake_type');
+            $history = $this->defectService->getShikakeDefectHistory($filters, 20);
+        } else {
+            $history = $this->defectService->getCircuitDefectHistory($filters, 20);
+        }
+
+        $shikakeTypes = [
+            'BONDER' => 'Bonder',
+            'DBL_CRIMP' => 'Dbl Crimp',
+            'JOINT' => 'Joint',
+            'SHIELD' => 'Shield',
+            'TWIST' => 'Twist',
+        ];
 
         return view('defect.history', [
             'conveyors' => $conveyors,
             'history' => $history,
-            'filters' => $filters,
+            'filters' => array_merge($filters, ['type' => $type]),
+            'shikakeTypes' => $shikakeTypes,
         ]);
     }
 
@@ -251,8 +268,16 @@ class DefectController extends Controller
         $dateTo = $request->input('date_to', now()->toDateString());
         $conveyorId = $request->input('conveyor_id');
 
-        $summary = $this->defectService->getDefectSummary($dateFrom, $dateTo, $conveyorId);
+        $circuitSummary = $this->defectService->getCircuitDefectSummary($dateFrom, $dateTo, $conveyorId);
+        $shikakeSummary = $this->defectService->getShikakeDefectSummary($dateFrom, $dateTo, $conveyorId);
 
-        return response()->json($summary);
+        return response()->json([
+            'circuit' => $circuitSummary,
+            'shikake' => $shikakeSummary,
+            'total' => [
+                'total_qty' => $circuitSummary['total_qty'] + $shikakeSummary['total_qty'],
+                'total_count' => $circuitSummary['total_count'] + $shikakeSummary['total_count'],
+            ],
+        ]);
     }
 }

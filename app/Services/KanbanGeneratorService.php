@@ -6,7 +6,8 @@ use App\Enums\ProcessType;
 use App\Models\AssySchedule;
 use App\Models\AssyScheduleCircuit;
 use App\Models\AssyScheduleShikake;
-use App\Models\KanbanBalance;
+use App\Models\KanbanBalanceCircuit;
+use App\Models\KanbanBalanceShikake;
 use App\Models\MasterAssy;
 use App\Models\MasterCircuit;
 use App\Models\MasterConveyor;
@@ -114,7 +115,7 @@ class KanbanGeneratorService
         $conveyorCode = $conveyor->conveyor ?? 'CVX';
 
         // Get unique assy codes from schedules
-        $assyCodes = $schedules->pluck('assycode')->unique()->filter();
+        $assyCodes = $schedules->pluck('assy')->unique()->filter();
 
         // Get all circuits linked to these assy codes
         $circuitGroups = $this->getCircuitsForAssyCodes($assyCodes, $conveyorId);
@@ -126,10 +127,9 @@ class KanbanGeneratorService
 
         foreach ($circuitGroups as $circuitKey => $circuitData) {
             // Get or create balance record
-            $balance = KanbanBalance::findOrCreateForCircuit(
+            $balance = KanbanBalanceCircuit::findOrCreate(
                 $conveyorId,
-                $circuitData['cct_no'],
-                $circuitData['cct_code']
+                $circuitData['master_circuit_id']
             );
 
             // Calculate kebutuhan per cutoff based on schedule qty and circuit's relevant assy codes
@@ -192,7 +192,7 @@ class KanbanGeneratorService
         $conveyorCode = $conveyor->conveyor ?? 'CVX';
 
         // Get unique assy codes from schedules
-        $assyCodes = $schedules->pluck('assycode')->unique()->filter();
+        $assyCodes = $schedules->pluck('assy')->unique()->filter();
 
         // Get all shikakes linked to these assy codes
         $shikakeGroups = $this->getShikakesForAssyCodes($assyCodes, $conveyorId);
@@ -204,7 +204,7 @@ class KanbanGeneratorService
 
         foreach ($shikakeGroups as $shikakeKey => $shikakeData) {
             // Get or create balance record
-            $balance = KanbanBalance::findOrCreateForShikake(
+            $balance = KanbanBalanceShikake::findOrCreate(
                 $conveyorId,
                 $shikakeData['master_shikake_id']
             );
@@ -460,7 +460,7 @@ class KanbanGeneratorService
             $representativeSchedule = null;
             
             foreach ($cutoffSchedules as $schedule) {
-                if (in_array($schedule->assycode, $itemAssyCodes) || empty($itemAssyCodes)) {
+                if (in_array($schedule->assy, $itemAssyCodes) || empty($itemAssyCodes)) {
                     $kebutuhan += $schedule->qty;
                     if (!$representativeSchedule) {
                         $representativeSchedule = $schedule;

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Config\ShikakeTemplateConfig;
+use App\Config\CircuitTemplateConfig;
 use App\Models\MasterAssy;
 use Illuminate\Support\Facades\File;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -12,9 +13,11 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
-class GenerateSampleDataShikake extends Command
+class GenerateSampleDataTemplate extends Command
 {
-    protected $signature = 'sample:generate-shikake {--count=10 : Number of unique identifiers to generate}';
+    protected $signature = 'sample:generate 
+                            {--type=all : Type of samples to generate (all, circuit, shikake, twist, bonder, joint, shield, dbl-crimp)}
+                            {--count=10 : Number of unique identifiers to generate}';
     protected $description = 'Generate sample data Excel files for Master Shikake and Master Circuit imports';
 
     protected $assyNames = [];
@@ -22,8 +25,15 @@ class GenerateSampleDataShikake extends Command
 
     public function handle()
     {
+        $type = strtolower($this->option('type'));
         $count = (int) $this->option('count');
         $count = max(5, min(20, $count)); // Clamp between 5-20 identifiers
+
+        $validTypes = ['all', 'circuit', 'shikake', 'twist', 'bonder', 'joint', 'shield', 'dbl-crimp'];
+        if (!in_array($type, $validTypes)) {
+            $this->error("Invalid type: {$type}. Valid options: " . implode(', ', $validTypes));
+            return Command::FAILURE;
+        }
 
         $this->info("Generating sample data with {$count} unique identifiers each...");
 
@@ -42,7 +52,7 @@ class GenerateSampleDataShikake extends Command
         ];
         
         // Limit to first 5 assy for sample columns
-        $this->assyNames = array_slice($this->assyNames, 0, 5);
+        //$this->assyNames = array_slice($this->assyNames, 0, 5);
         $this->info('Using ' . count($this->assyNames) . ' sample assy codes.');
 
         // Create samples directory in storage if not exists
@@ -57,17 +67,38 @@ class GenerateSampleDataShikake extends Command
             File::put($gitignorePath, "*\n!.gitignore\n");
         }
 
+        $generatedCount = 0;
+
         // Generate Shikake sample files
-        $this->generateShikakeSample($samplesPath, 'TWIST', $count);
-        $this->generateShikakeSample($samplesPath, 'BONDER', $count);
-        $this->generateShikakeSample($samplesPath, 'JOINT', $count);
-        $this->generateShikakeSample($samplesPath, 'SHIELD', $count);
-        $this->generateShikakeSample($samplesPath, 'DBL CRIMP', $count);
+        if (in_array($type, ['all', 'shikake', 'twist'])) {
+            $this->generateShikakeSample($samplesPath, 'TWIST', $count);
+            $generatedCount++;
+        }
+        if (in_array($type, ['all', 'shikake', 'bonder'])) {
+            $this->generateShikakeSample($samplesPath, 'BONDER', $count);
+            $generatedCount++;
+        }
+        if (in_array($type, ['all', 'shikake', 'joint'])) {
+            $this->generateShikakeSample($samplesPath, 'JOINT', $count);
+            $generatedCount++;
+        }
+        if (in_array($type, ['all', 'shikake', 'shield'])) {
+            $this->generateShikakeSample($samplesPath, 'SHIELD', $count);
+            $generatedCount++;
+        }
+        if (in_array($type, ['all', 'shikake', 'dbl-crimp'])) {
+            $this->generateShikakeSample($samplesPath, 'DBL CRIMP', $count);
+            $generatedCount++;
+        }
 
         // Generate Circuit sample file
-        $this->generateCircuitSample($samplesPath, $count);
+        if (in_array($type, ['all', 'circuit'])) {
+            $this->generateCircuitSample($samplesPath, $count);
+            $generatedCount++;
+        }
 
-        $this->info('All sample data files generated successfully!');
+        $this->info('');
+        $this->info("All {$generatedCount} sample file(s) generated successfully!");
         $this->info("Files saved to: {$samplesPath}");
         return Command::SUCCESS;
     }
@@ -161,7 +192,7 @@ class GenerateSampleDataShikake extends Command
                 // Add assy values (same for all rows in identifier group)
                 foreach ($this->assyNames as $index => $assyName) {
                     $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($assyStartCol + $index);
-                    $value = in_array($assyName, $assyAssignments) ? '1' : '';
+                    $value = '1';
                     $sheet->setCellValue($colLetter . $row, $value);
                 }
 
@@ -258,7 +289,7 @@ class GenerateSampleDataShikake extends Command
                 foreach ($this->assyNames as $index => $assyName) {
                     $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($assyStartCol + $index);
                     $value = in_array($assyName, $assyAssignments) ? '1' : '';
-                    $sheet->setCellValue($colLetter . $row, $value);
+                    $sheet->setCellValue($colLetter . $row, '1');
                 }
 
                 $row++;
@@ -322,52 +353,7 @@ class GenerateSampleDataShikake extends Command
 
     protected function getCircuitHeaders()
     {
-        return [
-            'Conveyor',       // 0
-            'CCT No.',        // 1
-            'Family',         // 2
-            'Qty.',           // 3
-            'Issue',          // 4
-            'Machine',        // 5
-            'Sequence',       // 6
-            'Barcode Kanban', // 7
-            'Released Date',  // 8
-            'Released Note',  // 9
-            'Cust No.',       // 10
-            'Barcode Mesin',  // 11
-            'Address',        // 12
-            'CCT Code',       // 13
-            'Kind',           // 14
-            'Size',           // 15
-            'Col',            // 16
-            'C/L',            // 17
-            'Terminal 1',     // 18
-            'Note 1',         // 19
-            'Gold 1',         // 20
-            'Strip 1',        // 21
-            'Acc. 1',         // 22
-            'Acc. 1A',        // 23
-            'Tube 1',         // 24
-            'Mark 1',         // 25
-            'Remark 1',       // 26
-            'Terminal 2',     // 27
-            'Note 2',         // 28
-            'Gold 2',         // 29
-            'Strip 2',        // 30
-            'Acc 2',          // 31
-            'Acc 2A',         // 32
-            'Tube 2',         // 33
-            'Mark 2',         // 34
-            'Remark 2',       // 35
-            'TA',             // 36
-            'TB',             // 37
-            'T01',            // 38
-            'T02',            // 39
-            'T03',            // 40
-            'T04',            // 41
-            'T05',            // 42
-            'T06',            // 43
-        ];
+        return CircuitTemplateConfig::getHeaders();
     }
 
     /**
@@ -375,13 +361,13 @@ class GenerateSampleDataShikake extends Command
      */
     protected function generateSharedShikakeData($processType, $identifierIndex)
     {
-        // Note: released_date, released_note are no longer in master tables
-        // These fields are now generated dynamically in assy_schedule_shikake table
         $shared = [
+            'carline' => 'CL-' . chr(65 + ($identifierIndex % 5)),
             'conveyor' => 'CONV-' . str_pad($identifierIndex, 3, '0', STR_PAD_LEFT),
             'machine' => $this->machineList[($identifierIndex - 1) % count($this->machineList)],
             'qty' => rand(50, 500),
             'family' => 'FAM-' . chr(65 + ($identifierIndex % 5)),
+            'released_note' => 'Release note sample ' . $identifierIndex,
         ];
 
         // Add process-specific shared data (identifiers)
@@ -467,14 +453,14 @@ class GenerateSampleDataShikake extends Command
      */
     protected function generateSharedCircuitData($identifierIndex)
     {
-        // Note: released_note is no longer in master tables
-        // This field is now generated dynamically in assy_schedule_circuit table
         return [
+            'carline' => 'CL-' . chr(65 + ($identifierIndex % 5)),
             'conveyor' => 'CONV-' . str_pad($identifierIndex, 3, '0', STR_PAD_LEFT),
             'cct_no' => 'CCT-' . str_pad($identifierIndex, 4, '0', STR_PAD_LEFT),
             'family' => 'FAM-' . chr(65 + ($identifierIndex % 5)),
             'qty' => rand(50, 500),
             'machine' => $this->machineList[($identifierIndex - 1) % count($this->machineList)],
+            'released_note' => 'Release note sample ' . $identifierIndex,
             'cust_no' => 'CUST-' . str_pad(rand(1, 100), 3, '0', STR_PAD_LEFT),
             'address' => 'ADDR-' . chr(65 + ($identifierIndex % 5)),
             'cct_code' => 'CODE-' . str_pad($identifierIndex, 3, '0', STR_PAD_LEFT),
@@ -518,7 +504,7 @@ class GenerateSampleDataShikake extends Command
     {
         $uniqueSuffix = str_pad($globalRowIndex, 6, '0', STR_PAD_LEFT);
 
-        // Base data (columns 0-6) - NEW STRUCTURE
+        // Base data (columns 0-6) - matches ShikakeTemplateConfig::getBaseHeaders()
         $baseData = [
             $sharedData['carline'] ?? 'CL-' . rand(1, 5),  // Carline
             $sharedData['conveyor'],                       // Conveyor
@@ -526,6 +512,7 @@ class GenerateSampleDataShikake extends Command
             $sharedData['qty'],                            // QTY
             $sharedData['family'],                         // Family
             $issueNum,                                     // Sequence (reset per group)
+            $sharedData['released_note'] ?? '',            // Released Note
         ];
 
         // Process-specific data
@@ -630,19 +617,16 @@ class GenerateSampleDataShikake extends Command
      */
     protected function generateCircuitRowData($sharedData, $issueNum, $issueCount, $globalRowIndex)
     {
-        $issue = $this->generateIssueFormat($issueNum, $issueCount);
         $uniqueSuffix = str_pad($globalRowIndex, 6, '0', STR_PAD_LEFT);
 
         return [
+            $sharedData['carline'],            // Carline
             $sharedData['conveyor'],           // Conveyor
             $sharedData['cct_no'],             // CCT No.
             $sharedData['family'],             // Family
             $sharedData['qty'],                // Qty.
-            $issue,                            // Issue
             $sharedData['machine'],            // Machine
             $issueNum,                         // Sequence (reset per group)
-            'BK-' . $uniqueSuffix,             // Barcode Kanban (unique)
-            date('Y-m-d', strtotime('+' . rand(1, 30) . ' days')), // Released Date
             $sharedData['released_note'],      // Released Note
             $sharedData['cust_no'],            // Cust No.
             'BM-' . $uniqueSuffix,             // Barcode Mesin (unique)

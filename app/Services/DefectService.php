@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\DefectLog;
-use App\Models\KanbanBalance;
+use App\Models\DefectLogCircuit;
+use App\Models\DefectLogShikake;
+use App\Models\KanbanBalanceCircuit;
+use App\Models\KanbanBalanceShikake;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -15,7 +17,7 @@ class DefectService
      * 
      * @param string $type - 'circuit' or 'shikake'
      * @param int $conveyorId - ID conveyor
-     * @param array $params - Parameters based on type (cct_no, cct_code for circuit; master_shikake_id, shikake_type for shikake)
+     * @param array $params - Parameters based on type (master_circuit_id for circuit; master_shikake_id, shikake_type for shikake)
      * @param int $qtyDefect - Amount to reduce from balance
      * @param array $meta - Metadata (date, shift, reason)
      * @return array
@@ -40,16 +42,13 @@ class DefectService
 
             // 1. Get current balance
             if ($type === 'circuit') {
-                $balance = KanbanBalance::where([
+                $balance = KanbanBalanceCircuit::where([
                     'conveyor_id' => $conveyorId,
-                    'type' => 'circuit',
-                    'cct_no' => $params['cct_no'],
-                    'cct_code' => $params['cct_code'],
+                    'master_circuit_id' => $params['master_circuit_id'],
                 ])->first();
             } else {
-                $balance = KanbanBalance::where([
+                $balance = KanbanBalanceShikake::where([
                     'conveyor_id' => $conveyorId,
-                    'type' => 'shikake',
                     'master_shikake_id' => $params['master_shikake_id'],
                 ])->first();
             }
@@ -74,22 +73,33 @@ class DefectService
             $balanceAfter = $balanceBefore - $qtyDefect;
             $balance->update(['sisa' => $balanceAfter]);
 
-            // 5. Log the defect
-            DefectLog::create([
-                'conveyor_id' => $conveyorId,
-                'type' => $type,
-                'cct_no' => $params['cct_no'] ?? null,
-                'cct_code' => $params['cct_code'] ?? null,
-                'master_shikake_id' => $params['master_shikake_id'] ?? null,
-                'shikake_type' => $params['shikake_type'] ?? null,
-                'defect_date' => $meta['date'],
-                'shift' => $meta['shift'],
-                'qty_defect' => $qtyDefect,
-                'balance_before' => $balanceBefore,
-                'balance_after' => $balanceAfter,
-                'reason' => $meta['reason'] ?? null,
-                'created_by' => Auth::id(),
-            ]);
+            // 5. Log the defect to appropriate table
+            if ($type === 'circuit') {
+                DefectLogCircuit::create([
+                    'conveyor_id' => $conveyorId,
+                    'master_circuit_id' => $params['master_circuit_id'],
+                    'defect_date' => $meta['date'],
+                    'shift' => $meta['shift'],
+                    'qty_defect' => $qtyDefect,
+                    'balance_before' => $balanceBefore,
+                    'balance_after' => $balanceAfter,
+                    'reason' => $meta['reason'] ?? null,
+                    'created_by' => Auth::id(),
+                ]);
+            } else {
+                DefectLogShikake::create([
+                    'conveyor_id' => $conveyorId,
+                    'master_shikake_id' => $params['master_shikake_id'],
+                    'shikake_type' => $params['shikake_type'] ?? null,
+                    'defect_date' => $meta['date'],
+                    'shift' => $meta['shift'],
+                    'qty_defect' => $qtyDefect,
+                    'balance_before' => $balanceBefore,
+                    'balance_after' => $balanceAfter,
+                    'reason' => $meta['reason'] ?? null,
+                    'created_by' => Auth::id(),
+                ]);
+            }
 
             DB::commit();
 
@@ -122,17 +132,14 @@ class DefectService
      * Get current balance for circuit
      * 
      * @param int $conveyorId
-     * @param string $cctNo
-     * @param string $cctCode
+     * @param int $masterCircuitId
      * @return array|null
      */
-    public function getCircuitBalance(int $conveyorId, string $cctNo, string $cctCode): ?array
+    public function getCircuitBalance(int $conveyorId, int $masterCircuitId): ?array
     {
-        $balance = KanbanBalance::where([
+        $balance = KanbanBalanceCircuit::where([
             'conveyor_id' => $conveyorId,
-            'type' => 'circuit',
-            'cct_no' => $cctNo,
-            'cct_code' => $cctCode,
+            'master_circuit_id' => $masterCircuitId,
         ])->first();
 
         if (!$balance) {
@@ -156,9 +163,8 @@ class DefectService
      */
     public function getShikakeBalance(int $conveyorId, int $masterShikakeId): ?array
     {
-        $balance = KanbanBalance::where([
+        $balance = KanbanBalanceShikake::where([
             'conveyor_id' => $conveyorId,
-            'type' => 'shikake',
             'master_shikake_id' => $masterShikakeId,
         ])->first();
 
@@ -182,11 +188,10 @@ class DefectService
      */
     public function getCircuitsWithBalance(int $conveyorId)
     {
-        return KanbanBalance::where('conveyor_id', $conveyorId)
-            ->where('type', 'circuit')
+        return KanbanBalanceCircuit::where('conveyor_id', $conveyorId)
             ->where('sisa', '>', 0)
-            ->orderBy('cct_no')
-            ->orderBy('cct_code')
+            ->with('masterCircuit')
+            ->orderBy('master_circuit_id')
             ->get();
     }
 
@@ -199,29 +204,28 @@ class DefectService
      */
     public function getShikakesWithBalance(int $conveyorId, ?string $shikakeType = null)
     {
-        $query = KanbanBalance::where('conveyor_id', $conveyorId)
-            ->where('type', 'shikake')
+        $query = KanbanBalanceShikake::where('conveyor_id', $conveyorId)
             ->where('sisa', '>', 0)
-            ->with('shikake');
+            ->with('masterShikake');
 
         return $query->get()->filter(function ($balance) use ($shikakeType) {
             if (!$shikakeType) {
                 return true;
             }
-            return $balance->shikake && strtoupper($balance->shikake->process) === strtoupper($shikakeType);
+            return $balance->masterShikake && strtoupper($balance->masterShikake->process) === strtoupper($shikakeType);
         });
     }
 
     /**
-     * Get defect history with filters
+     * Get circuit defect history with filters
      * 
-     * @param array $filters - Optional filters (date_from, date_to, conveyor_id, type)
+     * @param array $filters - Optional filters (date_from, date_to, conveyor_id, shift)
      * @param int $perPage - Items per page
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function getDefectHistory(array $filters = [], int $perPage = 15)
+    public function getCircuitDefectHistory(array $filters = [], int $perPage = 15)
     {
-        $query = DefectLog::with(['conveyor', 'shikake', 'creator'])
+        $query = DefectLogCircuit::with(['conveyor', 'masterCircuit', 'creator'])
             ->orderBy('defect_date', 'desc')
             ->orderBy('created_at', 'desc');
 
@@ -237,10 +241,6 @@ class DefectService
             $query->where('conveyor_id', $filters['conveyor_id']);
         }
 
-        if (!empty($filters['type'])) {
-            $query->where('type', $filters['type']);
-        }
-
         if (!empty($filters['shift'])) {
             $query->where('shift', $filters['shift']);
         }
@@ -249,30 +249,88 @@ class DefectService
     }
 
     /**
-     * Get defect summary for a period
+     * Get shikake defect history with filters
+     * 
+     * @param array $filters - Optional filters (date_from, date_to, conveyor_id, shift, shikake_type)
+     * @param int $perPage - Items per page
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    public function getShikakeDefectHistory(array $filters = [], int $perPage = 15)
+    {
+        $query = DefectLogShikake::with(['conveyor', 'masterShikake', 'creator'])
+            ->orderBy('defect_date', 'desc')
+            ->orderBy('created_at', 'desc');
+
+        if (!empty($filters['date_from'])) {
+            $query->where('defect_date', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->where('defect_date', '<=', $filters['date_to']);
+        }
+
+        if (!empty($filters['conveyor_id'])) {
+            $query->where('conveyor_id', $filters['conveyor_id']);
+        }
+
+        if (!empty($filters['shift'])) {
+            $query->where('shift', $filters['shift']);
+        }
+
+        if (!empty($filters['shikake_type'])) {
+            $query->where('shikake_type', $filters['shikake_type']);
+        }
+
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * Get circuit defect summary for a period
      * 
      * @param string $dateFrom
      * @param string $dateTo
      * @param int|null $conveyorId
      * @return array
      */
-    public function getDefectSummary(string $dateFrom, string $dateTo, ?int $conveyorId = null): array
+    public function getCircuitDefectSummary(string $dateFrom, string $dateTo, ?int $conveyorId = null): array
     {
-        $query = DefectLog::whereBetween('defect_date', [$dateFrom, $dateTo]);
+        $query = DefectLogCircuit::whereBetween('defect_date', [$dateFrom, $dateTo]);
 
         if ($conveyorId) {
             $query->where('conveyor_id', $conveyorId);
         }
 
-        $total = $query->sum('qty_defect');
-        $count = $query->count();
-        
-        $byType = DefectLog::whereBetween('defect_date', [$dateFrom, $dateTo])
+        return [
+            'total_qty' => (clone $query)->sum('qty_defect'),
+            'total_count' => (clone $query)->count(),
+        ];
+    }
+
+    /**
+     * Get shikake defect summary for a period
+     * 
+     * @param string $dateFrom
+     * @param string $dateTo
+     * @param int|null $conveyorId
+     * @return array
+     */
+    public function getShikakeDefectSummary(string $dateFrom, string $dateTo, ?int $conveyorId = null): array
+    {
+        $query = DefectLogShikake::whereBetween('defect_date', [$dateFrom, $dateTo]);
+
+        if ($conveyorId) {
+            $query->where('conveyor_id', $conveyorId);
+        }
+
+        $total = (clone $query)->sum('qty_defect');
+        $count = (clone $query)->count();
+
+        $byType = DefectLogShikake::whereBetween('defect_date', [$dateFrom, $dateTo])
             ->when($conveyorId, fn($q) => $q->where('conveyor_id', $conveyorId))
-            ->selectRaw('type, SUM(qty_defect) as total_qty, COUNT(*) as count')
-            ->groupBy('type')
+            ->selectRaw('shikake_type, SUM(qty_defect) as total_qty, COUNT(*) as count')
+            ->groupBy('shikake_type')
             ->get()
-            ->keyBy('type')
+            ->keyBy('shikake_type')
             ->toArray();
 
         return [
@@ -286,22 +344,19 @@ class DefectService
      * Reset balance for a circuit (admin function)
      * 
      * @param int $conveyorId
-     * @param string $cctNo
-     * @param string $cctCode
+     * @param int $masterCircuitId
      * @param int $newSisa
      * @param string $reason
      * @return array
      */
-    public function resetCircuitBalance(int $conveyorId, string $cctNo, string $cctCode, int $newSisa, string $reason): array
+    public function resetCircuitBalance(int $conveyorId, int $masterCircuitId, int $newSisa, string $reason): array
     {
         DB::beginTransaction();
 
         try {
-            $balance = KanbanBalance::where([
+            $balance = KanbanBalanceCircuit::where([
                 'conveyor_id' => $conveyorId,
-                'type' => 'circuit',
-                'cct_no' => $cctNo,
-                'cct_code' => $cctCode,
+                'master_circuit_id' => $masterCircuitId,
             ])->first();
 
             if (!$balance) {
@@ -312,11 +367,9 @@ class DefectService
             $balance->update(['sisa' => $newSisa]);
 
             // Log the reset as a special defect entry
-            DefectLog::create([
+            DefectLogCircuit::create([
                 'conveyor_id' => $conveyorId,
-                'type' => 'circuit',
-                'cct_no' => $cctNo,
-                'cct_code' => $cctCode,
+                'master_circuit_id' => $masterCircuitId,
                 'defect_date' => now()->toDateString(),
                 'shift' => 0, // 0 indicates admin reset
                 'qty_defect' => abs($newSisa - $balanceBefore),
@@ -358,9 +411,8 @@ class DefectService
         DB::beginTransaction();
 
         try {
-            $balance = KanbanBalance::where([
+            $balance = KanbanBalanceShikake::where([
                 'conveyor_id' => $conveyorId,
-                'type' => 'shikake',
                 'master_shikake_id' => $masterShikakeId,
             ])->first();
 
@@ -369,14 +421,13 @@ class DefectService
             }
 
             $balanceBefore = $balance->sisa;
-            $shikakeType = $balance->shikake?->process;
+            $shikakeType = $balance->masterShikake?->process;
             
             $balance->update(['sisa' => $newSisa]);
 
             // Log the reset as a special defect entry
-            DefectLog::create([
+            DefectLogShikake::create([
                 'conveyor_id' => $conveyorId,
-                'type' => 'shikake',
                 'master_shikake_id' => $masterShikakeId,
                 'shikake_type' => $shikakeType,
                 'defect_date' => now()->toDateString(),

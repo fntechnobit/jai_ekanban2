@@ -51,6 +51,7 @@
                     <thead>
                         <tr>
                             <th width="5%">No</th>
+                            <th>Carline</th>
                             <th>Conveyor</th>
                             <th>CCT No</th>
                             <th>Family</th>
@@ -97,6 +98,7 @@
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                    { data: 'carline', name: 'carline' },
                     { data: 'conveyor_name', name: 'conveyor_name' },
                     { data: 'cct_no', name: 'cct_no' },
                     { data: 'family', name: 'family' },
@@ -276,11 +278,13 @@
                             // Populate form fields
                             $('#circuit_id').val(data.id);
                             $('#conveyor').val(data.conveyor ? data.conveyor.conveyor : '');
+                            $('#carline').val(data.carline);
                             $('#cct_no').val(data.cct_no);
                             $('#family').val(data.family);
                             $('#qty').val(data.qty);
                             $('#machine').val(data.machine);
                             $('#sequence').val(data.sequence);
+                            $('#released_note').val(data.released_note);
                             $('#cust_no').val(data.cust_no);
                             $('#barcode_mesin').val(data.barcode_mesin);
                             $('#address').val(data.address);

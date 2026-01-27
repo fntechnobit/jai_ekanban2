@@ -8,15 +8,14 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     * 
+     * Remove unique_circuit_group constraint to allow multiple kanban records
+     * per circuit per schedule (needed for multi-issue kanban generation)
      */
     public function up(): void
     {
         Schema::table('assy_schedule_circuit', function (Blueprint $table) {
-            $table->string('released_note', 255)->nullable()->after('release_date');
-        });
-
-        Schema::table('assy_schedule_shikake', function (Blueprint $table) {
-            $table->string('released_note', 255)->nullable()->after('release_date');
+            $table->dropUnique('unique_circuit_group');
         });
     }
 
@@ -26,11 +25,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('assy_schedule_circuit', function (Blueprint $table) {
-            $table->dropColumn('released_note');
-        });
-
-        Schema::table('assy_schedule_shikake', function (Blueprint $table) {
-            $table->dropColumn('released_note');
+            $table->unique(['assy_schedule_id', 'cct_no', 'cct_code'], 'unique_circuit_group');
         });
     }
 };

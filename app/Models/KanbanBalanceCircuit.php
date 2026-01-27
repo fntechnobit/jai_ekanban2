@@ -5,16 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class KanbanBalance extends Model
+class KanbanBalanceCircuit extends Model
 {
-    protected $table = 'kanban_balance';
+    protected $table = 'kanban_balance_circuit';
     
     protected $fillable = [
         'conveyor_id',
-        'type',
-        'cct_no',
-        'cct_code',
-        'master_shikake_id',
+        'master_circuit_id',
         'sisa',
         'last_nomor_urut',
         'last_schedule_id',
@@ -38,11 +35,11 @@ class KanbanBalance extends Model
     }
     
     /**
-     * Get the shikake that owns this balance (for shikake type)
+     * Get the master circuit that owns this balance
      */
-    public function shikake(): BelongsTo
+    public function masterCircuit(): BelongsTo
     {
-        return $this->belongsTo(MasterShikake::class, 'master_shikake_id');
+        return $this->belongsTo(MasterCircuit::class, 'master_circuit_id');
     }
     
     /**
@@ -54,50 +51,14 @@ class KanbanBalance extends Model
     }
     
     /**
-     * Scope for circuit type
-     */
-    public function scopeCircuit($query)
-    {
-        return $query->where('type', 'circuit');
-    }
-    
-    /**
-     * Scope for shikake type
-     */
-    public function scopeShikake($query)
-    {
-        return $query->where('type', 'shikake');
-    }
-    
-    /**
      * Find or create balance for circuit
      */
-    public static function findOrCreateForCircuit(int $conveyorId, string $cctNo, string $cctCode): self
+    public static function findOrCreate(int $conveyorId, int $masterCircuitId): self
     {
         return static::firstOrCreate(
             [
                 'conveyor_id' => $conveyorId,
-                'type' => 'circuit',
-                'cct_no' => $cctNo,
-                'cct_code' => $cctCode,
-            ],
-            [
-                'sisa' => 0,
-                'last_nomor_urut' => 0,
-            ]
-        );
-    }
-    
-    /**
-     * Find or create balance for shikake
-     */
-    public static function findOrCreateForShikake(int $conveyorId, int $masterShikakeId): self
-    {
-        return static::firstOrCreate(
-            [
-                'conveyor_id' => $conveyorId,
-                'type' => 'shikake',
-                'master_shikake_id' => $masterShikakeId,
+                'master_circuit_id' => $masterCircuitId,
             ],
             [
                 'sisa' => 0,

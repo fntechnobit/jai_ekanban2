@@ -30,6 +30,11 @@
                                     </div>
 
                                     <div class="mb-3">
+                                        <label class="form-label fw-semibold">Carline </label>
+                                        <input type="text" name="carline" id="carline" class="form-control form-control-sm">
+                                    </div>
+
+                                    <div class="mb-3">
                                         <label class="form-label fw-semibold">Process <span class="text-danger">*</span></label>
                                         <select name="process" id="process" class="form-select form-control-sm" onchange="toggleProcessSections()">
                                             <option value="">- Choose Process -</option>
@@ -56,6 +61,12 @@
                                         <label class="form-label fw-semibold">Sequence</label>
                                         <input type="number" name="sequence" id="sequence" class="form-control form-control-sm">
                                         <div class="invalid-feedback" id="sequence-error"></div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Released Note</label>
+                                        <textarea name="released_note" id="released_note" class="form-control form-control-sm" rows="2"></textarea>
+                                        <div class="invalid-feedback" id="released_note-error"></div>
                                     </div>
                                 </div>
                                 

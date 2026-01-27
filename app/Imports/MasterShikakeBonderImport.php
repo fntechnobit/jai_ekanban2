@@ -41,6 +41,7 @@ class MasterShikakeBonderImport extends BaseShikakeImport
             'to_machine' => 'To Machine',
             'barcode_navigasi' => 'Barcode Navigasi',
             'barcode_process' => 'Barcode Process',
+            'released_note' => 'Released Note',
             'cct_no_a_1' => 'CCT No A 1',
             'bonder_no_a_1' => 'Bonder No A 1',
             'cct_no_a_2' => 'CCT No A 2',

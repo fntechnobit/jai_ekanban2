@@ -4,30 +4,67 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Config\ShikakeTemplateConfig;
+use App\Config\CircuitTemplateConfig;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
-class GenerateShikakeTemplates extends Command
+class GenerateTemplates extends Command
 {
-    protected $signature = 'shikake:generate-templates';
-    protected $description = 'Generate Excel templates for Shikake process types';
+    protected $signature = 'templates:generate {--type=all : Type of templates to generate (all, circuit, shikake)}';
+    protected $description = 'Generate Excel templates for Shikake and Circuit imports';
 
     public function handle()
     {
-        $this->info('Generating Shikake templates...');
-
-        $templates = ShikakeTemplateConfig::getAllTemplates();
-        $docsPath = public_path('docs');
-
-        foreach ($templates as $filename => $headers) {
-            $this->createTemplate($docsPath . '/' . $filename, $headers);
-            $this->info("Created: {$filename}");
+        $type = strtolower($this->option('type'));
+        
+        if (!in_array($type, ['all', 'circuit', 'shikake'])) {
+            $this->error("Invalid type: {$type}. Use 'all', 'circuit', or 'shikake'.");
+            return Command::FAILURE;
         }
 
-        $this->info('All templates generated successfully!');
+        $this->info('Generating templates...');
+        $docsPath = public_path('docs');
+
+        // Ensure docs directory exists
+        if (!is_dir($docsPath)) {
+            mkdir($docsPath, 0755, true);
+        }
+
+        $generatedCount = 0;
+
+        // Generate Shikake templates
+        if ($type === 'all' || $type === 'shikake') {
+            $this->info('');
+            $this->info('Generating Shikake templates...');
+            $templates = ShikakeTemplateConfig::getAllTemplates();
+
+            foreach ($templates as $filename => $headers) {
+                $this->createTemplate($docsPath . '/' . $filename, $headers);
+                $this->info("  Created: {$filename}");
+                $generatedCount++;
+            }
+        }
+
+        // Generate Circuit templates
+        if ($type === 'all' || $type === 'circuit') {
+            $this->info('');
+            $this->info('Generating Circuit templates...');
+            $templates = CircuitTemplateConfig::getAllTemplates();
+
+            foreach ($templates as $filename => $headers) {
+                $this->createTemplate($docsPath . '/' . $filename, $headers);
+                $this->info("  Created: {$filename}");
+                $generatedCount++;
+            }
+        }
+
+        $this->info('');
+        $this->info("All {$generatedCount} template(s) generated successfully!");
+        $this->info("Files saved to: {$docsPath}");
+        
         return Command::SUCCESS;
     }
 

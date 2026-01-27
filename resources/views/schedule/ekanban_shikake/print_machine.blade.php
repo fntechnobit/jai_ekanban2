@@ -133,6 +133,9 @@
                                 <div class="mb-3 row">
                                     <label class="col-sm-3 col-form-label">&nbsp;</label>
                                     <div class="col-sm-9">
+                                        <button type="button" class="btn btn-primary btn-sm" id="btn-filter">
+                                            <i class="fa-solid fa-filter"></i> Filter
+                                        </button>
                                         <button type="button" class="btn btn-secondary btn-sm" id="btn-reset">
                                             <i class="fa-solid fa-arrow-rotate-right"></i> Reset
                                         </button>
@@ -352,6 +355,15 @@
                 if (machine) {
                     table.ajax.reload();
                 }
+            });
+
+            $('#btn-filter').click(function() {
+                var machine = $('#filter_machine').val();
+                if (!machine) {
+                    Swal.fire('Warning', 'Please select a machine first', 'warning');
+                    return;
+                }
+                table.ajax.reload();
             });
 
             $('#btn-reset').click(function() {

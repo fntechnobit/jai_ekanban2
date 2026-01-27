@@ -10,6 +10,12 @@
     .filter-badge:hover {
         opacity: 0.8;
     }
+    .type-selector .btn {
+        min-width: 120px;
+    }
+    .type-selector .btn.active {
+        font-weight: bold;
+    }
 </style>
 @endsection
 
@@ -35,8 +41,23 @@
             </div>
         </div>
         <div class="card-body">
+            <!-- Type Selector -->
+            <div class="mb-3 type-selector">
+                <div class="btn-group" role="group" aria-label="Defect Type">
+                    <a href="{{ route('defect.history', array_merge(request()->except('type', 'shikake_type', 'page'), ['type' => 'circuit'])) }}" 
+                       class="btn btn-outline-primary {{ ($filters['type'] ?? 'circuit') == 'circuit' ? 'active' : '' }}">
+                        <i class="fa-solid fa-scissors me-1"></i> Circuit
+                    </a>
+                    <a href="{{ route('defect.history', array_merge(request()->except('type', 'page'), ['type' => 'shikake'])) }}" 
+                       class="btn btn-outline-warning {{ ($filters['type'] ?? '') == 'shikake' ? 'active' : '' }}">
+                        <i class="fa-solid fa-link-slash me-1"></i> Shikake
+                    </a>
+                </div>
+            </div>
+
             <!-- Filters -->
             <form action="{{ route('defect.history') }}" method="GET" class="mb-4">
+                <input type="hidden" name="type" value="{{ $filters['type'] ?? 'circuit' }}">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-2">
                         <label for="date_from" class="form-label">From Date</label>
@@ -59,14 +80,19 @@
                             @endforeach
                         </select>
                     </div>
+                    @if(($filters['type'] ?? 'circuit') == 'shikake')
                     <div class="col-md-2">
-                        <label for="type" class="form-label">Type</label>
-                        <select class="form-select form-select-sm" id="type" name="type">
+                        <label for="shikake_type" class="form-label">Shikake Type</label>
+                        <select class="form-select form-select-sm" id="shikake_type" name="shikake_type">
                             <option value="">- All -</option>
-                            <option value="circuit" {{ ($filters['type'] ?? '') == 'circuit' ? 'selected' : '' }}>Cutting/Circuit</option>
-                            <option value="shikake" {{ ($filters['type'] ?? '') == 'shikake' ? 'selected' : '' }}>Shikake</option>
+                            @foreach($shikakeTypes as $key => $label)
+                                <option value="{{ $key }}" {{ ($filters['shikake_type'] ?? '') == $key ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
                         </select>
                     </div>
+                    @endif
                     <div class="col-md-2">
                         <label for="shift" class="form-label">Shift</label>
                         <select class="form-select form-select-sm" id="shift" name="shift">
@@ -80,7 +106,7 @@
                         <button type="submit" class="btn btn-primary btn-sm">
                             <i class="fa-solid fa-search me-1"></i> Filter
                         </button>
-                        <a href="{{ route('defect.history') }}" class="btn btn-secondary btn-sm">
+                        <a href="{{ route('defect.history', ['type' => $filters['type'] ?? 'circuit']) }}" class="btn btn-secondary btn-sm">
                             <i class="fa-solid fa-arrows-rotate me-1"></i> Reset
                         </a>
                     </div>
@@ -89,15 +115,15 @@
 
             <!-- Summary Cards -->
             <div class="row mb-4" id="summary-cards">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="card bg-light">
                         <div class="card-body text-center">
-                            <h6 class="text-muted mb-1">Total Defects</h6>
+                            <h6 class="text-muted mb-1">Total Records</h6>
                             <h3 class="mb-0">{{ $history->total() }}</h3>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="card bg-danger text-white">
                         <div class="card-body text-center">
                             <h6 class="mb-1">Total Qty Defect</h6>
@@ -105,19 +131,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card bg-primary text-white">
+                <div class="col-md-4">
+                    <div class="card {{ ($filters['type'] ?? 'circuit') == 'circuit' ? 'bg-primary' : 'bg-warning' }} {{ ($filters['type'] ?? 'circuit') == 'circuit' ? 'text-white' : 'text-dark' }}">
                         <div class="card-body text-center">
-                            <h6 class="mb-1">Circuit Defects</h6>
-                            <h3 class="mb-0">{{ $history->where('type', 'circuit')->count() }}</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card bg-warning text-dark">
-                        <div class="card-body text-center">
-                            <h6 class="mb-1">Shikake Defects</h6>
-                            <h3 class="mb-0">{{ $history->where('type', 'shikake')->count() }}</h3>
+                            <h6 class="mb-1">{{ ($filters['type'] ?? 'circuit') == 'circuit' ? 'Circuit' : 'Shikake' }} Defects</h6>
+                            <h3 class="mb-0">{{ $history->total() }}</h3>
                         </div>
                     </div>
                 </div>
@@ -131,14 +149,16 @@
                             <th width="5%">No</th>
                             <th width="10%">Date</th>
                             <th width="5%">Shift</th>
-                            <th width="10%">Conveyor</th>
-                            <th width="8%">Type</th>
-                            <th width="15%">Code</th>
+                            <th width="12%">Conveyor</th>
+                            @if(($filters['type'] ?? 'circuit') == 'shikake')
+                            <th width="10%">Type</th>
+                            @endif
+                            <th width="18%">Code</th>
                             <th width="8%">Qty</th>
                             <th width="8%">Before</th>
                             <th width="8%">After</th>
-                            <th width="15%">Reason</th>
-                            <th width="8%">Created By</th>
+                            <th width="16%">Reason</th>
+                            <th width="10%">Created By</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -154,23 +174,24 @@
                                     @endif
                                 </td>
                                 <td>{{ $defect->conveyor?->conveyor ?? '-' }}</td>
+                                @if(($filters['type'] ?? 'circuit') == 'shikake')
                                 <td>
-                                    @if($defect->type == 'circuit')
-                                        <span class="badge bg-primary">Circuit</span>
+                                    @if($defect->shikake_type)
+                                        <span class="badge bg-warning text-dark">{{ $defect->shikake_type }}</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">
-                                            Shikake
-                                            @if($defect->shikake_type)
-                                                <br><small>({{ $defect->shikake_type }})</small>
-                                            @endif
-                                        </span>
+                                        <span class="text-muted">-</span>
                                     @endif
                                 </td>
+                                @endif
                                 <td>
-                                    @if($defect->type == 'circuit')
-                                        {{ $defect->cct_no }} - {{ $defect->cct_code }}
+                                    @if(($filters['type'] ?? 'circuit') == 'circuit')
+                                        @if($defect->masterCircuit)
+                                            {{ $defect->masterCircuit->cct_no }} - {{ $defect->masterCircuit->cct_code }}
+                                        @else
+                                            <span class="text-muted">Circuit #{{ $defect->master_circuit_id }}</span>
+                                        @endif
                                     @else
-                                        {{ $defect->shikake?->machine ?? "SHK-{$defect->master_shikake_id}" }}
+                                        {{ $defect->masterShikake?->machine ?? "SHK-{$defect->master_shikake_id}" }}
                                     @endif
                                 </td>
                                 <td class="text-end text-danger fw-bold">{{ number_format($defect->qty_defect) }}</td>
@@ -189,7 +210,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11" class="text-center text-muted py-4">
+                                <td colspan="{{ ($filters['type'] ?? 'circuit') == 'shikake' ? '12' : '11' }}" class="text-center text-muted py-4">
                                     <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
                                     No defect records found
                                 </td>

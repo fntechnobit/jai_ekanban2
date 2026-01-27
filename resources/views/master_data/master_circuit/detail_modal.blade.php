@@ -23,6 +23,11 @@
                             </div>
 
                             <div class="mb-3">
+                                <label>Carline <span class="text-danger">*</span></label>
+                                <input type="text" name="carline" id="carline" class="form-control form-control-sm">
+                            </div>
+
+                            <div class="mb-3">
                                 <label>CCT No</label>
                                 <input type="text" name="cct_no" id="cct_no" class="form-control form-control-sm">
                             </div>
@@ -45,6 +50,11 @@
                             <div class="mb-3">
                                 <label>Sequence</label>
                                 <input type="text" name="sequence" id="sequence" class="form-control form-control-sm">
+                            </div>
+
+                            <div class="mb-3">
+                                <label>Released Note</label>
+                                <textarea name="released_note" id="released_note" class="form-control form-control-sm" rows="2"></textarea>
                             </div>
 
                             <div class="mb-3">

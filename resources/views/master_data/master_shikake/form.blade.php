@@ -33,6 +33,11 @@
                                 </div>
 
                                 <div class="mb-3">
+                                    <label>Carline <span class="text-danger">*</span></label>
+                                    <input type="text" name="carline" class="form-control form-control-sm" value="{{ $shikake->carline ?? '' }}" required>
+                                </div>
+
+                                <div class="mb-3">
                                     <label>CCT Code</label>
                                     <input type="text" name="cct_code" class="form-control form-control-sm" value="{{ $shikake->shikake_no ?? '' }}" readonly>
                                 </div>
@@ -72,6 +77,11 @@
                                 <div class="mb-3">
                                     <label>Sequence</label>
                                     <input type="number" name="sequence" class="form-control form-control-sm" value="{{ $shikake->sequence ?? '' }}">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label>Released Note</label>
+                                    <textarea name="released_note" class="form-control form-control-sm" rows="2">{{ $shikake->released_note ?? '' }}</textarea>
                                 </div>
 
                                 <div class="mb-3">

@@ -25,6 +25,7 @@ class MasterShikakeService
                 'master_shikake.id',
                 'master_shikake.conveyor_id',
                 'master_shikake.process',
+                'master_shikake.carline',
                 'master_shikake.conveyor as shikake_conveyor',
                 'master_shikake.machine',
                 'master_shikake.qty',
@@ -64,8 +65,14 @@ class MasterShikakeService
 
         return DataTables::of($query)
             ->addIndexColumn()
+            ->addColumn('carline', function ($row) {
+                return $row->carline ?? '-';
+            })
             ->addColumn('conveyor_name', function ($row) {
                 return $row->conveyor ?? '-';
+            })
+            ->filterColumn('carline', function($query, $keyword) {
+                $query->where('master_shikake.carline', 'like', "%{$keyword}%");
             })
             ->addColumn('identifier', function ($row) {
                 return $this->getIdentifierByProcess($row);

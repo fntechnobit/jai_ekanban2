@@ -33,6 +33,11 @@
                                 </div>
 
                                 <div class="mb-3">
+                                    <label>Carline <span class="text-danger">*</span></label>
+                                    <input type="text" name="carline" class="form-control form-control-sm" value="{{ $circuit->carline ?? '' }}" required>
+                                </div>
+
+                                <div class="mb-3">
                                     <label>CCT No</label>
                                     <input type="text" name="cct_no" class="form-control form-control-sm" value="{{ $circuit->cct_no ?? '' }}">
                                 </div>
@@ -50,6 +55,11 @@
                                 <div class="mb-3">
                                     <label>Machine Sequence</label>
                                     <input type="text" name="machine_sequence" class="form-control form-control-sm" value="{{ $circuit->machine_sequence ?? '' }}">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label>Released Note</label>
+                                    <textarea name="released_note" class="form-control form-control-sm" rows="2">{{ $circuit->released_note ?? '' }}</textarea>
                                 </div>
 
                                 <div class="mb-3">

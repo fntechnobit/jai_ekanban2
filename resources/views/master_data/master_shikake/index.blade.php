@@ -60,6 +60,7 @@
                         <thead>
                             <tr>
                                 <th width="5%">No</th>
+                                <th>Carline</th>
                                 <th>Conveyor</th>
                                 <th>Identifier</th>
                                 <th>Family</th>
@@ -107,6 +108,7 @@
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                    { data: 'carline', name: 'carline' },
                     { data: 'conveyor_name', name: 'conveyor' },
                     { data: 'identifier', name: 'identifier', orderable: false, searchable: false },
                     { data: 'family', name: 'family' },
@@ -344,10 +346,12 @@
             function populateMainFields(data) {
                 $('#shikake_id').val(data.id);
                 $('#conveyor').val(data.conveyor ? data.conveyor.conveyor : '');
+                $('#carline').val(data.carline);
                 $('#process').val(data.process);
                 $('#machine').val(data.machine);
                 $('#family').val(data.family);
                 $('#sequence').val(data.sequence);
+                $('#released_note').val(data.released_note);
                 $('#qty').val(data.qty);
             }
 

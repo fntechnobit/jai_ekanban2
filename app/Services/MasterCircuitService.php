@@ -33,8 +33,14 @@ class MasterCircuitService
 
         return DataTables::of($query)
             ->addIndexColumn()
+            ->addColumn('carline', function ($row) {
+                return $row->carline ?? '-';
+            })
             ->addColumn('conveyor_name', function ($row) {
                 return $row->getRelation('conveyor') ? $row->getRelation('conveyor')->conveyor : ($row->conveyor ?? '-');
+            })
+            ->filterColumn('carline', function($query, $keyword) {
+                $query->where('master_circuit.carline', 'like', "%{$keyword}%");
             })
             ->addColumn('action', function ($row) {
                 /** @var \App\Models\User|null $currentUser */
