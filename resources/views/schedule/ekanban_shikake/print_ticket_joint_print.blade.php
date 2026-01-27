@@ -186,7 +186,7 @@
             </colgroup>
             <thead>
                 <tr>
-                    <th colspan="4">EKANBAN JOINT</th>
+                    <th colspan="4">EKANBAN JOINT - {{ $shikake->carline ?? '' }}</th>
                 </tr>
             </thead>
             <tbody>

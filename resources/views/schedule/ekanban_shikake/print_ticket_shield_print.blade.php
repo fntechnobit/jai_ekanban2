@@ -118,7 +118,7 @@
         </colgroup>
         <thead>
             <tr>
-                <th colspan="4">EKANBAN SHIELD WIRE</th>
+                <th colspan="4">EKANBAN SHIELD WIRE - {{ $shikake->carline ?? '' }}</th>
             </tr>
         </thead>
         <tbody>

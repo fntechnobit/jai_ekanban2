@@ -139,7 +139,7 @@
             </colgroup>
             <thead>
                 <tr>
-                    <th colspan="4">EKANBAN JOINT</th>
+                    <th colspan="4">EKANBAN JOINT - {{ $shikake->carline ?? '' }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -164,7 +164,7 @@
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_1 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_1 ?? '' }}</td>
-                    <td colspan="2" rowspan="5" class="barcode-cell">
+                    <td colspan="2" rowspan="3" class="barcode-cell">
                         @if(isset($processData->barcode_process_path))
                             <img src="{{ $processData->barcode_process_path }}" alt="Barcode">
                             <div style="font-size: 10px; text-align: center; margin-top: 4px;">{{ $processData->barcode_process ?? '' }}</div>
@@ -181,24 +181,16 @@
                     <td class="value-cell">{{ $processData->cct_no_3 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_3 ?? '' }}</td>
                 </tr>
+                
+                <!-- Row 9-10: Machine Label/Value -->
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_4 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_4 ?? '' }}</td>
+                    <td colspan="2" class="label-cell">MACHINE</td>
                 </tr>
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_5 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_5 ?? '' }}</td>
-                </tr>
-                
-                <!-- Row 9-10: Machine Label/Value -->
-                <tr>
-                    <td class="label-cell"></td>
-                    <td class="label-cell"></td>
-                    <td colspan="2" class="label-cell">MACHINE</td>
-                </tr>
-                <tr>
-                    <td class="value-cell"></td>
-                    <td class="value-cell"></td>
                     <td colspan="2" class="value-cell">{{ $shikake->machine ?? '' }}</td>
                 </tr>
                 

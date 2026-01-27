@@ -154,7 +154,7 @@
             </colgroup>
             <thead>
                 <tr>
-                    <th colspan="7">EKANBAN BONDER</th>
+                    <th colspan="7">EKANBAN BONDER - {{ $shikake->carline ?? '' }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -183,7 +183,7 @@
                     <td class="value-cell">{{ $processData->bonder_no_a_1 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->cct_no_b_1 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_b_1 ?? '' }}</td>
-                    <td colspan="3" rowspan="5" class="barcode-cell">
+                    <td colspan="3" rowspan="3" class="barcode-cell">
                         @if(isset($processData->barcode_process_path))
                             <img src="{{ $processData->barcode_process_path }}" alt="Barcode">
                             <div style="font-size: 9px; text-align: center; margin-top: 4px;">{{ $processData->barcode_process ?? '' }}</div>
@@ -204,44 +204,31 @@
                     <td class="value-cell">{{ $processData->cct_no_b_3 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_b_3 ?? '' }}</td>
                 </tr>
+                <!-- Row 6: MACHINE / DIES Labels with pair 6 -->
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_a_4 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_a_4 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->cct_no_b_4 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_b_4 ?? '' }}</td>
-                </tr>
-                <tr>
-                    <td class="value-cell">{{ $processData->cct_no_a_5 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_a_5 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->cct_no_b_5 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_b_5 ?? '' }}</td>
-                </tr>
-                
-                <!-- Row 6: MACHINE / DIES Labels with pair 6 -->
-                <tr>
-                    <td class="value-cell">{{ $processData->cct_no_a_6 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_a_6 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->cct_no_b_6 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_b_6 ?? '' }}</td>
                     <td colspan="2" class="label-cell">MACHINE</td>
                     <td class="label-cell">DIES</td>
                 </tr>
                 <!-- Row 7: MACHINE / DIES Values with pair 6 -->
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_a_6 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_a_6 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->cct_no_b_6 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_b_6 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_a_5 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->bonder_no_a_5 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_b_5 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->bonder_no_b_5 ?? '' }}</td>
                     <td colspan="2" class="value-cell">{{ $shikake->machine ?? '' }}</td>
                     <td class="value-cell">{{ $processData->dies ?? '' }}</td>
                 </tr>
                 
                 <!-- Row 8: TO MACHINE / SEQ Labels with pair 7 -->
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_a_7 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_a_7 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->cct_no_b_7 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_b_7 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_a_6 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->bonder_no_a_6 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_b_6 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->bonder_no_b_6 ?? '' }}</td>
                     <td colspan="2" class="label-cell">TO MACHINE</td>
                     <td class="label-cell">SEQ</td>
                 </tr>

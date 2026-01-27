@@ -158,6 +158,11 @@ class EkanbanShikakeController extends Controller
                 $processData->barcode_process_path = BarcodeHelper::generateBarcodeCached($processData->barcode_process, null, 2, 50, 'shikake');
             }
         }
+
+        // Barcode for barcode_mesin (DBL CRIMP specific)
+        if ($process === 'DBL CRIMP' && $processData && !empty($processData->barcode_mesin)) {
+            $processData->barcode_mesin_path = BarcodeHelper::generateBarcodeCached($processData->barcode_mesin, null, 2, 50, 'shikake');
+        }
     }
 
     /**
