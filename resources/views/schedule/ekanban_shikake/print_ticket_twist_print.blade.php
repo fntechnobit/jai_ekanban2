@@ -1,207 +1,240 @@
-{{-- Standalone E-KANBAN CUTTING TWIST Template - PRINT VERSION --}}
-{{-- Container: 120mm x 70mm - For thermal printer via QZ Tray --}}
+{{-- TWIST Process Print Template - PRINT VERSION (landscape, 80mm height) --}}
 <style>
-    /* ========================================
-       TWIST Print Template - Wrapper for Image + Ticket
-       ======================================== */
+/* TWIST Print Template - Landscape layout for 80mm thermal printer */
+/* Native 576px height = 80mm paper width at 203dpi (1:1 no scaling) */
+/* Ticket width: 120mm = 987px at 203dpi */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.twist-print-wrapper {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0;
+    margin: 10px auto;
+    justify-content: flex-start;
+    align-items: stretch;
+    background: white;
+    page-break-after: always;
+    height: 576px;
+}
+
+.twist-print-wrapper .shikake-image-section {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    height: 100%;
+}
+
+.twist-print-wrapper .shikake-image-section img {
+    height: 100%;
+    width: auto;
+    object-fit: contain;
+}
+
+.twist-kanban-container {
+    width: 987px;
+    min-width: 987px;
+    height: 100%;
+    flex-shrink: 0;
+    background: white;
+    margin: 0;
+    padding: 0;
+    border: 2px solid #ddd;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+.twist-kanban-container table {
+    width: 100%;
+    height: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.twist-kanban-container th,
+.twist-kanban-container td {
+    border: 1px solid #000;
+    padding: 2px 4px;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 1.2;
+    font-size: 18px;
+    box-sizing: border-box;
+}
+
+.twist-kanban-container thead th {
+    background-color: transparent;
+    color: #000;
+    font-weight: bold;
+    font-size: 28px;
+    padding: 4px;
+    border: 2px solid #000;
+}
+
+.twist-kanban-container .twist-section-label {
+    background-color: transparent;
+    color: #000;
+    font-weight: bold;
+    font-size: 18px;
+    width: 5.5mm;
+    padding: 4px;
+}
+
+.twist-kanban-container .twist-section-label.black-bg {
+    background-color: #000;
+    color: white;
+}
+
+.twist-kanban-container .twist-label-cell {
+    background-color: transparent;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.twist-kanban-container .twist-value-cell {
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.twist-kanban-container .text-left {
+    text-align: left !important;
+    padding-left: 4px;
+}
+
+.twist-kanban-container .twist-qrcode-cell {
+    padding: 2px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.twist-kanban-container .twist-qrcode-cell img {
+    max-width: 180px;
+    max-height: 180px;
+}
+
+.twist-kanban-container .twist-barcode-cell {
+    padding: 2px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.twist-kanban-container .twist-barcode-cell img {
+    max-width: 180px;
+    width: auto;
+    height: 60px;
+}
+
+.twist-kanban-container .twist-qr-label {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.twist-kanban-container .twist-qr-img {
+    width: 180px;
+    height: 180px;
+}
+    
+/* Thermal Printer Optimization */
+@media print {
+    body {
+        margin: 0;
+        padding: 0;
+        background: white;
+    }
+    
     .twist-print-wrapper {
-        display: flex;
         flex-direction: row;
-        flex-wrap: nowrap;
         gap: 0;
-        margin: 10px auto;
-        justify-content: center;
-        align-items: flex-start;
+        margin: 0;
+        justify-content: flex-start;
+        page-break-after: always;
+        page-break-inside: avoid;
     }
     
     .twist-print-wrapper .shikake-image-section {
+        display: flex;
         flex-shrink: 0;
+        align-items: center;
     }
     
     .twist-print-wrapper .shikake-image-section img {
         height: 70mm;
         width: auto;
         object-fit: contain;
-        border: 1px solid #ccc;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     
-    /* ========================================
-       TWIST Template - Screen Styles (Portrait Preview)
-       ======================================== */
     .twist-kanban-container {
-        width: 120mm;
-        max-width: 120mm;
-        height: 70mm;
-        background: white;
+        width: auto;
+        max-width: none;
+        height: auto;
+        border: none;
+        margin: 0;
         padding: 0;
-        border: 1px solid #ddd;
-        overflow: hidden;
-        font-family: Arial, sans-serif;
     }
     
     .twist-kanban-container table {
         width: 100%;
-        height: 100%;
-        border-collapse: collapse;
-        table-layout: fixed;
+        page-break-inside: avoid;
     }
     
     .twist-kanban-container th,
     .twist-kanban-container td {
-        border: 1px solid #000;
-        padding: 1px 2px;
-        text-align: center;
-        vertical-align: middle;
-        line-height: 1.1;
-        font-size: 9px;
-        height: 4.5mm;
-        box-sizing: border-box;
+        border: 1px solid #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     
     .twist-kanban-container thead th {
-        background-color: transparent;
-        color: #000;
-        font-weight: bold;
-        font-size: 11px;
-        padding: 4px;
-        border: 1px solid #000;
-        height: 4.5mm;
-    }
-    
-    .twist-kanban-container .twist-section-label {
-        background-color: transparent;
-        color: #000;
-        font-weight: bold;
-        font-size: 10px;
-        width: 5.5mm;
-        padding: 2px;
-    }
-    
-    .twist-kanban-container .twist-section-label.black-bg {
-        background-color: #000;
-        color: white;
+        font-size: 28px;
     }
     
     .twist-kanban-container .twist-label-cell {
-        background-color: transparent;
-        font-weight: 500;
-        font-size: 8px;
+        font-size: 14px;
     }
     
     .twist-kanban-container .twist-value-cell {
-        font-weight: bold;
-        font-size: 9px;
+        font-size: 18px;
     }
     
-    .twist-kanban-container .text-left {
-        text-align: left !important;
-        padding-left: 2px;
+    .twist-kanban-container .twist-section-label {
+        font-size: 18px;
     }
     
-    .twist-kanban-container .twist-qrcode-cell {
-        padding: 2px;
-        vertical-align: middle;
-        text-align: center;
-    }
-    
-    .twist-kanban-container .twist-qrcode-cell img {
-        max-width: 100%;
-        height: auto;
-    }
-    
-    .twist-kanban-container .twist-barcode-cell {
-        padding: 1px;
-        vertical-align: middle;
-        text-align: center;
-    }
-    
-    .twist-kanban-container .twist-barcode-cell img {
-        max-width: 80%;
-        width: auto;
-        height: 5mm;
-    }
-    
-    .twist-kanban-container .twist-qr-label {
-        font-size: 6px;
-        font-weight: bold;
-        margin-bottom: 1px;
+    .twist-kanban-container .twist-section-label.black-bg {
+        background-color: #000 !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     
     .twist-kanban-container .twist-qr-img {
-        width: 13mm;
-        height: 13mm;
+        width: 180px;
+        height: 180px;
     }
     
-    /* ========================================
-       TWIST Template - Print Styles (Landscape)
-       ======================================== */
-    @media print {
-        @page {
-            size: landscape;
-            margin: 1mm;
-        }
-        
-        .twist-kanban-container {
-            width: 100%;
-            max-width: none;
-            height: auto;
-            margin: 0;
-            padding: 0;
-            border: none;
-            page-break-after: always;
-            page-break-inside: avoid;
-        }
-        
-        .twist-kanban-container table {
-            width: 100%;
-            page-break-inside: avoid;
-        }
-        
-        .twist-kanban-container th,
-        .twist-kanban-container td {
-            border: 1px solid #000 !important;
-            font-size: 9px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-        
-        .twist-kanban-container thead th {
-            font-size: 11px;
-        }
-        
-        .twist-kanban-container .twist-label-cell {
-            font-size: 8px;
-        }
-        
-        .twist-kanban-container .twist-value-cell {
-            font-size: 9px;
-        }
-        
-        .twist-kanban-container .twist-section-label {
-            font-size: 10px;
-        }
-        
-        .twist-kanban-container .twist-section-label.black-bg {
-            background-color: #000 !important;
-            color: white !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-        
-        .twist-kanban-container .twist-qr-img {
-            width: 15mm;
-            height: 15mm;
-        }
-        
-        .twist-kanban-container .twist-barcode-cell img {
-            max-width: 80%;
-            height: 6mm;
-        }
+    .twist-kanban-container .twist-barcode-cell img {
+        max-width: 180px;
+        height: 60px;
     }
+    
+    @page {
+        size: landscape;
+        margin: 1mm;
+    }
+}
 </style>
 
 {{-- Wrapper with flexbox for image + ticket --}}
-<div class="twist-print-wrapper">
+<div class="ticket twist-print-wrapper" data-orientation="landscape">
     {{-- Image section (LEFT) - only if image exists --}}
     @if(!empty($shikake->image_path))
     <div class="shikake-image-section">
@@ -209,7 +242,7 @@
     </div>
     @endif
     
-    {{-- Ticket section (RIGHT) --}}
+    {{-- Ticket section (RIGHT) - landscape layout for 80mm thermal printer --}}
     <div class="twist-kanban-container">
     <table>
         <colgroup>

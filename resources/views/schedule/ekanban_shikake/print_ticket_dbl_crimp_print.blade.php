@@ -1,8 +1,8 @@
-{{-- DBL CRIMP Process Print Template - PRINT VERSION --}}
-{{-- Following BONDER pattern with unified table structure from dbl-crm.html reference --}}
-{{-- Dimensions: 120mm x 70mm for thermal printer --}}
+{{-- DBL CRIMP Process Print Template - PRINT VERSION (landscape, 80mm height) --}}
 <style>
-/* DBL CRIMP Print Template - Wrapper for Image + Ticket */
+/* DBL CRIMP Print Template - Landscape layout for 80mm thermal printer */
+/* Native 576px height = 80mm paper width at 203dpi (1:1 no scaling) */
+/* Ticket width: 120mm = 987px at 203dpi */
 * {
     margin: 0;
     padding: 0;
@@ -15,32 +15,38 @@
     flex-wrap: nowrap;
     gap: 0;
     margin: 10px auto;
-    justify-content: center;
-    align-items: flex-start;
+    justify-content: flex-start;
+    align-items: stretch;
+    background: white;
+    page-break-after: always;
+    height: 576px;
 }
 
 .dbl-crimp-print-wrapper .shikake-image-section {
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    height: 100%;
 }
 
 .dbl-crimp-print-wrapper .shikake-image-section img {
-    height: 264px;
+    height: 100%;
     width: auto;
     object-fit: contain;
-    border: 1px solid #ccc;
 }
 
-/* DBL CRIMP Print Template - 120mm x 70mm for thermal printer */
 .ticket-dbl-crimp-print {
-    width: 120mm;
-    max-width: 120mm;
-    height: 70mm;
+    width: 987px;
+    min-width: 987px;
+    height: 100%;
+    flex-shrink: 0;
     background: white;
     margin: 0;
     padding: 0;
-    border: 1px solid #ddd;
+    border: 2px solid #ddd;
     overflow: hidden;
-    page-break-after: always;
     font-family: Arial, sans-serif;
 }
 
@@ -54,12 +60,11 @@
 .ticket-dbl-crimp-print th,
 .ticket-dbl-crimp-print td {
     border: 1px solid #000;
-    padding: 1px 2px;
+    padding: 2px 4px;
     text-align: center;
     vertical-align: middle;
-    line-height: 1.1;
-    font-size: 9px;
-    height: 4.4mm;
+    line-height: 1.2;
+    font-size: 18px;
     box-sizing: border-box;
 }
 
@@ -67,21 +72,20 @@
     background-color: transparent;
     color: #000;
     font-weight: bold;
-    font-size: 14px;
-    padding: 3px;
-    border: 1px solid #000;
-    height: 4.5mm;
+    font-size: 28px;
+    padding: 4px;
+    border: 2px solid #000;
 }
 
 .ticket-dbl-crimp-print .label-cell {
     background-color: transparent;
     font-weight: 500;
-    font-size: 7px;
+    font-size: 14px;
 }
 
 .ticket-dbl-crimp-print .value-cell {
     font-weight: bold;
-    font-size: 9px;
+    font-size: 18px;
 }
 
 .ticket-dbl-crimp-print .qrcode-cell {
@@ -90,10 +94,21 @@
 }
 
 .ticket-dbl-crimp-print .qrcode-cell img {
-    max-width: 50px;
-    max-height: 50px;
+    max-width: 180px;
+    max-height: 180px;
     display: block;
     margin: 0 auto;
+}
+
+.ticket-dbl-crimp-print .qr-img {
+    width: 180px;
+    height: 180px;
+}
+
+.ticket-dbl-crimp-print .qr-label {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 4px;
 }
 
 .ticket-dbl-crimp-print .barcode-cell {
@@ -102,8 +117,8 @@
 }
 
 .ticket-dbl-crimp-print .barcode-cell img {
-    max-width: 70px;
-    max-height: 30px;
+    max-width: 180px;
+    height: 60px;
     display: block;
     margin: 0 auto;
 }
@@ -115,18 +130,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 7px;
+    font-size: 12px;
     color: #000;
 }
 
 .ticket-dbl-crimp-print .qrcode-placeholder {
-    width: 50px;
-    height: 50px;
+    width: 180px;
+    height: 180px;
 }
 
 .ticket-dbl-crimp-print .barcode-placeholder {
-    width: 70px;
-    height: 30px;
+    width: 180px;
+    height: 60px;
 }
 
 /* Thermal Printer Optimization */
@@ -137,23 +152,41 @@
         background: white;
     }
     
+    .dbl-crimp-print-wrapper {
+        flex-direction: row;
+        gap: 0;
+        margin: 0;
+        justify-content: flex-start;
+        page-break-after: always;
+        page-break-inside: avoid;
+    }
+    
     .dbl-crimp-print-wrapper .shikake-image-section {
-        display: none;
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+    }
+    
+    .dbl-crimp-print-wrapper .shikake-image-section img {
+        height: 70mm;
+        width: auto;
+        object-fit: contain;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     
     .ticket-dbl-crimp-print {
-        width: 120mm;
-        height: 70mm;
+        width: auto;
+        max-width: none;
+        height: auto;
         border: none;
         margin: 0;
         padding: 0;
-        page-break-after: always;
     }
     
     .ticket-dbl-crimp-print table {
         page-break-inside: avoid;
         width: 100%;
-        height: 100%;
     }
     
     .ticket-dbl-crimp-print th,
@@ -164,29 +197,29 @@
     }
     
     @page {
-        size: 120mm 70mm;
-        margin: 0;
+        size: landscape;
+        margin: 1mm;
     }
 }
 </style>
 
 {{-- Wrapper with flexbox for image + ticket --}}
-<div class="dbl-crimp-print-wrapper">
-    {{-- Image section (LEFT) - only if image exists, hidden on print --}}
+<div class="ticket dbl-crimp-print-wrapper" data-orientation="landscape">
+    {{-- Image section (LEFT) - only if image exists --}}
     @if(!empty($shikake->image_path))
     <div class="shikake-image-section">
         <img src="{{ asset($shikake->image_path) }}" alt="Shikake Image">
     </div>
     @endif
     
-    {{-- Ticket section (RIGHT) - 120mm x 70mm unified table structure --}}
+    {{-- Ticket section (RIGHT) - landscape layout for 80mm thermal printer --}}
     <div class="ticket-dbl-crimp-print">
         <table>
             <colgroup>
-                <col style="width: 29.6mm">
-                <col style="width: 29.6mm">
-                <col style="width: 29.6mm">
-                <col style="width: 29.6mm">
+                <col style="width: 25%">
+                <col style="width: 25%">
+                <col style="width: 25%">
+                <col style="width: 25%">
             </colgroup>
             <thead>
                 <tr>
@@ -249,10 +282,10 @@
                 <!-- Row 9-13: BARCODE KANBAN Section -->
                 <tr>
                     <td colspan="2" rowspan="5" class="qrcode-cell">
-                        <div class="label-cell" style="font-size: 6px; margin-bottom: 1px;">BARCODE KANBAN</div>
+                        <div class="qr-label">BARCODE KANBAN</div>
                         @if(isset($shikake->qr_code_path))
-                            <img src="{{ $shikake->qr_code_path }}" alt="QR Code">
-                            <div style="font-size: 6px; margin-top: 1px; font-weight: bold;">{{ $shikake->barcode_kanban ?? '' }}</div>
+                            <img src="{{ $shikake->qr_code_path }}" alt="QR Code" class="qr-img">
+                            <div style="font-size: 10px; margin-top: 1px; font-weight: bold;">{{ $shikake->barcode_kanban ?? '' }}</div>
                         @else
                             <div class="qrcode-placeholder">QR</div>
                         @endif

@@ -54,7 +54,7 @@
 }
 </style>
 
-<div class="ticket-wrap-generic ticket-generic">
+<div class="ticket ticket-wrap-generic ticket-generic">
     <div class="header">
         E-KANBAN SHIKAKE - {{ $shikake->process ?? 'UNKNOWN' }}
     </div>

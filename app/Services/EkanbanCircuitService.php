@@ -205,6 +205,7 @@ class EkanbanCircuitService
                 'master_circuit.remark_2',
                 'master_circuit.barcode_mesin',
                 'master_circuit.released_note',
+                'master_circuit.image_path',
                 // Kanban fields from assy_schedule_circuit
                 'assy_schedule_circuit.issue',
                 'assy_schedule_circuit.barcode_kanban',

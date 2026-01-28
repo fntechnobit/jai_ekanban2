@@ -1,17 +1,53 @@
-{{-- SHIELD Process Print Template - PRINT VERSION (120mm×70mm for thermal printer) --}}
+{{-- SHIELD Process Print Template - PRINT VERSION (landscape, 80mm height) --}}
 <style>
-/* SHIELD Print Template - Container for thermal printing */
+/* SHIELD Print Template - Landscape layout for 80mm thermal printer */
+/* Native 576px height = 80mm paper width at 203dpi (1:1 no scaling) */
+/* Ticket width: 120mm = 987px at 203dpi */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.shield-print-wrapper {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0;
+    margin: 10px auto;
+    justify-content: flex-start;
+    align-items: stretch;
+    background: white;
+    page-break-after: always;
+    height: 576px;
+}
+
+.shield-print-wrapper .shikake-image-section {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    height: 100%;
+}
+
+.shield-print-wrapper .shikake-image-section img {
+    height: 100%;
+    width: auto;
+    object-fit: contain;
+}
+
 .ticket-shield-print {
-    width: 120mm;
-    max-width: 120mm;
-    height: 70mm;
+    width: 987px;
+    min-width: 987px;
+    height: 100%;
+    flex-shrink: 0;
     background: white;
     margin: 0;
     padding: 0;
-    border: 1px solid #ddd;
+    border: 2px solid #ddd;
     overflow: hidden;
     font-family: Arial, sans-serif;
-    page-break-after: always;
 }
 
 .ticket-shield-print table {
@@ -24,12 +60,11 @@
 .ticket-shield-print th,
 .ticket-shield-print td {
     border: 1px solid #000;
-    padding: 1px 2px;
+    padding: 2px 4px;
     text-align: center;
     vertical-align: middle;
-    line-height: 1;
-    font-size: 8px;
-    height: 3.9mm;
+    line-height: 1.2;
+    font-size: 18px;
     box-sizing: border-box;
 }
 
@@ -37,21 +72,20 @@
     background-color: transparent;
     color: #000;
     font-weight: bold;
-    font-size: 10px;
-    padding: 2px;
-    border: 1px solid #000;
-    height: 4mm;
+    font-size: 28px;
+    padding: 4px;
+    border: 2px solid #000;
 }
 
 .ticket-shield-print .label-cell {
     background-color: transparent;
     font-weight: 500;
-    font-size: 6px;
+    font-size: 14px;
 }
 
 .ticket-shield-print .value-cell {
     font-weight: bold;
-    font-size: 8px;
+    font-size: 18px;
 }
 
 .ticket-shield-print .qrcode-cell {
@@ -60,37 +94,78 @@
 }
 
 .ticket-shield-print .qrcode-cell img {
-    max-width: 50px;
-    max-height: 50px;
+    max-width: 180px;
+    max-height: 180px;
     display: block;
     margin: 0 auto;
 }
 
+.ticket-shield-print .qr-img {
+    width: 180px;
+    height: 180px;
+}
+
+.ticket-shield-print .qr-label {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
 .ticket-shield-print .qrcode-placeholder {
-    width: 50px;
-    height: 50px;
+    width: 180px;
+    height: 180px;
     border: 1px solid #000;
     margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
+    font-size: 12px;
     color: #000;
 }
 
 /* Thermal Printer Optimization */
 @media print {
-    .ticket-shield-print {
-        width: 120mm;
+    body {
+        margin: 0;
+        padding: 0;
+        background: white;
+    }
+    
+    .shield-print-wrapper {
+        flex-direction: row;
+        gap: 0;
+        margin: 0;
+        justify-content: flex-start;
+        page-break-after: always;
+        page-break-inside: avoid;
+    }
+    
+    .shield-print-wrapper .shikake-image-section {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+    }
+    
+    .shield-print-wrapper .shikake-image-section img {
         height: 70mm;
+        width: auto;
+        object-fit: contain;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    .ticket-shield-print {
+        width: auto;
+        max-width: none;
+        height: auto;
         border: none;
         margin: 0;
         padding: 0;
-        page-break-after: always;
     }
     
     .ticket-shield-print table {
         page-break-inside: avoid;
+        width: 100%;
     }
     
     .ticket-shield-print th,
@@ -101,21 +176,30 @@
     }
     
     @page {
-        size: 120mm 70mm;
-        margin: 0;
+        size: landscape;
+        margin: 1mm;
     }
 }
 </style>
 
-{{-- Ticket container - 120mm×70mm for thermal printer --}}
-<div class="ticket-shield-print">
-    <table>
-        <colgroup>
-            <col style="width: 30mm">
-            <col style="width: 30mm">
-            <col style="width: 30mm">
-            <col style="width: 30mm">
-        </colgroup>
+{{-- Wrapper with flexbox for image + ticket --}}
+<div class="ticket shield-print-wrapper" data-orientation="landscape">
+    {{-- Image section (LEFT) - only if image exists --}}
+    @if(!empty($shikake->image_path))
+    <div class="shikake-image-section">
+        <img src="{{ asset($shikake->image_path) }}" alt="Shikake Image">
+    </div>
+    @endif
+    
+    {{-- Ticket section (RIGHT) - landscape layout for 80mm thermal printer --}}
+    <div class="ticket-shield-print">
+        <table>
+            <colgroup>
+                <col style="width: 25%">
+                <col style="width: 25%">
+                <col style="width: 25%">
+                <col style="width: 25%">
+            </colgroup>
         <thead>
             <tr>
                 <th colspan="4">EKANBAN SHIELD WIRE - {{ $shikake->carline ?? '' }}</th>
@@ -160,7 +244,7 @@
                 <td colspan="2" class="label-cell">MACHINE</td>
                 <td colspan="2" rowspan="4" class="qrcode-cell">
                     @if(isset($shikake->qr_code_path))
-                        <img src="{{ $shikake->qr_code_path }}" alt="QR Code">
+                        <img src="{{ $shikake->qr_code_path }}" alt="QR Code" class="qr-img">
                     @else
                         <div class="qrcode-placeholder">QR CODE</div>
                     @endif
@@ -232,5 +316,6 @@
             </tr>
         </tbody>
     </table>
+    </div>
 </div>
-{{-- End of ticket-shield-print --}}
+{{-- End of shield-print-wrapper --}}

@@ -549,25 +549,65 @@
         }
 
         async function renderTicketToCanvas(ticket) {
-            const prevW = ticket.style.width;
-            const prevB = ticket.style.boxSizing;
+            const isLandscape = ticket.dataset.orientation === 'landscape';
+
+            // Save original inline styles
+            const saved = {
+                w: ticket.style.width,
+                h: ticket.style.height,
+                b: ticket.style.boxSizing,
+                mw: ticket.style.maxWidth,
+                ov: ticket.style.overflow
+            };
+
             ticket.style.boxSizing = 'border-box';
-            ticket.style.width = BASE_DOTS + 'px';
-            
-            const restore = makeVisibleForCapture(ticket);
+
+            if (isLandscape) {
+                // Landscape: wrapper already at 576px via CSS, ensure it's set
+                // After rotation: 576px height -> 576 dots width = 1:1 no scaling
+                ticket.style.height = BASE_DOTS + 'px';
+                ticket.style.maxWidth = 'none';
+                ticket.style.overflow = 'visible';
+            } else {
+                ticket.style.width = BASE_DOTS + 'px';
+            }
+
+            const restore = makeVisibleForCapture(ticket, isLandscape);
             const canvas = await html2canvas(ticket, { scale: 1, backgroundColor: '#fff', useCORS: true });
             restore();
-            
-            ticket.style.width = prevW;
-            ticket.style.boxSizing = prevB;
 
-            const srcW = canvas.width;
-            const srcH = canvas.height;
-            let dstW = Math.min(BASE_DOTS, srcW);
-            dstW -= (dstW % 8);
-            const dstH = Math.floor(srcH * (dstW / srcW));
-            
-            if (dstW !== srcW) {
+            // Restore all saved inline styles
+            ticket.style.width = saved.w;
+            ticket.style.height = saved.h;
+            ticket.style.boxSizing = saved.b;
+            ticket.style.maxWidth = saved.mw;
+            ticket.style.overflow = saved.ov;
+
+            let finalCanvas, dstW, dstH, srcW, srcH;
+
+            if (isLandscape) {
+                // For landscape: rotate 90° CW so height becomes print-head width
+                finalCanvas = rotateCanvas90CW(canvas);
+                
+                // After rotation: original height -> new width, original width -> new height
+                // Scale so that new width (original height) = BASE_DOTS (paper width)
+                srcW = finalCanvas.width;  // This was original height
+                srcH = finalCanvas.height; // This was original width (can be long)
+                
+                dstW = BASE_DOTS;
+                dstW -= (dstW % 8);
+                const scale = dstW / srcW;
+                dstH = Math.floor(srcH * scale);
+            } else {
+                finalCanvas = canvas;
+                srcW = finalCanvas.width;
+                srcH = finalCanvas.height;
+                dstW = Math.min(BASE_DOTS, srcW);
+                dstW -= (dstW % 8);
+                dstH = Math.floor(srcH * (dstW / srcW));
+            }
+
+            if (dstW !== srcW || dstH !== srcH) {
                 const out = document.createElement('canvas');
                 out.width = dstW;
                 out.height = dstH;
@@ -575,13 +615,13 @@
                 ctx.imageSmoothingEnabled = false;
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(0, 0, dstW, dstH);
-                ctx.drawImage(canvas, 0, 0, dstW, dstH);
+                ctx.drawImage(finalCanvas, 0, 0, dstW, dstH);
                 return out;
             }
-            return canvas;
+            return finalCanvas;
         }
 
-        function makeVisibleForCapture(node) {
+        function makeVisibleForCapture(node, isLandscape) {
             const prev = {
                 v: node.style.visibility,
                 p: node.style.position,
@@ -593,7 +633,9 @@
             node.style.position = 'absolute';
             node.style.left = '-10000px';
             node.style.top = '0';
-            node.style.height = 'auto';
+            if (!isLandscape) {
+                node.style.height = 'auto';
+            }
             return () => {
                 node.style.visibility = prev.v;
                 node.style.position = prev.p;
@@ -601,6 +643,19 @@
                 node.style.top = prev.t;
                 node.style.height = prev.h;
             };
+        }
+
+        function rotateCanvas90CW(canvas) {
+            const w = canvas.width;
+            const h = canvas.height;
+            const rotated = document.createElement('canvas');
+            rotated.width = h;
+            rotated.height = w;
+            const ctx = rotated.getContext('2d');
+            ctx.translate(h, 0);
+            ctx.rotate(Math.PI / 2);
+            ctx.drawImage(canvas, 0, 0);
+            return rotated;
         }
 
         function canvasToEscposSlices(canvas) {

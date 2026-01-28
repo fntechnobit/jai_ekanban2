@@ -1,6 +1,7 @@
-{{-- JOINT Process Print Template - PRINT VERSION (104mm x 70mm) --}}
+{{-- JOINT Process Print Template - PRINT VERSION (landscape, 80mm height) --}}
 <style>
-/* JOINT Print Template - Compact 104mm x 70mm for thermal printer */
+/* JOINT Print Template - Landscape layout for 80mm thermal printer */
+/* Native 576px height = 80mm paper width at 203dpi (1:1 no scaling) */
 * {
     margin: 0;
     padding: 0;
@@ -13,36 +14,44 @@
     flex-wrap: nowrap;
     gap: 0;
     margin: 10px auto;
-    justify-content: center;
-    align-items: flex-start;
+    justify-content: flex-start;
+    align-items: stretch;
+    background: white;
+    page-break-after: always;
+    height: 576px;
 }
 
 .joint-print-wrapper .shikake-image-section {
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    height: 100%;
 }
 
 .joint-print-wrapper .shikake-image-section img {
-    height: 264px;
+    height: 100%;
     width: auto;
     object-fit: contain;
-    border: 1px solid #ccc;
 }
 
 .ticket-joint-print {
-    width: 104mm;
-    max-width: 104mm;
-    height: 70mm;
+    width: 856px;
+    min-width: 856px;
+    height: 100%;
+    flex-shrink: 0;
     background: white;
     margin: 0;
     padding: 0;
     border: 2px solid #ddd;
     overflow: hidden;
-    page-break-after: always;
     font-family: Arial, sans-serif;
 }
 
 .ticket-joint-print table {
     width: 100%;
+    height: 100%;
     border-collapse: collapse;
     table-layout: fixed;
 }
@@ -50,12 +59,11 @@
 .ticket-joint-print th,
 .ticket-joint-print td {
     border: 1px solid #000;
-    padding: 1px 2px;
+    padding: 2px 4px;
     text-align: center;
     vertical-align: middle;
-    line-height: 1.1;
-    font-size: 10px;
-    height: 4.2mm;
+    line-height: 1.2;
+    font-size: 18px;
     box-sizing: border-box;
 }
 
@@ -63,21 +71,20 @@
     background-color: transparent;
     color: #000;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 28px;
     padding: 4px;
-    border: 1px solid #000;
-    height: 5mm;
+    border: 2px solid #000;
 }
 
 .ticket-joint-print .label-cell {
     background-color: transparent;
     font-weight: 500;
-    font-size: 8px;
+    font-size: 14px;
 }
 
 .ticket-joint-print .value-cell {
     font-weight: bold;
-    font-size: 10px;
+    font-size: 18px;
 }
 
 .ticket-joint-print .qrcode-cell {
@@ -86,10 +93,21 @@
 }
 
 .ticket-joint-print .qrcode-cell img {
-    max-width: 45px;
-    max-height: 45px;
+    max-width: 180px;
+    max-height: 180px;
     display: block;
     margin: 0 auto;
+}
+
+.ticket-joint-print .qr-img {
+    width: 180px;
+    height: 180px;
+}
+
+.ticket-joint-print .qr-label {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 4px;
 }
 
 .ticket-joint-print .barcode-cell {
@@ -98,8 +116,8 @@
 }
 
 .ticket-joint-print .barcode-cell img {
-    max-width: 70px;
-    max-height: 28px;
+    max-width: 180px;
+    height: 60px;
     display: block;
     margin: 0 auto;
 }
@@ -111,18 +129,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
+    font-size: 12px;
     color: #000;
 }
 
 .ticket-joint-print .qrcode-placeholder {
-    width: 45px;
-    height: 45px;
+    width: 180px;
+    height: 180px;
 }
 
 .ticket-joint-print .barcode-placeholder {
-    width: 70px;
-    height: 28px;
+    width: 180px;
+    height: 60px;
 }
 
 /* Thermal Printer Optimization */
@@ -133,23 +151,41 @@
         background: white;
     }
     
+    .joint-print-wrapper {
+        flex-direction: row;
+        gap: 0;
+        margin: 0;
+        justify-content: flex-start;
+        page-break-after: always;
+        page-break-inside: avoid;
+    }
+    
     .joint-print-wrapper .shikake-image-section {
-        display: none;
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+    }
+    
+    .joint-print-wrapper .shikake-image-section img {
+        height: 70mm;
+        width: auto;
+        object-fit: contain;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
     
     .ticket-joint-print {
-        width: 104mm;
-        height: 70mm;
+        width: auto;
+        max-width: none;
+        height: auto;
         border: none;
         margin: 0;
         padding: 0;
-        page-break-after: always;
     }
     
     .ticket-joint-print table {
         page-break-inside: avoid;
         width: 100%;
-        height: 100%;
     }
     
     .ticket-joint-print th,
@@ -160,14 +196,14 @@
     }
     
     @page {
-        size: 104mm 70mm;
-        margin: 0;
+        size: landscape;
+        margin: 1mm;
     }
 }
 </style>
 
 {{-- Wrapper with flexbox for image + ticket --}}
-<div class="joint-print-wrapper">
+<div class="ticket joint-print-wrapper" data-orientation="landscape">
     {{-- Image section (LEFT) - only if image exists --}}
     @if(!empty($shikake->image_path))
     <div class="shikake-image-section">
@@ -175,14 +211,14 @@
     </div>
     @endif
     
-    {{-- Ticket section (RIGHT) - 104mm x 70mm compact layout --}}
+    {{-- Ticket section (RIGHT) - landscape layout for 80mm thermal printer --}}
     <div class="ticket-joint-print">
         <table>
             <colgroup>
-                <col style="width: 26mm">
-                <col style="width: 26mm">
-                <col style="width: 26mm">
-                <col style="width: 26mm">
+                <col style="width: 25%">
+                <col style="width: 25%">
+                <col style="width: 25%">
+                <col style="width: 25%">
             </colgroup>
             <thead>
                 <tr>
@@ -211,10 +247,10 @@
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_1 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_1 ?? '' }}</td>
-                    <td colspan="2" rowspan="5" class="barcode-cell">
+                    <td colspan="2" rowspan="3" class="barcode-cell">
                         @if(isset($processData->barcode_process_path))
                             <img src="{{ $processData->barcode_process_path }}" alt="Barcode">
-                            <div style="font-size: 7px; text-align: center;">{{ $processData->barcode_process ?? '' }}</div>
+                            <div style="font-size: 10px; text-align: center;">{{ $processData->barcode_process ?? '' }}</div>
                         @else
                             <div class="barcode-placeholder">BARCODE</div>
                         @endif
@@ -228,33 +264,25 @@
                     <td class="value-cell">{{ $processData->cct_no_3 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_3 ?? '' }}</td>
                 </tr>
+                
+                <!-- Row 9-10: Machine Label/Value -->
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_4 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_4 ?? '' }}</td>
+                    <td colspan="2" class="label-cell">MACHINE</td>
                 </tr>
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_5 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_5 ?? '' }}</td>
-                </tr>
-                
-                <!-- Row 9-10: Machine Label/Value -->
-                <tr>
-                    <td class="label-cell"></td>
-                    <td class="label-cell"></td>
-                    <td colspan="2" class="label-cell">MACHINE</td>
-                </tr>
-                <tr>
-                    <td class="value-cell"></td>
-                    <td class="value-cell"></td>
                     <td colspan="2" class="value-cell">{{ $shikake->machine ?? '' }}</td>
                 </tr>
                 
                 <!-- Row 11-15: QR Code section (rowspan=5) with SEQ/TO MACHINE/QTY/ISSUE/FAMILY -->
                 <tr>
                     <td colspan="2" rowspan="5" class="qrcode-cell">
-                        <div class="label-cell" style="font-size: 7px; margin-bottom: 2px;">QRCODE KANBAN</div>
+                        <div class="qr-label">QRCODE KANBAN</div>
                         @if(isset($shikake->qr_code_path))
-                            <img src="{{ $shikake->qr_code_path }}" alt="QR Code">
+                            <img src="{{ $shikake->qr_code_path }}" alt="QR Code" class="qr-img">
                         @else
                             <div class="qrcode-placeholder">QR</div>
                         @endif

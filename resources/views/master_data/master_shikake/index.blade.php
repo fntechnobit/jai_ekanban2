@@ -288,6 +288,17 @@
                 });
             });
 
+            // Reset modal when it's hidden (closed)
+            $('#detailShikakeModal').on('hidden.bs.modal', function () {
+                // Reset file input and hide preview
+                $('#imageInput').val('');
+                $('#imagePreviewContainer').hide();
+                $('#imagePreview').attr('src', '');
+                
+                // Clear validation errors
+                clearValidationErrors();
+            });
+
             // Handle View button click
             $('#master-shikake-table').on('click', '.btn-view', function() {
                 const id = $(this).data('id');
@@ -300,6 +311,10 @@
                 
                 // Clear any previous validation errors
                 clearValidationErrors();
+                
+                // Reset file input and image preview
+                $('#imageInput').val('');
+                $('#imagePreviewContainer').hide();
                 
                 // Fetch data via AJAX
                 $.ajax({

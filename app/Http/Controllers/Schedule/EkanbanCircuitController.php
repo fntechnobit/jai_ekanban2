@@ -97,7 +97,7 @@ class EkanbanCircuitController extends Controller
 
         return response()->json([
             'ok' => true,
-            'html' => $html
+            'html' => '<div id="print_stack_ajax">' . $html . '</div>'
         ]);
     }
 
