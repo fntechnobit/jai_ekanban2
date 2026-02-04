@@ -28,6 +28,14 @@
                             <!-- Left Column -->
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label>Type <span class="text-danger">*</span></label>
+                                    <select name="type" id="circuit_type" class="form-select form-select-sm" required>
+                                        <option value="CUTTING" {{ ($circuit->type ?? 'CUTTING') == 'CUTTING' ? 'selected' : '' }}>CUTTING</option>
+                                        <option value="CUTTING_TWIST" {{ ($circuit->type ?? '') == 'CUTTING_TWIST' ? 'selected' : '' }}>CUTTING TWIST</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
                                     <label>Conveyor <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control form-control-sm" value="{{ $circuit->getRelation('conveyor') ? $circuit->getRelation('conveyor')->conveyor : $circuit->conveyor }}" readonly>
                                 </div>
@@ -72,9 +80,42 @@
                                     <input type="text" name="cust_no" class="form-control form-control-sm" value="{{ $circuit->cust_no ?? '' }}">
                                 </div>
 
-                                <div class="mb-3">
+                                <div class="mb-3 cutting-only-field">
                                     <label>Barcode Mesin</label>
                                     <input type="text" name="barcode_mesin" class="form-control form-control-sm" value="{{ $circuit->barcode_mesin ?? '' }}">
+                                </div>
+
+                                <!-- CUTTING_TWIST specific fields -->
+                                <div class="cutting-twist-fields" style="display: none;">
+                                    <div class="mb-3">
+                                        <label>Machine Twist</label>
+                                        <input type="text" name="machine_twist" class="form-control form-control-sm" value="{{ $circuit->machine_twist ?? '' }}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label>Sequence 2</label>
+                                        <input type="number" name="sequence_2" class="form-control form-control-sm" value="{{ $circuit->sequence_2 ?? '' }}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label>Barcode Navigasi</label>
+                                        <input type="text" name="barcode_navigasi" class="form-control form-control-sm" value="{{ $circuit->barcode_navigasi ?? '' }}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label>Barcode Process</label>
+                                        <input type="text" name="barcode_process" class="form-control form-control-sm" value="{{ $circuit->barcode_process ?? '' }}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label>Barcode Shikake</label>
+                                        <input type="text" name="barcode_shikake" class="form-control form-control-sm" value="{{ $circuit->barcode_shikake ?? '' }}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label>To Store</label>
+                                        <input type="text" name="to_store" class="form-control form-control-sm" value="{{ $circuit->to_store ?? '' }}">
+                                    </div>
                                 </div>
 
                                 <div class="mb-3">
@@ -282,6 +323,24 @@
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
     <script>
         $(document).ready(function() {
+            // Toggle CUTTING_TWIST fields based on type
+            function toggleCuttingTwistFields() {
+                var type = $('#circuit_type').val();
+                if (type === 'CUTTING_TWIST') {
+                    $('.cutting-twist-fields').show();
+                    $('.cutting-only-field').hide();
+                } else {
+                    $('.cutting-twist-fields').hide();
+                    $('.cutting-only-field').show();
+                }
+            }
+
+            // Initial toggle
+            toggleCuttingTwistFields();
+
+            // On type change
+            $('#circuit_type').on('change', toggleCuttingTwistFields);
+
             // Image preview
             $('#imageInput').change(function() {
                 const file = this.files[0];

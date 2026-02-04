@@ -85,7 +85,7 @@
 
     <!-- Preview Modal -->
     <div class="modal fade" id="previewModal" tabindex="-1" >
-        <div class="modal-dialog modal-lg" >
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h4 class="modal-title">Circuit Label Preview</h4>
@@ -93,8 +93,11 @@
                         
                     </button>
                 </div>
-                <div class="modal-body" id="preview-content">
-                    <!-- Preview content will be loaded here -->
+                <div class="modal-body" id="preview-content" style="max-height: 70vh; overflow-y: auto;">
+                    <div class="text-center">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size: 3rem;"></i>
+                        <p>Loading preview...</p>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
@@ -190,56 +193,23 @@
         });
 
         function showPreview(ids) {
+            // Show modal with loading indicator
+            $('#previewModal').modal('show');
+            $('#preview-content').html('<div class="text-center"><i class="fa-solid fa-spinner fa-spin" style="font-size: 3rem;"></i><p>Loading preview...</p></div>');
+
+            // Fetch preview HTML using GET (same approach as print_machine)
             $.ajax({
-                url: "{{ route('schedule.ekanban-circuit.print') }}",
-                type: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    ids: ids
-                },
+                url: "{{ route('schedule.ekanban-circuit.print-preview') }}",
+                type: 'GET',
+                data: { ids: ids },
                 success: function(response) {
-                    if (response.success) {
-                        currentPreviewData = response.circuits;
-                        renderPreview(response.circuits);
-                        $('#previewModal').modal('show');
-                    }
+                    currentPreviewData = ids; // Store IDs for printing
+                    $('#preview-content').html(response);
                 },
-                error: function(xhr) {
-                    Swal.fire('Error!', 'Failed to get circuit data', 'error');
+                error: function(xhr, status, error) {
+                    $('#preview-content').html('<div class="alert alert-danger">Failed to load preview: ' + error + '</div>');
                 }
             });
-        }
-
-        function renderPreview(circuits) {
-            var html = '';
-            
-            circuits.forEach(function(circuit, index) {
-                html += `
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h5>Circuit Label ${index + 1}</h5>
-                        </div>
-                        <div class="card-body" style="font-family: monospace;">
-                            <div class="row">
-                                <div class="col-6">
-                                    <strong>Circuit:</strong> ${circuit.circuit_name || 'N/A'}<br>
-                                    <strong>Code:</strong> ${circuit.circuit_code || 'N/A'}<br>
-                                    <strong>Conveyor:</strong> ${circuit.conveyor}<br>
-                                    <strong>Area:</strong> ${circuit.area || 'N/A'}
-                                </div>
-                                <div class="col-6">
-                                    <strong>Assy:</strong> ${circuit.assy}<br>
-                                    <strong>Qty:</strong> ${circuit.qty}<br>
-                                    <strong>Schedule:</strong> ${moment(circuit.schedule).format('DD-MM-YYYY')}<br>
-                                    <strong>Shift:</strong> ${circuit.shift}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            $('#preview-content').html(html);
         }
 
         function printPreview() {
@@ -251,16 +221,37 @@
 
     <style>
         @media print {
-            .modal-header, .modal-footer, .btn {
+            /* Hide everything except the print content */
+            body > *:not(.modal) {
                 display: none !important;
+            }
+            .card, .container-fluid, .card-header, .card-body {
+                display: none !important;
+            }
+            .modal-header, .modal-footer {
+                display: none !important;
+            }
+            .modal {
+                position: static !important;
+                display: block !important;
+                overflow: visible !important;
             }
             .modal-dialog {
                 max-width: 100% !important;
                 margin: 0 !important;
+                transform: none !important;
             }
             .modal-content {
                 border: none !important;
                 box-shadow: none !important;
+            }
+            .modal-body {
+                padding: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+            .modal-backdrop {
+                display: none !important;
             }
         }
     </style>

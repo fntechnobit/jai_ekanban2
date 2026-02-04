@@ -551,6 +551,9 @@
         async function renderTicketToCanvas(ticket) {
             const isLandscape = ticket.dataset.orientation === 'landscape';
 
+            // Target the inner ticket element directly
+            const ticketEl = ticket.querySelector('.ticket-circuit-print') || ticket;
+
             // Save original inline styles
             const saved = {
                 w: ticket.style.width,
@@ -573,7 +576,21 @@
             }
 
             const restore = makeVisibleForCapture(ticket, isLandscape);
-            const canvas = await html2canvas(ticket, { scale: 1, backgroundColor: '#fff', useCORS: true });
+            
+            // Capture with specific options to avoid extra space
+            const canvas = await html2canvas(ticketEl, { 
+                scale: 1, 
+                backgroundColor: '#fff', 
+                useCORS: true,
+                logging: false,
+                width: ticketEl.offsetWidth,
+                height: ticketEl.offsetHeight,
+                windowWidth: ticketEl.offsetWidth,
+                windowHeight: ticketEl.offsetHeight,
+                x: 0,
+                y: 0
+            });
+            
             restore();
 
             // Restore all saved inline styles
@@ -583,23 +600,26 @@
             ticket.style.maxWidth = saved.mw;
             ticket.style.overflow = saved.ov;
 
+            // Crop any white space from canvas - but only from left/right (which becomes top/bottom after rotation)
+            const croppedCanvas = cropWhiteSpaceHorizontalOnly(canvas);
+
             let finalCanvas, dstW, dstH, srcW, srcH;
 
             if (isLandscape) {
                 // For landscape: rotate 90° CW so height becomes print-head width
-                finalCanvas = rotateCanvas90CW(canvas);
+                finalCanvas = rotateCanvas90CW(croppedCanvas);
                 
-                // After rotation: original height -> new width, original width -> new height
-                // Scale so that new width (original height) = BASE_DOTS (paper width)
+                // After rotation: original height → new width (paper width), original width → new height (print length)
                 srcW = finalCanvas.width;  // This was original height
-                srcH = finalCanvas.height; // This was original width (can be long)
+                srcH = finalCanvas.height; // This was original width (ticket length)
                 
+                // Scale to fit paper width exactly (576 dots)
                 dstW = BASE_DOTS;
                 dstW -= (dstW % 8);
                 const scale = dstW / srcW;
                 dstH = Math.floor(srcH * scale);
             } else {
-                finalCanvas = canvas;
+                finalCanvas = croppedCanvas;
                 srcW = finalCanvas.width;
                 srcH = finalCanvas.height;
                 dstW = Math.min(BASE_DOTS, srcW);
@@ -620,6 +640,139 @@
             }
             return finalCanvas;
         }
+        
+        function cropWhiteSpace(canvas) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            let top = 0, bottom = canvas.height, left = 0, right = canvas.width;
+            
+            // Find top
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const idx = (y * canvas.width + x) * 4;
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                    if (r < 250 || g < 250 || b < 250) {
+                        top = y;
+                        y = canvas.height;
+                        break;
+                    }
+                }
+            }
+            
+            // Find bottom
+            for (let y = canvas.height - 1; y >= top; y--) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const idx = (y * canvas.width + x) * 4;
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                    if (r < 250 || g < 250 || b < 250) {
+                        bottom = y + 1;
+                        y = -1;
+                        break;
+                    }
+                }
+            }
+            
+            // Find left
+            for (let x = 0; x < canvas.width; x++) {
+                for (let y = top; y < bottom; y++) {
+                    const idx = (y * canvas.width + x) * 4;
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                    if (r < 250 || g < 250 || b < 250) {
+                        left = x;
+                        x = canvas.width;
+                        break;
+                    }
+                }
+            }
+            
+            // Find right
+            for (let x = canvas.width - 1; x >= left; x--) {
+                for (let y = top; y < bottom; y++) {
+                    const idx = (y * canvas.width + x) * 4;
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                    if (r < 250 || g < 250 || b < 250) {
+                        right = x + 1;
+                        x = -1;
+                        break;
+                    }
+                }
+            }
+            
+            const width = right - left;
+            const height = bottom - top;
+            
+            if (width <= 0 || height <= 0 || (left === 0 && top === 0 && right === canvas.width && bottom === canvas.height)) {
+                return canvas;
+            }
+            
+            const croppedCanvas = document.createElement('canvas');
+            croppedCanvas.width = width;
+            croppedCanvas.height = height;
+            const croppedCtx = croppedCanvas.getContext('2d');
+            croppedCtx.drawImage(canvas, left, top, width, height, 0, 0, width, height);
+            
+            return croppedCanvas;
+        }
+        
+        // Crop only horizontal (left/right) white space - preserve full height for landscape rotation
+        function cropWhiteSpaceHorizontalOnly(canvas) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            let left = 0, right = canvas.width;
+            
+            // Find left - scan from left edge
+            for (let x = 0; x < canvas.width; x++) {
+                let hasContent = false;
+                for (let y = 0; y < canvas.height; y++) {
+                    const idx = (y * canvas.width + x) * 4;
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                    if (r < 250 || g < 250 || b < 250) {
+                        hasContent = true;
+                        break;
+                    }
+                }
+                if (hasContent) {
+                    left = x;
+                    break;
+                }
+            }
+            
+            // Find right - scan from right edge
+            for (let x = canvas.width - 1; x >= left; x--) {
+                let hasContent = false;
+                for (let y = 0; y < canvas.height; y++) {
+                    const idx = (y * canvas.width + x) * 4;
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                    if (r < 250 || g < 250 || b < 250) {
+                        hasContent = true;
+                        break;
+                    }
+                }
+                if (hasContent) {
+                    right = x + 1;
+                    break;
+                }
+            }
+            
+            const width = right - left;
+            
+            // Keep full height, only crop width
+            if (width <= 0 || (left === 0 && right === canvas.width)) {
+                return canvas;
+            }
+            
+            const croppedCanvas = document.createElement('canvas');
+            croppedCanvas.width = width;
+            croppedCanvas.height = canvas.height; // Keep original height (576px)
+            const croppedCtx = croppedCanvas.getContext('2d');
+            croppedCtx.drawImage(canvas, left, 0, width, canvas.height, 0, 0, width, canvas.height);
+            
+            return croppedCanvas;
+        }
 
         function makeVisibleForCapture(node, isLandscape) {
             const prev = {
@@ -627,21 +780,58 @@
                 p: node.style.position,
                 l: node.style.left,
                 t: node.style.top,
-                h: node.style.height
+                h: node.style.height,
+                m: node.style.margin,
+                b: node.style.border,
+                pd: node.style.padding,
+                w: node.style.width
             };
             node.style.visibility = 'visible';
             node.style.position = 'absolute';
             node.style.left = '-10000px';
             node.style.top = '0';
+            node.style.margin = '0 !important';
+            node.style.border = 'none !important';
+            node.style.padding = '0 !important';
             if (!isLandscape) {
                 node.style.height = 'auto';
             }
+            
+            // Also remove margins/borders from inner ticket element
+            const ticketEl = node.querySelector('.ticket-circuit-print');
+            let prevTicket = null;
+            if (ticketEl) {
+                prevTicket = {
+                    m: ticketEl.style.margin,
+                    b: ticketEl.style.border,
+                    pd: ticketEl.style.padding,
+                    w: ticketEl.style.width
+                };
+                ticketEl.style.margin = '0 !important';
+                ticketEl.style.border = 'none !important';
+                ticketEl.style.padding = '0 !important';
+                // Set exact HEIGHT to match paper width (after rotation)
+                ticketEl.style.height = '576px';
+                ticketEl.style.width = '800px';
+            }
+            
             return () => {
                 node.style.visibility = prev.v;
                 node.style.position = prev.p;
                 node.style.left = prev.l;
                 node.style.top = prev.t;
                 node.style.height = prev.h;
+                node.style.margin = prev.m;
+                node.style.border = prev.b;
+                node.style.padding = prev.pd;
+                node.style.width = prev.w;
+                
+                if (ticketEl && prevTicket) {
+                    ticketEl.style.margin = prevTicket.m;
+                    ticketEl.style.border = prevTicket.b;
+                    ticketEl.style.padding = prevTicket.pd;
+                    ticketEl.style.width = prevTicket.w;
+                }
             };
         }
 

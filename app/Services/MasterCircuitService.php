@@ -14,7 +14,7 @@ class MasterCircuitService
         return MasterCircuit::with(['conveyor'])->select('master_circuit.*');
     }
 
-    public function getDatatable($areaId = null, $conveyorId = null)
+    public function getDatatable($areaId = null, $conveyorId = null, $type = null)
     {
         $query = MasterCircuit::with(['conveyor'])
             ->select('master_circuit.*');
@@ -31,8 +31,16 @@ class MasterCircuitService
             $query->where('conveyor_id', $conveyorId);
         }
 
+        // Filter by type
+        if ($type) {
+            $query->where('type', $type);
+        }
+
         return DataTables::of($query)
             ->addIndexColumn()
+            ->addColumn('type', function ($row) {
+                return $row->type ?? 'CUTTING';
+            })
             ->addColumn('carline', function ($row) {
                 return $row->carline ?? '-';
             })
@@ -41,6 +49,9 @@ class MasterCircuitService
             })
             ->filterColumn('carline', function($query, $keyword) {
                 $query->where('master_circuit.carline', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('type', function($query, $keyword) {
+                $query->where('master_circuit.type', 'like', "%{$keyword}%");
             })
             ->addColumn('action', function ($row) {
                 /** @var \App\Models\User|null $currentUser */

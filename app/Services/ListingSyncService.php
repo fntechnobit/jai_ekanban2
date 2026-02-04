@@ -114,13 +114,21 @@ class ListingSyncService
             $startDate = Carbon::parse($startDate)->startOfDay();
             $endDate = Carbon::parse($endDate)->endOfDay();
 
-            // Delete only listing_stage records that do NOT have locked assy_schedules
+            // Delete only listing_stage records that do NOT have protected assy_schedules
+            // Protected schedules are: locked (is_lock != 0), user-edited (is_user_edited = 1), or soft-deleted (deleted_at IS NOT NULL)
+            // IMPORTANT: Because assy_schedule has ON DELETE CASCADE on listing_id,
+            // deleting listing_stage will hard-delete associated assy_schedule records,
+            // bypassing Laravel's SoftDeletes. So we must protect all three cases here.
             $deletedCount = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])
                 ->whereNotExists(function ($query) {
                     $query->select(DB::raw(1))
                         ->from('assy_schedule')
                         ->whereColumn('assy_schedule.listing_id', 'listing_stage.id')
-                        ->where('assy_schedule.is_lock', '!=', 0);
+                        ->where(function ($q) {
+                            $q->where('assy_schedule.is_lock', '!=', 0)
+                              ->orWhere('assy_schedule.is_user_edited', '=', 1)
+                              ->orWhereNotNull('assy_schedule.deleted_at');
+                        });
                 })
                 ->delete();
 
@@ -130,11 +138,15 @@ class ListingSyncService
                     $query->select(DB::raw(1))
                         ->from('assy_schedule')
                         ->whereColumn('assy_schedule.listing_id', 'listing_stage.id')
-                        ->where('assy_schedule.is_lock', '!=', 0);
+                        ->where(function ($q) {
+                            $q->where('assy_schedule.is_lock', '!=', 0)
+                              ->orWhere('assy_schedule.is_user_edited', '=', 1)
+                              ->orWhereNotNull('assy_schedule.deleted_at');
+                        });
                 })
                 ->count();
 
-            Log::info("Deleted listing_stage records (protected locked schedules)", [
+            Log::info("Deleted listing_stage records (protected: locked, user-edited, soft-deleted schedules)", [
                 'start_date' => $startDate->format('Y-m-d'),
                 'end_date' => $endDate->format('Y-m-d'),
                 'deleted_count' => $deletedCount,

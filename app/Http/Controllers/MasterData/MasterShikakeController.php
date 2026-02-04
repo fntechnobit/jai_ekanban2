@@ -371,7 +371,11 @@ class MasterShikakeController extends Controller
             return ResponseHelper::error('Template file not found for process: ' . ($process ?? 'default'), 404);
         }
         
-        return response()->download($filePath, $templateFile);
+        return response()->download($filePath, $templateFile, [
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
+        ]);
     }
 
     public function removeByConveyor(Request $request)

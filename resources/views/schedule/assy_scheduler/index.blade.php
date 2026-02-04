@@ -52,8 +52,9 @@
                                 <th width="12%">Times</th>
                                 <th width="8%">Shift</th>
                                 <th width="8%">Cut Off</th>
-                                <th width="45%">Assy</th>
-                                <th width="8%">Qty.</th>
+                                <th width="35%">Assy</th>
+                                <th width="12%">Qty.</th>
+                                <th width="10%">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -65,6 +66,7 @@
     </div>
 
     @include('schedule.assy_scheduler.generate_modal')
+    @include('schedule.assy_scheduler.edit_modal')
 @endsection
 
 @section('script')
@@ -109,7 +111,8 @@
                     { data: 'shift', name: 'shift', className: 'text-center' , orderable: false},
                     { data: 'cutoff', name: 'cutoff', className: 'text-center' , orderable: false},
                     { data: 'assy', name: 'assy' , orderable: false},
-                    { data: 'qty', name: 'qty', className: 'text-center' , orderable: false}
+                    { data: 'qty', name: 'qty', className: 'text-center' , orderable: false},
+                    { data: 'action', name: 'action', className: 'text-center', orderable: false, searchable: false }
                 ],
                 ordering: false,
                 pageLength: 100,
@@ -191,6 +194,151 @@
                     },
                     complete: function() {
                         submitBtn.prop('disabled', false).html('<i class="fa-solid fa-gear"></i> Generate');
+                    }
+                });
+            });
+
+            // Edit button click
+            $(document).on('click', '.btn-edit', function() {
+                var id = $(this).data('id');
+                var assy = $(this).data('assy');
+                var qty = $(this).data('qty');
+                
+                $('#edit_id').val(id);
+                $('#edit_assy').val(assy);
+                $('#edit_qty').val(qty);
+                $('#editModal').modal('show');
+            });
+
+            // Edit form submission
+            $('#editForm').submit(function(e) {
+                e.preventDefault();
+                
+                var id = $('#edit_id').val();
+                var qty = $('#edit_qty').val();
+                var submitBtn = $('#btn-submit-edit');
+                
+                Swal.fire({
+                    title: 'Are you sure?',
+                    html: '<div class="text-warning"><i class="ti ti-alert-triangle fa-2x mb-2"></i></div>' +
+                          '<p>This change <strong>cannot be undone</strong>, even after re-sync.</p>' +
+                          '<p class="text-muted small">The edited record will be preserved during future synchronizations.</p>',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, save changes',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        submitBtn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> Saving...');
+                        
+                        $.ajax({
+                            url: "{{ url('schedule/assy-scheduler') }}/" + id,
+                            type: 'PUT',
+                            data: {
+                                _token: '{{ csrf_token() }}',
+                                qty: qty
+                            },
+                            success: function(response) {
+                                $('#editModal').modal('hide');
+                                table.ajax.reload();
+                                Swal.fire('Success!', response.message, 'success');
+                            },
+                            error: function(xhr) {
+                                var message = 'Failed to update schedule';
+                                if (xhr.responseJSON && xhr.responseJSON.message) {
+                                    message = xhr.responseJSON.message;
+                                }
+                                Swal.fire('Error!', message, 'error');
+                            },
+                            complete: function() {
+                                submitBtn.prop('disabled', false).html('<i class="ti ti-check"></i> Save Changes');
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Delete button click
+            $(document).on('click', '.btn-delete', function() {
+                var id = $(this).data('id');
+                var assy = $(this).data('assy');
+                
+                Swal.fire({
+                    title: 'Delete Schedule?',
+                    html: '<div class="text-danger"><i class="ti ti-trash fa-2x mb-2"></i></div>' +
+                          '<p>Are you sure you want to delete schedule for <strong>' + assy + '</strong>?</p>' +
+                          '<p class="text-warning"><strong>Warning:</strong> This change cannot be undone, even after re-sync.</p>' +
+                          '<p class="text-muted small">The deleted record will not appear in verification and will be preserved during future synchronizations.</p>',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, delete it',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: "{{ url('schedule/assy-scheduler') }}/" + id,
+                            type: 'DELETE',
+                            data: {
+                                _token: '{{ csrf_token() }}'
+                            },
+                            success: function(response) {
+                                table.ajax.reload();
+                                Swal.fire('Deleted!', response.message, 'success');
+                            },
+                            error: function(xhr) {
+                                var message = 'Failed to delete schedule';
+                                if (xhr.responseJSON && xhr.responseJSON.message) {
+                                    message = xhr.responseJSON.message;
+                                }
+                                Swal.fire('Error!', message, 'error');
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Restore button click (for soft-deleted records)
+            $(document).on('click', '.btn-restore', function() {
+                var id = $(this).data('id');
+                var assy = $(this).data('assy');
+                
+                Swal.fire({
+                    title: 'Restore Schedule?',
+                    html: '<p>Are you sure you want to restore schedule for <strong>' + assy + '</strong>?</p>' +
+                          '<p class="text-muted small">You will need to set the quantity after restoring.</p>',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, restore it',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Restore by updating with current qty (which triggers restore in backend)
+                        $.ajax({
+                            url: "{{ url('schedule/assy-scheduler') }}/" + id,
+                            type: 'GET',
+                            success: function(response) {
+                                if (response.success) {
+                                    // Open edit modal with fetched data to set new qty
+                                    $('#edit_id').val(response.data.id);
+                                    $('#edit_assy').val(response.data.assy);
+                                    $('#edit_qty').val(response.data.qty);
+                                    $('#editModal').modal('show');
+                                }
+                            },
+                            error: function(xhr) {
+                                var message = 'Failed to fetch schedule data';
+                                if (xhr.responseJSON && xhr.responseJSON.message) {
+                                    message = xhr.responseJSON.message;
+                                }
+                                Swal.fire('Error!', message, 'error');
+                            }
+                        });
                     }
                 });
             });

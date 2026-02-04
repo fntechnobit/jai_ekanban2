@@ -20,6 +20,7 @@ class ScheduleVerificationService
 
     /**
      * Get datatable query for schedule verification
+     * Excludes records with qty <= 0 (they should not appear in verification)
      */
     public function getDatatableQuery($startDate = null, $endDate = null, $conveyorId = null, $status = null)
     {
@@ -33,6 +34,7 @@ class ScheduleVerificationService
                 DB::raw('MAX(is_lock) as is_lock'),
                 DB::raw('MIN(id) as first_id')
             )
+            ->where('qty', '>', 0) // Exclude qty <= 0 from verification
             ->groupBy('conveyor_id', 'schedule_date', 'shift');
 
         // Apply filters
@@ -74,9 +76,11 @@ class ScheduleVerificationService
         }
 
         // Get all schedules for this conveyor, date, and shift
+        // Exclude records with qty <= 0
         $schedules = AssySchedule::where('conveyor_id', $conveyorId)
             ->whereDate('schedule', $date)
             ->where('shift', $shift)
+            ->where('qty', '>', 0) // Exclude qty <= 0 from verification details
             ->orderBy('cutoff', 'asc')
             ->orderBy('seq', 'asc')
             ->get();

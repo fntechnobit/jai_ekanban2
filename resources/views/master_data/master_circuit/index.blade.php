@@ -27,7 +27,7 @@
             <div class="card-body">
                 <!-- Filters -->
                 <div class="row mb-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="filter_area_id" class="form-label">Area * :</label>
                         <select class="form-select select2" id="filter_area_id" style="width: 100%;">
                             <option value="">- All Area -</option>
@@ -36,7 +36,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="filter_conveyor_id" class="form-label">Conveyor * :</label>
                         <select class="form-select select2" id="filter_conveyor_id" style="width: 100%;">
                             <option value="">- All Conveyor -</option>
@@ -45,12 +45,21 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <label for="filter_type" class="form-label">Type :</label>
+                        <select class="form-select select2" id="filter_type" style="width: 100%;">
+                            <option value="">- All Type -</option>
+                            <option value="CUTTING">CUTTING</option>
+                            <option value="CUTTING_TWIST">CUTTING TWIST</option>
+                        </select>
+                    </div>
                 </div>
 
                 <table id="master-circuit-table" class="table table-bordered table-striped">
                     <thead>
                         <tr>
                             <th width="5%">No</th>
+                            <th>Type</th>
                             <th>Carline</th>
                             <th>Conveyor</th>
                             <th>CCT No</th>
@@ -77,7 +86,7 @@
     <script>
         $(function () {
             // Initialize Select2 for filters
-            $('#filter_area_id, #filter_conveyor_id').select2({
+            $('#filter_area_id, #filter_conveyor_id, #filter_type').select2({
                 theme: 'bootstrap-5',
                 allowClear: true,
                 placeholder: function() {
@@ -94,10 +103,12 @@
                     data: function(d) {
                         d.area_id = $('#filter_area_id').val();
                         d.conveyor_id = $('#filter_conveyor_id').val();
+                        d.type = $('#filter_type').val();
                     }
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                    { data: 'type', name: 'type' },
                     { data: 'carline', name: 'carline' },
                     { data: 'conveyor_name', name: 'conveyor_name' },
                     { data: 'cct_no', name: 'cct_no' },
@@ -113,7 +124,7 @@
             });
 
             // Filter handlers
-            $('#filter_area_id, #filter_conveyor_id').on('change', function() {
+            $('#filter_area_id, #filter_conveyor_id, #filter_type').on('change', function() {
                 table.ajax.reload();
             });
 
@@ -258,13 +269,28 @@
                 });
             });
 
+            // Toggle modal CUTTING_TWIST fields based on type
+            function toggleModalCuttingTwistFields() {
+                var type = $('#modal_circuit_type').val();
+                if (type === 'CUTTING_TWIST') {
+                    $('.modal-cutting-twist-fields').show();
+                    $('.modal-cutting-only-field').hide();
+                } else {
+                    $('.modal-cutting-twist-fields').hide();
+                    $('.modal-cutting-only-field').show();
+                }
+            }
+
+            // On modal type change
+            $('#modal_circuit_type').on('change', toggleModalCuttingTwistFields);
+
             // Handle View button click
             $('#master-circuit-table').on('click', '.btn-view', function() {
                 const id = $(this).data('id');
-                
+
                 // Show modal
                 $('#detailCircuitModal').modal('show');
-                
+
                 // Fetch data via AJAX
                 $.ajax({
                     url: "{{ route('master-data.master-circuit.show', ':id') }}".replace(':id', id),
@@ -274,9 +300,10 @@
                         if (response.success) {
                             const data = response.data;
                             console.log('Circuit data:', data);
-                            
+
                             // Populate form fields
                             $('#circuit_id').val(data.id);
+                            $('#modal_circuit_type').val(data.type || 'CUTTING');
                             $('#conveyor').val(data.conveyor ? data.conveyor.conveyor : '');
                             $('#carline').val(data.carline);
                             $('#cct_no').val(data.cct_no);
@@ -293,7 +320,18 @@
                             $('#size').val(data.size);
                             $('#col').val(data.col);
                             $('#cl').val(data.cl);
-                            
+
+                            // CUTTING_TWIST specific fields
+                            $('#machine_twist').val(data.machine_twist);
+                            $('#sequence_2').val(data.sequence_2);
+                            $('#barcode_navigasi').val(data.barcode_navigasi);
+                            $('#barcode_process').val(data.barcode_process);
+                            $('#barcode_shikake').val(data.barcode_shikake);
+                            $('#to_store').val(data.to_store);
+
+                            // Toggle fields based on type
+                            toggleModalCuttingTwistFields();
+
                             // Terminal 1 fields
                             $('#terminal_1').val(data.terminal_1);
                             $('#note_1').val(data.note_1);
@@ -304,7 +342,7 @@
                             $('#tube_1').val(data.tube_1);
                             $('#mark_1').val(data.mark_1);
                             $('#remark_1').val(data.remark_1);
-                            
+
                             // Terminal 2 fields
                             $('#terminal_2').val(data.terminal_2);
                             $('#note_2').val(data.note_2);
@@ -315,7 +353,7 @@
                             $('#tube_2').val(data.tube_2);
                             $('#mark_2').val(data.mark_2);
                             $('#remark_2').val(data.remark_2);
-                            
+
                             // T fields
                             $('#ta').val(data.ta);
                             $('#tb').val(data.tb);
@@ -323,7 +361,7 @@
                                 const fieldName = 't' + String(i).padStart(2, '0');
                                 $('#' + fieldName).val(data[fieldName]);
                             }
-                            
+
                             // Image preview
                             if (data.image_path) {
                                 $('#imagePreview').attr('src', '{{ asset("") }}' + data.image_path);
@@ -331,7 +369,7 @@
                             } else {
                                 $('#imagePreviewContainer').hide();
                             }
-                            
+
                             // Assy list
                             if (data.assemblies && data.assemblies.length > 0) {
                                 const assyText = data.assemblies.map(a => a.assy).join(', ');

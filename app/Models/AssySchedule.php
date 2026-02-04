@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AssySchedule extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'assy_schedule';
 
     protected $fillable = [
@@ -27,6 +30,7 @@ class AssySchedule extends Model
         'verified_by',
         'created_by',
         'updated_by',
+        'is_user_edited',
     ];
 
     protected $casts = [
@@ -46,6 +50,7 @@ class AssySchedule extends Model
         'verified_by' => 'integer',
         'created_by' => 'integer',
         'updated_by' => 'integer',
+        'is_user_edited' => 'boolean',
     ];
 
     /**

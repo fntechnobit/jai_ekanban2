@@ -36,7 +36,8 @@ class MasterCircuitController extends Controller
         if ($request->ajax()) {
             $areaId = $request->get('area_id');
             $conveyorId = $request->get('conveyor_id');
-            return $this->masterCircuitService->getDatatable($areaId, $conveyorId);
+            $type = $request->get('type');
+            return $this->masterCircuitService->getDatatable($areaId, $conveyorId, $type);
         }
     }
 
@@ -178,7 +179,11 @@ class MasterCircuitController extends Controller
             return ResponseHelper::error('Template file not found', 404);
         }
         
-        return response()->download($filePath, 'Template_Cutting.xlsx');
+        return response()->download($filePath, 'Template_Cutting.xlsx', [
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0'
+        ]);
     }
 
     public function removeByConveyor(Request $request)

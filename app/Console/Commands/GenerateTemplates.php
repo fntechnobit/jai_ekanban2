@@ -19,7 +19,7 @@ class GenerateTemplates extends Command
     public function handle()
     {
         $type = strtolower($this->option('type'));
-        
+
         if (!in_array($type, ['all', 'circuit', 'shikake'])) {
             $this->error("Invalid type: {$type}. Use 'all', 'circuit', or 'shikake'.");
             return Command::FAILURE;
@@ -55,7 +55,7 @@ class GenerateTemplates extends Command
             $templates = CircuitTemplateConfig::getAllTemplates();
 
             foreach ($templates as $filename => $headers) {
-                $this->createTemplate($docsPath . '/' . $filename, $headers);
+                $this->createCircuitTemplate($docsPath . '/' . $filename, $headers);
                 $this->info("  Created: {$filename}");
                 $generatedCount++;
             }
@@ -64,7 +64,7 @@ class GenerateTemplates extends Command
         $this->info('');
         $this->info("All {$generatedCount} template(s) generated successfully!");
         $this->info("Files saved to: {$docsPath}");
-        
+
         return Command::SUCCESS;
     }
 
@@ -155,6 +155,210 @@ class GenerateTemplates extends Command
 
         // Write the file
         $writer = new Xlsx($spreadsheet);
+        $writer->save($filePath);
+    }
+
+    protected function createCircuitTemplate($filePath, $headers)
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Data');
+
+        // Get color categories
+        $cuttingTwistColumns = CircuitTemplateConfig::getCuttingTwistColumns();
+        $cuttingOnlyColumns = CircuitTemplateConfig::getCuttingOnlyColumns();
+
+        // Set required headers with color coding
+        $col = 1;
+        foreach ($headers as $header) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+            $sheet->setCellValue($colLetter . '1', $header);
+
+            // Determine color based on column type
+            if (in_array($header, $cuttingTwistColumns)) {
+                // Blue for CUTTING_TWIST only
+                $bgColor = 'BDD7EE';
+                $fontColor = '000000';
+            } elseif (in_array($header, $cuttingOnlyColumns)) {
+                // Yellow for CUTTING only
+                $bgColor = 'FFEB9C';
+                $fontColor = '000000';
+            } else {
+                // Green for ALL types
+                $bgColor = 'C6EFCE';
+                $fontColor = '000000';
+            }
+
+            $sheet->getStyle($colLetter . '1')->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'color' => ['rgb' => $fontColor],
+                ],
+                'fill' => [
+                    'fillType' => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => $bgColor],
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000'],
+                    ],
+                ],
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical' => Alignment::VERTICAL_CENTER,
+                ],
+            ]);
+
+            $col++;
+        }
+
+        // Add example assy columns
+        $exampleAssyColumns = ['ASSY-001', 'ASSY-002', 'ASSY-003'];
+        $assyStartCol = $col;
+        foreach ($exampleAssyColumns as $assyHeader) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
+            $sheet->setCellValue($colLetter . '1', $assyHeader);
+
+            // Style assy columns (light green with italic)
+            $sheet->getStyle($colLetter . '1')->applyFromArray([
+                'font' => [
+                    'bold' => true,
+                    'italic' => true,
+                    'color' => ['rgb' => '000000'],
+                ],
+                'fill' => [
+                    'fillType' => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => '92D050'],
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000'],
+                    ],
+                ],
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical' => Alignment::VERTICAL_CENTER,
+                ],
+            ]);
+
+            $col++;
+        }
+
+        // Auto-size all columns
+        $totalColumns = count($headers) + count($exampleAssyColumns);
+        foreach (range(1, $totalColumns) as $colIndex) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+            $sheet->getColumnDimension($colLetter)->setAutoSize(true);
+        }
+
+        // Freeze the header row
+        $sheet->freezePane('A2');
+
+        // Create PETUNJUK (Instructions) sheet
+        $petunjukSheet = $spreadsheet->createSheet();
+        $petunjukSheet->setTitle('PETUNJUK');
+
+        $instructions = [
+            ['PETUNJUK PENGISIAN TEMPLATE MASTER CIRCUIT'],
+            [''],
+            ['1. CARA MENGISI KOLOM TYPE'],
+            ['   - Isi dengan "CUTTING" untuk data cutting standar'],
+            ['   - Isi dengan "CUTTING_TWIST" untuk data cutting twist'],
+            ['   - Kolom ini WAJIB diisi untuk setiap baris data'],
+            ['   - Penulisan harus HURUF KAPITAL semua'],
+            [''],
+            ['2. KETERANGAN WARNA'],
+            [''],
+            ['   HIJAU - Field yang WAJIB diisi untuk SEMUA tipe'],
+            ['   - TYPE, CARLINE, CONVEYOR, CCT No., FAMILY, QTY, MACHINE, SEQUENCE'],
+            ['   - RELEASED NOTE, CUST NO., ADDRESS, CCT CODE, KIND, SIZE, COL, C/L'],
+            ['   - TERMINAL 1, TERMINAL 2, NOTE 1, NOTE 2, STRIP 1, STRIP 2'],
+            ['   - ACC. 1, ACC 2, TUBE 1, TUBE 2, MARK 1, MARK 2'],
+            ['   - TA, TB, T01-T06'],
+            [''],
+            ['   KUNING - Field KHUSUS untuk tipe CUTTING saja'],
+            ['   - BARCODE MESIN'],
+            ['   - GOLD 1, GOLD 2'],
+            ['   - ACC. 1A, ACC 2A'],
+            ['   - REMARK 1, REMARK 2'],
+            ['   - Jika TYPE = "CUTTING_TWIST", kolom ini bisa dikosongkan'],
+            [''],
+            ['   BIRU - Field KHUSUS untuk tipe CUTTING_TWIST saja'],
+            ['   - MACHINE TWIST - Nomor mesin twist'],
+            ['   - SEQUENCE 2 - Urutan kedua'],
+            ['   - BARCODE NAVIGASI - Barcode untuk navigasi'],
+            ['   - BARCODE PROCESS - Barcode proses'],
+            ['   - BARCODE SHIKAKE - Barcode shikake'],
+            ['   - TO STORE - Tujuan penyimpanan'],
+            ['   - Jika TYPE = "CUTTING", kolom ini bisa dikosongkan'],
+            [''],
+            ['3. CONTOH PENGISIAN'],
+            [''],
+            ['   Contoh baris CUTTING:'],
+            ['   TYPE=CUTTING | CARLINE=ABC | CONVEYOR=CONV-1 | ... | BARCODE MESIN=BM001 | (kolom biru dikosongkan)'],
+            [''],
+            ['   Contoh baris CUTTING_TWIST:'],
+            ['   TYPE=CUTTING_TWIST | CARLINE=XYZ | CONVEYOR=CONV-2 | ... | MACHINE TWIST=MT001 | BARCODE NAVIGASI=NAV001'],
+            [''],
+            ['4. CATATAN PENTING'],
+            ['   - Satu file Excel bisa berisi campuran data CUTTING dan CUTTING_TWIST'],
+            ['   - Pastikan TYPE diisi dengan benar di setiap baris'],
+            ['   - Maksimal 1000 baris per upload'],
+            ['   - Format file harus .xlsx atau .xls'],
+            ['   - Baris data dimulai dari baris ke-2 (baris 1 adalah header)'],
+            [''],
+            ['5. KOLOM ASSY'],
+            ['   - Kolom Assy dimulai setelah kolom T06'],
+            ['   - Isi dengan angka "1" jika circuit memiliki assy tersebut'],
+            ['   - Kosongkan jika circuit tidak memiliki assy tersebut'],
+        ];
+
+        $row = 1;
+        foreach ($instructions as $line) {
+            $petunjukSheet->setCellValue('A' . $row, $line[0]);
+            $row++;
+        }
+
+        // Style title
+        $petunjukSheet->getStyle('A1')->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 14,
+            ],
+        ]);
+
+        // Add color legend
+        $legendRow = $row + 1;
+        $petunjukSheet->setCellValue('A' . $legendRow, 'LEGENDA WARNA:');
+        $petunjukSheet->getStyle('A' . $legendRow)->getFont()->setBold(true);
+
+        $legendRow++;
+        $petunjukSheet->setCellValue('A' . $legendRow, 'HIJAU');
+        $petunjukSheet->getStyle('A' . $legendRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('C6EFCE');
+        $petunjukSheet->setCellValue('B' . $legendRow, '= Wajib untuk SEMUA tipe');
+
+        $legendRow++;
+        $petunjukSheet->setCellValue('A' . $legendRow, 'KUNING');
+        $petunjukSheet->getStyle('A' . $legendRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('FFEB9C');
+        $petunjukSheet->setCellValue('B' . $legendRow, '= Khusus CUTTING saja');
+
+        $legendRow++;
+        $petunjukSheet->setCellValue('A' . $legendRow, 'BIRU');
+        $petunjukSheet->getStyle('A' . $legendRow)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('BDD7EE');
+        $petunjukSheet->setCellValue('B' . $legendRow, '= Khusus CUTTING_TWIST saja');
+
+        // Set column widths for PETUNJUK sheet
+        $petunjukSheet->getColumnDimension('A')->setWidth(100);
+        $petunjukSheet->getColumnDimension('B')->setWidth(30);
+
+        // Set Data sheet as active
+        $spreadsheet->setActiveSheetIndex(0);
+
+        // Disable formula pre-calculation to avoid issues
+        $writer = new Xlsx($spreadsheet);
+        $writer->setPreCalculateFormulas(false);
         $writer->save($filePath);
     }
 }

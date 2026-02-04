@@ -18,6 +18,14 @@
                         <!-- Left Column -->
                         <div class="col-md-6">
                             <div class="mb-3">
+                                <label>Type <span class="text-danger">*</span></label>
+                                <select name="type" id="modal_circuit_type" class="form-select form-select-sm" required>
+                                    <option value="CUTTING">CUTTING</option>
+                                    <option value="CUTTING_TWIST">CUTTING TWIST</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
                                 <label>Conveyor</label>
                                 <input type="text" id="conveyor" class="form-control form-control-sm" readonly>
                             </div>
@@ -62,9 +70,42 @@
                                 <input type="text" name="cust_no" id="cust_no" class="form-control form-control-sm">
                             </div>
 
-                            <div class="mb-3">
+                            <div class="mb-3 modal-cutting-only-field">
                                 <label>Barcode Mesin</label>
                                 <input type="text" name="barcode_mesin" id="barcode_mesin" class="form-control form-control-sm">
+                            </div>
+
+                            <!-- CUTTING_TWIST specific fields -->
+                            <div class="modal-cutting-twist-fields" style="display: none;">
+                                <div class="mb-3">
+                                    <label>Machine Twist</label>
+                                    <input type="text" name="machine_twist" id="machine_twist" class="form-control form-control-sm">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label>Sequence 2</label>
+                                    <input type="number" name="sequence_2" id="sequence_2" class="form-control form-control-sm">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label>Barcode Navigasi</label>
+                                    <input type="text" name="barcode_navigasi" id="barcode_navigasi" class="form-control form-control-sm">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label>Barcode Process</label>
+                                    <input type="text" name="barcode_process" id="barcode_process" class="form-control form-control-sm">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label>Barcode Shikake</label>
+                                    <input type="text" name="barcode_shikake" id="barcode_shikake" class="form-control form-control-sm">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label>To Store</label>
+                                    <input type="text" name="to_store" id="to_store" class="form-control form-control-sm">
+                                </div>
                             </div>
 
                             <div class="mb-3">

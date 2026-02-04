@@ -106,11 +106,12 @@ class AssySchedulerController extends Controller
     }
 
     /**
-     * Get assy schedule list - shows all individual schedule records
+     * Get assy schedule list - shows all individual schedule records including soft-deleted
      */
     public function getAssyScheduleList(Request $request)
     {
-        $query = AssySchedule::with('conveyor')
+        $query = AssySchedule::withTrashed()
+            ->with('conveyor')
             ->orderBy('schedule', 'asc')
             ->orderBy('shift', 'asc')
             ->orderBy('cutoff', 'asc');
@@ -144,8 +145,65 @@ class AssySchedulerController extends Controller
                 return $schedule->assy;
             })
             ->editColumn('qty', function ($schedule) {
-                return $schedule->qty;
+                $qty = $schedule->qty;
+                $badges = '';
+                
+                // Add badges for status flags
+                if ($schedule->deleted_at) {
+                    $badges = '<span class="badge bg-danger ms-1" title="Deleted - will not appear in verification">Deleted</span>';
+                    return '<span class="text-decoration-line-through text-muted">' . $qty . '</span>' . $badges;
+                }
+                
+                if ($schedule->is_user_edited) {
+                    $badges = '<span class="badge bg-warning ms-1" title="Edited by user - will not be affected by re-sync">Edited</span>';
+                }
+                
+                if ($qty <= 0) {
+                    $badges .= '<span class="badge bg-secondary ms-1" title="Qty is 0 - will not appear in verification">Skip</span>';
+                }
+                
+                return $qty . $badges;
             })
+            ->addColumn('action', function ($schedule) {
+                $isLocked = $schedule->is_lock;
+                $isDeleted = $schedule->deleted_at !== null;
+                
+                $editBtn = '';
+                $deleteBtn = '';
+                
+                if (!$isLocked) {
+                    if ($isDeleted) {
+                        // Show restore button for deleted records
+                        $editBtn = '<button type="button" class="btn btn-soft-success btn-sm btn-restore" 
+                            data-id="' . $schedule->id . '" 
+                            data-assy="' . htmlspecialchars($schedule->assy) . '"
+                            title="Restore this schedule">
+                            <i class="ti ti-restore"></i>
+                        </button>';
+                    } else {
+                        // Show edit and delete buttons
+                        $editBtn = '<button type="button" class="btn btn-soft-primary btn-sm btn-edit" 
+                            data-id="' . $schedule->id . '" 
+                            data-assy="' . htmlspecialchars($schedule->assy) . '"
+                            data-qty="' . $schedule->qty . '"
+                            title="Edit quantity">
+                            <i class="ti ti-edit"></i>
+                        </button>';
+                        
+                        $deleteBtn = '<button type="button" class="btn btn-soft-danger btn-sm btn-delete ms-1" 
+                            data-id="' . $schedule->id . '" 
+                            data-assy="' . htmlspecialchars($schedule->assy) . '"
+                            title="Delete this schedule">
+                            <i class="ti ti-trash"></i>
+                        </button>';
+                    }
+                } else {
+                    $editBtn = '<span class="badge bg-success" title="Schedule is verified/locked">Verified</span>';
+                }
+                
+                return '<div class="btn-group" role="group">' . $editBtn . $deleteBtn . '</div>';
+            })
+            ->rawColumns(['qty', 'action'])
             ->make(true);
     }
 
@@ -357,6 +415,121 @@ class AssySchedulerController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load available assy data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get single assy schedule record for edit modal
+     */
+    public function show($id)
+    {
+        try {
+            $schedule = AssySchedule::withTrashed()->with('conveyor')->findOrFail($id);
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $schedule->id,
+                    'conveyor_name' => $schedule->conveyor ? $schedule->conveyor->conveyor : '-',
+                    'schedule' => $schedule->schedule->format('Y-m-d'),
+                    'shift' => $schedule->shift,
+                    'cutoff' => $schedule->cutoff,
+                    'assy' => $schedule->assy,
+                    'qty' => $schedule->qty,
+                    'is_lock' => $schedule->is_lock,
+                    'is_user_edited' => $schedule->is_user_edited,
+                    'deleted_at' => $schedule->deleted_at,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Get schedule error", ['error' => $e->getMessage()]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Schedule not found'
+            ], 404);
+        }
+    }
+
+    /**
+     * Update single assy schedule record (qty only)
+     */
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'qty' => 'required|integer|min:0',
+        ]);
+
+        try {
+            $schedule = AssySchedule::withTrashed()->findOrFail($id);
+            
+            // Check if schedule is locked/verified
+            if ($schedule->is_lock) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot edit a verified schedule. Please unverify first.'
+                ], 400);
+            }
+
+            // Update qty and mark as user edited
+            $schedule->qty = $request->input('qty');
+            $schedule->is_user_edited = true;
+            $schedule->updated_by = auth()->id();
+            
+            // If it was soft deleted, restore it
+            if ($schedule->trashed()) {
+                $schedule->restore();
+            }
+            
+            $schedule->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Schedule updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Update schedule error", ['error' => $e->getMessage()]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update schedule: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Soft delete single assy schedule record
+     */
+    public function destroySingle($id)
+    {
+        try {
+            $schedule = AssySchedule::findOrFail($id);
+            
+            // Check if schedule is locked/verified
+            if ($schedule->is_lock) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete a verified schedule. Please unverify first.'
+                ], 400);
+            }
+
+            // Mark as user edited and soft delete
+            $schedule->is_user_edited = true;
+            $schedule->updated_by = auth()->id();
+            $schedule->save();
+            $schedule->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Schedule deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Delete schedule error", ['error' => $e->getMessage()]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete schedule: ' . $e->getMessage()
             ], 500);
         }
     }

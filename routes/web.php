@@ -108,6 +108,9 @@ Route::middleware('auth')->group(function () {
         Route::get('assy-scheduler/manage-data', [AssySchedulerController::class, 'manageData'])->name('assy-scheduler.manage-data');
         Route::post('assy-scheduler/save-manage', [AssySchedulerController::class, 'saveManage'])->name('assy-scheduler.save-manage');
         Route::post('assy-scheduler/available-assy', [AssySchedulerController::class, 'availableAssyData'])->name('assy-scheduler.available-assy');
+        Route::get('assy-scheduler/{id}', [AssySchedulerController::class, 'show'])->name('assy-scheduler.show');
+        Route::put('assy-scheduler/{id}', [AssySchedulerController::class, 'update'])->name('assy-scheduler.update');
+        Route::delete('assy-scheduler/{id}', [AssySchedulerController::class, 'destroySingle'])->name('assy-scheduler.destroy-single');
         
         // Schedule Verification
         Route::get('schedule-verification', [ScheduleVerificationController::class, 'index'])->name('schedule-verification.index');

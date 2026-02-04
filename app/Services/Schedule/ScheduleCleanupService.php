@@ -10,7 +10,7 @@ class ScheduleCleanupService
 {
     /**
      * Delete unverified (unlocked) schedules for specific shifts
-     * Preserves locked schedules (is_lock = 1)
+     * Preserves locked schedules (is_lock = 1) and user-edited schedules (is_user_edited = 1)
      * 
      * @param string $date Date in Y-m-d format
      * @param int $conveyorId Conveyor ID
@@ -33,6 +33,7 @@ class ScheduleCleanupService
             ->where('conveyor_id', $conveyorId)
             ->whereIn('shift', $unlockedShifts)
             ->where('is_lock', 0) // Only delete unlocked schedules
+            ->where('is_user_edited', 0) // Preserve user-edited schedules
             ->delete();
         
         Log::info("Deleted unlocked schedules", [
@@ -47,7 +48,7 @@ class ScheduleCleanupService
     
     /**
      * Delete all unlocked schedules for a date range
-     * Preserves locked schedules
+     * Preserves locked schedules, user-edited schedules, and soft-deleted schedules
      * 
      * @param Carbon $startDate Start date
      * @param Carbon $endDate End date
@@ -57,11 +58,30 @@ class ScheduleCleanupService
     public function deleteUnlockedSchedulesInRange(Carbon $startDate, Carbon $endDate, ?int $conveyorId = null): int
     {
         $query = AssySchedule::whereBetween('schedule', [$startDate, $endDate])
-            ->where('is_lock', 0);
-        
+            ->where('is_lock', 0)
+            ->where('is_user_edited', 0);
+            
         if ($conveyorId) {
             $query->where('conveyor_id', $conveyorId);
         }
+        
+        // Log what will be preserved before deletion
+        $preservedCount = AssySchedule::withTrashed()
+            ->whereBetween('schedule', [$startDate, $endDate])
+            ->where(function($q) {
+                $q->where('is_lock', 1)
+                  ->orWhere('is_user_edited', 1)
+                  ->orWhereNotNull('deleted_at');
+            })
+            ->when($conveyorId, fn($q) => $q->where('conveyor_id', $conveyorId))
+            ->count();
+        
+        Log::info("Schedules to be preserved (locked/user-edited/soft-deleted)", [
+            'start_date' => $startDate->format('Y-m-d'),
+            'end_date' => $endDate->format('Y-m-d'),
+            'conveyor_id' => $conveyorId,
+            'preserved_count' => $preservedCount
+        ]);
         
         $deletedCount = $query->delete();
         

@@ -221,6 +221,9 @@ class GenerateSampleDataTemplate extends Command
     protected function generateCircuitSample($samplesPath, $identifierCount)
     {
         $headers = $this->getCircuitHeaders();
+        $cuttingTwistColumns = CircuitTemplateConfig::getCuttingTwistColumns();
+        $cuttingOnlyColumns = CircuitTemplateConfig::getCuttingOnlyColumns();
+
         $filename = 'Sample_Cutting.xlsx';
         $filePath = $samplesPath . '/' . $filename;
 
@@ -228,56 +231,61 @@ class GenerateSampleDataTemplate extends Command
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Data');
 
-        // Set required headers
+        // Set headers with color coding
         $col = 1;
         foreach ($headers as $header) {
             $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
             $sheet->setCellValue($colLetter . '1', $header);
+
+            // Determine color based on column type
+            if (in_array($header, $cuttingTwistColumns)) {
+                $bgColor = 'BDD7EE'; // Blue for CUTTING_TWIST only
+            } elseif (in_array($header, $cuttingOnlyColumns)) {
+                $bgColor = 'FFEB9C'; // Yellow for CUTTING only
+            } else {
+                $bgColor = 'C6EFCE'; // Green for ALL types
+            }
+
+            $this->styleHeaderCell($sheet, $colLetter . '1', $bgColor, '000000');
             $col++;
         }
 
-        // Add assy columns
+        // Add assy columns (green with italic)
         $assyStartCol = $col;
         foreach ($this->assyNames as $assyName) {
             $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
             $sheet->setCellValue($colLetter . '1', $assyName);
+            $this->styleHeaderRange($sheet, "{$colLetter}1:{$colLetter}1", '92D050', '000000', true);
             $col++;
         }
 
-        // Style required header columns (blue background)
-        $lastRequiredColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
-        $this->styleHeaderRange($sheet, "A1:{$lastRequiredColumn}1", '4472C4', 'FFFFFF');
-
-        // Style assy columns (light green background)
-        if (!empty($this->assyNames)) {
-            $firstAssyColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($assyStartCol);
-            $lastAssyColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($assyStartCol + count($this->assyNames) - 1);
-            $this->styleHeaderRange($sheet, "{$firstAssyColumn}1:{$lastAssyColumn}1", '92D050', '000000', true);
-        }
-
-        // Generate sample data rows with identifier grouping
+        // Generate sample data rows - alternate between CUTTING and CUTTING_TWIST
         $row = 2;
         $globalRowIndex = 0;
 
         for ($identifierIndex = 1; $identifierIndex <= $identifierCount; $identifierIndex++) {
+            // Alternate type: odd = CUTTING, even = CUTTING_TWIST
+            $type = ($identifierIndex % 2 === 1) ? 'CUTTING' : 'CUTTING_TWIST';
+
             // Random number of issues per identifier (2-5)
             $issueCount = rand(2, 5);
-            
+
             // Generate shared data for this identifier group
-            $sharedData = $this->generateSharedCircuitData($identifierIndex);
+            $sharedData = $this->generateSharedCircuitData($identifierIndex, $type);
             $assyAssignments = $this->generateAssyAssignments();
 
             for ($issueNum = 1; $issueNum <= $issueCount; $issueNum++) {
                 $globalRowIndex++;
-                
+
                 // Generate row data with shared identifier but unique barcodes/issue
                 $data = $this->generateCircuitRowData(
                     $sharedData,
                     $issueNum,
                     $issueCount,
-                    $globalRowIndex
+                    $globalRowIndex,
+                    $type
                 );
-                
+
                 $col = 1;
                 foreach ($data as $value) {
                     $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col);
@@ -288,7 +296,6 @@ class GenerateSampleDataTemplate extends Command
                 // Add assy values (same for all rows in identifier group)
                 foreach ($this->assyNames as $index => $assyName) {
                     $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($assyStartCol + $index);
-                    $value = in_array($assyName, $assyAssignments) ? '1' : '';
                     $sheet->setCellValue($colLetter . $row, '1');
                 }
 
@@ -311,7 +318,9 @@ class GenerateSampleDataTemplate extends Command
         $writer->save($filePath);
 
         $totalRows = $row - 2;
-        $this->info("Created: {$filename} ({$identifierCount} identifiers, {$totalRows} rows)");
+        $cuttingCount = ceil($identifierCount / 2);
+        $twistCount = floor($identifierCount / 2);
+        $this->info("Created: {$filename} ({$identifierCount} identifiers: {$cuttingCount} CUTTING, {$twistCount} CUTTING_TWIST, {$totalRows} total rows)");
     }
 
     protected function styleHeaderRange($sheet, $range, $bgColor, $fontColor, $italic = false)
@@ -451,9 +460,10 @@ class GenerateSampleDataTemplate extends Command
     /**
      * Generate shared data for a Circuit identifier group
      */
-    protected function generateSharedCircuitData($identifierIndex)
+    protected function generateSharedCircuitData($identifierIndex, $type = 'CUTTING')
     {
-        return [
+        $data = [
+            'type' => $type,
             'carline' => 'CL-' . chr(65 + ($identifierIndex % 5)),
             'conveyor' => 'CONV-' . str_pad($identifierIndex, 3, '0', STR_PAD_LEFT),
             'cct_no' => 'CCT-' . str_pad($identifierIndex, 4, '0', STR_PAD_LEFT),
@@ -495,6 +505,14 @@ class GenerateSampleDataTemplate extends Command
             't05' => 'T05-' . rand(1, 5),
             't06' => 'T06-' . rand(1, 5),
         ];
+
+        // Add CUTTING_TWIST specific data
+        if ($type === 'CUTTING_TWIST') {
+            $data['machine_twist'] = 'MT-' . str_pad(rand(1, 5), 2, '0', STR_PAD_LEFT);
+            $data['to_store'] = 'STORE-' . chr(65 + ($identifierIndex % 3));
+        }
+
+        return $data;
     }
 
     /**
@@ -615,53 +633,88 @@ class GenerateSampleDataTemplate extends Command
     /**
      * Generate row data for Circuit with shared identifier and unique barcodes/issue
      */
-    protected function generateCircuitRowData($sharedData, $issueNum, $issueCount, $globalRowIndex)
+    protected function generateCircuitRowData($sharedData, $issueNum, $issueCount, $globalRowIndex, $type = 'CUTTING')
     {
         $uniqueSuffix = str_pad($globalRowIndex, 6, '0', STR_PAD_LEFT);
+        $isCuttingTwist = ($type === 'CUTTING_TWIST');
 
         return [
-            $sharedData['carline'],            // Carline
-            $sharedData['conveyor'],           // Conveyor
-            $sharedData['cct_no'],             // CCT No.
-            $sharedData['family'],             // Family
-            $sharedData['qty'],                // Qty.
-            $sharedData['machine'],            // Machine
-            $issueNum,                         // Sequence (reset per group)
-            $sharedData['released_note'],      // Released Note
-            $sharedData['cust_no'],            // Cust No.
-            'BM-' . $uniqueSuffix,             // Barcode Mesin (unique)
-            $sharedData['address'],            // Address
-            $sharedData['cct_code'],           // CCT Code
-            $sharedData['kind'],               // Kind
-            $sharedData['size'],               // Size
-            $sharedData['col'],                // Col
-            $sharedData['cl'],                 // C/L
-            $sharedData['terminal_1'],         // Terminal 1
-            $sharedData['note_1'],             // Note 1
-            $sharedData['gold_1'],             // Gold 1
-            $sharedData['strip_1'],            // Strip 1
-            $sharedData['acc_1'],              // Acc. 1
-            $sharedData['acc_1a'],             // Acc. 1A
-            $sharedData['tube_1'],             // Tube 1
-            $sharedData['mark_1'],             // Mark 1
-            $sharedData['remark_1'],           // Remark 1
-            $sharedData['terminal_2'],         // Terminal 2
-            $sharedData['note_2'],             // Note 2
-            $sharedData['gold_2'],             // Gold 2
-            $sharedData['strip_2'],            // Strip 2
-            $sharedData['acc_2'],              // Acc 2
-            $sharedData['acc_2a'],             // Acc 2A
-            $sharedData['tube_2'],             // Tube 2
-            $sharedData['mark_2'],             // Mark 2
-            $sharedData['remark_2'],           // Remark 2
-            $sharedData['ta'],                 // TA
-            $sharedData['tb'],                 // TB
-            $sharedData['t01'],                // T01
-            $sharedData['t02'],                // T02
-            $sharedData['t03'],                // T03
-            $sharedData['t04'],                // T04
-            $sharedData['t05'],                // T05
-            $sharedData['t06'],                // T06
+            $type,                                              // 0: Type
+            $sharedData['carline'],                             // 1: Carline
+            $sharedData['conveyor'],                            // 2: Conveyor
+            $sharedData['cct_no'],                              // 3: CCT No.
+            $sharedData['family'],                              // 4: Family
+            $sharedData['qty'],                                 // 5: Qty.
+            $sharedData['machine'],                             // 6: Machine
+            $isCuttingTwist ? ($sharedData['machine_twist'] ?? '') : '',  // 7: Machine Twist (CUTTING_TWIST only)
+            $issueNum,                                          // 8: Sequence
+            $isCuttingTwist ? $issueNum : '',                   // 9: Sequence 2 (CUTTING_TWIST only)
+            $sharedData['released_note'],                       // 10: Released Note
+            $sharedData['cust_no'],                             // 11: Cust No.
+            $isCuttingTwist ? '' : 'BM-' . $uniqueSuffix,       // 12: Barcode Mesin (CUTTING only)
+            $isCuttingTwist ? 'BN-' . $uniqueSuffix : '',       // 13: Barcode Navigasi (CUTTING_TWIST only)
+            $isCuttingTwist ? 'BP-' . $uniqueSuffix : '',       // 14: Barcode Process (CUTTING_TWIST only)
+            $isCuttingTwist ? 'BS-' . $uniqueSuffix : '',       // 15: Barcode Shikake (CUTTING_TWIST only)
+            $isCuttingTwist ? ($sharedData['to_store'] ?? '') : '',  // 16: To Store (CUTTING_TWIST only)
+            $sharedData['address'],                             // 17: Address
+            $sharedData['cct_code'],                            // 18: CCT Code
+            $sharedData['kind'],                                // 19: Kind
+            $sharedData['size'],                                // 20: Size
+            $sharedData['col'],                                 // 21: Col
+            $sharedData['cl'],                                  // 22: C/L
+            $sharedData['terminal_1'],                          // 23: Terminal 1
+            $sharedData['note_1'],                              // 24: Note 1
+            $isCuttingTwist ? '' : $sharedData['gold_1'],       // 25: Gold 1 (CUTTING only)
+            $sharedData['strip_1'],                             // 26: Strip 1
+            $sharedData['acc_1'],                               // 27: Acc. 1
+            $isCuttingTwist ? '' : $sharedData['acc_1a'],       // 28: Acc. 1A (CUTTING only)
+            $sharedData['tube_1'],                              // 29: Tube 1
+            $sharedData['mark_1'],                              // 30: Mark 1
+            $isCuttingTwist ? '' : $sharedData['remark_1'],     // 31: Remark 1 (CUTTING only)
+            $sharedData['terminal_2'],                          // 32: Terminal 2
+            $sharedData['note_2'],                              // 33: Note 2
+            $isCuttingTwist ? '' : $sharedData['gold_2'],       // 34: Gold 2 (CUTTING only)
+            $sharedData['strip_2'],                             // 35: Strip 2
+            $sharedData['acc_2'],                               // 36: Acc 2
+            $isCuttingTwist ? '' : $sharedData['acc_2a'],       // 37: Acc 2A (CUTTING only)
+            $sharedData['tube_2'],                              // 38: Tube 2
+            $sharedData['mark_2'],                              // 39: Mark 2
+            $isCuttingTwist ? '' : $sharedData['remark_2'],     // 40: Remark 2 (CUTTING only)
+            $sharedData['ta'],                                  // 41: TA
+            $sharedData['tb'],                                  // 42: TB
+            $sharedData['t01'],                                 // 43: T01
+            $sharedData['t02'],                                 // 44: T02
+            $sharedData['t03'],                                 // 45: T03
+            $sharedData['t04'],                                 // 46: T04
+            $sharedData['t05'],                                 // 47: T05
+            $sharedData['t06'],                                 // 48: T06
         ];
+    }
+
+    /**
+     * Style a single header cell with background color
+     */
+    protected function styleHeaderCell($sheet, $cell, $bgColor, $fontColor)
+    {
+        $sheet->getStyle($cell)->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => $fontColor],
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => $bgColor],
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+        ]);
     }
 }

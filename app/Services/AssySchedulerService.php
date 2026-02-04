@@ -72,7 +72,11 @@ class AssySchedulerService
             }
 
             // Step 3: Get fresh listing data from listing_stage for the date range
-            // Skip listings that already have locked schedules (matching SP logic: NOT EXISTS verified)
+            // Skip listings that already have:
+            // - locked/verified schedules (is_lock != 0)
+            // - user-edited schedules (is_user_edited = 1) 
+            // - soft-deleted schedules (deleted_at IS NOT NULL)
+            // Note: We use raw query to bypass SoftDeletes trait and check ALL records including soft-deleted
             $listingsQuery = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])
                 ->whereNotNull('assycode')
                 ->where('assycode', '!=', '')
@@ -91,7 +95,12 @@ class AssySchedulerService
                                 ->whereColumn('master_conveyor.id', 'assy_schedule.conveyor_id')
                                 ->whereColumn('master_conveyor.conveyor', 'listing_stage.conveyor');
                         })
-                        ->where('assy_schedule.is_lock', '!=', 0);
+                        // Skip listing if matching schedule is: locked OR user-edited OR soft-deleted
+                        ->where(function ($q) {
+                            $q->where('assy_schedule.is_lock', '!=', 0)
+                              ->orWhere('assy_schedule.is_user_edited', '=', 1)
+                              ->orWhereNotNull('assy_schedule.deleted_at');
+                        });
                 })
                 ->orderBy('id', 'asc')
                 ->orderBy('listing_date_time', 'asc')
@@ -152,12 +161,11 @@ class AssySchedulerService
                     $maxShifts
                 );
 
-                // Step 6: Delete only unlocked schedules
+                // Step 6: Delete only unlocked schedules (preserves locked, user-edited, and soft-deleted)
                 $this->scheduleCleanup->deleteUnlockedSchedulesInRange(
                     $scheduleDate,
                     $scheduleDate,
-                    $conveyor->id,
-                    $shiftLockStatus
+                    $conveyor->id
                 );
 
                 // Step 7: Calculate cutoff capacities for each shift

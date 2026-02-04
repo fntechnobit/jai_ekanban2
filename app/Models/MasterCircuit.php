@@ -10,20 +10,31 @@ class MasterCircuit extends Model
 {
     use HasFactory, SoftDeletes;
 
+    // Type constants
+    const TYPE_CUTTING = 'CUTTING';
+    const TYPE_CUTTING_TWIST = 'CUTTING_TWIST';
+
     protected $table = 'master_circuit';
 
     protected $fillable = [
         'conveyor_id',
+        'type',
         'carline',
         'conveyor',
         'cct_no',
         'family',
         'qty',
         'machine',
+        'machine_twist',
         'sequence',
+        'sequence_2',
         'released_note',
         'cust_no',
         'barcode_mesin',
+        'barcode_navigasi',
+        'barcode_process',
+        'barcode_shikake',
+        'to_store',
         'address',
         'cct_code',
         'kind',
@@ -64,8 +75,25 @@ class MasterCircuit extends Model
 
     protected $casts = [
         'qty' => 'integer',
+        'sequence_2' => 'integer',
         'deleted_at' => 'datetime',
     ];
+
+    /**
+     * Scope for CUTTING type only
+     */
+    public function scopeCutting($query)
+    {
+        return $query->where('type', self::TYPE_CUTTING);
+    }
+
+    /**
+     * Scope for CUTTING_TWIST type only
+     */
+    public function scopeCuttingTwist($query)
+    {
+        return $query->where('type', self::TYPE_CUTTING_TWIST);
+    }
 
     /**
      * Get the conveyor that owns this circuit
