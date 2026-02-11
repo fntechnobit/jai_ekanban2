@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="JAI E-Kanban - Electronic Kanban Management System">
+    <meta name="author" content="Technobit Indonesia">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" href="{{ asset('assets/images/logo/favicon.png') }}" type="image/x-icon">
+    <title>@yield('title', 'Login') | JAI E-Kanban</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Tabler icons-->
+    <link rel="stylesheet" type="text/css" href="{{ asset('assets/vendor/tabler-icons/tabler-icons.css') }}">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" type="text/css" href="{{ asset('plugins/fontawesome-free-6.5.2-web/css/fontawesome.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('plugins/fontawesome-free-6.5.2-web/css/solid.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('plugins/fontawesome-free-6.5.2-web/css/regular.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ asset('plugins/fontawesome-free-6.5.2-web/css/brands.min.css') }}">
+
+    <!-- Bootstrap css-->
+    <link rel="stylesheet" type="text/css" href="{{ asset('assets/vendor/bootstrap/bootstrap.min.css') }}">
+
+    <!-- Main Style css -->
+    <link rel="stylesheet" type="text/css" href="{{ asset('assets/css/style.css') }}">
+
+    <style>
+        /* Font Awesome Override untuk Auth Pages */
+        i[class*="fa-"],
+        i[class^="fa-"] {
+            font-family: "Font Awesome 6 Free" !important;
+            font-weight: 900 !important;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            display: inline-block;
+            font-style: normal;
+            font-variant: normal;
+            text-rendering: auto;
+            line-height: 1;
+        }
+
+        .fa-regular {
+            font-weight: 400 !important;
+        }
+
+        .fa-brands {
+            font-family: "Font Awesome 6 Brands" !important;
+            font-weight: 400 !important;
+        }
+
+        /* Login page styles */
+        .form-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .image-contentbox {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .image-contentbox img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Footer styles */
+        .auth-footer {
+            margin-top: auto;
+            padding-top: 2rem;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .auth-footer p {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+
+        .auth-footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .auth-footer a:hover {
+            color: #764ba2;
+        }
+    </style>
+
+    @yield('css')
+</head>
+
+<body>
+    <div class="app-wrapper d-block">
+        <div class="">
+            <!-- Body main section starts -->
+            <main class="w-100">
+                @yield('content')
+            </main>
+            <!-- Body main section ends -->
+        </div>
+    </div>
+
+    <!-- Bootstrap js-->
+    <script src="{{ asset('assets/vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
+    
+    <!-- jQuery -->
+    <script src="{{ asset('assets/js/jquery-3.6.3.min.js') }}"></script>
+    
+    <!-- jQuery Validation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+
+    @yield('script')
+</body>
+
+</html>

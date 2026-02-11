@@ -1,0 +1,14 @@
+# Files to Delete from Server
+# These files are obsolete and should be removed during deployment
+
+# Console Commands
+app/Console/Commands/GenerateShikakeTemplates.php
+
+# Blade Views - Old Print Ticket Views (replaced with separate preview and print views)
+resources/views/schedule/ekanban_shikake/print_ticket_bonder.blade.php
+resources/views/schedule/ekanban_shikake/print_ticket_dbl_crimp.blade.php
+resources/views/schedule/ekanban_shikake/print_ticket_joint.blade.php
+resources/views/schedule/ekanban_shikake/print_ticket_shield.blade.php
+
+# Note: print_ticket_twist.blade.php was renamed to print_ticket_twist_preview.blade.php
+# If the old file still exists on the server, delete it as well.
