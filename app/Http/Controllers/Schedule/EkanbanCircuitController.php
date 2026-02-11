@@ -8,6 +8,7 @@ use App\Models\MasterArea;
 use App\Models\MasterConveyor;
 use App\Models\MasterMachine;
 use App\Models\AssySchedule;
+use App\Models\MasterCircuit;
 use App\Services\EkanbanCircuitService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,16 +48,33 @@ class EkanbanCircuitController extends Controller
         // If ids parameter is provided, return preview HTML for AJAX request
         if ($request->has('ids')) {
             $ids = is_array($request->ids) ? $request->ids : explode(',', $request->ids);
-            
-            $circuits = $this->ekanbanCircuitService->getCircuitsForPrint($ids);
 
-            // Generate QR codes and barcodes for each circuit
-            foreach ($circuits as $circuit) {
+            $allCircuits = $this->ekanbanCircuitService->getCircuitsForPrint($ids);
+
+            // Separate by type
+            $cuttingCircuits = $allCircuits->filter(fn($c) => ($c->type ?? MasterCircuit::TYPE_CUTTING) === MasterCircuit::TYPE_CUTTING);
+            $twistCircuits = $allCircuits->filter(fn($c) => ($c->type ?? null) === MasterCircuit::TYPE_CUTTING_TWIST);
+
+            // Generate barcodes for CUTTING circuits
+            foreach ($cuttingCircuits as $circuit) {
                 BarcodeHelper::generateCircuitBarcodes($circuit, 'barcode_kanban', 'cct_no', 'barcode_mesin', 'cct_code');
             }
 
-            $html = view('schedule.ekanban_circuit.print_ticket', compact('circuits'))->render();
-            
+            // Generate barcodes for CUTTING_TWIST circuits
+            foreach ($twistCircuits as $circuit) {
+                $this->generateTwistBarcodes($circuit);
+            }
+
+            $html = '';
+            if ($cuttingCircuits->isNotEmpty()) {
+                $circuits = $cuttingCircuits;
+                $html .= view('schedule.ekanban_circuit.print_ticket', compact('circuits'))->render();
+            }
+            if ($twistCircuits->isNotEmpty()) {
+                $circuits = $twistCircuits;
+                $html .= view('schedule.ekanban_circuit.print_ticket_twist', compact('circuits'))->render();
+            }
+
             return response($html);
         }
         
@@ -79,21 +97,39 @@ class EkanbanCircuitController extends Controller
     public function print(Request $request)
     {
         $ids = is_array($request->ids) ? $request->ids : explode(',', $request->ids);
-        
-        $circuits = $this->ekanbanCircuitService->getCircuitsForPrint($ids);
-        
-        Log::info('Print function called with ' . count($circuits) . ' circuits');
 
-        // Generate QR codes and barcodes for each circuit
-        foreach ($circuits as $circuit) {
+        $allCircuits = $this->ekanbanCircuitService->getCircuitsForPrint($ids);
+
+        Log::info('Print function called with ' . count($allCircuits) . ' circuits');
+
+        // Separate by type
+        $cuttingCircuits = $allCircuits->filter(fn($c) => ($c->type ?? MasterCircuit::TYPE_CUTTING) === MasterCircuit::TYPE_CUTTING);
+        $twistCircuits = $allCircuits->filter(fn($c) => ($c->type ?? null) === MasterCircuit::TYPE_CUTTING_TWIST);
+
+        // Generate barcodes for CUTTING circuits
+        foreach ($cuttingCircuits as $circuit) {
             Log::info('Processing circuit ID: ' . $circuit->id . ', CCT NO: ' . ($circuit->cct_no ?? 'N/A') . ', Barcode Kanban: ' . ($circuit->barcode_kanban ?? 'N/A'));
             BarcodeHelper::generateCircuitBarcodes($circuit);
+        }
+
+        // Generate barcodes for CUTTING_TWIST circuits
+        foreach ($twistCircuits as $circuit) {
+            Log::info('Processing twist circuit ID: ' . $circuit->id . ', CCT NO: ' . ($circuit->cct_no ?? 'N/A') . ', Barcode Kanban: ' . ($circuit->barcode_kanban ?? 'N/A'));
+            $this->generateTwistBarcodes($circuit);
         }
 
         // Mark circuits as printed
         $this->ekanbanCircuitService->markAsPrinted($ids, Auth::id());
 
-        $html = view('schedule.ekanban_circuit.print_ticket', compact('circuits'))->render();
+        $html = '';
+        if ($cuttingCircuits->isNotEmpty()) {
+            $circuits = $cuttingCircuits;
+            $html .= view('schedule.ekanban_circuit.print_ticket', compact('circuits'))->render();
+        }
+        if ($twistCircuits->isNotEmpty()) {
+            $circuits = $twistCircuits;
+            $html .= view('schedule.ekanban_circuit.print_ticket_twist', compact('circuits'))->render();
+        }
 
         return response()->json([
             'ok' => true,
@@ -117,5 +153,38 @@ class EkanbanCircuitController extends Controller
         });
 
         return response()->json($formattedMachines);
+    }
+
+    /**
+     * Generate barcodes for CUTTING_TWIST circuit
+     */
+    private function generateTwistBarcodes($circuit)
+    {
+        // QR code for kanban (same as regular circuit)
+        BarcodeHelper::generateCircuitBarcodes($circuit, 'barcode_kanban', 'cct_no', 'barcode_mesin', 'cct_code');
+
+        // Barcode for barcode_navigasi
+        if (!empty($circuit->barcode_navigasi)) {
+            $path = BarcodeHelper::generateBarcodeCached($circuit->barcode_navigasi, null, 3, 80, 'circuit');
+            if ($path) {
+                $circuit->barcode_navigasi_path = $path;
+            }
+        }
+
+        // Barcode for barcode_process
+        if (!empty($circuit->barcode_process)) {
+            $path = BarcodeHelper::generateBarcodeCached($circuit->barcode_process, null, 3, 80, 'circuit');
+            if ($path) {
+                $circuit->barcode_process_path = $path;
+            }
+        }
+
+        // QR code for barcode_shikake
+        if (!empty($circuit->barcode_shikake)) {
+            $path = BarcodeHelper::generateQRCodeCached($circuit->barcode_shikake, 'circuit');
+            if ($path) {
+                $circuit->barcode_shikake_path = $path;
+            }
+        }
     }
 }

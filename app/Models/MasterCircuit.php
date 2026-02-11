@@ -17,6 +17,7 @@ class MasterCircuit extends Model
     protected $table = 'master_circuit';
 
     protected $fillable = [
+        'type',
         'conveyor_id',
         'type',
         'carline',
@@ -37,6 +38,7 @@ class MasterCircuit extends Model
         'barcode_shikake',
         'to_store',
         'address',
+        'to_store',
         'cct_code',
         'kind',
         'size',
@@ -48,6 +50,7 @@ class MasterCircuit extends Model
         'strip_1',
         'acc_1b',
         'acc_1a',
+        'acc_2a',
         'tube_1',
         'mark_1',
         'terminal_2',

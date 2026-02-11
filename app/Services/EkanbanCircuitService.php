@@ -181,6 +181,7 @@ class EkanbanCircuitService
                 'master_circuit.strip_1',
                 'master_circuit.acc_1b',
                 'master_circuit.acc_1a',
+                'master_circuit.acc_2a',
                 'master_circuit.tube_1',
                 'master_circuit.mark_1',
                 'master_circuit.terminal_2',
@@ -199,6 +200,14 @@ class EkanbanCircuitService
                 'master_circuit.barcode_mesin',
                 'master_circuit.released_note',
                 'master_circuit.image_path',
+                // Twist-specific fields
+                'master_circuit.type',
+                'master_circuit.machine_twist',
+                'master_circuit.sequence_2',
+                'master_circuit.barcode_navigasi',
+                'master_circuit.barcode_process',
+                'master_circuit.barcode_shikake',
+                'master_circuit.to_store',
                 // Kanban fields from assy_schedule_circuit
                 'assy_schedule_circuit.issue',
                 'assy_schedule_circuit.barcode_kanban',
