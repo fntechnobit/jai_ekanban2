@@ -307,7 +307,7 @@
                 </tr>
                 <tr>
                     <td class="label-cell" style="text-align: left;">Acc 1</td>
-                    <td class="value-cell" style="text-align: left;" colspan="3">{{ $circuit->acc_1 ?? '' }}</td>
+                    <td class="value-cell" style="text-align: left;" colspan="3">{{ $circuit->acc_1a ?? '' }}</td>
                     <td class="label-cell" style="text-align: left;">Note</td>
                     <td class="value-cell">{{ $circuit->ta ?? '' }}</td>
                     <td class="label-cell" style="text-align: left;">To 2</td>
@@ -315,7 +315,7 @@
                 </tr>
                 <tr>
                     <td class="label-cell" style="text-align: left;">Acc 2</td>
-                    <td class="value-cell" style="text-align: left;" colspan="3">{{ $circuit->acc_1a ?? '' }}</td>
+                    <td class="value-cell" style="text-align: left;" colspan="3">{{ $circuit->acc_1b ?? '' }}</td>
                     <td class="label-cell" style="text-align: left;">Strip</td>
                     <td class="value-cell">{{ $circuit->strip_1 ?? '' }}</td>
                     <td class="label-cell" style="text-align: left;">To 3</td>
@@ -340,7 +340,7 @@
                 </tr>
                 <tr>
                     <td class="label-cell" style="text-align: left;">Acc 1</td>
-                    <td class="value-cell" style="text-align: left;" colspan="3">{{ $circuit->acc_2 ?? '' }}</td>
+                    <td class="value-cell" style="text-align: left;" colspan="3">{{ $circuit->acc_2a ?? '' }}</td>
                     <td class="label-cell" style="text-align: left;">Note</td>
                     <td class="value-cell">{{ $circuit->tb ?? '' }}</td>
                     <td class="label-cell" style="text-align: left;">CCT Code</td>
@@ -348,7 +348,7 @@
                 </tr>
                 <tr>
                     <td class="label-cell" style="text-align: left;">Acc 2</td>
-                    <td class="value-cell" style="text-align: left;" colspan="3">{{ $circuit->acc_2a ?? '' }}</td>
+                    <td class="value-cell" style="text-align: left;" colspan="3">{{ $circuit->acc_2b ?? '' }}</td>
                     <td class="label-cell" style="text-align: left;">Strip</td>
                     <td class="value-cell" >{{ $circuit->strip_2 ?? '' }}</td>
                     <td class="label-cell" style="text-align: left;">Qty</td>

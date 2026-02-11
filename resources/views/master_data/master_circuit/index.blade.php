@@ -327,6 +327,7 @@
                             $('#barcode_navigasi').val(data.barcode_navigasi);
                             $('#barcode_process').val(data.barcode_process);
                             $('#barcode_shikake').val(data.barcode_shikake);
+                            $('#memory_twist').val(data.memory_twist);
                             $('#to_store').val(data.to_store);
 
                             // Toggle fields based on type
@@ -337,27 +338,23 @@
                             $('#note_1').val(data.note_1);
                             $('#gold_1').val(data.gold_1);
                             $('#strip_1').val(data.strip_1);
-                            $('#acc_1').val(data.acc_1);
+                            $('#acc_1b').val(data.acc_1b);
                             $('#acc_1a').val(data.acc_1a);
                             $('#tube_1').val(data.tube_1);
                             $('#mark_1').val(data.mark_1);
-                            $('#remark_1').val(data.remark_1);
 
                             // Terminal 2 fields
                             $('#terminal_2').val(data.terminal_2);
                             $('#note_2').val(data.note_2);
                             $('#gold_2').val(data.gold_2);
                             $('#strip_2').val(data.strip_2);
-                            $('#acc_2').val(data.acc_2);
+                            $('#acc_2b').val(data.acc_2b);
                             $('#acc_2a').val(data.acc_2a);
                             $('#tube_2').val(data.tube_2);
                             $('#mark_2').val(data.mark_2);
-                            $('#remark_2').val(data.remark_2);
 
                             // T fields
-                            $('#ta').val(data.ta);
-                            $('#tb').val(data.tb);
-                            for(let i = 1; i <= 6; i++) {
+                            for(let i = 1; i <= 3; i++) {
                                 const fieldName = 't' + String(i).padStart(2, '0');
                                 $('#' + fieldName).val(data[fieldName]);
                             }

@@ -113,6 +113,11 @@
                                     </div>
 
                                     <div class="mb-3">
+                                        <label>Memory Twist</label>
+                                        <input type="text" name="memory_twist" class="form-control form-control-sm" value="{{ $circuit->memory_twist ?? '' }}">
+                                    </div>
+
+                                    <div class="mb-3">
                                         <label>To Store</label>
                                         <input type="text" name="to_store" class="form-control form-control-sm" value="{{ $circuit->to_store ?? '' }}">
                                     </div>
@@ -172,12 +177,12 @@
 
                                 <div class="mb-3">
                                     <label>ACC 1</label>
-                                    <input type="text" name="acc_1" class="form-control form-control-sm" value="{{ $circuit->acc_1 ?? '' }}">
+                                    <input type="text" name="acc_1a" class="form-control form-control-sm" value="{{ $circuit->acc_1a ?? '' }}">
                                 </div>
 
                                 <div class="mb-3">
-                                    <label>ACC 1A</label>
-                                    <input type="text" name="acc_1a" class="form-control form-control-sm" value="{{ $circuit->acc_1a ?? '' }}">
+                                    <label>ACC 2</label>
+                                    <input type="text" name="acc_2a" class="form-control form-control-sm" value="{{ $circuit->acc_2a ?? '' }}">
                                 </div>
 
                                 <div class="mb-3">
@@ -188,11 +193,6 @@
                                 <div class="mb-3">
                                     <label>Mark 1</label>
                                     <input type="text" name="mark_1" class="form-control form-control-sm" value="{{ $circuit->mark_1 ?? '' }}">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label>Remark 1</label>
-                                    <textarea name="remark_1" class="form-control form-control-sm" rows="2">{{ $circuit->remark_1 ?? '' }}</textarea>
                                 </div>
                             </div>
 
@@ -221,13 +221,13 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label>ACC 2</label>
-                                    <input type="text" name="acc_2" class="form-control form-control-sm" value="{{ $circuit->acc_2 ?? '' }}">
+                                    <label>ACC 1</label>
+                                    <input type="text" name="acc_1b" class="form-control form-control-sm" value="{{ $circuit->acc_1b ?? '' }}">
                                 </div>
 
                                 <div class="mb-3">
-                                    <label>ACC 2A</label>
-                                    <input type="text" name="acc_2a" class="form-control form-control-sm" value="{{ $circuit->acc_2a ?? '' }}">
+                                    <label>ACC 2</label>
+                                    <input type="text" name="acc_2b" class="form-control form-control-sm" value="{{ $circuit->acc_2b ?? '' }}">
                                 </div>
 
                                 <div class="mb-3">
@@ -240,24 +240,9 @@
                                     <input type="text" name="mark_2" class="form-control form-control-sm" value="{{ $circuit->mark_2 ?? '' }}">
                                 </div>
 
-                                <div class="mb-3">
-                                    <label>Remark 2</label>
-                                    <textarea name="remark_2" class="form-control form-control-sm" rows="2">{{ $circuit->remark_2 ?? '' }}</textarea>
-                                </div>
-
                                 <!-- T Fields -->
                                 <h5 class="mt-3">T Fields</h5>
-                                <div class="mb-3">
-                                    <label>TA</label>
-                                    <input type="text" name="ta" class="form-control form-control-sm" value="{{ $circuit->ta ?? '' }}">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label>TB</label>
-                                    <input type="text" name="tb" class="form-control form-control-sm" value="{{ $circuit->tb ?? '' }}">
-                                </div>
-
-                                @for($i = 1; $i <= 6; $i++)
+                                @for($i = 1; $i <= 3; $i++)
                                 <div class="mb-3">
                                     <label>T{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</label>
                                     <input type="text" name="t{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" class="form-control form-control-sm" value="{{ $circuit->{'t' . str_pad($i, 2, '0', STR_PAD_LEFT)} ?? '' }}">

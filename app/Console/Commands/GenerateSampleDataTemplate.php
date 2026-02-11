@@ -474,6 +474,7 @@ class GenerateSampleDataTemplate extends Command
             'cust_no' => 'CUST-' . str_pad(rand(1, 100), 3, '0', STR_PAD_LEFT),
             'address' => 'ADDR-' . chr(65 + ($identifierIndex % 5)),
             'cct_code' => 'CODE-' . str_pad($identifierIndex, 3, '0', STR_PAD_LEFT),
+            'to_store' => 'STORE-' . chr(65 + ($identifierIndex % 3)),
             'kind' => 'TYPE-' . chr(65 + ($identifierIndex % 4)),
             'size' => rand(1, 10) . '.0',
             'col' => ['RED', 'BLUE', 'GREEN', 'BLACK', 'WHITE'][$identifierIndex % 5],
@@ -482,34 +483,27 @@ class GenerateSampleDataTemplate extends Command
             'note_1' => 'Note 1',
             'gold_1' => rand(0, 1) ? 'YES' : '',
             'strip_1' => rand(5, 15) . 'mm',
-            'acc_1' => 'ACC-1-' . $identifierIndex,
+            'acc_1b' => 'ACC-1B-' . $identifierIndex,
             'acc_1a' => 'ACC-1A-' . $identifierIndex,
             'tube_1' => 'TUBE-1',
             'mark_1' => 'MK-1',
-            'remark_1' => 'Remark 1 sample',
             'terminal_2' => 'TERM-2-' . $identifierIndex,
             'note_2' => 'Note 2',
             'gold_2' => rand(0, 1) ? 'YES' : '',
             'strip_2' => rand(5, 15) . 'mm',
-            'acc_2' => 'ACC-2-' . $identifierIndex,
+            'acc_2b' => 'ACC-2B-' . $identifierIndex,
             'acc_2a' => 'ACC-2A-' . $identifierIndex,
             'tube_2' => 'TUBE-2',
             'mark_2' => 'MK-2',
-            'remark_2' => 'Remark 2 sample',
-            'ta' => 'TA-' . rand(1, 10),
-            'tb' => 'TB-' . rand(1, 10),
             't01' => 'T01-' . rand(1, 5),
             't02' => 'T02-' . rand(1, 5),
             't03' => 'T03-' . rand(1, 5),
-            't04' => 'T04-' . rand(1, 5),
-            't05' => 'T05-' . rand(1, 5),
-            't06' => 'T06-' . rand(1, 5),
         ];
 
         // Add CUTTING_TWIST specific data
         if ($type === 'CUTTING_TWIST') {
             $data['machine_twist'] = 'MT-' . str_pad(rand(1, 5), 2, '0', STR_PAD_LEFT);
-            $data['to_store'] = 'STORE-' . chr(65 + ($identifierIndex % 3));
+            $data['memory_twist'] = 'MEM-' . str_pad(rand(1, 5), 2, '0', STR_PAD_LEFT);
         }
 
         return $data;
@@ -655,7 +649,7 @@ class GenerateSampleDataTemplate extends Command
             $isCuttingTwist ? 'BN-' . $uniqueSuffix : '',       // 13: Barcode Navigasi (CUTTING_TWIST only)
             $isCuttingTwist ? 'BP-' . $uniqueSuffix : '',       // 14: Barcode Process (CUTTING_TWIST only)
             $isCuttingTwist ? 'BS-' . $uniqueSuffix : '',       // 15: Barcode Shikake (CUTTING_TWIST only)
-            $isCuttingTwist ? ($sharedData['to_store'] ?? '') : '',  // 16: To Store (CUTTING_TWIST only)
+            $sharedData['to_store'],                            // 16: To Store
             $sharedData['address'],                             // 17: Address
             $sharedData['cct_code'],                            // 18: CCT Code
             $sharedData['kind'],                                // 19: Kind
@@ -666,28 +660,22 @@ class GenerateSampleDataTemplate extends Command
             $sharedData['note_1'],                              // 24: Note 1
             $isCuttingTwist ? '' : $sharedData['gold_1'],       // 25: Gold 1 (CUTTING only)
             $sharedData['strip_1'],                             // 26: Strip 1
-            $sharedData['acc_1'],                               // 27: Acc. 1
-            $isCuttingTwist ? '' : $sharedData['acc_1a'],       // 28: Acc. 1A (CUTTING only)
+            $isCuttingTwist ? '' : $sharedData['acc_1a'],       // 27: Acc. 1A (CUTTING only)
+            $sharedData['acc_1b'],                              // 28: Acc. 1B
             $sharedData['tube_1'],                              // 29: Tube 1
             $sharedData['mark_1'],                              // 30: Mark 1
-            $isCuttingTwist ? '' : $sharedData['remark_1'],     // 31: Remark 1 (CUTTING only)
-            $sharedData['terminal_2'],                          // 32: Terminal 2
-            $sharedData['note_2'],                              // 33: Note 2
-            $isCuttingTwist ? '' : $sharedData['gold_2'],       // 34: Gold 2 (CUTTING only)
-            $sharedData['strip_2'],                             // 35: Strip 2
-            $sharedData['acc_2'],                               // 36: Acc 2
-            $isCuttingTwist ? '' : $sharedData['acc_2a'],       // 37: Acc 2A (CUTTING only)
-            $sharedData['tube_2'],                              // 38: Tube 2
-            $sharedData['mark_2'],                              // 39: Mark 2
-            $isCuttingTwist ? '' : $sharedData['remark_2'],     // 40: Remark 2 (CUTTING only)
-            $sharedData['ta'],                                  // 41: TA
-            $sharedData['tb'],                                  // 42: TB
-            $sharedData['t01'],                                 // 43: T01
-            $sharedData['t02'],                                 // 44: T02
-            $sharedData['t03'],                                 // 45: T03
-            $sharedData['t04'],                                 // 46: T04
-            $sharedData['t05'],                                 // 47: T05
-            $sharedData['t06'],                                 // 48: T06
+            $sharedData['terminal_2'],                          // 31: Terminal 2
+            $sharedData['note_2'],                              // 32: Note 2
+            $isCuttingTwist ? '' : $sharedData['gold_2'],       // 33: Gold 2 (CUTTING only)
+            $sharedData['strip_2'],                             // 34: Strip 2
+            $isCuttingTwist ? '' : $sharedData['acc_2a'],       // 35: Acc 2A (CUTTING only)
+            $sharedData['acc_2b'],                              // 36: Acc 2B
+            $sharedData['tube_2'],                              // 37: Tube 2
+            $sharedData['mark_2'],                              // 38: Mark 2
+            $sharedData['t01'],                                 // 39: T01
+            $sharedData['t02'],                                 // 40: T02
+            $sharedData['t03'],                                 // 41: T03
+            $isCuttingTwist ? ($sharedData['memory_twist'] ?? '') : '',  // 42: Memory Twist (CUTTING_TWIST only)
         ];
     }
 

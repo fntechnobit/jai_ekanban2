@@ -103,6 +103,11 @@
                                 </div>
 
                                 <div class="mb-3">
+                                    <label>Memory Twist</label>
+                                    <input type="text" name="memory_twist" id="memory_twist" class="form-control form-control-sm">
+                                </div>
+
+                                <div class="mb-3">
                                     <label>To Store</label>
                                     <input type="text" name="to_store" id="to_store" class="form-control form-control-sm">
                                 </div>
@@ -163,12 +168,12 @@
 
                             <div class="mb-3">
                                 <label>ACC 1</label>
-                                <input type="text" name="acc_1" id="acc_1" class="form-control form-control-sm">
+                                <input type="text" name="acc_1a" id="acc_1a" class="form-control form-control-sm">
                             </div>
 
                             <div class="mb-3">
-                                <label>ACC 1A</label>
-                                <input type="text" name="acc_1a" id="acc_1a" class="form-control form-control-sm">
+                                <label>ACC 2</label>
+                                <input type="text" name="acc_2a" id="acc_2a" class="form-control form-control-sm">
                             </div>
 
                             <div class="mb-3">
@@ -179,11 +184,6 @@
                             <div class="mb-3">
                                 <label>Mark 1</label>
                                 <input type="text" name="mark_1" id="mark_1" class="form-control form-control-sm">
-                            </div>
-
-                            <div class="mb-3">
-                                <label>Remark 1</label>
-                                <textarea name="remark_1" id="remark_1" class="form-control form-control-sm" rows="2"></textarea>
                             </div>
                         </div>
 
@@ -212,13 +212,13 @@
                             </div>
 
                             <div class="mb-3">
-                                <label>ACC 2</label>
-                                <input type="text" name="acc_2" id="acc_2" class="form-control form-control-sm">
+                                <label>ACC 1</label>
+                                <input type="text" name="acc_1b" id="acc_1b" class="form-control form-control-sm">
                             </div>
 
                             <div class="mb-3">
-                                <label>ACC 2A</label>
-                                <input type="text" name="acc_2a" id="acc_2a" class="form-control form-control-sm">
+                                <label>ACC 2</label>
+                                <input type="text" name="acc_2b" id="acc_2b" class="form-control form-control-sm">
                             </div>
 
                             <div class="mb-3">
@@ -231,25 +231,10 @@
                                 <input type="text" name="mark_2" id="mark_2" class="form-control form-control-sm">
                             </div>
 
-                            <div class="mb-3">
-                                <label>Remark 2</label>
-                                <textarea name="remark_2" id="remark_2" class="form-control form-control-sm" rows="2"></textarea>
-                            </div>
-
                             <hr>
                             <h6 class="font-weight-bold">T Fields</h6>
                             
-                            <div class="mb-3">
-                                <label>TA</label>
-                                <input type="text" name="ta" id="ta" class="form-control form-control-sm">
-                            </div>
-
-                            <div class="mb-3">
-                                <label>TB</label>
-                                <input type="text" name="tb" id="tb" class="form-control form-control-sm">
-                            </div>
-
-                            @for($i = 1; $i <= 6; $i++)
+                            @for($i = 1; $i <= 3; $i++)
                             <div class="mb-3">
                                 <label>T{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</label>
                                 <input type="text" name="t{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" id="t{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" class="form-control form-control-sm">

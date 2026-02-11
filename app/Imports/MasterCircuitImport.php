@@ -53,7 +53,7 @@ class MasterCircuitImport
             // Get conveyor data
             $conveyor = MasterConveyor::findOrFail($this->conveyorId);
 
-            // Get assy columns (after column AW/T06 which is index 48, so assy starts at 49)
+            // Get assy columns (after column AP/T03 which is index 41, so assy starts at 42)
             $assyColumns = [];
             for ($col = 49; $col < count($headerRow); $col++) {
                 $assyName = ImportHelper::cleanValue($headerRow[$col]);
@@ -221,7 +221,7 @@ class MasterCircuitImport
             'barcode_navigasi' => null,                                         // Column N - Barcode Navigasi (CUTTING_TWIST only)
             'barcode_process' => null,                                          // Column O - Barcode Process (CUTTING_TWIST only)
             'barcode_shikake' => null,                                          // Column P - Barcode Shikake (CUTTING_TWIST only)
-            'to_store' => null,                                                 // Column Q - To Store (CUTTING_TWIST only)
+            'to_store' => ImportHelper::cleanValue($rowData[16] ?? null),       // Column Q - To Store
             'address' => ImportHelper::cleanValue($rowData[17] ?? null),        // Column R - Address
             'cct_code' => ImportHelper::cleanValue($rowData[18] ?? null),       // Column S - CCT Code
             'kind' => ImportHelper::cleanValue($rowData[19] ?? null),           // Column T - Kind
@@ -232,28 +232,22 @@ class MasterCircuitImport
             'note_1' => ImportHelper::cleanValue($rowData[24] ?? null),         // Column Y - Note 1
             'gold_1' => ImportHelper::cleanValue($rowData[25] ?? null),         // Column Z - Gold 1
             'strip_1' => ImportHelper::cleanValue($rowData[26] ?? null),        // Column AA - Strip 1
-            'acc_1' => ImportHelper::cleanValue($rowData[27] ?? null),          // Column AB - Acc. 1
-            'acc_1a' => ImportHelper::cleanValue($rowData[28] ?? null),         // Column AC - Acc. 1A
+            'acc_1a' => ImportHelper::cleanValue($rowData[27] ?? null),         // Column AB - Acc. 1A
+            'acc_1b' => ImportHelper::cleanValue($rowData[28] ?? null),         // Column AC - Acc. 1B
             'tube_1' => ImportHelper::cleanValue($rowData[29] ?? null),         // Column AD - Tube 1
             'mark_1' => ImportHelper::cleanValue($rowData[30] ?? null),         // Column AE - Mark 1
-            'remark_1' => ImportHelper::cleanValue($rowData[31] ?? null),       // Column AF - Remark 1
-            'terminal_2' => ImportHelper::cleanValue($rowData[32] ?? null),     // Column AG - Terminal 2
-            'note_2' => ImportHelper::cleanValue($rowData[33] ?? null),         // Column AH - Note 2
-            'gold_2' => ImportHelper::cleanValue($rowData[34] ?? null),         // Column AI - Gold 2
-            'strip_2' => ImportHelper::cleanValue($rowData[35] ?? null),        // Column AJ - Strip 2
-            'acc_2' => ImportHelper::cleanValue($rowData[36] ?? null),          // Column AK - Acc 2
-            'acc_2a' => ImportHelper::cleanValue($rowData[37] ?? null),         // Column AL - Acc 2A
-            'tube_2' => ImportHelper::cleanValue($rowData[38] ?? null),         // Column AM - Tube 2
-            'mark_2' => ImportHelper::cleanValue($rowData[39] ?? null),         // Column AN - Mark 2
-            'remark_2' => ImportHelper::cleanValue($rowData[40] ?? null),       // Column AO - Remark 2
-            'ta' => ImportHelper::cleanValue($rowData[41] ?? null),             // Column AP - TA
-            'tb' => ImportHelper::cleanValue($rowData[42] ?? null),             // Column AQ - TB
-            't01' => ImportHelper::cleanValue($rowData[43] ?? null),            // Column AR - T01
-            't02' => ImportHelper::cleanValue($rowData[44] ?? null),            // Column AS - T02
-            't03' => ImportHelper::cleanValue($rowData[45] ?? null),            // Column AT - T03
-            't04' => ImportHelper::cleanValue($rowData[46] ?? null),            // Column AU - T04
-            't05' => ImportHelper::cleanValue($rowData[47] ?? null),            // Column AV - T05
-            't06' => ImportHelper::cleanValue($rowData[48] ?? null),            // Column AW - T06
+            'terminal_2' => ImportHelper::cleanValue($rowData[31] ?? null),     // Column AF - Terminal 2
+            'note_2' => ImportHelper::cleanValue($rowData[32] ?? null),         // Column AG - Note 2
+            'gold_2' => ImportHelper::cleanValue($rowData[33] ?? null),         // Column AH - Gold 2
+            'strip_2' => ImportHelper::cleanValue($rowData[34] ?? null),        // Column AI - Strip 2
+            'acc_2a' => ImportHelper::cleanValue($rowData[35] ?? null),         // Column AJ - Acc 2A
+            'acc_2b' => ImportHelper::cleanValue($rowData[36] ?? null),         // Column AK - Acc 2B
+            'tube_2' => ImportHelper::cleanValue($rowData[37] ?? null),         // Column AL - Tube 2
+            'mark_2' => ImportHelper::cleanValue($rowData[38] ?? null),         // Column AM - Mark 2
+            't01' => ImportHelper::cleanValue($rowData[39] ?? null),            // Column AN - T01
+            't02' => ImportHelper::cleanValue($rowData[40] ?? null),            // Column AO - T02
+            't03' => ImportHelper::cleanValue($rowData[41] ?? null),            // Column AP - T03
+            'memory_twist' => null,                                              // Column AQ - Memory Twist (CUTTING_TWIST only)
             'created_by' => Auth::id(),
         ];
 
@@ -264,7 +258,7 @@ class MasterCircuitImport
             $data['barcode_navigasi'] = ImportHelper::cleanValue($rowData[13] ?? null); // Column N - Barcode Navigasi
             $data['barcode_process'] = ImportHelper::cleanValue($rowData[14] ?? null);  // Column O - Barcode Process
             $data['barcode_shikake'] = ImportHelper::cleanValue($rowData[15] ?? null);  // Column P - Barcode Shikake
-            $data['to_store'] = ImportHelper::cleanValue($rowData[16] ?? null);         // Column Q - To Store
+            $data['memory_twist'] = ImportHelper::cleanValue($rowData[42] ?? null);     // Column AQ - Memory Twist
         }
 
         return $data;
