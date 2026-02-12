@@ -25,21 +25,48 @@ class MenuSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'code' => 'system',
-                'name' => 'System',
-                'url' => '#',
-                'icon' => 'fa-solid fa-gear',
-                'parent_id' => null,
-                'order' => 2,
-                'is_active' => true,
-            ],
-            [
                 'code' => 'schedule',
                 'name' => 'Schedule',
                 'url' => '#',
                 'icon' => 'fa-solid fa-calendar-days',
                 'parent_id' => null,
+                'order' => 2,
+                'is_active' => true,
+            ],
+            [
+                'code' => 'ekanban_print',
+                'name' => 'eKanban Print',
+                'url' => '#',
+                'icon' => 'fa-solid fa-print',
+                'parent_id' => null,
                 'order' => 3,
+                'is_active' => true,
+            ],
+            [
+                'code' => 'defect',
+                'name' => 'Defect',
+                'url' => '#',
+                'icon' => 'fa-solid fa-triangle-exclamation',
+                'parent_id' => null,
+                'order' => 4,
+                'is_active' => true,
+            ],
+            [
+                'code' => 'master_data',
+                'name' => 'Master Data',
+                'url' => '#',
+                'icon' => 'fa-solid fa-database',
+                'parent_id' => null,
+                'order' => 5,
+                'is_active' => true,
+            ],
+            [
+                'code' => 'system',
+                'name' => 'System',
+                'url' => '#',
+                'icon' => 'fa-solid fa-gear',
+                'parent_id' => null,
+                'order' => 6,
                 'is_active' => true,
             ],
         ];
@@ -142,21 +169,12 @@ class MenuSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'code' => 'ekanban_circuit',
-                'name' => 'eKanban Circuit',
-                'url' => '#',
-                'icon' => 'fa-solid fa-route',
+                'code' => 'schedule_verification',
+                'name' => 'Verification',
+                'url' => '/schedule/schedule-verification',
+                'icon' => 'fa-solid fa-clipboard-check',
                 'parent_id' => $scheduleMenu->id,
                 'order' => 2,
-                'is_active' => true,
-            ],
-            [
-                'code' => 'ekanban_shikake',
-                'name' => 'eKanban Shikake',
-                'url' => '#',
-                'icon' => 'fa-solid fa-wrench',
-                'parent_id' => $scheduleMenu->id,
-                'order' => 3,
                 'is_active' => true,
             ],
         ];
@@ -182,73 +200,30 @@ class MenuSeeder extends Seeder
             );
         }
 
-        // Create sub-sub menus for eKanban Circuit
-        $ekanbanCircuitMenu = Menu::where('code', 'ekanban_circuit')->first();
-        $circuitSubmenus = [
+        // Create submenus for eKanban Print
+        $ekanbanPrintMenu = Menu::where('code', 'ekanban_print')->first();
+        $printSubmenus = [
             [
-                'code' => 'ekanban_circuit_print_machine',
-                'name' => 'Print Per Machine',
-                'url' => '/schedule/ekanban-circuit/print-machine',
-                'icon' => 'fa-solid fa-print',
-                'parent_id' => $ekanbanCircuitMenu->id,
-                'order' => 1,
-                'is_active' => true,
-            ],
-            [
-                'code' => 'ekanban_circuit_print_preview',
-                'name' => 'Print Preview from Office',
-                'url' => '/schedule/ekanban-circuit/print-preview',
-                'icon' => 'fa-solid fa-eye',
-                'parent_id' => $ekanbanCircuitMenu->id,
-                'order' => 2,
-                'is_active' => true,
-            ],
-        ];
-
-        foreach ($circuitSubmenus as $submenu) {
-            $menu = Menu::firstOrCreate(
-                ['code' => $submenu['code']],
-                $submenu
-            );
-
-            GroupMenuAccess::firstOrCreate(
-                [
-                    'group_id' => 1,
-                    'menu_id' => $menu->id,
-                ],
-                [
-                    'can_create' => true,
-                    'can_read' => true,
-                    'can_update' => true,
-                    'can_delete' => true,
-                ]
-            );
-        }
-
-        // Create sub-sub menus for eKanban Shikake  
-        $ekanbanShikakeMenu = Menu::where('code', 'ekanban_shikake')->first();
-        $shikakeSubmenus = [
-            [
-                'code' => 'ekanban_shikake_print_machine',
-                'name' => 'Print Per Machine',
+                'code' => 'ekanban_shikake',
+                'name' => 'Shikake',
                 'url' => '/schedule/ekanban-shikake/print-machine',
-                'icon' => 'fa-solid fa-print',
-                'parent_id' => $ekanbanShikakeMenu->id,
+                'icon' => 'fa-solid fa-table',
+                'parent_id' => $ekanbanPrintMenu->id,
                 'order' => 1,
                 'is_active' => true,
             ],
             [
-                'code' => 'ekanban_shikake_print_preview',
-                'name' => 'Print Preview from Office',
-                'url' => '/schedule/ekanban-shikake/print-preview',
-                'icon' => 'fa-solid fa-eye',
-                'parent_id' => $ekanbanShikakeMenu->id,
+                'code' => 'ekanban_cutting',
+                'name' => 'Cutting',
+                'url' => '/schedule/ekanban-circuit/print-machine',
+                'icon' => 'fa-solid fa-diagram-project',
+                'parent_id' => $ekanbanPrintMenu->id,
                 'order' => 2,
                 'is_active' => true,
             ],
         ];
 
-        foreach ($shikakeSubmenus as $submenu) {
+        foreach ($printSubmenus as $submenu) {
             $menu = Menu::firstOrCreate(
                 ['code' => $submenu['code']],
                 $submenu

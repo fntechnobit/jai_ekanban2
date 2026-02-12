@@ -7,9 +7,6 @@
 <!-- Simple bar js-->
 <script src="{{ asset('assets/vendor/simplebar/simplebar.js') }}"></script>
 
-<!-- Customizer js-->
-<script src="{{ asset('assets/js/customizer.js') }}"></script>
-
 <!-- prism js-->
 <script src="{{ asset('assets/vendor/prism/prism.min.js') }}"></script>
 
@@ -36,6 +33,19 @@
 
 <!-- jQuery UI (for sortable/draggable) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+
+<!-- LocalStorage helper functions -->
+<script>
+const themeName = "La-Theme";
+
+function getLocalStorageItem(key, defaultValue = null) {
+    return localStorage.getItem(`${themeName}-${key}`) ?? defaultValue;
+}
+
+function setLocalStorageItem(key, value) {
+    localStorage.setItem(`${themeName}-${key}`, value);
+}
+</script>
 
 <!-- App js-->
 <script src="{{ asset('assets/js/script.js') }}"></script>

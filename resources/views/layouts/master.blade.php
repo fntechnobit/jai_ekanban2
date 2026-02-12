@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <!-- All meta and title start-->
@@ -11,9 +11,9 @@
     <!-- css end-->
 </head>
 
-<body>
+<body data-sidebar="dark" data-layout="ltr" text="medium-text">
     <!-- Loader start-->
-    <div class="app-wrapper">
+    <div class="app-wrapper warm">
         <div class="loader-wrapper">
             <div class="app-loader">
                 <span></span>
@@ -58,9 +58,6 @@
         @include('layouts.footer')
         <!-- Footer Section end -->
     </div>
-
-    <!--customizer-->
-    <div id="customizer"></div>
 
     <!-- scripts start-->
     @include('layouts.script')

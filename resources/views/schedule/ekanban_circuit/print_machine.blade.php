@@ -1,19 +1,39 @@
 @extends('layouts.master')
 
-@section('title', 'eKanban Circuit - Print Per Machine')
+@section('title', 'Cutting - Print Per Machine')
 
 @section('breadcrumb')
-    <x-page-header menu-code="ekanban_circuit_print_machine" />
 @endsection
 
 @section('content')
+    <style>
+        /* Match select2 height with button and datepicker - More specific selector */
+        .card-body .select2-container--bootstrap-5 .select2-selection--single,
+        .card-body .select2-container--bootstrap-5 .select2-selection {
+            height: 38px !important;
+            min-height: 38px !important;
+            padding: 0.375rem 0.75rem !important;
+        }
+        .card-body .select2-container--bootstrap-5 .select2-selection__rendered {
+            line-height: 1.5 !important;
+            padding-left: 0 !important;
+            padding-top: 0 !important;
+        }
+        .card-body .select2-container--bootstrap-5 .select2-selection__arrow {
+            height: 36px !important;
+        }
+        /* Datepicker text align right */
+        #filter_date {
+            text-align: right;
+        }
+    </style>
     <div class="container-fluid">
             <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fa-solid fa-route"></i> eKanban Circuit - Print Per Machine
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">
+                        <i class="fa-solid fa-diagram-project"></i> Cutting
                     </h3>
-                    <div class="card-tools">
+                    <div class="d-flex align-items-center gap-2">
                         <button class="btn btn-sm btn-success mr-1" id="btn-connect">
                             <i class="fa-solid fa-plug"></i> Connect
                         </button>
@@ -30,113 +50,62 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- Filters -->
-                    <form class="form-horizontal">
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="mb-3 row">
-                                    <label for="filter_area" class="col-sm-3 col-form-label">Area:</label>
-                                    <div class="col-sm-9">
-                                        <select class="form-select select2" id="filter_area">
-                                            <option value="">- All Area -</option>
-                                            @foreach($areas as $area)
-                                                <option value="{{ $area->id }}">{{ $area->area }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
+                    <!-- Filters - 4 columns x 2 rows -->
+                    <form class="mb-3">
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-3">
+                                <select class="form-select select2" id="filter_area">
+                                    <option value="">- All Area -</option>
+                                    @foreach($areas as $area)
+                                        <option value="{{ $area->id }}">{{ $area->area }}</option>
+                                    @endforeach
+                                </select>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3 row">
-                                    <label for="filter_cutoff" class="col-sm-3 col-form-label">Cut Off: <span class="text-danger">*</span></label>
-                                    <div class="col-sm-9">
-                                        <select class="form-select select2" id="filter_cutoff">
-                                            <option value="">- Choose Cut Off -</option>
-                                            <option value="1">Cut Off 1</option>
-                                            <option value="2">Cut Off 2</option>
-                                            <option value="3">Cut Off 3</option>
-                                            <option value="4">Cut Off 4</option>
-                                            <option value="5">Cut Off 5</option>
-                                        </select>
-                                    </div>
-                                </div>
+                            <div class="col-md-3">
+                                <select class="form-select select2" id="filter_machine" required>
+                                    <option value="">- Choose Machine -</option>
+                                </select>
                             </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="mb-3 row">
-                                    <label for="filter_machine" class="col-sm-3 col-form-label">Machine: <span class="text-danger">*</span></label>
-                                    <div class="col-sm-9">
-                                        <select class="form-select select2" id="filter_machine" required>
-                                            <option value="">- Choose Machine -</option>
-                                        </select>
-                                    </div>
-                                </div>
+                            <div class="col-md-3">
+                                <select class="form-select select2" id="filter_type">
+                                    <option value="all">- All Type -</option>
+                                    <option value="CUTTING">CUTTING</option>
+                                    <option value="CUTTING_TWIST">CUTTING TWIST</option>
+                                </select>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3 row">
-                                    <label for="filter_type" class="col-sm-3 col-form-label">Type:</label>
-                                    <div class="col-sm-9">
-                                        <select class="form-select select2" id="filter_type">
-                                            <option value="all">All Type</option>
-                                            <option value="CUTTING">CUTTING</option>
-                                            <option value="CUTTING_TWIST">CUTTING TWIST</option>
-                                        </select>
-                                    </div>
-                                </div>
+                            <div class="col-md-3">
+                                <select class="form-select select2" id="filter_print_status">
+                                    <option value="all">- All Status -</option>
+                                    <option value="not_printed" selected>Not Printed</option>
+                                    <option value="printed">Already Printed</option>
+                                </select>
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="mb-3 row">
-                                    <label for="filter_date" class="col-sm-3 col-form-label">Date:</label>
-                                    <div class="col-sm-9">
-                                        <input type="text" class="form-control form-control-sm" id="filter_date" readonly placeholder="Select date">
-                                    </div>
-                                </div>
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <input type="text" class="form-control" id="filter_date" readonly placeholder="Select date">
                             </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="mb-3 row">
-                                    <label for="filter_shift" class="col-sm-3 col-form-label">Shift:</label>
-                                    <div class="col-sm-9">
-                                        <select class="form-select select2" id="filter_shift">
-                                            <option value="">- All Shift -</option>
-                                            <option value="1">Shift 1</option>
-                                            <option value="2">Shift 2</option>
-                                        </select>
-                                    </div>
-                                </div>
+                            <div class="col-md-3">
+                                <select class="form-select select2" id="filter_shift">
+                                    <option value="">- All Shift -</option>
+                                    <option value="1">Shift 1</option>
+                                    <option value="2">Shift 2</option>
+                                </select>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3 row">
-                                    <label for="filter_print_status" class="col-sm-3 col-form-label">Print Status:</label>
-                                    <div class="col-sm-9">
-                                        <select class="form-select select2" id="filter_print_status">
-                                            <option value="all">All</option>
-                                            <option value="not_printed" selected>Not Printed</option>
-                                            <option value="printed">Already Printed</option>
-                                        </select>
-                                    </div>
-                                </div>
+                            <div class="col-md-3">
+                                <select class="form-select select2" id="filter_cutoff">
+                                    <option value="">- All Cut Off -</option>
+                                    <option value="1">Cut Off 1</option>
+                                    <option value="2">Cut Off 2</option>
+                                    <option value="3">Cut Off 3</option>
+                                    <option value="4">Cut Off 4</option>
+                                    <option value="5">Cut Off 5</option>
+                                </select>
                             </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3 row">
-                                    <label class="col-sm-3 col-form-label">&nbsp;</label>
-                                    <div class="col-sm-9">
-                                        <button type="button" class="btn btn-primary btn-sm" id="btn-filter">
-                                            <i class="fa-solid fa-filter"></i> Filter
-                                        </button>
-                                        <button type="button" class="btn btn-secondary btn-sm" id="btn-reset">
-                                            <i class="fa-solid fa-arrow-rotate-right"></i> Reset
-                                        </button>
-                                    </div>
-                                </div>
+                            <div class="col-md-3 text-end">
+                                <button type="button" class="btn btn-secondary" id="btn-reset" title="Reset Filters">
+                                    <i class="fa-solid fa-arrow-rotate-right"></i>
+                                </button>
                             </div>
                         </div>
                     </form>
@@ -209,14 +178,24 @@
         $(function () {
             // Initialize Select2
             $('.select2').select2({
-                allowClear: true
+                allowClear: true,
+                theme: 'bootstrap-5'
             });
+
+            // Force height after initialization
+            setTimeout(function() {
+                $('.select2-container--bootstrap-5 .select2-selection').css({
+                    'height': '38px',
+                    'min-height': '38px'
+                });
+            }, 100);
 
             // Initialize single date picker
             var currentDate = moment();
 
             $('#filter_date').daterangepicker({
                 singleDatePicker: true,
+                autoApply: true,
                 startDate: currentDate,
                 locale: {
                     format: 'DD-MM-YYYY'
@@ -324,9 +303,9 @@
                 order: [[3, 'asc']]
             });
 
-            // Auto-reload when machine is selected
-            $('#filter_machine').on('change', function() {
-                var machine = $(this).val();
+            // Auto-reload on all filter changes
+            $('#filter_area, #filter_machine, #filter_type, #filter_shift, #filter_cutoff, #filter_print_status').on('change', function() {
+                var machine = $('#filter_machine').val();
                 if (machine) {
                     table.ajax.reload();
                 }
@@ -340,21 +319,17 @@
                 }
             });
 
-            $('#btn-filter').click(function() {
-                var machine = $('#filter_machine').val();
-                if (!machine) {
-                    Swal.fire('Warning', 'Please select a machine first', 'warning');
-                    return;
-                }
-                table.ajax.reload();
-            });
-
             $('#btn-reset').click(function() {
-                $('.select2').val('').trigger('change');
+                // Reset all filters
+                $('#filter_area').val('').trigger('change');
                 $('#filter_type').val('all').trigger('change');
+                $('#filter_shift').val('').trigger('change');
+                $('#filter_cutoff').val('').trigger('change');
+                $('#filter_print_status').val('not_printed').trigger('change');
                 $('#filter_machine').empty().append('<option value="">- Choose Machine -</option>');
                 $('#filter_date').data('daterangepicker').setStartDate(moment());
-                table.ajax.reload();
+                // Clear table
+                table.clear().draw();
             });
 
             // Load all machines on page load (independent of conveyor)
