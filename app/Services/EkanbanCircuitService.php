@@ -94,6 +94,7 @@ class EkanbanCircuitService
                 'assy_schedule_id' => $row->assy_schedule_id,
                 'group_id' => $groupId,
                 'master_circuit_id' => $row->master_circuit_id,
+                'type' => $row->type ?? 'CUTTING',
                 'cct_no' => $row->cct_no,
                 'cct_code' => $row->cct_code,
                 'conveyor' => $row->conveyor,
@@ -165,6 +166,7 @@ class EkanbanCircuitService
                 'master_conveyor.conveyor',
                 'listing_stage.carline',
                 'master_circuit.id as circuit_id',
+                'master_circuit.type',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
                 'master_circuit.family',
@@ -174,12 +176,15 @@ class EkanbanCircuitService
                 'master_circuit.col',
                 'master_circuit.cl',
                 'master_circuit.machine',
+                'master_circuit.machine_twist',
+                'master_circuit.memory_twist',
                 'master_circuit.sequence',
+                'master_circuit.sequence_2',
                 'master_circuit.terminal_1',
                 'master_circuit.note_1',
                 'master_circuit.gold_1',
                 'master_circuit.strip_1',
-                'master_circuit.acc_1',
+                'master_circuit.acc_1b',
                 'master_circuit.acc_1a',
                 'master_circuit.tube_1',
                 'master_circuit.mark_1',
@@ -187,23 +192,20 @@ class EkanbanCircuitService
                 'master_circuit.note_2',
                 'master_circuit.gold_2',
                 'master_circuit.strip_2',
-                'master_circuit.acc_2',
+                'master_circuit.acc_2b',
                 'master_circuit.acc_2a',
                 'master_circuit.tube_2',
                 'master_circuit.mark_2',
-                'master_circuit.ta',
-                'master_circuit.tb',
                 'master_circuit.qty',
                 'master_circuit.address',
                 'master_circuit.t01',
                 'master_circuit.t02',
                 'master_circuit.t03',
-                'master_circuit.t04',
-                'master_circuit.t05',
-                'master_circuit.t06',
-                'master_circuit.remark_1',
-                'master_circuit.remark_2',
                 'master_circuit.barcode_mesin',
+                'master_circuit.barcode_navigasi',
+                'master_circuit.barcode_process',
+                'master_circuit.barcode_shikake',
+                'master_circuit.to_store',
                 'master_circuit.released_note',
                 'master_circuit.image_path',
                 // Kanban fields from assy_schedule_circuit
@@ -232,6 +234,7 @@ class EkanbanCircuitService
             ->select([
                 'assy_schedule_circuit.assy_schedule_id',
                 'assy_schedule_circuit.master_circuit_id',
+                'master_circuit.type',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
                 'master_circuit.machine',
@@ -253,6 +256,7 @@ class EkanbanCircuitService
             ->groupBy([
                 'assy_schedule_circuit.assy_schedule_id',
                 'assy_schedule_circuit.master_circuit_id',
+                'master_circuit.type',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
                 'master_circuit.machine',
@@ -299,6 +303,11 @@ class EkanbanCircuitService
     {
         // Machine is required
         $query->where('master_circuit.machine', $request->machine);
+
+        // Type filter (CUTTING / CUTTING_TWIST)
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->where('master_circuit.type', $request->type);
+        }
 
         // Cut off filter
         if ($request->filled('cutoff')) {

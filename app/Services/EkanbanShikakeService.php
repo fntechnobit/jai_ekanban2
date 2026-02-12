@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\AssyScheduleShikake;
-use App\Models\MasterShikakeTwist;
 use App\Models\MasterShikakeBonder;
 use App\Models\MasterShikakeJoint;
 use App\Models\MasterShikakeShield;
@@ -156,7 +155,6 @@ class EkanbanShikakeService
             ->join('master_shikake', 'assy_schedule_shikake.master_shikake_id', '=', 'master_shikake.id')
             ->leftJoin('listing_stage', 'assy_schedule.listing_id', '=', 'listing_stage.id')
             // Left join child tables to get identifiers
-            ->leftJoin('master_shikake_twist', 'master_shikake.id', '=', 'master_shikake_twist.master_shikake_id')
             ->leftJoin('master_shikake_bonder', 'master_shikake.id', '=', 'master_shikake_bonder.master_shikake_id')
             ->leftJoin('master_shikake_joint', 'master_shikake.id', '=', 'master_shikake_joint.master_shikake_id')
             ->leftJoin('master_shikake_shield', 'master_shikake.id', '=', 'master_shikake_shield.master_shikake_id')
@@ -193,7 +191,6 @@ class EkanbanShikakeService
                 'assy_schedule_shikake.qty_kanban',
                 'assy_schedule_shikake.cutoff as kanban_cutoff',
                 // Identifier fields from child tables
-                'master_shikake_twist.cct_no as twist_cct_no',
                 'master_shikake_bonder.bonder_no',
                 'master_shikake_joint.bonder_no as joint_bonder_no',
                 'master_shikake_shield.shield_no',
@@ -219,8 +216,6 @@ class EkanbanShikakeService
     private function getIdentifierByProcess($row)
     {
         switch ($row->process) {
-            case 'TWIST':
-                return $row->twist_cct_no ?? '-';
             case 'BONDER':
                 return $row->bonder_no ?? '-';
             case 'JOINT':
@@ -240,8 +235,6 @@ class EkanbanShikakeService
     public function loadProcessDetails($shikakeId, $process)
     {
         switch ($process) {
-            case 'TWIST':
-                return MasterShikakeTwist::where('master_shikake_id', $shikakeId)->first();
             case 'BONDER':
                 return MasterShikakeBonder::where('master_shikake_id', $shikakeId)->first();
             case 'JOINT':
@@ -264,8 +257,7 @@ class EkanbanShikakeService
             ->join('assy_schedule', 'assy_schedule_shikake.assy_schedule_id', '=', 'assy_schedule.id')
             ->join('master_conveyor', 'assy_schedule.conveyor_id', '=', 'master_conveyor.id')
             ->join('master_shikake', 'assy_schedule_shikake.master_shikake_id', '=', 'master_shikake.id')
-            // Left join child tables to get identifiers
-            ->leftJoin('master_shikake_twist', 'master_shikake.id', '=', 'master_shikake_twist.master_shikake_id')
+            // Left join child tables to get identifiers (TWIST moved to circuit module)
             ->leftJoin('master_shikake_bonder', 'master_shikake.id', '=', 'master_shikake_bonder.master_shikake_id')
             ->leftJoin('master_shikake_joint', 'master_shikake.id', '=', 'master_shikake_joint.master_shikake_id')
             ->leftJoin('master_shikake_shield', 'master_shikake.id', '=', 'master_shikake_shield.master_shikake_id')
@@ -286,7 +278,6 @@ class EkanbanShikakeService
                 DB::raw('MAX(assy_schedule_shikake.cutoff) as cutoff'),
                 // Computed identifier based on process type
                 DB::raw("COALESCE(
-                    master_shikake_twist.cct_no,
                     master_shikake_bonder.bonder_no,
                     master_shikake_joint.bonder_no,
                     master_shikake_shield.shield_no,
@@ -313,7 +304,6 @@ class EkanbanShikakeService
                 'assy_schedule.schedule',
                 'assy_schedule.shift',
                 DB::raw("COALESCE(
-                    master_shikake_twist.cct_no,
                     master_shikake_bonder.bonder_no,
                     master_shikake_joint.bonder_no,
                     master_shikake_shield.shield_no,
@@ -323,7 +313,6 @@ class EkanbanShikakeService
             ])
             ->orderBy('master_shikake.process', 'ASC')
             ->orderBy(DB::raw("COALESCE(
-                master_shikake_twist.cct_no,
                 master_shikake_bonder.bonder_no,
                 master_shikake_joint.bonder_no,
                 master_shikake_shield.shield_no,

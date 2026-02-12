@@ -50,12 +50,8 @@ class EkanbanCircuitController extends Controller
             
             $circuits = $this->ekanbanCircuitService->getCircuitsForPrint($ids);
 
-            // Generate QR codes and barcodes for each circuit
-            foreach ($circuits as $circuit) {
-                BarcodeHelper::generateCircuitBarcodes($circuit, 'barcode_kanban', 'cct_no', 'barcode_mesin', 'cct_code');
-            }
-
-            $html = view('schedule.ekanban_circuit.print_ticket', compact('circuits'))->render();
+            // Generate barcodes and render per-type templates
+            $html = $this->renderCircuitTickets($circuits);
             
             return response($html);
         }
@@ -84,21 +80,74 @@ class EkanbanCircuitController extends Controller
         
         Log::info('Print function called with ' . count($circuits) . ' circuits');
 
-        // Generate QR codes and barcodes for each circuit
-        foreach ($circuits as $circuit) {
-            Log::info('Processing circuit ID: ' . $circuit->id . ', CCT NO: ' . ($circuit->cct_no ?? 'N/A') . ', Barcode Kanban: ' . ($circuit->barcode_kanban ?? 'N/A'));
-            BarcodeHelper::generateCircuitBarcodes($circuit);
-        }
+        // Generate barcodes and render per-type templates
+        $html = $this->renderCircuitTickets($circuits);
 
         // Mark circuits as printed
         $this->ekanbanCircuitService->markAsPrinted($ids, Auth::id());
 
-        $html = view('schedule.ekanban_circuit.print_ticket', compact('circuits'))->render();
-
         return response()->json([
             'ok' => true,
-            'html' => '<div id="print_stack_ajax">' . $html . '</div>'
+            'html' => $html
         ]);
+    }
+
+    /**
+     * Render print tickets for circuits - dispatches to type-specific templates
+     * CUTTING uses print_ticket, CUTTING_TWIST uses print_ticket_twist
+     */
+    private function renderCircuitTickets($circuits)
+    {
+        // Separate circuits by type
+        $cuttingCircuits = $circuits->filter(fn($c) => ($c->type ?? 'CUTTING') === 'CUTTING');
+        $twistCircuits = $circuits->filter(fn($c) => ($c->type ?? 'CUTTING') === 'CUTTING_TWIST');
+
+        $htmlParts = [];
+
+        // Render CUTTING circuits with standard template
+        if ($cuttingCircuits->isNotEmpty()) {
+            foreach ($cuttingCircuits as $circuit) {
+                BarcodeHelper::generateCircuitBarcodes($circuit, 'barcode_kanban', 'cct_no', 'barcode_mesin', 'cct_code');
+            }
+            $htmlParts[] = view('schedule.ekanban_circuit.print_ticket', ['circuits' => $cuttingCircuits])->render();
+        }
+
+        // Render CUTTING_TWIST circuits with twist template
+        if ($twistCircuits->isNotEmpty()) {
+            foreach ($twistCircuits as $circuit) {
+                $this->generateCircuitTwistBarcodes($circuit);
+            }
+            $htmlParts[] = view('schedule.ekanban_circuit.print_ticket_twist', ['circuits' => $twistCircuits])->render();
+        }
+
+        return '<div id="print_stack_ajax">' . implode('', $htmlParts) . '</div>';
+    }
+
+    /**
+     * Generate barcodes specific to CUTTING_TWIST circuits
+     * Includes: QR kanban, QR shikake, barcode navigasi, barcode process
+     */
+    private function generateCircuitTwistBarcodes($circuit)
+    {
+        // QR code for barcode_kanban
+        if (!empty($circuit->barcode_kanban)) {
+            $circuit->qr_code_path = BarcodeHelper::generateQRCodeCached($circuit->barcode_kanban, 'circuit');
+        }
+
+        // QR code for barcode_shikake
+        if (!empty($circuit->barcode_shikake)) {
+            $circuit->barcode_shikake_path = BarcodeHelper::generateQRCodeCached($circuit->barcode_shikake, 'circuit');
+        }
+
+        // Barcode for barcode_navigasi
+        if (!empty($circuit->barcode_navigasi)) {
+            $circuit->barcode_navigasi_path = BarcodeHelper::generateBarcodeCached($circuit->barcode_navigasi, null, 2, 50, 'circuit');
+        }
+
+        // Barcode for barcode_process
+        if (!empty($circuit->barcode_process)) {
+            $circuit->barcode_process_path = BarcodeHelper::generateBarcodeCached($circuit->barcode_process, null, 2, 50, 'circuit');
+        }
     }
 
     /**

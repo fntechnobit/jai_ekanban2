@@ -8,7 +8,6 @@ enum ProcessType: string
     case DBL_CRIMP = 'DBL CRIMP';
     case JOINT = 'JOINT';
     case SHIELD = 'SHIELD';
-    case TWIST = 'TWIST';
 
     /**
      * Get all process types as array

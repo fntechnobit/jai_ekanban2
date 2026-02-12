@@ -75,6 +75,20 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3 row">
+                                    <label for="filter_type" class="col-sm-3 col-form-label">Type:</label>
+                                    <div class="col-sm-9">
+                                        <select class="form-select select2" id="filter_type">
+                                            <option value="all">All Type</option>
+                                            <option value="CUTTING">CUTTING</option>
+                                            <option value="CUTTING_TWIST">CUTTING TWIST</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="mb-3 row">
                                     <label for="filter_date" class="col-sm-3 col-form-label">Date:</label>
                                     <div class="col-sm-9">
                                         <input type="text" class="form-control form-control-sm" id="filter_date" readonly placeholder="Select date">
@@ -132,6 +146,7 @@
                             <thead>
                                 <tr>
                                     <th width="5%">Num.</th>
+                                    <th>Type</th>
                                     <th>Circuit No</th>
                                     <th>Circuit Code</th>
                                     <th>Conveyor</th>
@@ -216,7 +231,7 @@
                 scrollX: true,
                 scrollCollapse: true,
                 fixedColumns: {
-                    leftColumns: 4,  // Freeze: Num, Circuit No, Circuit Code, Machine
+                    leftColumns: 5,  // Freeze: Num, Type, Circuit No, Circuit Code, Conveyor
                     rightColumns: 1   // Freeze: Actions
                 },
                 ajax: {
@@ -226,6 +241,7 @@
                         d.area_id = $('#filter_area').val();
                         d.cutoff = $('#filter_cutoff').val();
                         d.machine = $('#filter_machine').val();
+                        d.type = $('#filter_type').val();
                         d.date = dateObj.startDate.format('YYYY-MM-DD');
                         d.shift = $('#filter_shift').val();
                         d.print_status = $('#filter_print_status').val();
@@ -233,6 +249,17 @@
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '5%' },
+                    { 
+                        data: 'type', 
+                        name: 'type', 
+                        width: '8%',
+                        render: function(data) {
+                            if (data === 'CUTTING_TWIST') {
+                                return '<span class="badge bg-info">TWIST</span>';
+                            }
+                            return '<span class="badge bg-primary">CUTTING</span>';
+                        }
+                    },
                     { data: 'cct_no', name: 'cct_no', width: '10%' },
                     { data: 'cct_code', name: 'cct_code', width: '10%' },
                     { data: 'conveyor', name: 'conveyor', width: '8%' },
@@ -324,6 +351,7 @@
 
             $('#btn-reset').click(function() {
                 $('.select2').val('').trigger('change');
+                $('#filter_type').val('all').trigger('change');
                 $('#filter_machine').empty().append('<option value="">- Choose Machine -</option>');
                 $('#filter_date').data('daterangepicker').setStartDate(moment());
                 table.ajax.reload();

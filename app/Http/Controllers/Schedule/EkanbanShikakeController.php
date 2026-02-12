@@ -111,8 +111,8 @@ class EkanbanShikakeController extends Controller
             $this->generateShikakeBarcodes($shikake, $processData, $process);
             
             // Template map with mode suffix (_preview or _print)
+            // Note: TWIST has been moved to circuit/cutting module
             $templateMap = [
-                'TWIST' => 'schedule.ekanban_shikake.print_ticket_twist' . $suffix,
                 'BONDER' => 'schedule.ekanban_shikake.print_ticket_bonder' . $suffix,
                 'JOINT' => 'schedule.ekanban_shikake.print_ticket_joint' . $suffix,
                 'SHIELD' => 'schedule.ekanban_shikake.print_ticket_shield' . $suffix,
