@@ -156,28 +156,87 @@ class ScheduleVerificationService
 
     /**
      * Get available assy data for a specific date and shift
+     * IMPORTANT: Only returns UNVERIFIED schedules (verified_at IS NULL AND is_lock = 0)
      */
     public function getAvailableAssyData($conveyorId, $date, $shift)
     {
-        // Get schedules for specific date and shift, grouped by cut-off
-        $schedules = AssySchedule::where('conveyor_id', $conveyorId)
-            ->where('schedule', $date)
-            ->where('shift', $shift)
+        \Log::info("getAvailableAssyData called", [
+            'conveyor_id' => $conveyorId,
+            'date' => $date,
+            'shift' => $shift
+        ]);
+
+        // Get schedules for specific date and shift (or all shifts), grouped by cut-off
+        // CRITICAL FILTERS:
+        // 1. is_lock = 0 (unlocked schedules)
+        // 2. verified_at IS NULL (not verified yet)
+        $query = AssySchedule::where('conveyor_id', $conveyorId)
+            ->whereDate('schedule', $date)  // Use whereDate for datetime column
             ->where('is_lock', 0)
-            ->select('id', 'assy', 'qty', 'cutoff', 'listing_id', 'assycode', 'seq', 'plt', 'mode', 'snp', 'snpa')
-            ->orderBy('cutoff')
-            ->orderBy('assy')
+            ->where(function($q) {
+                $q->whereNull('verified_at')
+                  ->orWhere('verified_at', '');
+            });
+        
+        // Only filter by shift if not 'all'
+        if ($shift !== 'all' && $shift !== null && $shift !== '') {
+            $query->where('shift', $shift);
+        }
+        
+        // Log the actual SQL query
+        \Log::info("SQL Query", [
+            'sql' => $query->toSql(),
+            'bindings' => $query->getBindings()
+        ]);
+        
+        // SORT ORDER: shift (ASC) -> cutoff (ASC) -> assy (ASC)
+        $schedules = $query->select('id', 'assy', 'qty', 'cutoff', 'shift', 'listing_id', 'assycode', 'seq', 'plt', 'mode', 'snp', 'snpa', 'verified_at', 'is_lock')
+            ->orderBy('shift', 'asc')
+            ->orderBy('cutoff', 'asc')
+            ->orderBy('assy', 'asc')
             ->get();
 
-        // Group by cut-off
+        \Log::info("Query executed", [
+            'total_records' => $schedules->count(),
+            'sample_first' => $schedules->first() ? [
+                'id' => $schedules->first()->id,
+                'assy' => $schedules->first()->assy,
+                'verified_at' => $schedules->first()->verified_at,
+                'is_lock' => $schedules->first()->is_lock
+            ] : null
+        ]);
+
+        // CRITICAL: Additional filter in collection to ensure no verified data
+        $schedules = $schedules->filter(function($item) {
+            $isUnverified = is_null($item->verified_at) || $item->verified_at === '';
+            $isUnlocked = $item->is_lock == 0;
+            
+            if (!$isUnverified || !$isUnlocked) {
+                \Log::warning("Filtering out verified/locked item", [
+                    'id' => $item->id,
+                    'assy' => $item->assy,
+                    'verified_at' => $item->verified_at,
+                    'is_lock' => $item->is_lock
+                ]);
+            }
+            
+            return $isUnverified && $isUnlocked;
+        });
+
+        // Group by cutoff while maintaining shift order
+        // Items are already sorted by shift -> cutoff -> assy from query
         $grouped = $schedules->groupBy('cutoff')->map(function($items, $cutoff) {
             return [
                 'cutoff' => $cutoff,
-                'items' => $items->map(function($item) {
+                'items' => $items->sortBy([
+                    ['shift', 'asc'],
+                    ['assy', 'asc']
+                ])->map(function($item) {
                     return [
                         'id' => $item->id,
                         'assy' => $item->assy,
                         'qty' => $item->qty,
+                        'shift' => $item->shift,
                         'listing_id' => $item->listing_id,
                         'assycode' => $item->assycode,
                         'seq' => $item->seq,
@@ -185,10 +244,20 @@ class ScheduleVerificationService
                         'mode' => $item->mode,
                         'snp' => $item->snp,
                         'snpa' => $item->snpa,
+                        'verified_at' => $item->verified_at,
+                        'is_lock' => $item->is_lock,
                     ];
                 })->values()
             ];
+        })->sortBy(function($group) {
+            // Sort groups by the minimum shift number in each cutoff group
+            return $group['items']->min('shift') ?? 99;
         })->values();
+
+        \Log::info("Final result", [
+            'grouped_count' => $grouped->count(),
+            'total_items' => $grouped->sum(function($g) { return count($g['items']); })
+        ]);
 
         return [
             'success' => true,

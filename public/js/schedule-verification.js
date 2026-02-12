@@ -1,5 +1,7 @@
 /**
  * Schedule Verification JavaScript
+ * Last Updated: 2026-02-12 - Panel 8:4 with H+10 date selector
+ * Version: 2.0.0
  */
 
 // Global variables to store route URLs (will be set from blade template)
@@ -204,26 +206,19 @@ $(function () {
         $('#modal-capacity').text(data.capacity + ' Capacity / Shift');
         $('#modal-assy-count').text(data.assy_count + ' Assy');
         $('#modal-total-listing').text(data.total_listing + ' Listing');
+        
+        // Set target shift label
+        $('#target-shift-label').text(data.shift + ' (' + moment(data.date).format('DD MMM YYYY') + ')');
 
         // Build shift with cut-offs
         var shiftsHtml = '';
         var maxCutOff = 5; // Always show up to Cut Off 5
-        
-        shiftsHtml += '<div class="shift-card">';
-        shiftsHtml += '<h6>Shift ' + data.shift + '</h6>';
         
         // Calculate total used for this shift
         var totalUsed = data.cut_offs.reduce((sum, co) => {
             return sum + co.items.reduce((s, item) => s + parseInt(item.qty), 0);
         }, 0);
         var remain = data.capacity - totalUsed;
-        
-        shiftsHtml += '<div class="shift-capacity-info">';
-        shiftsHtml += '<span class="badge badge-light">Capacity: ' + data.capacity + '</span>';
-        shiftsHtml += '<span class="badge badge-light">Used: ' + totalUsed + '</span>';
-        shiftsHtml += '<span class="badge badge-light">Remain: ' + remain + '</span>';
-        shiftsHtml += '</div>';
-        shiftsHtml += '</div>';
         
         // Build cut-off sections (always show 1-5)
         for (var i = 1; i <= maxCutOff; i++) {
@@ -245,27 +240,23 @@ $(function () {
             
             var isOverCapacity = used > cutoffCapacity;
             
-            shiftsHtml += '<div class="cutoff-section">';
-            shiftsHtml += '<div class="cutoff-header d-flex justify-content-between">';
-            shiftsHtml += '<span>Cut Off ' + i;
+            shiftsHtml += '<div class="cutoff-section mb-2">';
+            shiftsHtml += '<div class="cutoff-header d-flex justify-content-between align-items-center p-2">';
+            shiftsHtml += '<span class="cutoff-title">Cut Off ' + i;
             if (i === 5) {
-                var ratio = Math.round((used / data.normal_cutoff_capacity) * 100) / 100;
-                shiftsHtml += ' <small>(' + ratio + 'x)</small>';
+                shiftsHtml += ' <small>(0.875x)</small>';
             }
             shiftsHtml += '</span>';
-            shiftsHtml += '<div>';
-            shiftsHtml += '<span class="badge badge-info badge-sm">Cap: ' + cutoffCapacity + '</span> ';
-            shiftsHtml += '<span class="badge badge-' + (isOverCapacity ? 'danger' : 'warning') + ' badge-sm">Used: ' + used + '</span> ';
-            shiftsHtml += '<span class="badge badge-' + (isOverCapacity ? 'danger' : 'success') + ' badge-sm">Remain: ' + cutoffRemain.toFixed(2) + '</span>';
-            if (isOverCapacity && i === 5) {
-                shiftsHtml += ' <span class="badge badge-danger badge-sm"><i class="fas fa-exclamation-triangle"></i> Over Capacity!</span>';
-            }
+            shiftsHtml += '<div class="cutoff-badges">';
+            shiftsHtml += '<span class="badge bg-primary badge-sm">Cap: ' + cutoffCapacity + '</span> ';
+            shiftsHtml += '<span class="badge bg-danger badge-sm">Used: ' + used + '</span> ';
+            shiftsHtml += '<span class="badge bg-success badge-sm">Rem: ' + cutoffRemain.toFixed(2) + '</span>';
             shiftsHtml += '</div>';
             shiftsHtml += '</div>';
-            shiftsHtml += '<div class="cutoff-drop-zone" data-cutoff="' + i + '" data-shift="' + data.shift + '">';
+            shiftsHtml += '<div class="cutoff-drop-zone target-list" data-cutoff="' + i + '" data-shift="' + data.shift + '">';
             
             items.forEach(function(item) {
-                shiftsHtml += '<div class="assy-item" ';
+                shiftsHtml += '<div class="cutoff-item item-target" ';
                 shiftsHtml += 'data-id="' + item.id + '" ';
                 shiftsHtml += 'data-cutoff="' + item.cutoff + '" ';
                 shiftsHtml += 'data-shift="' + data.shift + '" ';
@@ -277,17 +268,23 @@ $(function () {
                 shiftsHtml += 'data-mode="' + (item.mode || 0) + '" ';
                 shiftsHtml += 'data-snp="' + (item.snp || 0) + '" ';
                 shiftsHtml += 'data-snpa="' + (item.snpa || 0) + '" ';
-                shiftsHtml += 'data-type="current"';
+                shiftsHtml += 'data-type="current" ';
+                shiftsHtml += 'data-is-transfer="0"';
                 if (!readOnly) {
                     shiftsHtml += ' draggable="true"';
                 }
                 shiftsHtml += '>';
-                shiftsHtml += '<div class="assy-code">' + item.assy + '</div>';
-                shiftsHtml += '<input type="number" class="form-control form-control-sm assy-qty" value="' + item.qty + '" min="1"';
+                shiftsHtml += '<div class="d-flex justify-content-between align-items-center">';
+                shiftsHtml += '<div class="item-head flex-grow-1">';
+                shiftsHtml += '<span class="item-code">' + (item.assycode || '') + '</span> ';
+                shiftsHtml += '<span class="item-name">' + item.assy + '</span>';
+                shiftsHtml += '</div>';
+                shiftsHtml += '<input type="number" class="form-control form-control-sm w-60 text-end vs-item-qty ms-2" value="' + item.qty + '" min="1"';
                 if (readOnly) {
                     shiftsHtml += ' readonly disabled';
                 }
                 shiftsHtml += '>';
+                shiftsHtml += '</div>';
                 shiftsHtml += '</div>';
             });
             
@@ -298,6 +295,7 @@ $(function () {
 
         // Store current data
         $('#verificationModal').data('conveyor-id', data.conveyor_id);
+        $('#verificationModal').data('conveyor', data.conveyor);
         $('#verificationModal').data('date', data.date);
         $('#verificationModal').data('shift', data.shift);
         $('#verificationModal').data('capacity', data.capacity);
@@ -307,48 +305,127 @@ $(function () {
         // Show/hide buttons based on read-only mode
         if (readOnly) {
             $('#btn-verify-schedule').hide();
-            $('.col-md-6:last').hide(); // Hide available assy section
-            $('.col-md-6:first').removeClass('col-md-6').addClass('col-md-12'); // Make shifts full width
+            $('.col-md-4').hide(); // Hide source panel
+            $('.col-md-8').removeClass('col-md-8').addClass('col-md-12'); // Make target full width
         } else {
             $('#btn-verify-schedule').show();
-            $('.col-md-6:last').show();
-            $('.col-md-6:first').removeClass('col-md-12').addClass('col-md-6');
+            $('.col-md-4').show();
+            if ($('.col-md-12').length && !$('.col-md-8').length) {
+                $('.col-md-12').removeClass('col-md-12').addClass('col-md-8');
+            }
+            
+            // Initialize source date options (H to H+10)
+            initializeSourceDateOptions(data.date, data.conveyor_id, data.shift);
         }
 
-        // Initialize single date picker for available assy (tomorrow by default)
-        var availDate = moment(data.date).add(1, 'days');
-        
-        $('#available-date').daterangepicker({
-            singleDatePicker: true,
-            startDate: availDate,
-            locale: {
-                format: 'DD-MM-YYYY'
-            }
-        });
-
-        // Set shift selector
-        $('#available-shift').val('1');
-
-        // Load available assy data
-        loadAvailableAssyData(data.conveyor_id);
-
         // Initialize drag and drop
-        initializeDragDrop();
+        if (!readOnly) {
+            initializeDragDrop();
+        }
 
         // Show modal
         $('#verificationModal').modal('show');
     }
 
-    // Load available assy data
-    function loadAvailableAssyData(conveyorId) {
-        var dateObj = $('#available-date').data('daterangepicker');
-        var date = dateObj.startDate.format('YYYY-MM-DD');
-        var shift = $('#available-shift').val();
+    // Initialize source date options from H to H+10
+    function initializeSourceDateOptions(currentDate, conveyorId, currentShift) {
+        var $dateSelect = $('#source-date');
+        $dateSelect.html('<option value="">-- Pilih Tanggal --</option>');
+        
+        var startDate = moment(currentDate);
+        
+        // Jika shift target adalah Shift 2 (shift terakhir), mulai dari H+1
+        // Karena tidak mungkin lagi mengambil data dari tanggal yang sama
+        var startIndex = (parseInt(currentShift) === 2) ? 1 : 0;
+        
+        // Generate dates from H (or H+1) to H+10
+        for (var i = startIndex; i <= 10; i++) {
+            var date = moment(startDate).add(i, 'days');
+            var dateStr = date.format('YYYY-MM-DD');
+            var label = date.format('DD MMM YYYY');
+            var isCurrent = (i === 0) ? ' (Current)' : '';
+            
+            $dateSelect.append('<option value="' + dateStr + '" data-current="' + (i === 0 ? '1' : '0') + '">' + 
+                              label + isCurrent + '</option>');
+        }
+        
+        // Store conveyor and shift info
+        $dateSelect.data('conveyor-id', conveyorId);
+        $dateSelect.data('current-date', currentDate);
+        $dateSelect.data('current-shift', currentShift);
+        
+        // Event handler for date change
+        $dateSelect.off('change').on('change', function() {
+            var selectedDate = $(this).val();
+            if (selectedDate) {
+                // Update shift dropdown
+                updateShiftOptions(selectedDate, currentDate, currentShift);
+                // Load source items
+                loadSourceItems();
+            } else {
+                $('#source-shift').html('<option value="all">Semua Shift</option>');
+                $('#source-items-list').html('');
+                $('#source-info').html('<span class="text-muted">Pilih tanggal untuk memuat data sumber</span>');
+            }
+        });
+        
+        // Event handler for shift change
+        $('#source-shift').off('change').on('change', function() {
+            loadSourceItems();
+        });
+    }
 
-        $('#available-loading').show();
-        $('#available-assy-container').html('');
-        $('#available-results-info').hide();
+    // Update shift options based on selected date
+    function updateShiftOptions(selectedDate, currentDate, currentShift) {
+        var $shiftSelect = $('#source-shift');
+        $shiftSelect.html('');
+        
+        var isSameDate = (selectedDate === currentDate);
+        
+        // Jika tanggal berbeda dengan target, tampilkan "Semua Shift"
+        if (!isSameDate) {
+            $shiftSelect.append('<option value="all">Semua Shift</option>');
+        }
+        
+        // Add shift options (1 and 2)
+        for (var i = 1; i <= 2; i++) {
+            // Skip current shift if same date
+            if (isSameDate && i === parseInt(currentShift)) {
+                continue;
+            }
+            $shiftSelect.append('<option value="' + i + '">Shift ' + i + '</option>');
+        }
+        
+        // Auto-select first available option
+        if ($shiftSelect.find('option').length > 0) {
+            $shiftSelect.val($shiftSelect.find('option:first').val());
+        }
+    }
 
+    // Load source items based on selected date and shift
+    function loadSourceItems() {
+        var date = $('#source-date').val();
+        var shift = $('#source-shift').val();
+        var conveyorId = $('#source-date').data('conveyor-id');
+        var currentDate = $('#source-date').data('current-date');
+        var currentShift = $('#source-date').data('current-shift');
+        
+        var $list = $('#source-items-list');
+        var $info = $('#source-info');
+        
+        if (!date) {
+            $list.html('');
+            $info.html('<span class="text-muted">Pilih tanggal untuk memuat data sumber</span>');
+            return;
+        }
+        
+        if (!shift) {
+            shift = 'all';
+        }
+        
+        $list.html('<div class="text-center p-3 text-primary"><i class="fa-solid fa-spinner fa-spin"></i> <strong>Memuat...</strong></div>');
+        $info.html('<span class="text-primary fw-bold">Memuat data...</span>');
+        
         $.ajax({
             url: routeUrls.availableAssy,
             type: 'GET',
@@ -358,88 +435,158 @@ $(function () {
                 shift: shift
             },
             success: function(response) {
-                $('#available-loading').hide();
+                $list.html('');
+                
+                console.log('=== AJAX Response ===');
+                console.log('URL:', routeUrls.availableAssy);
+                console.log('Params:', { conveyor_id: conveyorId, date: date, shift: shift });
+                console.log('Response:', response);
                 
                 if (response.success && response.data && response.data.length > 0) {
-                    var html = '';
                     var totalItems = 0;
+                    var html = '';
+                    var allItems = [];
                     
-                    // Group by cut-off
+                    console.log('Response data:', response.data);
+                    
+                    // Collect all items from all cutoffs first
                     response.data.forEach(function(cutoffData) {
                         if (cutoffData.items && cutoffData.items.length > 0) {
-                            html += '<div class="available-cutoff-section">';
-                            html += '<div class="available-cutoff-header">Cut Off ' + cutoffData.cutoff + ' (' + cutoffData.items.length + ' items)</div>';
-                            html += '<div class="available-drop-zone" data-cutoff="' + cutoffData.cutoff + '">';
-                            
                             cutoffData.items.forEach(function(item) {
-                                html += '<div class="available-assy-item" ';
-                                html += 'data-id="' + item.id + '" ';
-                                html += 'data-assy="' + item.assy + '" ';
-                                html += 'data-cutoff="' + cutoffData.cutoff + '" ';
-                                html += 'data-date="' + date + '" ';
-                                html += 'data-listing-id="' + (item.listing_id || 0) + '" ';
-                                html += 'data-assycode="' + (item.assycode || '') + '" ';
-                                html += 'data-seq="' + (item.seq || 0) + '" ';
-                                html += 'data-plt="' + (item.plt || 0) + '" ';
-                                html += 'data-mode="' + (item.mode || 0) + '" ';
-                                html += 'data-snp="' + (item.snp || 0) + '" ';
-                                html += 'data-snpa="' + (item.snpa || 0) + '" ';
-                                html += 'data-qty="' + item.qty + '" ';
-                                html += 'draggable="true">';
-                                html += '<div class="assy-code">' + item.assy + '</div>';
-                                html += '<div class="assy-qty">' + item.qty + ' pcs</div>';
-                                html += '</div>';
-                                totalItems++;
+                                console.log('Processing item:', item.id, item.assy, 'Shift', item.shift, 'CO' + cutoffData.cutoff, 
+                                           'verified_at:', item.verified_at, 'is_lock:', item.is_lock);
+                                
+                                // CRITICAL: Skip verified or locked items
+                                // Check multiple conditions for verified_at
+                                var isVerified = item.verified_at && 
+                                                item.verified_at !== null && 
+                                                item.verified_at !== '' && 
+                                                item.verified_at !== '0000-00-00 00:00:00';
+                                var isLocked = item.is_lock == 1 || item.is_lock === '1' || item.is_lock === true;
+                                
+                                if (isVerified || isLocked) {
+                                    console.error('❌ SKIPPED: VERIFIED/LOCKED DATA', {
+                                        id: item.id,
+                                        assy: item.assy,
+                                        shift: item.shift,
+                                        cutoff: cutoffData.cutoff,
+                                        verified_at: item.verified_at,
+                                        is_lock: item.is_lock,
+                                        reason: isVerified ? 'VERIFIED' : 'LOCKED'
+                                    });
+                                    return;
+                                }
+                                
+                                // Skip if same date AND same shift
+                                var itemShift = parseInt(item.shift);
+                                if (date === currentDate && itemShift === parseInt(currentShift)) {
+                                    console.warn('⚠️ SKIPPED: Same date AND shift', {
+                                        id: item.id,
+                                        assy: item.assy,
+                                        shift: itemShift,
+                                        reason: 'Same as target (' + currentDate + ' Shift ' + currentShift + ')'
+                                    });
+                                    return;
+                                }
+                                
+                                console.log('✅ ACCEPTED:', item.id, item.assy, 'Shift', itemShift, 'CO' + cutoffData.cutoff);
+                                
+                                allItems.push({
+                                    item: item,
+                                    cutoff: cutoffData.cutoff,
+                                    shift: itemShift
+                                });
                             });
-                            
-                            html += '</div></div>';
                         }
                     });
                     
-                    $('#available-assy-container').html(html);
-                    $('#available-results-info').show();
-                    $('#results-total').text(totalItems);
-                    $('#results-end').text(totalItems);
+                    // Sort items: shift -> cutoff -> assy name
+                    allItems.sort(function(a, b) {
+                        if (a.shift !== b.shift) return a.shift - b.shift;
+                        if (a.cutoff !== b.cutoff) return a.cutoff - b.cutoff;
+                        return (a.item.assy || '').localeCompare(b.item.assy || '');
+                    });
+                    
+                    // Build HTML from sorted items
+                    allItems.forEach(function(obj) {
+                        var item = obj.item;
+                        var cutoffData = { cutoff: obj.cutoff };
+                                
+                        html += '<div class="cutoff-item item-source" ';
+                        html += 'data-id="' + item.id + '" ';
+                        html += 'data-source-id="' + item.id + '" ';
+                        html += 'data-source-date="' + date + '" ';
+                        html += 'data-source-shift="' + obj.shift + '" ';
+                        html += 'data-source-cutoff="' + obj.cutoff + '" ';
+                        html += 'data-assy="' + item.assy + '" ';
+                        html += 'data-assycode="' + (item.assycode || '') + '" ';
+                        html += 'data-listing-id="' + (item.listing_id || 0) + '" ';
+                        html += 'data-seq="' + (item.seq || 0) + '" ';
+                        html += 'data-plt="' + (item.plt || 0) + '" ';
+                        html += 'data-mode="' + (item.mode || 0) + '" ';
+                        html += 'data-snp="' + (item.snp || 0) + '" ';
+                        html += 'data-snpa="' + (item.snpa || 0) + '" ';
+                        html += 'data-is-transfer="1" ';
+                        html += 'data-max-qty="' + item.qty + '" ';
+                        html += 'draggable="true">';
+                        html += '<div class="d-flex justify-content-between align-items-center">';
+                        html += '<div class="item-head flex-grow-1">';
+                        html += '<span class="item-code">' + (item.assycode || '') + '</span> ';
+                        html += '<span class="item-name">' + item.assy + '</span>';
+                        html += '<div class="source-info-badges mt-1">';
+                        html += '<span class="badge bg-info badge-sm">' + moment(date).format('DD MMM') + '</span> ';
+                        html += '<span class="badge bg-warning badge-sm">Shift ' + obj.shift + '</span> ';
+                        html += '<span class="badge bg-primary badge-sm">CO' + obj.cutoff + '</span>';
+                        html += '</div>';
+                        html += '</div>';
+                        html += '<input type="number" class="form-control form-control-sm w-60 text-end vs-item-qty ms-2" ';
+                        html += 'value="' + item.qty + '" min="1" max="' + item.qty + '">';
+                        html += '</div>';
+                        html += '</div>';
+                        
+                        totalItems++;
+                    });
+                    
+                    if (totalItems > 0) {
+                        $list.html(html);
+                        $info.html('<strong>Ditemukan ' + totalItems + ' item.</strong> Drag ke target cutoff.');
+                    } else {
+                        $info.html('<span class="text-warning">Tidak ada item yang tersedia dari shift lain.</span>');
+                    }
                 } else {
-                    $('#available-assy-container').html('<div class="text-center text-muted py-3">No available assy data found</div>');
+                    $info.html('<span class="text-info">Tidak ada item yang tersedia (sudah verified atau kosong).</span>');
                 }
             },
             error: function(xhr) {
-                $('#available-loading').hide();
-                $('#available-assy-container').html('<div class="text-center text-danger py-3">Failed to load data</div>');
+                $list.html('');
+                $info.html('<span class="text-danger">Gagal memuat data.</span>');
+                Swal.fire('Error!', 'Gagal memuat data sumber', 'error');
             }
         });
     }
-
-    // Refresh available assy data when date or shift changes
-    $('#btn-refresh-available, #available-shift').on('click change', function() {
-        var conveyorId = $('#verificationModal').data('conveyor-id');
-        loadAvailableAssyData(conveyorId);
-    });
-
-    $('#available-date').on('apply.daterangepicker', function(ev, picker) {
-        var conveyorId = $('#verificationModal').data('conveyor-id');
-        loadAvailableAssyData(conveyorId);
-    });
 
     // Initialize drag and drop
     function initializeDragDrop() {
         var draggedItem = null;
         var dragSource = null;
 
-        $(document).on('dragstart', '.assy-item, .available-assy-item', function(e) {
+        // Drag start event untuk cutoff-item
+        $(document).on('dragstart', '.cutoff-item', function(e) {
             draggedItem = $(this);
-            dragSource = $(this).hasClass('available-assy-item') ? 'available' : 'cutoff';
+            dragSource = $(this).hasClass('item-source') ? 'source' : 'target';
             $(this).addClass('dragging');
             e.originalEvent.dataTransfer.effectAllowed = 'move';
         });
 
-        $(document).on('dragend', '.assy-item, .available-assy-item', function(e) {
+        // Drag end event
+        $(document).on('dragend', '.cutoff-item', function(e) {
             $(this).removeClass('dragging');
+            $('.cutoff-drop-zone').removeClass('drag-over');
             draggedItem = null;
             dragSource = null;
         });
 
+        // Drag over cutoff drop zone
         $(document).on('dragover', '.cutoff-drop-zone', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -447,10 +594,12 @@ $(function () {
             e.originalEvent.dataTransfer.dropEffect = 'move';
         });
 
+        // Drag leave cutoff drop zone
         $(document).on('dragleave', '.cutoff-drop-zone', function(e) {
             $(this).removeClass('drag-over');
         });
 
+        // Drop on cutoff drop zone
         $(document).on('drop', '.cutoff-drop-zone', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -462,50 +611,22 @@ $(function () {
                 var newCutOff = $(this).data('cutoff');
                 var newShift = $(this).data('shift');
                 
-                if (dragSource === 'available') {
-                    // Create new assy item from available - copy all data
-                    var srcData = draggedItem.data();
-                    var assyCode = srcData.assy;
-                    var assyDate = srcData.date;
-                    var sourceId = srcData.id;
-                    var sourceQty = srcData.qty || draggedItem.find('.assy-qty').text().replace(' pcs', '').trim();
-                    var listingId = srcData.listingId || 0;
-                    var assycode = srcData.assycode || '';
-                    var seq = srcData.seq || 0;
-                    var plt = srcData.plt || 0;
-                    var mode = srcData.mode || 0;
-                    var snp = srcData.snp || 0;
-                    var snpa = srcData.snpa || 0;
-                    
-                    var newItem = $('<div class="assy-item" ' +
-                        'data-id="new_' + Date.now() + '" ' +
-                        'data-cutoff="' + newCutOff + '" ' +
-                        'data-shift="' + newShift + '" ' +
-                        'data-assy="' + assyCode + '" ' +
-                        'data-assycode="' + assycode + '" ' +
-                        'data-source-date="' + assyDate + '" ' +
-                        'data-source-id="' + sourceId + '" ' +
-                        'data-type="available" ' +
-                        'data-listing-id="' + listingId + '" ' +
-                        'data-seq="' + seq + '" ' +
-                        'data-plt="' + plt + '" ' +
-                        'data-mode="' + mode + '" ' +
-                        'data-snp="' + snp + '" ' +
-                        'data-snpa="' + snpa + '" ' +
-                        'draggable="true">' +
-                        '<div class="assy-code">' + assyCode + '</div>' +
-                        '<input type="number" class="form-control form-control-sm assy-qty" value="' + sourceQty + '" min="1">' +
-                        '</div>');
-                    
-                    $(this).append(newItem);
-                    
-                    // Remove from available
-                    draggedItem.remove();
-                } else {
-                    // Move existing item
+                if (dragSource === 'source') {
+                    // Move from source to target
+                    // Update item attributes
                     draggedItem.attr('data-cutoff', newCutOff);
                     draggedItem.attr('data-shift', newShift);
-                    draggedItem.attr('draggable', 'true');
+                    
+                    // Remove source classes and add transfer class
+                    draggedItem.removeClass('item-source').addClass('item-target is-transfer');
+                    
+                    // Move to target zone
+                    $(this).append(draggedItem);
+                    
+                } else {
+                    // Move within target zones
+                    draggedItem.attr('data-cutoff', newCutOff);
+                    draggedItem.attr('data-shift', newShift);
                     $(this).append(draggedItem);
                 }
                 
@@ -515,112 +636,93 @@ $(function () {
                     }
                 }, 100);
                 
-                updateCutOffStats();
+                recomputeAll();
                 
-                // Clear draggedItem to prevent further drops
+                // Clear draggedItem
                 draggedItem = null;
                 dragSource = null;
             }
         });
 
-        // Allow dragging back to available zone (to remove)
-        $(document).on('dragover', '.available-drop-zone', function(e) {
+        // Allow dragging back to source list (to remove from target)
+        $(document).on('dragover', '#source-items-list', function(e) {
             e.preventDefault();
             $(this).addClass('drag-over');
         });
 
-        $(document).on('dragleave', '.available-drop-zone', function(e) {
+        $(document).on('dragleave', '#source-items-list', function(e) {
             $(this).removeClass('drag-over');
         });
 
-        $(document).on('drop', '.available-drop-zone', function(e) {
+        $(document).on('drop', '#source-items-list', function(e) {
             e.preventDefault();
             $(this).removeClass('drag-over');
             
-            if (draggedItem && dragSource === 'cutoff') {
-                // Remove item from cut-off
-                draggedItem.remove();
-                updateCutOffStats();
+            if (draggedItem && dragSource === 'target') {
+                var isTransfer = draggedItem.attr('data-is-transfer') === '1';
+                
+                if (isTransfer) {
+                    // Can return to source - restore item-source class
+                    draggedItem.removeClass('item-target is-transfer').addClass('item-source');
+                    $(this).append(draggedItem);
+                } else {
+                    // Original target item - just remove it
+                    draggedItem.remove();
+                }
+                
+                recomputeAll();
             }
         });
 
         // Update stats when quantity changes
-        $(document).on('change', '.assy-qty', function() {
-            updateCutOffStats();
+        $(document).on('input change', '.vs-item-qty', function() {
+            var cutoffZone = $(this).closest('.cutoff-drop-zone');
+            if (cutoffZone.length) {
+                recompute(cutoffZone[0]);
+            }
         });
     }
 
-    // Update cut off statistics
-    function updateCutOffStats() {
-        var capacity = $('#verificationModal').data('capacity');
-        var normalCutoffCapacity = $('#verificationModal').data('normal-cutoff-capacity');
-        var cutoff5Capacity = $('#verificationModal').data('cutoff5-capacity');
+    // Recompute capacity for a specific cutoff
+    function recompute(el) {
+        var $el = $(el);
+        var cutoff = $el.data('cutoff');
+        var capacity;
         
-        // Update each cut-off
-        $('.cutoff-drop-zone').each(function() {
-            var cutOffZone = $(this);
-            var cutoff = cutOffZone.data('cutoff');
-            var used = 0;
-            
-            cutOffZone.find('.assy-item').each(function() {
-                var qty = parseInt($(this).find('.assy-qty').val()) || 0;
-                used += qty;
-            });
-            
-            // Determine capacity for this cutoff
-            var cutoffCapacity = (cutoff === 5) ? cutoff5Capacity : normalCutoffCapacity;
-            var remain = cutoffCapacity - used;
-            var isOverCapacity = used > cutoffCapacity;
-            
-            var cutoffSection = cutOffZone.closest('.cutoff-section');
-            var cutoffHeader = cutoffSection.find('.cutoff-header > div');
-            
-            // Get all badges
-            var badges = cutoffHeader.children('.badge');
-            
-            // Update capacity badge (first badge with "Cap:")
-            badges.filter(':contains("Cap:")').text('Cap: ' + cutoffCapacity);
-            
-            // Update used badge (badge with "Used:")
-            var usedBadge = badges.filter(':contains("Used:")');
-            usedBadge.removeClass('badge-warning badge-danger').addClass(isOverCapacity ? 'badge-danger' : 'badge-warning');
-            usedBadge.text('Used: ' + used);
-            
-            // Update remain badge (badge with "Remain:")
-            var remainBadge = badges.filter(':contains("Remain:")');
-            remainBadge.removeClass('badge-success badge-danger').addClass(isOverCapacity ? 'badge-danger' : 'badge-success');
-            remainBadge.text('Remain: ' + remain.toFixed(2));
-            
-            // Update ratio for Cut Off 5
-            if (cutoff === 5) {
-                var ratio = Math.round((used / normalCutoffCapacity) * 100) / 100;
-                var ratioText = cutoffSection.find('.cutoff-header > span small');
-                if (ratioText.length) {
-                    ratioText.text('(' + ratio + 'x)');
-                } else {
-                    cutoffSection.find('.cutoff-header > span').append(' <small>(' + ratio + 'x)</small>');
-                }
-                
-                // Show/hide warning badge
-                var warningBadge = badges.filter(':contains("Over Capacity")');
-                if (isOverCapacity && !warningBadge.length) {
-                    cutoffHeader.append(' <span class="badge badge-danger badge-sm"><i class="fas fa-exclamation-triangle"></i> Over Capacity!</span>');
-                } else if (!isOverCapacity && warningBadge.length) {
-                    warningBadge.remove();
-                }
-            }
+        if (cutoff === 5) {
+            capacity = parseFloat($('#verificationModal').data('cutoff5-capacity')) || 0;
+        } else {
+            capacity = parseFloat($('#verificationModal').data('normal-cutoff-capacity')) || 0;
+        }
+        
+        var sum = 0;
+        $el.find('.vs-item-qty').each(function() {
+            sum += (parseInt($(this).val() || 0, 10) || 0);
         });
+        
+        // Update badges in header
+        var $section = $el.closest('.cutoff-section');
+        $section.find('.cutoff-badges .bg-danger').text('Used: ' + sum);
+        $section.find('.cutoff-badges .bg-success').text('Rem: ' + (capacity - sum).toFixed(2));
+        
+        // Add over-capacity warning
+        if (sum > capacity) {
+            $el.addClass('over-capacity');
+        } else {
+            $el.removeClass('over-capacity');
+        }
+    }
 
-        // Update shift total
-        var totalUsed = 0;
-        $('.assy-item').each(function() {
-            var qty = parseInt($(this).find('.assy-qty').val()) || 0;
-            totalUsed += qty;
+    // Recompute all cutoffs
+    function recomputeAll() {
+        $('.cutoff-drop-zone').each(function() {
+            recompute(this);
         });
-        var shiftRemain = capacity - totalUsed;
-        
-        $('.shift-card .badge:contains("Used")').text('Used: ' + totalUsed);
-        $('.shift-card .badge:contains("Remain")').text('Remain: ' + shiftRemain);
+    }
+
+    // Update cut-off stats (legacy function name for compatibility)
+    function updateCutOffStats() {
+        recomputeAll();
     }
 
     // Verify schedule button
@@ -631,18 +733,20 @@ $(function () {
 
         // Collect all cutoffs data from the modal
         var cutoffs = [];
+        var transferred = []; // Track transferred items separately
+        
         $('#shifts-container .cutoff-drop-zone').each(function() {
             var cutoffNumber = $(this).data('cutoff');
             var items = [];
             
-            $(this).find('.assy-item').each(function() {
-                var itemData = $(this).data();
-                var qty = parseInt($(this).find('.assy-qty').val()) || 0;
-                
-                console.log('Item data:', itemData, 'qty:', qty);
+            $(this).find('.cutoff-item').each(function() {
+                var $item = $(this);
+                var itemData = $item.data();
+                var qty = parseInt($item.find('.vs-item-qty').val()) || 0;
+                var isTransfer = $item.attr('data-is-transfer') === '1';
                 
                 if (qty > 0) {
-                    items.push({
+                    var itemObj = {
                         id: itemData.id || 0,
                         listing_id: itemData.listingId || 0,
                         assy: itemData.assy || '',
@@ -653,9 +757,23 @@ $(function () {
                         mode: itemData.mode || 0,
                         snp: itemData.snp || 0,
                         snpa: itemData.snpa || 0,
-                        type: itemData.type || 'current',
-                        source_id: itemData.sourceId || null
-                    });
+                        type: itemData.type || 'current'
+                    };
+                    
+                    // If this is a transferred item, add to transferred array
+                    if (isTransfer && itemData.sourceId) {
+                        transferred.push({
+                            source_id: itemData.sourceId,
+                            source_date: itemData.sourceDate,
+                            source_shift: itemData.sourceShift,
+                            target_cutoff: cutoffNumber,
+                            qty: qty
+                        });
+                        itemObj.source_id = itemData.sourceId;
+                        itemObj.source_date = itemData.sourceDate;
+                    }
+                    
+                    items.push(itemObj);
                 }
             });
             
@@ -664,8 +782,6 @@ $(function () {
                 items: items
             });
         });
-        
-        console.log('Cutoffs data being sent:', cutoffs);
 
         Swal.fire({
             title: 'Verify This Schedule?',
@@ -695,7 +811,8 @@ $(function () {
                         conveyor_id: conveyorId,
                         date: date,
                         shift: shift,
-                        cutoffs: cutoffs
+                        cutoffs: cutoffs,
+                        transferred: transferred
                     }),
                     beforeSend: function() {
                         $('#btn-verify-schedule').prop('disabled', true)

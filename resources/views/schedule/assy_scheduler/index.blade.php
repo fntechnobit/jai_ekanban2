@@ -2,46 +2,34 @@
 
 @section('title', 'Assy Scheduler')
 
-@section('breadcrumb')
-    <x-page-header menu-code="assy_scheduler" />
-@endsection
-
 @section('content')
     <div class="container-fluid">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0"><i class="fa-solid fa-list"></i> Assy Schedule List</h5>
-                <div class="card-tools float-end">
-                    @if(auth()->user()->hasMenuPermission('assy_scheduler', 'can_create'))
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-generate">
-                            <i class="fa-solid fa-gear"></i> Generate
-                        </button>
-                    @endif
-                </div>
-            </div>
-            <div class="card-body">
-                <!-- Filters -->
-                <div class="row mb-3">
-                    <div class="col-md-5">
-                        <label for="filter_dates" class="form-label">Dates:</label>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="fa-solid fa-list"></i> Assy Schedule List</h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Filters -->
                         <input type="text" class="form-control form-control-sm" id="filter_dates" readonly
-                               placeholder="Select date range">
-                    </div>
-                    <div class="col-md-4">
-                        <label for="filter_conveyor_id" class="form-label">Conveyor:</label>
-                        <select class="form-select select2" id="filter_conveyor_id" style="width: 100%;">
+                               placeholder="Select date range" style="width: 220px;">
+                        <select class="form-select form-select-sm select2" id="filter_conveyor_id" style="width: 180px;">
                             <option value="">- All Conveyor -</option>
                             @foreach($conveyors as $conveyor)
                                 <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
                             @endforeach
                         </select>
-                    </div>
-                    <div class="col-md-3 d-flex align-items-end">
-                        <button type="button" class="btn btn-secondary btn-sm" id="btn-reset">
-                            <i class="fa-solid fa-arrows-rotate"></i> Reset
+                        <button type="button" class="btn btn-secondary" id="btn-reset" title="Reset Filter" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; height: 31px;">
+                            <i class="fa-solid fa-arrows-rotate"></i>
                         </button>
+                        @if(auth()->user()->hasMenuPermission('assy_scheduler', 'can_create'))
+                            <button type="button" class="btn btn-primary btn-sm" id="btn-generate">
+                                <i class="fa-solid fa-gear"></i> Generate
+                            </button>
+                        @endif
                     </div>
                 </div>
+            </div>
+            <div class="card-body">
 
                 <div class="table-responsive">
                     <table id="assy-schedule-table" class="table table-bordered table-striped table-sm">

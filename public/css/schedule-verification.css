@@ -8,6 +8,296 @@
     font-size: 12px;
 }
 
+/* Cutoff Section Styles (matching jai_filter_kanban) */
+.cutoff-section {
+    margin-bottom: 8px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.cutoff-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: linear-gradient(to right, #007bff, #0056b3);
+    color: white;
+}
+
+.cutoff-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.cutoff-badges {
+    display: flex;
+    gap: 5px;
+}
+
+.cutoff-badges .badge {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+}
+
+.cutoff-drop-zone {
+    min-height: 80px;
+    padding: 6px;
+    background: #f8f9fa;
+    border-top: 2px solid #007bff;
+}
+
+.cutoff-drop-zone.target-list {
+    background: #f8f9fa;
+}
+
+.cutoff-drop-zone.over-capacity {
+    border-color: #dc3545;
+    background: #fff5f5;
+}
+
+.cutoff-drop-zone.drag-over {
+    background: #e7f3ff;
+    border-color: #007bff;
+}
+
+/* Cutoff Item Styles */
+.cutoff-item {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    border-radius: 3px;
+    cursor: move;
+    font-size: 0.82rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: all 0.2s;
+    color: #212529 !important;
+}
+
+.cutoff-item:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Target Items (Panel Kiri - putih bersih) */
+.cutoff-item.item-target {
+    background: #ffffff !important;
+    border: 1px solid #007bff;
+    border-left: 4px solid #007bff;
+    color: #212529 !important;
+}
+
+.cutoff-item.item-target * {
+    color: inherit !important;
+}
+
+.cutoff-item.item-target .item-code {
+    color: #6c757d !important;
+}
+
+.cutoff-item.item-target .item-name {
+    color: #212529 !important;
+    font-weight: 600;
+}
+
+/* Source Items (Panel Kanan - kuning muda) */
+.cutoff-item.item-source {
+    background: #fffdf5 !important;
+    border: 1px solid #ffc107;
+    border-left: 4px solid #ffc107;
+    color: #212529 !important;
+}
+
+.cutoff-item.item-source * {
+    color: inherit !important;
+}
+
+.cutoff-item.item-source .item-code {
+    color: #6c757d !important;
+}
+
+.cutoff-item.item-source .item-name {
+    color: #212529 !important;
+    font-weight: 600;
+}
+
+/* Transferred Items (dipindah dari source ke target) */
+.cutoff-item.is-transfer {
+    background: #f0fff4 !important;
+    border: 1px solid #28a745;
+    border-left: 4px solid #28a745;
+    color: #212529 !important;
+}
+
+.cutoff-item.is-transfer * {
+    color: inherit !important;
+}
+
+.cutoff-item.is-transfer .item-code {
+    color: #6c757d !important;
+}
+
+.cutoff-item.is-transfer .item-name {
+    color: #212529 !important;
+    font-weight: 600;
+}
+
+.cutoff-item.dragging {
+    opacity: 0.4;
+}
+
+.item-head {
+    font-weight: 500;
+    font-size: 0.78rem;
+    color: #333;
+    line-height: 1.3;
+}
+
+.item-head .item-code {
+    color: #6c757d;
+    font-weight: 400;
+    margin-right: 5px;
+}
+
+.item-head .item-name {
+    color: #212529;
+    font-weight: 600;
+}
+
+.source-info-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.badge-sm {
+    font-size: 0.7rem !important;
+    padding: 2px 6px !important;
+    font-weight: 500;
+}
+
+.w-60 {
+    width: 60px !important;
+}
+
+/* Source List Container */
+.source-list-container {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+}
+
+.source-list {
+    background: #fffef0;
+    min-height: 200px;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    padding: 6px;
+}
+
+/* Source Panel - Warning Card Header */
+.card-header.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+}
+
+.card-header.bg-warning .card-title {
+    color: #000 !important;
+    font-weight: 700;
+}
+
+.card-header.bg-warning i {
+    color: #000 !important;
+}
+
+/* Source Info Text */
+#source-info {
+    font-weight: 500;
+    color: #495057 !important;
+}
+
+/* Source Panel Labels */
+.card-outline.card-warning .card-body label {
+    color: #495057;
+    font-weight: 600;
+}
+
+/* Select2 and Form Controls Color Fix */
+#verificationModal select,
+#verificationModal .form-select,
+#verificationModal .form-control {
+    color: #212529 !important;
+    background-color: #fff !important;
+}
+
+#verificationModal select option {
+    color: #212529 !important;
+    background-color: #fff !important;
+}
+
+/* Select2 Dropdown Menu */
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple {
+    color: #212529 !important;
+    background-color: #fff !important;
+}
+
+.select2-container--default .select2-results__option {
+    color: #212529 !important;
+    background-color: #fff !important;
+}
+
+.select2-container--default .select2-results__option--highlighted {
+    background-color: #007bff !important;
+    color: #fff !important;
+}
+
+/* Badge Colors with Better Contrast */
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+    color: #000 !important;
+}
+
+.badge.bg-warning.badge-sm,
+.source-info-badges .badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+    font-weight: 600;
+}
+
+.badge.bg-primary.badge-sm,
+.source-info-badges .badge.bg-primary {
+    background-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+.badge.bg-success {
+    background-color: #198754 !important;
+    color: #fff !important;
+}
+
+.badge.bg-danger {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+}
+
+/* Cutoff Header Badges - Ensure Good Contrast */
+.cutoff-badges .badge.bg-primary {
+    background-color: #0d6efd !important;
+    color: #fff !important;
+}
+
+.cutoff-badges .badge.bg-danger {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+}
+
+.cutoff-badges .badge.bg-success {
+    background-color: #198754 !important;
+    color: #fff !important;
+}
+
+/* Legacy assy-item styles (untuk backward compatibility) */
 .assy-item {
     background: #17a2b8;
     border: 1px solid #138496;
