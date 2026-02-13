@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../jai_filter_kanban"
+		}
+	],
+	"settings": {
+		"chat.editor.fontSize": 16,
+		"chat.editor.lineHeight": 1,
+		"chat.fontSize": 14
+	}
+}

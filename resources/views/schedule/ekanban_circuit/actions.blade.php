@@ -1,3 +1,4 @@
+<div class="btn-group" role="group" style="white-space: nowrap;">
 @if(request()->route()->getName() === 'schedule.ekanban-circuit.print-machine')
     <button type="button" class="btn btn-soft-info btn-sm btn-preview" 
             data-group-id="{{ $groupId }}" 

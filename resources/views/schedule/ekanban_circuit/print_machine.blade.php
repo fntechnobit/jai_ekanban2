@@ -7,12 +7,12 @@
 
 @section('content')
     <style>
-        /* Match select2 height with button and datepicker - More specific selector */
+        /* Match select2 height with button and datepicker - Smaller size like assy schedule */
         .card-body .select2-container--bootstrap-5 .select2-selection--single,
         .card-body .select2-container--bootstrap-5 .select2-selection {
-            height: 38px !important;
-            min-height: 38px !important;
-            padding: 0.375rem 0.75rem !important;
+            height: 31px !important;
+            min-height: 31px !important;
+            padding: 0.25rem 0.5rem !important;
         }
         .card-body .select2-container--bootstrap-5 .select2-selection__rendered {
             line-height: 1.5 !important;
@@ -20,7 +20,7 @@
             padding-top: 0 !important;
         }
         .card-body .select2-container--bootstrap-5 .select2-selection__arrow {
-            height: 36px !important;
+            height: 29px !important;
         }
         /* Datepicker text align right */
         #filter_date {
@@ -54,7 +54,7 @@
                     <form class="mb-3">
                         <div class="row g-2 mb-2">
                             <div class="col-md-3">
-                                <select class="form-select select2" id="filter_area">
+                                <select class="form-select form-select-sm select2" id="filter_area">
                                     <option value="">- All Area -</option>
                                     @foreach($areas as $area)
                                         <option value="{{ $area->id }}">{{ $area->area }}</option>
@@ -62,19 +62,19 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <select class="form-select select2" id="filter_machine" required>
+                                <select class="form-select form-select-sm select2" id="filter_machine" required>
                                     <option value="">- Choose Machine -</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <select class="form-select select2" id="filter_type">
+                                <select class="form-select form-select-sm select2" id="filter_type">
                                     <option value="all">- All Type -</option>
                                     <option value="CUTTING">CUTTING</option>
                                     <option value="CUTTING_TWIST">CUTTING TWIST</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <select class="form-select select2" id="filter_print_status">
+                                <select class="form-select form-select-sm select2" id="filter_print_status">
                                     <option value="all">- All Status -</option>
                                     <option value="not_printed" selected>Not Printed</option>
                                     <option value="printed">Already Printed</option>
@@ -83,17 +83,17 @@
                         </div>
                         <div class="row g-2">
                             <div class="col-md-3">
-                                <input type="text" class="form-control" id="filter_date" readonly placeholder="Select date">
+                                <input type="text" class="form-control form-control-sm" id="filter_date" readonly placeholder="Select date">
                             </div>
                             <div class="col-md-3">
-                                <select class="form-select select2" id="filter_shift">
+                                <select class="form-select form-select-sm select2" id="filter_shift">
                                     <option value="">- All Shift -</option>
                                     <option value="1">Shift 1</option>
                                     <option value="2">Shift 2</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <select class="form-select select2" id="filter_cutoff">
+                                <select class="form-select form-select-sm select2" id="filter_cutoff">
                                     <option value="">- All Cut Off -</option>
                                     <option value="1">Cut Off 1</option>
                                     <option value="2">Cut Off 2</option>
@@ -103,7 +103,7 @@
                                 </select>
                             </div>
                             <div class="col-md-3 text-end">
-                                <button type="button" class="btn btn-secondary" id="btn-reset" title="Reset Filters">
+                                <button type="button" class="btn btn-secondary" id="btn-reset" title="Reset Filters" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; height: 31px;">
                                     <i class="fa-solid fa-arrow-rotate-right"></i>
                                 </button>
                             </div>
@@ -116,18 +116,18 @@
                                 <tr>
                                     <th width="5%">Num.</th>
                                     <th>Type</th>
-                                    <th>Circuit No</th>
-                                    <th>Circuit Code</th>
-                                    <th>Conveyor</th>
-                                    <th>Machine</th>
+                                    <th>CCT No.</th>
+                                    <th>CCT Code</th>
+                                    <th>CV</th>
+                                    <th>Mach.</th>
                                     <th>Family</th>
                                     <th>Qty</th>
-                                    <th>Issue Qty</th>
-                                    <th>Barcode Kanban</th>
+                                    <th>Issue</th>
+                                    <th>Barcode</th>
                                     <th>Date</th>
                                     <th>Shift</th>
-                                    <th>Cut Off</th>
-                                    <th>Print Status</th>
+                                    <th>CO</th>
+                                    <th>Status</th>
                                     <th width="8%">#</th>
                                 </tr>
                             </thead>
@@ -234,9 +234,9 @@
                         width: '8%',
                         render: function(data) {
                             if (data === 'CUTTING_TWIST') {
-                                return '<span class="badge bg-info">TWIST</span>';
+                                return '<span class="badge bg-info">TWS</span>';
                             }
-                            return '<span class="badge bg-primary">CUTTING</span>';
+                            return '<span class="badge bg-primary">CCT</span>';
                         }
                     },
                     { data: 'cct_no', name: 'cct_no', width: '10%' },
@@ -252,9 +252,9 @@
                         orderable: false,
                         render: function(data, type, row) {
                             if (data > 0) {
-                                return '<span class="badge bg-secondary fw-bold">' + data + ' issue(s)</span>';
+                                return '<span class="badge bg-secondary fw-bold">' + data + '</span>';
                             } else {
-                                return '<span class="badge bg-light text-dark border">0 issue(s)</span>';
+                                return '<span class="badge bg-light text-dark border">0</span>';
                             }
                         }
                     },

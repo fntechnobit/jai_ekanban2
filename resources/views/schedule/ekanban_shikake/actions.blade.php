@@ -4,7 +4,7 @@
     $actionId = $groupId ?? $row->shikake_ids ?? '';
 @endphp
 
-<div class="btn-group" role="group">
+<div class="btn-group" role="group" style="white-space: nowrap;">
     <button type="button" class="btn btn-soft-info btn-sm btn-preview" data-group-id="{{ $actionId }}" title="Preview">
         <i class="fa-solid fa-eye"></i>
     </button>
