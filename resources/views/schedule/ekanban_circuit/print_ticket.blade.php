@@ -1,8 +1,7 @@
-{{-- CIRCUIT Print Template - PRINT VERSION (landscape, 80mm height) --}}
+{{-- CIRCUIT CUTTING Print Template --}}
+{{-- Based on cutting.html reference, scaled up for thermal printing (1px = 1 dot at 203dpi) --}}
+{{-- 9 columns, landscape, height 576px = 80mm --}}
 <style>
-/* CIRCUIT Print Template - Landscape layout for 80mm thermal printer */
-/* Native 576px height = 80mm paper width at 203dpi (1:1 no scaling) */
-/* Ticket width: 130mm = 1070px at 203dpi */
 * {
     margin: 0;
     padding: 0;
@@ -14,7 +13,7 @@
     flex-direction: row;
     flex-wrap: nowrap;
     gap: 0;
-    margin: 10px auto;
+    margin: 0;
     justify-content: flex-start;
     align-items: stretch;
     background: white;
@@ -38,14 +37,14 @@
 }
 
 .ticket-circuit-print {
-    width: 1070px;
-    min-width: 1070px;
+    width: 880px;
+    min-width: 880px;
     height: 100%;
     flex-shrink: 0;
     background: white;
     margin: 0;
     padding: 0;
-    border: 2px solid #ddd;
+    border: 2px solid #000;
     overflow: hidden;
     font-family: Arial, sans-serif;
 }
@@ -63,8 +62,8 @@
     padding: 2px 4px;
     text-align: center;
     vertical-align: middle;
-    line-height: 1.2;
-    font-size: 16px;
+    line-height: 1.1;
+    font-size: 22px;
     box-sizing: border-box;
 }
 
@@ -72,108 +71,86 @@
     background-color: transparent;
     color: #000;
     font-weight: bold;
-    font-size: 24px;
+    font-size: 32px;
     padding: 4px;
     border: 2px solid #000;
 }
 
-.ticket-circuit-print .label-cell {
-    background-color: #f0f0f0;
-    font-weight: 500;
-    font-size: 12px;
-}
-
-.ticket-circuit-print .value-cell {
-    font-weight: bold;
-    font-size: 16px;
-}
-
-.ticket-circuit-print .section-a {
-    background-color: #fff;
+.ticket-circuit-print .section-label {
+    background-color: transparent;
     color: #000;
     font-weight: bold;
-    font-size: 18px;
-    width: 25px;
+    font-size: 28px;
+    width: 40px;
+    padding: 2px;
 }
 
-.ticket-circuit-print .section-b {
+.ticket-circuit-print .section-label.black-bg {
     background-color: #000;
-    color: #fff;
-    font-weight: bold;
-    font-size: 18px;
-    width: 25px;
+    color: white;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
 }
 
-.ticket-circuit-print .qrcode-cell {
-    padding: 2px;
-    vertical-align: middle;
+.ticket-circuit-print .label-cell {
+    background-color: transparent;
+    font-weight: 500;
+    font-size: 18px;
 }
 
-.ticket-circuit-print .qrcode-cell img {
-    max-width: 140px;
-    max-height: 140px;
+.ticket-circuit-print .value-cell {
+    font-weight: bold;
+    font-size: 22px;
+}
+
+.text-left {
+    text-align: left !important;
+}
+
+.ticket-circuit-print .qrcode-cell {
+    padding: 4px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.ticket-circuit-print .qr-label {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.ticket-circuit-print .qr-img {
+    width: 110px;
+    height: 110px;
     display: block;
     margin: 0 auto;
 }
 
-.ticket-circuit-print .qr-img {
-    width: 140px;
-    height: 140px;
-}
-
-.ticket-circuit-print .qr-label {
-    font-size: 10px;
+.ticket-circuit-print .qr-text {
+    font-size: 12px;
     font-weight: bold;
-    margin-bottom: 2px;
+    margin-top: 1px;
+    word-break: break-all;
 }
 
 .ticket-circuit-print .barcode-cell {
     padding: 2px;
     vertical-align: middle;
+    text-align: center;
 }
 
 .ticket-circuit-print .barcode-cell img {
-    max-width: 160px;
-    height: 50px;
+    width: 100%;
+    max-width: 100%;
+    height: 80px;
     display: block;
-    margin: 0 auto;
+    box-sizing: border-box;
 }
 
-.ticket-circuit-print .qrcode-placeholder,
-.ticket-circuit-print .barcode-placeholder {
-    border: 1px solid #000;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    color: #000;
-}
-
-.ticket-circuit-print .qrcode-placeholder {
-    width: 140px;
-    height: 140px;
-}
-
-.ticket-circuit-print .barcode-placeholder {
-    width: 160px;
-    height: 50px;
-}
-
-/* Info table in header */
-.ticket-circuit-print .info-row th {
-    background-color: #f0f0f0;
-    font-size: 11px;
-    font-weight: bold;
-    padding: 2px;
-}
-
-.ticket-circuit-print .info-row td {
+.ticket-circuit-print .barcode-label {
     font-size: 14px;
     font-weight: bold;
-    padding: 2px;
+    margin-top: 2px;
 }
 
 /* Thermal Printer Optimization */
@@ -183,7 +160,7 @@
         padding: 0;
         background: white;
     }
-    
+
     .circuit-print-wrapper {
         flex-direction: row;
         gap: 0;
@@ -192,13 +169,13 @@
         page-break-after: always;
         page-break-inside: avoid;
     }
-    
+
     .circuit-print-wrapper .circuit-image-section {
         display: flex;
         flex-shrink: 0;
         align-items: center;
     }
-    
+
     .circuit-print-wrapper .circuit-image-section img {
         height: 70mm;
         width: auto;
@@ -206,7 +183,7 @@
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
-    
+
     .ticket-circuit-print {
         width: auto;
         max-width: none;
@@ -215,28 +192,24 @@
         margin: 0;
         padding: 0;
     }
-    
+
     .ticket-circuit-print table {
         page-break-inside: avoid;
         width: 100%;
     }
-    
+
     .ticket-circuit-print th,
     .ticket-circuit-print td {
         border: 1px solid #000 !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
-    
-    .ticket-circuit-print .section-b {
+
+    .ticket-circuit-print .section-label.black-bg {
         background-color: #000 !important;
-        color: #fff !important;
+        color: white !important;
     }
-    
-    .ticket-circuit-print .label-cell {
-        background-color: #f0f0f0 !important;
-    }
-    
+
     @page {
         size: landscape;
         margin: 1mm;
@@ -245,158 +218,164 @@
 </style>
 
 @foreach($circuits as $circuit)
-{{-- Wrapper with flexbox for image + ticket --}}
 <div class="ticket circuit-print-wrapper" data-orientation="landscape">
-    {{-- Image section (LEFT) - only if image exists --}}
     @if(!empty($circuit->image_path))
     <div class="circuit-image-section">
         <img src="{{ asset($circuit->image_path) }}" alt="Circuit Image">
     </div>
     @endif
-    
-    {{-- Ticket section (RIGHT) - landscape layout for 80mm thermal printer --}}
+
     <div class="ticket-circuit-print">
         <table>
             <colgroup>
-                <col style="width: 2.5%">
-                <col style="width: 7%">
-                <col style="width: 11%">
-                <col style="width: 6%">
-                <col style="width: 7%">
-                <col style="width: 7%">
-                <col style="width: 11%">
-                <col style="width: 16%">
-                <col style="width: 16%">
-                <col style="width: 16%">
+                <col style="width: 40px">   {{-- Col 1: Section label (5mm) --}}
+                <col style="width: 80px">   {{-- Col 2: Label (10mm) --}}
+                <col style="width: 120px">  {{-- Col 3: Value (15mm) --}}
+                <col style="width: 96px">   {{-- Col 4: (12mm) --}}
+                <col style="width: 96px">   {{-- Col 5: (12mm) --}}
+                <col style="width: 96px">   {{-- Col 6: (12mm) --}}
+                <col style="width: 96px">   {{-- Col 7: (12mm) --}}
+                <col style="width: 60px">   {{-- Col 8: SEQ/TO labels --}}
+                <col style="width: 116px">  {{-- Col 9: MACHINE/TO values --}}
             </colgroup>
             <thead>
                 <tr>
-                    <th colspan="10">EKANBAN CUTTING - {{ $circuit->carline ?? '' }}</th>
+                    <th colspan="9">E-KANBAN CUTTING {{ $circuit->carline ?? '' }}</th>
                 </tr>
             </thead>
             <tbody>
-                <!-- Row 1: Info Headers -->
-                <tr class="info-row">
-                    <th colspan="2">CCT NO</th>
-                    <th>CUST NO</th>
-                    <th>Kind</th>
-                    <th>Size</th>
-                    <th>Colour</th>
-                    <th>C/L</th>
-                    <th>SEQ</th>
-                    <th>MACHINE</th>
-                    <th>QTY</th>
-                </tr>
-                <!-- Row 2: Info Values -->
-                <tr class="info-row">
-                    <td colspan="2" class="value-cell">{{ $circuit->cct_no ?? '' }}</td>
-                    <td class="value-cell">{{ $circuit->cust_no ?? '' }}</td>
-                    <td class="value-cell">{{ $circuit->kind ?? '' }}</td>
-                    <td class="value-cell">{{ $circuit->size ?? '' }}</td>
-                    <td class="value-cell">{{ $circuit->col ?? '' }}</td>
-                    <td class="value-cell">{{ $circuit->cl ?? '' }}</td>
-                    <td class="value-cell">{{ $circuit->sequence ?? '' }}</td>
-                    <td class="value-cell">{{ $circuit->machine ?? '' }}</td>
-                    <td class="value-cell">{{ $circuit->qty ?? '' }}</td>
-                </tr>
-                
-                <!-- Section A: Row 3-6 -->
+                <!-- Row 1: Labels -->
                 <tr>
-                    <td rowspan="4" class="section-a">A</td>
-                    <td class="label-cell">Terminal</td>
-                    <td class="value-cell">{{ $circuit->terminal_1 ?? '' }}</td>
-                    <td class="value-cell">{{ $circuit->gold_1 ?? '' }}</td>
-                    <td class="value-cell" colspan="2">{{ $circuit->note_1 ?? '' }}</td>
-                    <td class="label-cell">To 1</td>
-                    <td class="value-cell" colspan="3">{{ $circuit->t01 ?? '' }}</td>
+                    <td colspan="2" class="label-cell">CCT NO</td>
+                    <td class="label-cell">CUST NO</td>
+                    <td class="label-cell">KIND</td>
+                    <td class="label-cell">SIZE</td>
+                    <td class="label-cell">COL</td>
+                    <td class="label-cell">C/L</td>
+                    <td class="label-cell">SEQ</td>
+                    <td class="label-cell">MACHINE</td>
                 </tr>
+                <!-- Row 2: Values -->
                 <tr>
-                    <td class="label-cell">Acc 1</td>
-                    <td class="value-cell">{{ $circuit->acc_1 ?? '' }}</td>
-                    <td class="label-cell">Note</td>
-                    <td class="value-cell" colspan="2">{{ $circuit->note_1 ?? '' }}</td>
-                    <td class="label-cell">To 2</td>
-                    <td class="value-cell" colspan="3">{{ $circuit->t02 ?? '' }}</td>
+                    <td colspan="2" class="value-cell">{{ $circuit->cct_no ?? '-' }}</td>
+                    <td class="value-cell">{{ $circuit->cust_no ?? '-' }}</td>
+                    <td class="value-cell">{{ $circuit->kind ?? '-' }}</td>
+                    <td class="value-cell">{{ $circuit->size ?? '-' }}</td>
+                    <td class="value-cell">{{ $circuit->col ?? '-' }}</td>
+                    <td class="value-cell">{{ $circuit->cl ?? '-' }}</td>
+                    <td class="value-cell">{{ $circuit->sequence ?? '-' }}</td>
+                    <td class="value-cell">{{ $circuit->machine ?? '-' }}</td>
                 </tr>
+
+                <!-- Section A - Row 1 -->
                 <tr>
-                    <td class="label-cell">Acc 2</td>
-                    <td class="value-cell">{{ $circuit->acc_1a ?? '' }}</td>
-                    <td class="label-cell">Strip</td>
-                    <td class="value-cell" colspan="2">{{ $circuit->strip_1 ?? '' }}</td>
-                    <td class="label-cell">To 3</td>
-                    <td class="value-cell" colspan="3">{{ $circuit->t03 ?? '' }}</td>
+                    <td rowspan="4" class="section-label">A</td>
+                    <td class="label-cell text-left">TERM.</td>
+                    <td colspan="3" class="value-cell text-left">{{ $circuit->terminal_1 ?? '' }}</td>
+                    <td class="label-cell">{{ $circuit->gold_1 ?? '' }}</td>
+                    <td class="value-cell">{{ $circuit->seal_1 ?? '' }}</td>
+                    <td class="label-cell text-left">TO 1</td>
+                    <td class="value-cell text-left">{{ $circuit->t01 ?? '' }}</td>
                 </tr>
+                <!-- Section A - Row 2 -->
                 <tr>
-                    <td class="label-cell">Tube</td>
-                    <td class="value-cell">{{ $circuit->tube_1 ?? '' }}</td>
-                    <td class="label-cell">Mark</td>
-                    <td class="value-cell" colspan="2">{{ $circuit->mark_1 ?? '' }}</td>
-                    <td class="label-cell">To</td>
-                    <td class="value-cell" colspan="3">{{ $circuit->address ?? '' }}</td>
+                    <td class="label-cell text-left">ACC 1</td>
+                    <td colspan="3" class="value-cell text-left">{{ $circuit->acc_1 ?? '' }}</td>
+                    <td class="label-cell text-left">NOTE</td>
+                    <td class="value-cell">{{ $circuit->note_1 ?? '' }}</td>
+                    <td class="label-cell text-left">TO 2</td>
+                    <td class="value-cell text-left">{{ $circuit->t02 ?? '' }}</td>
                 </tr>
-                
-                <!-- Section B: Row 7-10 -->
+                <!-- Section A - Row 3 -->
                 <tr>
-                    <td rowspan="4" class="section-b">B</td>
-                    <td class="label-cell">Terminal</td>
-                    <td class="value-cell">{{ $circuit->terminal_2 ?? '' }}</td>
-                    <td class="value-cell">{{ $circuit->gold_2 ?? '' }}</td>
-                    <td class="value-cell" colspan="2">{{ $circuit->note_2 ?? '' }}</td>
-                    <td class="label-cell">Cct Code</td>
-                    <td class="value-cell" colspan="3">{{ $circuit->cct_code ?? '' }}</td>
+                    <td class="label-cell text-left">ACC 2</td>
+                    <td colspan="3" class="value-cell text-left">{{ $circuit->acc_1a ?? '' }}</td>
+                    <td class="label-cell text-left">STRIP</td>
+                    <td class="value-cell">{{ $circuit->strip_1 ?? '' }}</td>
+                    <td class="label-cell text-left">TO 3</td>
+                    <td class="value-cell text-left">{{ $circuit->t03 ?? '' }}</td>
                 </tr>
+                <!-- Section A - Row 4 -->
                 <tr>
-                    <td class="label-cell">Acc 1</td>
-                    <td class="value-cell">{{ $circuit->acc_2 ?? '' }}</td>
-                    <td class="label-cell">Note</td>
-                    <td class="value-cell" colspan="2">{{ $circuit->note_2 ?? '' }}</td>
-                    <td class="label-cell">Issue</td>
-                    <td class="value-cell" colspan="3">{{ $circuit->issue ?? '' }}</td>
+                    <td class="label-cell text-left">TUBE</td>
+                    <td colspan="3" class="value-cell text-left">{{ $circuit->tube_1 ?? '' }}</td>
+                    <td class="label-cell text-left">MARK</td>
+                    <td class="value-cell">{{ $circuit->mark_1 ?? '' }}</td>
+                    <td rowspan="2" class="label-cell text-left">TO STORE</td>
+                    <td rowspan="2" class="value-cell text-left">{{ $circuit->to_store ?? '' }}</td>
                 </tr>
+
+                <!-- Section B - Row 1 -->
                 <tr>
-                    <td class="label-cell">Acc 2</td>
-                    <td class="value-cell">{{ $circuit->acc_2a ?? '' }}</td>
-                    <td class="label-cell">Strip</td>
-                    <td class="value-cell" colspan="2">{{ $circuit->strip_2 ?? '' }}</td>
-                    <td class="label-cell">CV</td>
-                    <td class="value-cell" colspan="3">{{ $circuit->conveyor ?? '' }}</td>
+                    <td rowspan="4" class="section-label black-bg">B</td>
+                    <td class="label-cell text-left">TERM.</td>
+                    <td colspan="3" class="value-cell text-left">{{ $circuit->terminal_2 ?? '' }}</td>
+                    <td class="label-cell">{{ $circuit->gold_2 ?? '' }}</td>
+                    <td class="value-cell">{{ $circuit->seal_2 ?? '' }}</td>
                 </tr>
+                <!-- Section B - Row 2 -->
                 <tr>
-                    <td class="label-cell">Tube</td>
-                    <td class="value-cell">{{ $circuit->tube_2 ?? '' }}</td>
-                    <td class="label-cell">Mark</td>
-                    <td class="value-cell" colspan="2">{{ $circuit->mark_2 ?? '' }}</td>
-                    <td class="label-cell">Family</td>
-                    <td class="value-cell" colspan="3">{{ $circuit->family ?? '' }}</td>
+                    <td class="label-cell text-left">ACC 1</td>
+                    <td colspan="3" class="value-cell text-left">{{ $circuit->acc_2 ?? '' }}</td>
+                    <td class="label-cell text-left">NOTE</td>
+                    <td class="value-cell">{{ $circuit->note_2 ?? '' }}</td>
+                    <td class="label-cell text-left">CCT CODE</td>
+                    <td class="value-cell text-left">{{ $circuit->cct_code ?? '' }}</td>
                 </tr>
-                
-                <!-- Barcode Section -->
+                <!-- Section B - Row 3 -->
                 <tr>
-                    <td colspan="4" class="label-cell">BARCODE KANBAN</td>
-                    <td colspan="3" class="label-cell">DATE / NOTE</td>
-                    <td colspan="3" class="label-cell">BARCODE MESIN</td>
+                    <td class="label-cell text-left">ACC 2</td>
+                    <td colspan="3" class="value-cell text-left">{{ $circuit->acc_2a ?? '' }}</td>
+                    <td class="label-cell text-left">STRIP</td>
+                    <td class="value-cell">{{ $circuit->strip_2 ?? '' }}</td>
+                    <td class="label-cell text-left">QTY</td>
+                    <td class="value-cell text-left">{{ $circuit->qty ?? '' }}</td>
                 </tr>
+                <!-- Section B - Row 4 -->
                 <tr>
-                    <td colspan="4" rowspan="2" class="qrcode-cell">
+                    <td class="label-cell text-left">TUBE</td>
+                    <td colspan="3" class="value-cell text-left">{{ $circuit->tube_2 ?? '' }}</td>
+                    <td class="label-cell text-left">MARK</td>
+                    <td class="value-cell">{{ $circuit->mark_2 ?? '' }}</td>
+                    <td class="label-cell text-left">ISSUE</td>
+                    <td class="value-cell text-left">{{ $circuit->issue ?? '' }}</td>
+                </tr>
+
+                <!-- Bottom Section - Row 1 -->
+                <tr>
+                    <td colspan="3" rowspan="4" class="qrcode-cell">
+                        <div class="qr-label">QRCODE KANBAN</div>
                         @if(isset($circuit->qr_code_path))
-                            <img src="{{ $circuit->qr_code_path }}" alt="QR Code" class="qr-img">
-                            <div class="qr-label">{{ $circuit->barcode_kanban ?? "" }}</div>
+                            <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="qr-img">
+                            <div class="qr-text">{{ $circuit->barcode_kanban ?? '' }}</div>
                         @else
-                            <div class="qrcode-placeholder">QR CODE</div>
+                            <div style="width:110px;height:110px;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR CODE</div>
                         @endif
                     </td>
-                    <td colspan="3" class="value-cell">{{ $circuit->release_date ? \Carbon\Carbon::parse($circuit->release_date)->format('d-M-y') : '' }}</td>
-                    <td colspan="3" rowspan="2" class="barcode-cell">
+                    <td colspan="4" class="value-cell text-left">{{ $circuit->carline ?? '' }}</td>
+                    <td colspan="2" rowspan="4" class="barcode-cell">
+                        <div class="barcode-label">BARCODE MESIN</div>
                         @if(isset($circuit->barcode_path))
-                            <img src="{{ $circuit->barcode_path }}" alt="Barcode">
-                            <div class="qr-label">{{ $circuit->barcode_mesin ?? "" }}</div>
-                        @else
-                            <div class="barcode-placeholder">BARCODE</div>
+                            <img src="{{ $circuit->barcode_path }}" alt="Barcode Mesin">
+                            <div class="barcode-label">{{ $circuit->barcode_mesin ?? '' }}</div>
+                        @elseif(!empty($circuit->barcode_mesin))
+                            <div style="font-size:18px;font-weight:bold;">{{ $circuit->barcode_mesin }}</div>
                         @endif
                     </td>
                 </tr>
+                <!-- Bottom Section - Row 2 -->
                 <tr>
-                    <td colspan="3" class="value-cell" style="font-size: 12px;">{{ $circuit->released_note ?? '' }}</td>
+                    <td colspan="4" class="value-cell text-left">{{ $circuit->conveyor ?? '' }}</td>
+                </tr>
+                <!-- Bottom Section - Row 3 -->
+                <tr>
+                    <td colspan="4" class="value-cell text-left">
+                        {{ $circuit->release_date ? \Carbon\Carbon::parse($circuit->release_date)->format('d-M-y') : '' }}
+                    </td>
+                </tr>
+                <!-- Bottom Section - Row 4 -->
+                <tr>
+                    <td colspan="4" class="value-cell text-left">{{ $circuit->released_note ?? '' }}</td>
                 </tr>
             </tbody>
         </table>

@@ -235,7 +235,7 @@ class BarcodeHelper
         // Generate Barcode using cached method
         $barcodeData = !empty($circuit->$barcodeField) ? $circuit->$barcodeField : ($circuit->$barcodeFallbackField ?? '');
         if (!empty($barcodeData)) {
-            $barcodePath = self::generateBarcodeCached($barcodeData, null, 3, 80, 'circuit');
+            $barcodePath = self::generateBarcodeCached($barcodeData, null, 4, 90, 'circuit');
             if ($barcodePath) {
                 $circuit->barcode_path = $barcodePath;
             }

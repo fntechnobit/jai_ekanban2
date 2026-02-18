@@ -480,18 +480,36 @@
                     return;
                 }
 
-                // Inject into page
+                // Inject into page (use offscreen positioning instead of height:0/overflow:hidden
+                // so flex/table layouts compute correctly for html2canvas)
                 let holder = document.getElementById('print_area_ajax_holder');
                 if (!holder) {
                     holder = document.createElement('div');
                     holder.id = 'print_area_ajax_holder';
+                    holder.style.position = 'fixed';
+                    holder.style.left = '-9999px';
+                    holder.style.top = '0';
                     holder.style.visibility = 'hidden';
-                    holder.style.height = '0';
-                    holder.style.overflow = 'hidden';
+                    holder.style.overflow = 'visible';
                     document.body.appendChild(holder);
                 }
                 holder.innerHTML = '';
                 holder.appendChild(stack);
+
+                // Wait for all images inside tickets to load before capturing
+                const imgs = stack.querySelectorAll('img');
+                if (imgs.length > 0) {
+                    await Promise.all(Array.from(imgs).map(img => {
+                        if (img.complete) return Promise.resolve();
+                        return new Promise((resolve) => {
+                            img.onload = resolve;
+                            img.onerror = resolve;
+                        });
+                    }));
+                }
+
+                // Allow browser to complete layout before capture
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
                 await printStackNow('#print_stack_ajax', selectedPrinter);
                 
@@ -514,8 +532,8 @@
         const BASE_DOTS = Math.floor((TARGET_DOTS / SCALE_W) / 8) * 8;
         const SLICE_ROWS = 256;
         const THRESHOLD = 145;
-        const BLANK_AFTER_PAGE_DOTS = 250;
-        const CUT_OFFSET_DOTS = 8;
+        const BLANK_AFTER_PAGE_DOTS = 20;
+        const CUT_OFFSET_DOTS = 184; // ~23mm feed to pass cutter blade position
 
         async function printStackNow(stackRootSel, printer) {
             const tickets = Array.from(document.querySelectorAll(stackRootSel + ' .ticket'));
@@ -526,7 +544,8 @@
             const jobs = [{ type: 'raw', format: 'command', flavor: 'hex', data: '1B40' }]; // ESC @ init
             
             for (const t of tickets) {
-                const cvs = await renderTicketToCanvas(t);
+                const rawCvs = await renderTicketToCanvas(t);
+                const cvs = trimCanvasWhitespace(rawCvs);
                 const { slices, bpr } = canvasToEscposSlices(cvs);
                 
                 for (const hex of slices) {
@@ -651,6 +670,9 @@
         function rotateCanvas90CW(canvas) {
             const w = canvas.width;
             const h = canvas.height;
+            if (w === 0 || h === 0) {
+                throw new Error('Cannot rotate empty canvas (' + w + 'x' + h + '). Element may not be rendered properly.');
+            }
             const rotated = document.createElement('canvas');
             rotated.width = h;
             rotated.height = w;
@@ -659,6 +681,61 @@
             ctx.rotate(Math.PI / 2);
             ctx.drawImage(canvas, 0, 0);
             return rotated;
+        }
+
+        // Trim all 4 sides of white/blank space from canvas
+        function trimCanvasWhitespace(canvas) {
+            const w = canvas.width;
+            const h = canvas.height;
+            if (w === 0 || h === 0) return canvas;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const img = ctx.getImageData(0, 0, w, h).data;
+
+            function isRowBlank(y) {
+                for (let x = 0; x < w; x++) {
+                    const idx = (y * w + x) * 4;
+                    if (img[idx] < 245 || img[idx+1] < 245 || img[idx+2] < 245) return false;
+                }
+                return true;
+            }
+            function isColBlank(x) {
+                for (let y = 0; y < h; y++) {
+                    const idx = (y * w + x) * 4;
+                    if (img[idx] < 245 || img[idx+1] < 245 || img[idx+2] < 245) return false;
+                }
+                return true;
+            }
+
+            let top = 0, bottom = h - 1, left = 0, right = w - 1;
+
+            while (top < h && isRowBlank(top)) top++;
+            while (bottom > top && isRowBlank(bottom)) bottom--;
+            while (left < w && isColBlank(left)) left++;
+            while (right > left && isColBlank(right)) right--;
+
+            // If all white, return as-is
+            if (top > bottom || left > right) return canvas;
+
+            // 2px padding to avoid border clipping
+            top    = Math.max(0,     top    - 2);
+            bottom = Math.min(h - 1, bottom + 2);
+            left   = Math.max(0,     left   - 2);
+            right  = Math.min(w - 1, right  + 2);
+
+            const cropW = right - left + 1;
+            const cropH = bottom - top + 1;
+
+            // Only crop if there's meaningful blank to remove (>4px)
+            if (cropH >= h - 4 && cropW >= w - 4) return canvas;
+
+            const cropped = document.createElement('canvas');
+            cropped.width = cropW;
+            cropped.height = cropH;
+            const cctx = cropped.getContext('2d');
+            cctx.fillStyle = '#fff';
+            cctx.fillRect(0, 0, cropW, cropH);
+            cctx.drawImage(canvas, left, top, cropW, cropH, 0, 0, cropW, cropH);
+            return cropped;
         }
 
         function canvasToEscposSlices(canvas) {

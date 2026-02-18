@@ -125,28 +125,28 @@ class EkanbanCircuitController extends Controller
 
     /**
      * Generate barcodes specific to CUTTING_TWIST circuits
-     * Includes: QR kanban, QR shikake, barcode navigasi, barcode process
+     * Includes: QR kanban, barcode mesin (linear), QR shikake, barcode process (linear)
      */
     private function generateCircuitTwistBarcodes($circuit)
     {
-        // QR code for barcode_kanban
+        // QR code for barcode_kanban (bottom-left)
         if (!empty($circuit->barcode_kanban)) {
             $circuit->qr_code_path = BarcodeHelper::generateQRCodeCached($circuit->barcode_kanban, 'circuit');
         }
 
-        // QR code for barcode_shikake
+        // Linear barcode for barcode_mesin (top-right)
+        if (!empty($circuit->barcode_mesin)) {
+            $circuit->barcode_mesin_path = BarcodeHelper::generateBarcodeCached($circuit->barcode_mesin, null, 4, 90, 'circuit');
+        }
+
+        // QR code for barcode_shikake (bottom-right)
         if (!empty($circuit->barcode_shikake)) {
-            $circuit->barcode_shikake_path = BarcodeHelper::generateQRCodeCached($circuit->barcode_shikake, 'circuit');
+            $circuit->qr_shikake_path = BarcodeHelper::generateQRCodeCached($circuit->barcode_shikake, 'circuit');
         }
 
-        // Barcode for barcode_navigasi
-        if (!empty($circuit->barcode_navigasi)) {
-            $circuit->barcode_navigasi_path = BarcodeHelper::generateBarcodeCached($circuit->barcode_navigasi, null, 2, 50, 'circuit');
-        }
-
-        // Barcode for barcode_process
+        // Linear barcode for barcode_process (section A/B right side)
         if (!empty($circuit->barcode_process)) {
-            $circuit->barcode_process_path = BarcodeHelper::generateBarcodeCached($circuit->barcode_process, null, 2, 50, 'circuit');
+            $circuit->barcode_process_path = BarcodeHelper::generateBarcodeCached($circuit->barcode_process, null, 4, 90, 'circuit');
         }
     }
 

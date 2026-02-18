@@ -3,7 +3,7 @@
 @section('title', 'Schedule Verification')
 
 @section('css')
-<link rel="stylesheet" href="{{ url('css/schedule-verification.css') }}?v={{ time() }}">
+<link rel="stylesheet" href="{{ url('css/schedule-verification.css') }}">
 @endsection
 
 @section('content')
@@ -23,17 +23,18 @@
                         @endforeach
                     </select>
                     <select class="form-select form-select-sm" id="filter_status" style="width: 140px;">
-                        <option value="">- All Status -</option>
+                        <option value="">- All -</option>
                         <option value="verified">Verified</option>
                         <option value="pending">Pending</option>
                     </select>
-                    <button type="button" class="btn btn-secondary" id="btn-reset" title="Reset Filter" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; height: 31px;">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-reset" title="Reset Filter">
                         <i class="fa-solid fa-arrows-rotate"></i>
                     </button>
                 </div>
             </div>
         </div>
         <div class="card-body">
+
             <div class="table-responsive">
                 <table id="schedule-verification-table" class="table table-bordered table-striped table-sm">
                     <thead>
@@ -83,63 +84,43 @@
                     </div>
 
                     <div class="row">
-                        <!-- PANEL KIRI: TARGET - CUTOFF (8 kolom) -->
-                        <div class="col-md-8">
-                            <div class="card card-outline card-secondary mb-3">
-                                <div class="card-header bg-primary">
-                                    <h6 class="card-title text-white mb-0">
-                                        <b><i class="fa-solid fa-bullseye"></i> TARGET - SHIFT <span id="target-shift-label"></span></b>
-                                    </h6>
-                                </div>
-                                <div class="card-body p-2">
-                                    <div id="shifts-container">
-                                        <!-- Shifts and cut-offs will be loaded dynamically -->
-                                    </div>
-                                </div>
+                        <!-- Shifts Container with Cut-offs -->
+                        <div class="col-md-6">
+                            <div id="shifts-container">
+                                <!-- Shifts and cut-offs will be loaded dynamically -->
                             </div>
                         </div>
                         
-                        <!-- PANEL KANAN: SOURCE DATA (4 kolom) -->
-                        <div class="col-md-4">
-                            <div class="card card-outline card-warning mb-3">
-                                <div class="card-header bg-warning text-dark">
-                                    <h6 class="card-title mb-0">
-                                        <b><i class="fa-solid fa-box-open"></i> SUMBER DATA (H s/d H+10)</b>
-                                    </h6>
+                        <!-- Available Assy Data -->
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0">Generated Assy Data</h6>
+                                    <div class="date-filter-controls d-flex mt-2">
+                                        <input type="text" id="available-date" class="form-control form-control-sm" 
+                                               style="width: 140px;" placeholder="Select date">
+                                        <select id="available-shift" class="form-select form-select-sm ms-2" style="width: 100px;">
+                                            <option value="1">Shift 1</option>
+                                            <option value="2">Shift 2</option>
+                                        </select>
+                                        <button type="button" id="btn-refresh-available" class="btn btn-sm btn-light ms-2">
+                                            <i class="fa-solid fa-arrows-rotate"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="card-body p-2">
-                                    <!-- Filter Source -->
-                                    <div class="row mb-2">
-                                        <div class="col-7">
-                                            <label class="small text-muted mb-1">Tanggal</label>
-                                            <select id="source-date" class="form-select form-select-sm">
-                                                <option value="">-- Pilih Tanggal --</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-5">
-                                            <label class="small text-muted mb-1">Shift</label>
-                                            <select id="source-shift" class="form-select form-select-sm">
-                                                <option value="all">Semua Shift</option>
-                                            </select>
-                                        </div>
+                                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                                    <!-- Results summary -->
+                                    <div id="available-results-info" class="text-muted small mb-2" style="display: none;">
+                                        Showing <span id="results-start">1</span>-<span id="results-end">20</span> of <span id="results-total">0</span> items
                                     </div>
-
-                                    <!-- Source Items Info -->
-                                    <div id="source-info" class="mb-2 text-center small text-dark">
-                                        Pilih tanggal untuk memuat data sumber
+                                    
+                                    <!-- Loading indicator -->
+                                    <div id="available-loading" class="text-center py-3" style="display: none;">
+                                        <i class="fa-solid fa-spinner ti-spin"></i> Loading...
                                     </div>
-
-                                    <!-- Source Items List -->
-                                    <div class="source-list-container" style="max-height: 400px; overflow-y: auto;">
-                                        <div id="source-items-list" class="source-list">
-                                            <!-- Items akan dimuat via JavaScript -->
-                                        </div>
-                                    </div>
-
-                                    <div class="mt-2 p-2 bg-light border rounded">
-                                        <small class="text-dark">
-                                            <i class="fa-solid fa-info-circle text-primary"></i> Drag item dari panel ini ke cutoff target di sebelah kiri.
-                                        </small>
+                                    
+                                    <div id="available-assy-container">
+                                        <!-- Available assy items grouped by cut-off will be loaded dynamically -->
                                     </div>
                                 </div>
                             </div>
@@ -160,7 +141,7 @@
 @endsection
 
 @section('script')
-    <script src="{{ url('js/schedule-verification.js') }}?v={{ time() }}"></script>
+    <script src="{{ url('js/schedule-verification.js') }}"></script>
     <script>
         // Set route URLs for the external JavaScript file
         routeUrls = {

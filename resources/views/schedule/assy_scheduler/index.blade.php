@@ -18,7 +18,7 @@
                                 <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
                             @endforeach
                         </select>
-                        <button type="button" class="btn btn-secondary" id="btn-reset" title="Reset Filter" style="padding: 0.25rem 0.5rem; font-size: 0.875rem; height: 31px;">
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-reset" title="Reset Filter">
                             <i class="fa-solid fa-arrows-rotate"></i>
                         </button>
                         @if(auth()->user()->hasMenuPermission('assy_scheduler', 'can_create'))

@@ -1,11 +1,8 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
-    # Redirect /ekanban/ to /ekanban/public/
-    RewriteCond %{REQUEST_URI} ^/ekanban/?$
-    RewriteRule ^(.*)$ /ekanban/public/ [R=301,L]
-    
-    # Redirect any non-public request to public folder
-    RewriteCond %{REQUEST_URI} !^/ekanban/public/
-    RewriteRule ^(.*)$ /ekanban/public/$1 [R=301,L]
-</IfModule>
+    # If file/directory doesn't exist at root, forward to public/
+    # This ensures storage symlink, assets, and Laravel routes all work
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ public/$1 [L]
