@@ -312,7 +312,7 @@
                 </tr>
                 <tr>
                     <td class="label-cell">Acc 1</td>
-                    <td class="value-cell">{{ $circuit->acc_1b ?? '' }}</td>
+                    <td class="value-cell">{{ $circuit->acc_1 ?? '' }}</td>
                     <td class="label-cell">Note</td>
                     <td class="value-cell" colspan="2">{{ $circuit->note_1 ?? '' }}</td>
                     <td class="label-cell">To 2</td>
@@ -347,7 +347,7 @@
                 </tr>
                 <tr>
                     <td class="label-cell">Acc 1</td>
-                    <td class="value-cell">{{ $circuit->acc_2b ?? '' }}</td>
+                    <td class="value-cell">{{ $circuit->acc_2 ?? '' }}</td>
                     <td class="label-cell">Note</td>
                     <td class="value-cell" colspan="2">{{ $circuit->note_2 ?? '' }}</td>
                     <td class="label-cell">Issue</td>

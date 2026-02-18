@@ -32,7 +32,7 @@ class BarcodeHelper
             
             // Check if cached version exists
             if (file_exists($fullPath)) {
-                return "/storage/{$cachePath}";
+                return asset("storage/{$cachePath}");
             }
 
             // Generate new QR code
@@ -56,7 +56,7 @@ class BarcodeHelper
             
             Storage::disk('public')->put($cachePath, $qrCodeBinary);
             
-            return "/storage/{$cachePath}";
+            return asset("storage/{$cachePath}");
         } catch (\Exception $e) {
             Log::error('QR generation failed: ' . $e->getMessage());
             return null;
@@ -90,7 +90,7 @@ class BarcodeHelper
             
             // Check if cached version exists
             if (file_exists($fullPath)) {
-                return "/storage/{$cachePath}";
+                return asset("storage/{$cachePath}");
             }
 
             // Generate new barcode
@@ -104,7 +104,7 @@ class BarcodeHelper
             
             Storage::disk('public')->put($cachePath, $barcode);
             
-            return "/storage/{$cachePath}";
+            return asset("storage/{$cachePath}");
         } catch (\Exception $e) {
             Log::error('Barcode generation failed: ' . $e->getMessage());
             return null;
@@ -140,7 +140,7 @@ class BarcodeHelper
             $qrPath = 'temp/qr_' . $circuitId . '_' . time() . rand(1000, 9999) . '.png';
             Storage::disk('public')->put($qrPath, $qrCodeBinary);
             
-            return '/storage/' . $qrPath;
+            return asset('storage/' . $qrPath);
         } catch (\Exception $e) {
             Log::error('QR generation failed for circuit ' . $circuitId . ': ' . $e->getMessage());
             return null;
@@ -170,7 +170,7 @@ class BarcodeHelper
             $barcodePath = 'temp/barcode_' . $circuitId . '_' . time() . rand(1000, 9999) . '.png';
             Storage::disk('public')->put($barcodePath, $barcode);
             
-            return '/storage/' . $barcodePath;
+            return asset('storage/' . $barcodePath);
         } catch (\Exception $e) {
             Log::error('Barcode generation failed for circuit ' . $circuitId . ': ' . $e->getMessage());
             return null;

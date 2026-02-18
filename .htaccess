@@ -1,17 +1,11 @@
-# Set DirectoryIndex
-DirectoryIndex index.php
-
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /ekanban/
     
-    # Redirect Trailing Slashes If Not A Folder...
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_URI} (.+)/$
-    RewriteRule ^ %1 [L,R=301]
-
-    # Handle Front Controller - route everything to index.php
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^(.*)$ index.php [QSA,L]
+    # Redirect /ekanban/ to /ekanban/public/
+    RewriteCond %{REQUEST_URI} ^/ekanban/?$
+    RewriteRule ^(.*)$ /ekanban/public/ [R=301,L]
+    
+    # Redirect any non-public request to public folder
+    RewriteCond %{REQUEST_URI} !^/ekanban/public/
+    RewriteRule ^(.*)$ /ekanban/public/$1 [R=301,L]
 </IfModule>

@@ -41,10 +41,10 @@
 
                                     <li class="header-notification">
                                         <div class="flex-shrink-0 app-dropdown">
-                                            <a href="#" class="d-block head-icon position-relative" data-bs-toggle="dropdown"
+                                            <a href="#" class="d-block head-icon position-relative" id="notificationBell" data-bs-toggle="dropdown"
                                                 data-bs-auto-close="outside" aria-expanded="false">
                                                 <i class="fa-solid fa-bell"></i>
-                                                <span class="position-absolute translate-middle p-1 bg-success border border-light rounded-circle animate__animated animate__fadeIn animate__infinite animate__slower"></span>
+                                                <span id="notificationBadge" class="position-absolute translate-middle p-1 bg-success border border-light rounded-circle animate__animated animate__fadeIn animate__infinite animate__slower" style="display: none;"></span>
                                             </a>
                                             <div class="dropdown-menu dropdown-menu-end bg-transparent border-0">
                                                 <div class="card">
@@ -55,12 +55,15 @@
                                                     </div>
                                                     <div class="card-body p-0">
                                                         <div class="head-container app-scroll">
-                                                            <div class="hidden-massage py-4 px-3 text-center">
+                                                            <div id="notificationContent" class="hidden-massage py-4 px-3 text-center">
                                                                 <img src="{{ asset('assets/images/icons/bell.png') }}" class="w-50 h-50 mb-3 mt-2" alt="">
                                                                 <div>
                                                                     <h6 class="mb-0">No Notifications</h6>
                                                                     <p class="text-secondary">You're all caught up!</p>
                                                                 </div>
+                                                            </div>
+                                                            <div id="notificationList" style="display: none;">
+                                                                <!-- Notifications will be dynamically added here -->
                                                             </div>
                                                         </div>
                                                     </div>

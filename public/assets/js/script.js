@@ -190,25 +190,35 @@ $('.loader-wrapper').fadeOut('slow', function () {
 let calcScrollValue = () => {
   let scrollProgress = document.getElementsByClassName("go-top");
   let progressValue = document.getElementsByClassName("progress-value");
+  
+  if (scrollProgress.length === 0) return;
+  
   let pos = document.documentElement.scrollTop;
   let calcHeight =
     document.documentElement.scrollHeight -
     document.documentElement.clientHeight;
   let scrollValue = Math.round((pos * 100) / calcHeight);
+  
   if (pos > 100) {
     scrollProgress[0].style.display = 'grid';
   } else {
     scrollProgress[0].style.display = 'none';
   }
 
-  scrollProgress[0].addEventListener("click", () => {
-    document.documentElement.scrollTop = 0;
-  });
+  // Smooth scroll to top when clicked
+  scrollProgress[0].onclick = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
 
-  scrollProgress[0].style.background = `conic-gradient( rgba(var(--primary),1) ${scrollValue}%, var(--light-gray) ${scrollValue}%)`;
+  // Update progress circle
+  scrollProgress[0].style.background = `conic-gradient(rgba(var(--primary), 1) ${scrollValue}%, #e9ecef ${scrollValue}%)`;
 };
 
 window.onscroll = calcScrollValue;
+window.onload = calcScrollValue;
 
 
 

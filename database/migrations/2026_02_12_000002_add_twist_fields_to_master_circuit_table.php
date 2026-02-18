@@ -18,8 +18,8 @@ use Illuminate\Support\Facades\Schema;
  * - to_store: varchar(255) - Store destination
  * 
  * Additionally documents column name corrections:
- * - acc_1b (NOT acc_1) - Accessory 1B
- * - acc_2b (NOT acc_2) - Accessory 2B
+ * - acc_1 (NOT acc_1b) - Accessory 1
+ * - acc_2 (NOT acc_2b) - Accessory 2
  * - No remark_1, remark_2, ta, tb, t04, t05, t06 columns exist
  */
 return new class extends Migration

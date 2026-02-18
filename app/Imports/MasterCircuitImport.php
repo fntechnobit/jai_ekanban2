@@ -131,15 +131,25 @@ class MasterCircuitImport
             ];
         }
 
-        // Validate first 41 columns match expected headers
+        // Validate first columns match expected headers
         $mismatches = [];
         for ($i = 0; $i < count($expectedHeaders); $i++) {
             $uploadedHeader = trim($headerRow[$i] ?? '');
             $expectedHeader = $expectedHeaders[$i];
             
-            if (strcasecmp($uploadedHeader, $expectedHeader) !== 0) {
-                $columnLetter = ImportHelper::numberToColumnLetter($i + 1);
-                $mismatches[] = "Column {$columnLetter}: Expected '{$expectedHeader}', found '{$uploadedHeader}'";
+            // Special handling for Memory Twist column - accept both variations
+            if ($i === 49) { // Column AX (Memory Twist)
+                $isValid = (strcasecmp($uploadedHeader, 'Memory Twist') === 0) || 
+                           (strcasecmp($uploadedHeader, 'MEMORI TWIST') === 0);
+                if (!$isValid) {
+                    $columnLetter = ImportHelper::numberToColumnLetter($i + 1);
+                    $mismatches[] = "Column {$columnLetter}: Expected 'Memory Twist' or 'MEMORI TWIST', found '{$uploadedHeader}'";
+                }
+            } else {
+                if (strcasecmp($uploadedHeader, $expectedHeader) !== 0) {
+                    $columnLetter = ImportHelper::numberToColumnLetter($i + 1);
+                    $mismatches[] = "Column {$columnLetter}: Expected '{$expectedHeader}', found '{$uploadedHeader}'";
+                }
             }
         }
 
@@ -233,7 +243,7 @@ class MasterCircuitImport
             'note_1' => ImportHelper::cleanValue($rowData[24] ?? null),         // Column Y - Note 1
             'gold_1' => ImportHelper::cleanValue($rowData[25] ?? null),         // Column Z - Gold 1
             'strip_1' => ImportHelper::cleanValue($rowData[26] ?? null),        // Column AA - Strip 1
-            'acc_1b' => ImportHelper::cleanValue($rowData[27] ?? null),         // Column AB - Acc. 1B
+            'acc_1' => ImportHelper::cleanValue($rowData[27] ?? null),          // Column AB - Acc. 1
             'acc_1a' => ImportHelper::cleanValue($rowData[28] ?? null),         // Column AC - Acc. 1A
             'tube_1' => ImportHelper::cleanValue($rowData[29] ?? null),         // Column AD - Tube 1
             'mark_1' => ImportHelper::cleanValue($rowData[30] ?? null),         // Column AE - Mark 1
@@ -242,7 +252,7 @@ class MasterCircuitImport
             'note_2' => ImportHelper::cleanValue($rowData[33] ?? null),         // Column AH - Note 2
             'gold_2' => ImportHelper::cleanValue($rowData[34] ?? null),         // Column AI - Gold 2
             'strip_2' => ImportHelper::cleanValue($rowData[35] ?? null),        // Column AJ - Strip 2
-            'acc_2b' => ImportHelper::cleanValue($rowData[36] ?? null),         // Column AK - Acc 2B
+            'acc_2' => ImportHelper::cleanValue($rowData[36] ?? null),          // Column AK - Acc 2
             'acc_2a' => ImportHelper::cleanValue($rowData[37] ?? null),         // Column AL - Acc 2A
             'tube_2' => ImportHelper::cleanValue($rowData[38] ?? null),         // Column AM - Tube 2
             'mark_2' => ImportHelper::cleanValue($rowData[39] ?? null),         // Column AN - Mark 2

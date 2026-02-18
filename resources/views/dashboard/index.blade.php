@@ -267,6 +267,9 @@
 @section('script')
 <script>
 $(document).ready(function() {
+    // Auto-generate Assy Schedule for next 3 days on dashboard load
+    autoGenerateAssySchedule();
+
     // Fetch printing trend data via AJAX
     $.ajax({
         url: '{{ route("dashboard.printing-trend") }}',
@@ -330,6 +333,133 @@ $(document).ready(function() {
             $('#printingTrendChart').parent().html('<p class="text-center text-muted">Unable to load chart data</p>');
         }
     });
+
+    /**
+     * Auto-generate Assy Schedule for next 3 days
+     */
+    function autoGenerateAssySchedule() {
+        // Get today's date
+        var today = new Date();
+        var startDate = formatDate(today);
+        
+        // Calculate 3 days from today
+        var endDateObj = new Date(today);
+        endDateObj.setDate(endDateObj.getDate() + 3);
+        var endDate = formatDate(endDateObj);
+        
+        console.log('Auto-generating Assy Schedule from ' + startDate + ' to ' + endDate);
+        
+        // Call the generate endpoint
+        $.ajax({
+            url: '{{ route("schedule.assy-scheduler.generate") }}',
+            type: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                start_date: startDate,
+                end_date: endDate,
+                conveyor_id: null // Generate for all conveyors
+            },
+            beforeSend: function() {
+                console.log('Generating assy schedules...');
+            },
+            success: function(response) {
+                if (response.success) {
+                    console.log('✓ Assy Schedule generated successfully:', response.message);
+                    console.log('Details:', response.data);
+                    
+                    // Show notification in navbar
+                    showNavbarNotification(response.message, response.data);
+                    
+                    // Optional: Show a subtle notification
+                    if (typeof toastr !== 'undefined') {
+                        toastr.success(response.message, 'Schedule Generated', {
+                            timeOut: 3000,
+                            closeButton: true,
+                            progressBar: true
+                        });
+                    }
+                } else {
+                    console.warn('⚠ Schedule generation warning:', response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('✗ Failed to generate assy schedule:', error);
+                
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    console.error('Error details:', xhr.responseJSON.message);
+                }
+                
+                // Don't show error toast to user as this is a background operation
+                // Just log it for debugging purposes
+            }
+        });
+    }
+    
+    /**
+     * Helper function to format date as YYYY-MM-DD
+     */
+    function formatDate(date) {
+        var year = date.getFullYear();
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var day = String(date.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    }
+    
+    /**
+     * Show notification in navbar header
+     */
+    function showNavbarNotification(message, data) {
+        var notificationBadge = $('#notificationBadge');
+        var notificationContent = $('#notificationContent');
+        var notificationList = $('#notificationList');
+        
+        // Show badge indicator
+        notificationBadge.show();
+        
+        // Hide empty message
+        notificationContent.hide();
+        
+        // Create notification item
+        var timestamp = new Date().toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit'
+        });
+        
+        var detailsHtml = '';
+        if (data && data.schedules_created > 0) {
+            detailsHtml = '<small class="text-muted d-block mt-1">' +
+                '<i class="fa-solid fa-calendar-plus me-1"></i>' + data.schedules_created + ' schedules created' +
+                '</small>';
+        }
+        
+        var notificationItem = 
+            '<div class="notification-item p-3 border-bottom" style="background: #f8f9fa;">' +
+                '<div class="d-flex align-items-start">' +
+                    '<div class="flex-shrink-0">' +
+                        '<span class="h-40 w-40 d-flex-center b-r-50 bg-success text-white">' +
+                            '<i class="fa-solid fa-calendar-check"></i>' +
+                        '</span>' +
+                    '</div>' +
+                    '<div class="flex-grow-1 ms-3">' +
+                        '<h6 class="mb-1">Assy Schedule Generated</h6>' +
+                        '<p class="mb-0 text-muted f-s-13">' + message + '</p>' +
+                        detailsHtml +
+                        '<small class="text-muted d-block mt-1">' +
+                            '<i class="fa-regular fa-clock me-1"></i>' + timestamp +
+                        '</small>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        
+        // Add notification to list
+        notificationList.prepend(notificationItem);
+        notificationList.show();
+        
+        // Auto-hide badge after 10 seconds
+        setTimeout(function() {
+            notificationBadge.fadeOut();
+        }, 10000);
+    }
 });
 </script>
 @endsection
