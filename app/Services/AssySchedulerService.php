@@ -242,7 +242,7 @@ class AssySchedulerService
      * Get schedules for datatable
      *
      * @param array $filters
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder
      */
     public function getSchedulesQuery($filters = [])
     {
