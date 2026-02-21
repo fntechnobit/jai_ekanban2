@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class MasterFamilyRequest extends FormRequest
+class MasterCarlineRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,18 +22,23 @@ class MasterFamilyRequest extends FormRequest
      */
     public function rules(): array
     {
-        $masterFamilyId = $this->route('master_family');
+        $masterCarlineId = $this->route('master_carline');
 
         return [
-            'family' => [
+            'code' => [
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('master_family')->ignore($masterFamilyId)
+                Rule::unique('master_carline')->ignore($masterCarlineId)
             ],
-            'carline_id' => [
-                'nullable',
-                'exists:master_carline,id',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'area_id' => [
+                'required',
+                'exists:master_area,id',
             ],
         ];
     }

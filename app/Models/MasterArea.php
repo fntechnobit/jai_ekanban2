@@ -17,4 +17,12 @@ class MasterArea extends Model
         'updated_by',
         'deleted_by',
     ];
+
+    /**
+     * Get the carlines for the area.
+     */
+    public function carlines()
+    {
+        return $this->hasMany(MasterCarline::class, 'area_id');
+    }
 }

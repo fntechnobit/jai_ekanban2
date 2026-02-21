@@ -53,8 +53,9 @@ class EkanbanShikakeController extends Controller
             
             $shikakes = $this->ekanbanShikakeService->getShikakesForPrint($ids);
 
-            // Render process-specific templates in PREVIEW mode (larger, 576px)
-            $html = $this->renderPrintTickets($shikakes, 'preview');
+            // Support mode parameter: 'print' for thermal (120mm), 'preview' for screen (576px)
+            $mode = $request->input('mode', 'preview');
+            $html = $this->renderPrintTickets($shikakes, $mode);
             
             return response($html);
         }
@@ -74,19 +75,24 @@ class EkanbanShikakeController extends Controller
     }
 
     /**
-     * Print individual shikake - routes to process-specific templates
+     * Print individual shikake - routes to process-specific templates / mark as printed
      */
     public function print(Request $request)
     {
         $ids = is_array($request->ids) ? $request->ids : explode(',', $request->ids);
-        
+
+        // Mark shikakes as printed
+        $this->ekanbanShikakeService->markAsPrinted($ids, Auth::id());
+
+        // If mark_only flag is set, skip HTML generation
+        if ($request->boolean('mark_only')) {
+            return response()->json(['ok' => true]);
+        }
+
         $shikakes = $this->ekanbanShikakeService->getShikakesForPrint($ids);
 
         // Render process-specific templates in PRINT mode (120mm x 70mm for thermal)
         $html = $this->renderPrintTickets($shikakes, 'print');
-
-        // Mark shikakes as printed
-        $this->ekanbanShikakeService->markAsPrinted($ids, Auth::id());
 
         return response()->json([
             'ok' => true,

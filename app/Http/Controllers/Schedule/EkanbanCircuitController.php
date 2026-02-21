@@ -70,21 +70,26 @@ class EkanbanCircuitController extends Controller
     }
 
     /**
-     * Print individual circuit
+     * Print individual circuit / mark as printed
      */
     public function print(Request $request)
     {
         $ids = is_array($request->ids) ? $request->ids : explode(',', $request->ids);
-        
+
+        // Mark circuits as printed
+        $this->ekanbanCircuitService->markAsPrinted($ids, Auth::id());
+
+        // If mark_only flag is set, skip HTML generation
+        if ($request->boolean('mark_only')) {
+            return response()->json(['ok' => true]);
+        }
+
         $circuits = $this->ekanbanCircuitService->getCircuitsForPrint($ids);
         
         Log::info('Print function called with ' . count($circuits) . ' circuits');
 
         // Generate barcodes and render per-type templates
         $html = $this->renderCircuitTickets($circuits);
-
-        // Mark circuits as printed
-        $this->ekanbanCircuitService->markAsPrinted($ids, Auth::id());
 
         return response()->json([
             'ok' => true,
@@ -108,6 +113,10 @@ class EkanbanCircuitController extends Controller
         if ($cuttingCircuits->isNotEmpty()) {
             foreach ($cuttingCircuits as $circuit) {
                 BarcodeHelper::generateCircuitBarcodes($circuit, 'barcode_kanban', 'cct_no', 'barcode_mesin', 'cct_code');
+                // Generate QR code for qrcode_shikake
+                if (!empty($circuit->qrcode_shikake)) {
+                    $circuit->qr_shikake_path = BarcodeHelper::generateQRCodeCached($circuit->qrcode_shikake, 'circuit');
+                }
             }
             $htmlParts[] = view('schedule.ekanban_circuit.print_ticket', ['circuits' => $cuttingCircuits])->render();
         }
@@ -139,9 +148,14 @@ class EkanbanCircuitController extends Controller
             $circuit->barcode_mesin_path = BarcodeHelper::generateBarcodeCached($circuit->barcode_mesin, null, 4, 90, 'circuit');
         }
 
-        // QR code for barcode_shikake (bottom-right)
+        // QR code for barcode_shikake (static from master, bottom-right)
         if (!empty($circuit->barcode_shikake)) {
             $circuit->qr_shikake_path = BarcodeHelper::generateQRCodeCached($circuit->barcode_shikake, 'circuit');
+        }
+
+        // QR code for qrcode_shikake (generated, same format as barcode_kanban but with shikake_code)
+        if (!empty($circuit->qrcode_shikake)) {
+            $circuit->qr_qrcode_shikake_path = BarcodeHelper::generateQRCodeCached($circuit->qrcode_shikake, 'circuit');
         }
 
         // Linear barcode for barcode_process (section A/B right side)

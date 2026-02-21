@@ -53,9 +53,9 @@ class MasterCircuitImport
             // Get conveyor data
             $conveyor = MasterConveyor::findOrFail($this->conveyorId);
             
-            // Get assy columns (after column AX/MEMORI TWIST which is index 49)
+            // Get assy columns (after column AY/MEMORI TWIST which is index 50)
             $assyColumns = [];
-            for ($col = 50; $col < count($headerRow); $col++) {
+            for ($col = 51; $col < count($headerRow); $col++) {
                 $assyName = ImportHelper::cleanValue($headerRow[$col]);
                 if ($assyName) {
                     $assyColumns[$col] = $assyName;
@@ -138,7 +138,7 @@ class MasterCircuitImport
             $expectedHeader = $expectedHeaders[$i];
             
             // Special handling for Memory Twist column - accept both variations
-            if ($i === 49) { // Column AX (Memory Twist)
+            if ($i === 50) { // Column AY (Memory Twist)
                 $isValid = (strcasecmp($uploadedHeader, 'Memory Twist') === 0) || 
                            (strcasecmp($uploadedHeader, 'MEMORI TWIST') === 0);
                 if (!$isValid) {
@@ -235,37 +235,38 @@ class MasterCircuitImport
             'to_store' => ImportHelper::cleanValue($rowData[16] ?? null),       // Column Q - To Store
             'address' => ImportHelper::cleanValue($rowData[17] ?? null),        // Column R - Address
             'cct_code' => ImportHelper::cleanValue($rowData[18] ?? null),       // Column S - CCT Code
-            'kind' => ImportHelper::cleanValue($rowData[19] ?? null),           // Column T - Kind
-            'size' => ImportHelper::cleanValue($rowData[20] ?? null),           // Column U - Size
-            'col' => ImportHelper::cleanValue($rowData[21] ?? null),            // Column V - Col
-            'cl' => ImportHelper::cleanValue($rowData[22] ?? null),             // Column W - C/L
-            'terminal_1' => ImportHelper::cleanValue($rowData[23] ?? null),     // Column X - Terminal 1
-            'note_1' => ImportHelper::cleanValue($rowData[24] ?? null),         // Column Y - Note 1
-            'gold_1' => ImportHelper::cleanValue($rowData[25] ?? null),         // Column Z - Gold 1
-            'strip_1' => ImportHelper::cleanValue($rowData[26] ?? null),        // Column AA - Strip 1
-            'acc_1' => ImportHelper::cleanValue($rowData[27] ?? null),          // Column AB - Acc. 1
-            'acc_1a' => ImportHelper::cleanValue($rowData[28] ?? null),         // Column AC - Acc. 1A
-            'tube_1' => ImportHelper::cleanValue($rowData[29] ?? null),         // Column AD - Tube 1
-            'mark_1' => ImportHelper::cleanValue($rowData[30] ?? null),         // Column AE - Mark 1
-            // Column AF (index 31) - Remark 1: not in DB schema, skipped
-            'terminal_2' => ImportHelper::cleanValue($rowData[32] ?? null),     // Column AG - Terminal 2
-            'note_2' => ImportHelper::cleanValue($rowData[33] ?? null),         // Column AH - Note 2
-            'gold_2' => ImportHelper::cleanValue($rowData[34] ?? null),         // Column AI - Gold 2
-            'strip_2' => ImportHelper::cleanValue($rowData[35] ?? null),        // Column AJ - Strip 2
-            'acc_2' => ImportHelper::cleanValue($rowData[36] ?? null),          // Column AK - Acc 2
-            'acc_2a' => ImportHelper::cleanValue($rowData[37] ?? null),         // Column AL - Acc 2A
-            'tube_2' => ImportHelper::cleanValue($rowData[38] ?? null),         // Column AM - Tube 2
-            'mark_2' => ImportHelper::cleanValue($rowData[39] ?? null),         // Column AN - Mark 2
-            // Column AO (index 40) - Remark 2: not in DB schema, skipped
-            // Column AP (index 41) - TA: not in DB schema, skipped
-            // Column AQ (index 42) - TB: not in DB schema, skipped
-            't01' => ImportHelper::cleanValue($rowData[43] ?? null),            // Column AR - T01
-            't02' => ImportHelper::cleanValue($rowData[44] ?? null),            // Column AS - T02
-            't03' => ImportHelper::cleanValue($rowData[45] ?? null),            // Column AT - T03
-            // Column AU (index 46) - T04: not in DB schema, skipped
-            // Column AV (index 47) - T05: not in DB schema, skipped
-            // Column AW (index 48) - T06: not in DB schema, skipped
-            'memory_twist' => ImportHelper::cleanValue($rowData[49] ?? null),   // Column AX - Memori Twist
+            'shikake_code' => ImportHelper::cleanValue($rowData[19] ?? null),   // Column T - Shikake Code
+            'kind' => ImportHelper::cleanValue($rowData[20] ?? null),           // Column U - Kind
+            'size' => ImportHelper::cleanValue($rowData[21] ?? null),           // Column V - Size
+            'col' => ImportHelper::cleanValue($rowData[22] ?? null),            // Column W - Col
+            'cl' => ImportHelper::cleanValue($rowData[23] ?? null),             // Column X - C/L
+            'terminal_1' => ImportHelper::cleanValue($rowData[24] ?? null),     // Column Y - Terminal 1
+            'note_1' => ImportHelper::cleanValue($rowData[25] ?? null),         // Column Z - Note 1
+            'gold_1' => ImportHelper::cleanValue($rowData[26] ?? null),         // Column AA - Gold 1
+            'strip_1' => ImportHelper::cleanValue($rowData[27] ?? null),        // Column AB - Strip 1
+            'acc_1' => ImportHelper::cleanValue($rowData[28] ?? null),          // Column AC - Acc. 1
+            'acc_1a' => ImportHelper::cleanValue($rowData[29] ?? null),         // Column AD - Acc. 1A
+            'tube_1' => ImportHelper::cleanValue($rowData[30] ?? null),         // Column AE - Tube 1
+            'mark_1' => ImportHelper::cleanValue($rowData[31] ?? null),         // Column AF - Mark 1
+            // Column AG (index 32) - Remark 1: not in DB schema, skipped
+            'terminal_2' => ImportHelper::cleanValue($rowData[33] ?? null),     // Column AH - Terminal 2
+            'note_2' => ImportHelper::cleanValue($rowData[34] ?? null),         // Column AI - Note 2
+            'gold_2' => ImportHelper::cleanValue($rowData[35] ?? null),         // Column AJ - Gold 2
+            'strip_2' => ImportHelper::cleanValue($rowData[36] ?? null),        // Column AK - Strip 2
+            'acc_2' => ImportHelper::cleanValue($rowData[37] ?? null),          // Column AL - Acc 2
+            'acc_2a' => ImportHelper::cleanValue($rowData[38] ?? null),         // Column AM - Acc 2A
+            'tube_2' => ImportHelper::cleanValue($rowData[39] ?? null),         // Column AN - Tube 2
+            'mark_2' => ImportHelper::cleanValue($rowData[40] ?? null),         // Column AO - Mark 2
+            // Column AP (index 41) - Remark 2: not in DB schema, skipped
+            // Column AQ (index 42) - TA: not in DB schema, skipped
+            // Column AR (index 43) - TB: not in DB schema, skipped
+            't01' => ImportHelper::cleanValue($rowData[44] ?? null),            // Column AS - T01
+            't02' => ImportHelper::cleanValue($rowData[45] ?? null),            // Column AT - T02
+            't03' => ImportHelper::cleanValue($rowData[46] ?? null),            // Column AU - T03
+            // Column AV (index 47) - T04: not in DB schema, skipped
+            // Column AW (index 48) - T05: not in DB schema, skipped
+            // Column AX (index 49) - T06: not in DB schema, skipped
+            'memory_twist' => ImportHelper::cleanValue($rowData[50] ?? null),   // Column AY - Memori Twist
             'created_by' => Auth::id(),
         ];
     }

@@ -12,6 +12,7 @@ use App\Http\Controllers\Schedule\ScheduleVerificationController;
 use App\Http\Controllers\Schedule\EkanbanCircuitController;
 use App\Http\Controllers\Schedule\EkanbanShikakeController;
 use App\Http\Controllers\MasterData\MasterAreaController;
+use App\Http\Controllers\MasterData\MasterCarlineController;
 use App\Http\Controllers\MasterData\MasterFamilyController;
 use App\Http\Controllers\MasterData\MasterConveyorController;
 use App\Http\Controllers\MasterData\MasterMachineController;
@@ -61,9 +62,13 @@ Route::middleware('auth')->group(function () {
 
     // Master Data Module Routes
     Route::prefix('master-data')->name('master-data.')->group(function () {
-        // Preassy Area Data Management
+        // Area Data Management
         Route::resource('master-area', MasterAreaController::class);
         Route::get('master-area/datatable/data', [MasterAreaController::class, 'datatable'])->name('master-area.datatable');
+
+        // Carline Data Management
+        Route::resource('master-carline', MasterCarlineController::class);
+        Route::get('master-carline/datatable/data', [MasterCarlineController::class, 'datatable'])->name('master-carline.datatable');
 
         // Master Family Management
         Route::resource('master-family', MasterFamilyController::class);
@@ -93,6 +98,7 @@ Route::middleware('auth')->group(function () {
         Route::post('master-circuit/import', [MasterCircuitController::class, 'import'])->name('master-circuit.import');
         Route::get('master-circuit/download-template', [MasterCircuitController::class, 'downloadTemplate'])->name('master-circuit.download-template');
         Route::post('master-circuit/remove-by-conveyor', [MasterCircuitController::class, 'removeByConveyor'])->name('master-circuit.remove-by-conveyor');
+        Route::post('master-circuit/{id}/upload-drawing', [MasterCircuitController::class, 'uploadDrawing'])->name('master-circuit.upload-drawing');
         Route::resource('master-circuit', MasterCircuitController::class);
     });
 

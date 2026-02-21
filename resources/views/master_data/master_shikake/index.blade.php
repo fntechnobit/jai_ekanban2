@@ -9,17 +9,17 @@
 @section('content')
     <div class="container-fluid">
             <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Shikake Data List</h3>
-                    <div class="card-tools">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="card-title mb-0">Shikake Data List</h5>
+                    <div class="d-flex gap-1">
                         @if(auth()->user()->hasMenuPermission('master_shikake', 'can_create'))
-                            <button type="button" class="btn btn-primary btn-sm" id="btn-import">
-                                <i class="fa-solid fa-upload"></i> Import/Upload Shikake
+                            <button type="button" class="btn btn-success btn-sm" id="btn-import">
+                                <i class="ti ti-upload"></i> Import
                             </button>
                         @endif
                         @if(auth()->user()->hasMenuPermission('master_shikake', 'can_delete'))
                             <button type="button" class="btn btn-danger btn-sm" id="btn-remove-data">
-                                <i class="fa-solid fa-trash"></i> Remove Data
+                                <i class="ti ti-trash"></i> Remove Data
                             </button>
                         @endif
                     </div>
@@ -28,7 +28,7 @@
                     <!-- Filters -->
                     <div class="row mb-3">
                         <div class="col-md-4">
-                            <label for="filter_area">Area * :</label>
+                            <label for="filter_area">Area</label>
                             <select class="form-select select2" id="filter_area" style="width: 100%;">
                                 <option value="">- All Area -</option>
                                 @foreach($areas as $area)
@@ -37,7 +37,7 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="filter_conveyor">Conveyor * :</label>
+                            <label for="filter_conveyor">Conveyor</label>
                             <select class="form-select select2" id="filter_conveyor" style="width: 100%;">
                                 <option value="">- All Conveyor -</option>
                                 @foreach($conveyors as $conveyor)
@@ -46,7 +46,7 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="filter_process">Process :</label>
+                            <label for="filter_process">Process</label>
                             <select class="form-select select2" id="filter_process" style="width: 100%;">
                                 <option value="">- All Process -</option>
                                 @foreach($processTypes as $processType)
@@ -79,6 +79,7 @@
 
     @include('master_data.master_shikake.import_modal')
     @include('master_data.master_shikake.detail_modal')
+    @include('master_data.master_shikake.edit_modal')
 @endsection
 
 @section('script')
@@ -252,22 +253,26 @@
             // Delete Shikake
             $(document).on('click', '.btn-delete', function () {
                 var id = $(this).data('id');
-                var name = $(this).data('name');
-                var barcode = $(this).data('barcode');
+                var process = $(this).data('process');
+                var identifier = $(this).data('identifier');
+                var conveyor = $(this).data('conveyor');
+                var carline = $(this).data('carline');
 
                 Swal.fire({
-                    title: 'Delete Shikake Data?',
+                    title: 'Hapus Data Shikake?',
                     html: `<div style="text-align: left;">
-                        <p><strong>Shikake Number:</strong> ${name}</p>
-                        <p><strong>Barcode:</strong> ${barcode}</p>
-                        <p class="text-danger mt-3">This action cannot be undone!</p>
+                        <p><strong>Process:</strong> ${process}</p>
+                        <p><strong>Identifier:</strong> ${identifier}</p>
+                        <p><strong>Conveyor:</strong> ${conveyor}</p>
+                        <p><strong>Carline:</strong> ${carline}</p>
+                        <p class="text-danger mt-3">Data yang dihapus tidak dapat dikembalikan!</p>
                     </div>`,
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#d33',
                     cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Yes, delete it!',
-                    cancelButtonText: 'Cancel'
+                    confirmButtonText: 'Ya, hapus!',
+                    cancelButtonText: 'Batal'
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({
@@ -288,8 +293,8 @@
                 });
             });
 
-            // Reset modal when it's hidden (closed)
-            $('#detailShikakeModal').on('hidden.bs.modal', function () {
+            // Reset edit modal when it's hidden (closed)
+            $('#editShikakeModal').on('hidden.bs.modal', function () {
                 // Reset file input and hide preview
                 $('#imageInput').val('');
                 $('#imagePreviewContainer').hide();
@@ -299,67 +304,211 @@
                 clearValidationErrors();
             });
 
-            // Handle View button click
+            // Handle View button click (read-only)
             $('#master-shikake-table').on('click', '.btn-view', function() {
                 const id = $(this).data('id');
                 
-                // Show loading indicator
-                showLoadingSpinner();
-                
-                // Show modal
-                $('#detailShikakeModal').modal('show');
-                
-                // Clear any previous validation errors
-                clearValidationErrors();
-                
-                // Reset file input and image preview
-                $('#imageInput').val('');
-                $('#imagePreviewContainer').hide();
-                
-                // Fetch data via AJAX
                 $.ajax({
                     url: "{{ route('master-data.master-shikake.index') }}/" + id,
                     type: 'GET',
                     dataType: 'json',
-                    beforeSend: function() {
-                        $('#loading-indicator').show();
-                    },
                     success: function(response) {
                         if (response.success) {
-                            const data = response.data;
-                            console.log('Shikake data:', data);
-                            
-                            // Populate main form fields
-                            populateMainFields(data);
-                            
-                            // Populate process-specific fields
-                            populateProcessFields(data.process, data.process_data || {});
-                            
-                            // Show appropriate process section
-                            toggleProcessSections();
-                            
-                            // Handle image preview
-                            handleImagePreview(data.image_path);
-                            
-                            // Handle assembly list
-                            handleAssemblyList(data.assemblies);
+                            const d = response.data;
+                            const pd = d.process_data || {};
+
+                            // Main info
+                            $('#v_sk_process').html('<span class="badge ' + getProcessBadge(d.process) + '">' + (d.process || '-') + '</span>');
+                            $('#v_sk_conveyor').text(d.conveyor ? d.conveyor.conveyor : '-');
+                            $('#v_sk_carline').text(d.carline || '-');
+                            $('#v_sk_machine').text(d.machine || '-');
+                            $('#v_sk_family').text(d.family || '-');
+                            $('#v_sk_qty').text(d.qty || '-');
+                            $('#v_sk_sequence').text(d.sequence || '-');
+                            $('#v_sk_released_note').text(d.released_note || '-');
+
+                            // Hide all process sections
+                            $('#v_sk_twist_section, #v_sk_bonder_section, #v_sk_joint_section, #v_sk_shield_section, #v_sk_dbl_crimp_section').hide();
+
+                            // Populate process-specific view
+                            switch(d.process) {
+                                case 'TWIST':
+                                    populateViewTwist(pd);
+                                    $('#v_sk_twist_section').show();
+                                    break;
+                                case 'BONDER':
+                                    populateViewBonder(pd);
+                                    $('#v_sk_bonder_section').show();
+                                    break;
+                                case 'JOINT':
+                                    populateViewJoint(pd);
+                                    $('#v_sk_joint_section').show();
+                                    break;
+                                case 'SHIELD':
+                                    populateViewShield(pd);
+                                    $('#v_sk_shield_section').show();
+                                    break;
+                                case 'DBL CRIMP':
+                                    populateViewDblCrimp(pd);
+                                    $('#v_sk_dbl_crimp_section').show();
+                                    break;
+                            }
+
+                            // Assy List
+                            if (d.assemblies && d.assemblies.length > 0) {
+                                $('#v_sk_assy_list').html(d.assemblies.map(a => a.assy).join(', '));
+                            } else {
+                                $('#v_sk_assy_list').html('<span class="text-muted">-</span>');
+                            }
+
+                            // Drawing
+                            if (d.image_path) {
+                                $('#v_sk_drawing_img').attr('src', '{{ asset("") }}' + d.image_path);
+                                $('#v_sk_drawing_container').show();
+                            } else {
+                                $('#v_sk_drawing_container').hide();
+                            }
+
+                            $('#detailShikakeModal').modal('show');
                         }
                     },
                     error: function(xhr) {
-                        console.error('Error loading shikake details:', xhr);
-                        Swal.fire('Error!', xhr.responseJSON?.message || 'Failed to load data', 'error');
-                        $('#detailShikakeModal').modal('hide');
-                    },
-                    complete: function() {
-                        hideLoadingSpinner();
-                        $('#loading-indicator').hide();
+                        Swal.fire('Error!', xhr.responseJSON?.message || 'Gagal memuat data', 'error');
                     }
                 });
             });
 
-            // Helper function to populate main fields
+            // Handle Edit button click
+            $('#master-shikake-table').on('click', '.btn-edit', function() {
+                const id = $(this).data('id');
+                
+                showLoadingSpinner();
+                $('#editShikakeModal').modal('show');
+                clearValidationErrors();
+                $('#imageInput').val('');
+                $('#imagePreviewContainer').hide();
+                
+                $.ajax({
+                    url: "{{ route('master-data.master-shikake.index') }}/" + id,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            const data = response.data;
+                            populateMainFields(data);
+                            populateProcessFields(data.process, data.process_data || {});
+                            toggleProcessSections();
+                            handleImagePreview(data.image_path);
+                            handleAssemblyList(data.assemblies);
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire('Error!', xhr.responseJSON?.message || 'Gagal memuat data', 'error');
+                        $('#editShikakeModal').modal('hide');
+                    },
+                    complete: function() {
+                        hideLoadingSpinner();
+                    }
+                });
+            });
+
+            // Process badge helper
+            function getProcessBadge(process) {
+                return { 'TWIST': 'bg-primary', 'BONDER': 'bg-success', 'JOINT': 'bg-info', 'SHIELD': 'bg-warning', 'DBL CRIMP': 'bg-secondary' }[process] || 'bg-dark';
+            }
+
+            // View populate helpers
+            function populateViewTwist(pd) {
+                $('#v_sk_twist_cct_no').text(pd.cct_no || '-');
+                $('#v_sk_twist_cct_code').text(pd.cct_code || '-');
+                $('#v_sk_twist_machine_twist').text(pd.machine_twist || '-');
+                $('#v_sk_twist_sequence_2').text(pd.sequence_2 || '-');
+                $('#v_sk_twist_barcode_navigasi').text(pd.barcode_navigasi || '-');
+                $('#v_sk_twist_barcode_process').text(pd.barcode_process || '-');
+                $('#v_sk_twist_barcode_shikake').text(pd.barcode_shikake || '-');
+                $('#v_sk_twist_to_store').text(pd.to_store || '-');
+                $('#v_sk_twist_cust_no').text(pd.cust_no || '-');
+                $('#v_sk_twist_kind').text(pd.kind || '-');
+                $('#v_sk_twist_size').text(pd.size || '-');
+                $('#v_sk_twist_color').text(pd.color || '-');
+                $('#v_sk_twist_cl').text(pd.cl || '-');
+                $('#v_sk_twist_terminal_a').text(pd.terminal_a || '-');
+                $('#v_sk_twist_terminal_b').text(pd.terminal_b || '-');
+                $('#v_sk_twist_acc_1_a').text(pd.acc_1_a || '-');
+                $('#v_sk_twist_acc_1_ab').text(pd.acc_1_ab || '-');
+                $('#v_sk_twist_tube_a').text(pd.tube_a || '-');
+                $('#v_sk_twist_tube_b').text(pd.tube_b || '-');
+                $('#v_sk_twist_note_a').text(pd.note_a || '-');
+                $('#v_sk_twist_note_b').text(pd.note_b || '-');
+                $('#v_sk_twist_strip_a').text(pd.strip_a || '-');
+                $('#v_sk_twist_strip_b').text(pd.strip_b || '-');
+                $('#v_sk_twist_mark_a').text(pd.mark_a || '-');
+                $('#v_sk_twist_mark_b').text(pd.mark_b || '-');
+            }
+
+            function populateViewBonder(pd) {
+                $('#v_sk_bonder_no').text(pd.bonder_no || '-');
+                $('#v_sk_bonder_address').text(pd.address || '-');
+                $('#v_sk_bonder_dies').text(pd.dies || '-');
+                $('#v_sk_bonder_to_machine').text(pd.to_machine || '-');
+                $('#v_sk_bonder_barcode_navigasi').text(pd.barcode_navigasi || '-');
+                $('#v_sk_bonder_barcode_process').text(pd.barcode_process || '-');
+                var sideA = '', sideB = '';
+                for (var i = 1; i <= 7; i++) {
+                    var cctA = pd['cct_no_a_' + i] || '', bndA = pd['bonder_no_a_' + i] || '';
+                    if (cctA || bndA) sideA += '<tr><td>' + (cctA || '-') + '</td><td>' + (bndA || '-') + '</td></tr>';
+                    var cctB = pd['cct_no_b_' + i] || '', bndB = pd['bonder_no_b_' + i] || '';
+                    if (cctB || bndB) sideB += '<tr><td>' + (cctB || '-') + '</td><td>' + (bndB || '-') + '</td></tr>';
+                }
+                $('#v_sk_bonder_side_a').html(sideA || '<tr><td colspan="2" class="text-muted">-</td></tr>');
+                $('#v_sk_bonder_side_b').html(sideB || '<tr><td colspan="2" class="text-muted">-</td></tr>');
+            }
+
+            function populateViewJoint(pd) {
+                $('#v_sk_joint_bonder_no').text(pd.bonder_no || '-');
+                $('#v_sk_joint_address').text(pd.address || '-');
+                $('#v_sk_joint_address_store').text(pd.address_store || '-');
+                $('#v_sk_joint_to_machine').text(pd.to_machine || '-');
+                $('#v_sk_joint_barcode_process').text(pd.barcode_process || '-');
+                for (var i = 1; i <= 5; i++) {
+                    $('#v_sk_joint_cct_' + i).text(pd['cct_no_' + i] || '-');
+                    $('#v_sk_joint_bonder_' + i).text(pd['bonder_no_' + i] || '-');
+                }
+            }
+
+            function populateViewShield(pd) {
+                $('#v_sk_shield_no').text(pd.shield_no || '-');
+                $('#v_sk_shield_address').text(pd.address || '-');
+                $('#v_sk_shield_blade').text(pd.blade || '-');
+                var toList = [];
+                for (var i = 1; i <= 9; i++) {
+                    if (pd['to_' + i]) toList.push(pd['to_' + i]);
+                }
+                $('#v_sk_shield_to_list').text(toList.length ? toList.join(', ') : '-');
+                var pairs = '';
+                for (var i = 1; i <= 2; i++) {
+                    var cct = pd['cct_no_' + i] || '', addr = pd['address_no_1_' + i] || '';
+                    if (cct || addr) pairs += '<tr><td>' + (cct || '-') + '</td><td>' + (addr || '-') + '</td></tr>';
+                }
+                $('#v_sk_shield_pairs').html(pairs || '<tr><td colspan="2" class="text-muted">-</td></tr>');
+            }
+
+            function populateViewDblCrimp(pd) {
+                $('#v_sk_dbl_drawing_no').text(pd.drawing_no || '-');
+                $('#v_sk_dbl_address').text(pd.address || '-');
+                $('#v_sk_dbl_barcode_mesin').text(pd.barcode_mesin || '-');
+                $('#v_sk_dbl_to_machine').text(pd.to_machine || '-');
+                var pairs = '';
+                for (var i = 1; i <= 5; i++) {
+                    var cct = pd['cct_no_' + i] || '', addr = pd['address_' + i] || '';
+                    if (cct || addr) pairs += '<tr><td>' + (cct || '-') + '</td><td>' + (addr || '-') + '</td></tr>';
+                }
+                $('#v_sk_dbl_pairs').html(pairs || '<tr><td colspan="2" class="text-muted">-</td></tr>');
+            }
+
+            // Helper function to populate main fields (for edit modal)
             function populateMainFields(data) {
-                $('#shikake_id').val(data.id);
+                $('#edit_shikake_id').val(data.id);
                 $('#conveyor').val(data.conveyor ? data.conveyor.conveyor : '');
                 $('#carline').val(data.carline);
                 $('#process').val(data.process);
@@ -549,19 +698,19 @@
             }
 
             function showLoadingSpinner() {
-                $('#loading-indicator').show();
-                $('#submit-spinner').show();
-                $('#submit-icon').hide();
-                $('#submit-text').text('Loading...');
-                $('#submit-btn').prop('disabled', true);
+                $('#edit-loading-indicator').show();
+                $('#edit-submit-spinner').show();
+                $('#edit-submit-icon').hide();
+                $('#edit-submit-text').text('Loading...');
+                $('#edit-submit-btn').prop('disabled', true);
             }
 
             function hideLoadingSpinner() {
-                $('#loading-indicator').hide();
-                $('#submit-spinner').hide();
-                $('#submit-icon').show();
-                $('#submit-text').text('Update');
-                $('#submit-btn').prop('disabled', false);
+                $('#edit-loading-indicator').hide();
+                $('#edit-submit-spinner').hide();
+                $('#edit-submit-icon').show();
+                $('#edit-submit-text').text('Save');
+                $('#edit-submit-btn').prop('disabled', false);
             }
 
             function clearValidationErrors() {
@@ -569,25 +718,14 @@
                 $('.invalid-feedback').text('').hide();
             }
 
-            // Handle image preview on file select
-            $('#imageInput').on('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        $('#imagePreview').attr('src', e.target.result);
-                        $('#imagePreviewContainer').show();
-                    }
-                    reader.readAsDataURL(file);
-                }
-            });
+            // (Image preview handled by edit_modal.blade.php script)
 
-            // Handle form submission
-            $('#shikakeDetailForm').on('submit', function(e) {
+            // Handle form submission (edit modal)
+            $('#editShikakeForm').on('submit', function(e) {
                 e.preventDefault();
                 
                 const formData = new FormData(this);
-                const id = $('#shikake_id').val();
+                const id = $('#edit_shikake_id').val();
                 formData.append('_method', 'PUT');
                 
                 // Clear previous validation errors
@@ -603,16 +741,15 @@
                     processData: false,
                     contentType: false,
                     beforeSend: function() {
-                        // Disable form during submission
-                        $('#shikakeDetailForm input, #shikakeDetailForm textarea, #shikakeDetailForm select').prop('disabled', true);
+                        $('#editShikakeForm input, #editShikakeForm textarea, #editShikakeForm select').prop('disabled', true);
                     },
                     success: function(response) {
                         if (response.success) {
-                            $('#detailShikakeModal').modal('hide');
+                            $('#editShikakeModal').modal('hide');
                             table.ajax.reload();
                             Swal.fire({
                                 icon: 'success',
-                                title: 'Success!',
+                                title: 'Berhasil!',
                                 text: response.message,
                                 timer: 2000,
                                 showConfirmButton: false
@@ -620,17 +757,13 @@
                         }
                     },
                     error: function(xhr) {
-                        console.error('Form submission error:', xhr);
-                        
                         if (xhr.status === 422) {
-                            // Handle validation errors
                             const errors = xhr.responseJSON.errors;
                             displayValidationErrors(errors);
-                            
                             Swal.fire({
                                 icon: 'warning',
-                                title: 'Validation Error',
-                                text: 'Please check the form for errors and try again.',
+                                title: 'Validasi Error',
+                                text: 'Periksa form dan coba lagi.',
                                 timer: 3000,
                                 showConfirmButton: false
                             });
@@ -638,31 +771,30 @@
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Error!',
-                                text: xhr.responseJSON?.message || 'Failed to update shikake data',
+                                text: xhr.responseJSON?.message || 'Gagal update data shikake',
                                 showConfirmButton: true
                             });
                         }
                     },
                     complete: function() {
-                        // Re-enable form inputs
-                        $('#shikakeDetailForm input, #shikakeDetailForm textarea, #shikakeDetailForm select').prop('disabled', false);
+                        $('#editShikakeForm input, #editShikakeForm textarea, #editShikakeForm select').prop('disabled', false);
                         hideSubmissionLoading();
                     }
                 });
             });
 
             function showSubmissionLoading() {
-                $('#submit-spinner').show();
-                $('#submit-icon').hide();
-                $('#submit-text').text('Updating...');
-                $('#submit-btn').prop('disabled', true);
+                $('#edit-submit-spinner').show();
+                $('#edit-submit-icon').hide();
+                $('#edit-submit-text').text('Saving...');
+                $('#edit-submit-btn').prop('disabled', true);
             }
 
             function hideSubmissionLoading() {
-                $('#submit-spinner').hide();
-                $('#submit-icon').show();
-                $('#submit-text').text('Update');
-                $('#submit-btn').prop('disabled', false);
+                $('#edit-submit-spinner').hide();
+                $('#edit-submit-icon').show();
+                $('#edit-submit-text').text('Save');
+                $('#edit-submit-btn').prop('disabled', false);
             }
 
             function displayValidationErrors(errors) {
@@ -728,14 +860,14 @@
                 }
 
                 Swal.fire({
-                    title: 'Are you sure?',
-                    html: `You are about to delete all Shikake data for:<br><strong>${conveyorName}</strong><br><br>This action cannot be undone!`,
+                    title: 'Yakin hapus semua?',
+                    html: `Anda akan menghapus semua data Shikake pada conveyor:<br><strong>${conveyorName}</strong><br><br><span class="text-danger">Data yang dihapus tidak dapat dikembalikan!</span>`,
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#d33',
                     cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Yes, delete all!',
-                    cancelButtonText: 'Cancel'
+                    confirmButtonText: 'Ya, hapus semua!',
+                    cancelButtonText: 'Batal'
                 }).then((result) => {
                     if (result.isConfirmed) {
                         $.ajax({

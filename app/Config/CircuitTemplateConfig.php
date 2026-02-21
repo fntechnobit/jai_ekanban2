@@ -34,37 +34,38 @@ class CircuitTemplateConfig
             'To Store',          // Q - 16
             'Address',           // R - 17
             'CCT Code',          // S - 18
-            'Kind',              // T - 19
-            'Size',              // U - 20
-            'Col',               // V - 21
-            'C/L',               // W - 22
-            'Terminal 1',        // X - 23
-            'Note 1',            // Y - 24
-            'Gold 1',            // Z - 25
-            'Strip 1',           // AA - 26
-            'Acc. 1',            // AB - 27
-            'Acc. 1A',           // AC - 28
-            'Tube 1',            // AD - 29
-            'Mark 1',            // AE - 30
-            'Remark 1',          // AF - 31
-            'Terminal 2',        // AG - 32
-            'Note 2',            // AH - 33
-            'Gold 2',            // AI - 34
-            'Strip 2',           // AJ - 35
-            'Acc 2',             // AK - 36
-            'Acc 2A',            // AL - 37
-            'Tube 2',            // AM - 38
-            'Mark 2',            // AN - 39
-            'Remark 2',          // AO - 40
-            'TA',                // AP - 41
-            'TB',                // AQ - 42
-            'T01',               // AR - 43
-            'T02',               // AS - 44
-            'T03',               // AT - 45
-            'T04',               // AU - 46
-            'T05',               // AV - 47
-            'T06',               // AW - 48
-            'Memory Twist',      // AX - 49
+            'Shikake Code',      // T - 19
+            'Kind',              // U - 20
+            'Size',              // V - 21
+            'Col',               // W - 22
+            'C/L',               // X - 23
+            'Terminal 1',        // Y - 24
+            'Note 1',            // Z - 25
+            'Gold 1',            // AA - 26
+            'Strip 1',           // AB - 27
+            'Acc. 1',            // AC - 28
+            'Acc. 1A',           // AD - 29
+            'Tube 1',            // AE - 30
+            'Mark 1',            // AF - 31
+            'Remark 1',          // AG - 32
+            'Terminal 2',        // AH - 33
+            'Note 2',            // AI - 34
+            'Gold 2',            // AJ - 35
+            'Strip 2',           // AK - 36
+            'Acc 2',             // AL - 37
+            'Acc 2A',            // AM - 38
+            'Tube 2',            // AN - 39
+            'Mark 2',            // AO - 40
+            'Remark 2',          // AP - 41
+            'TA',                // AQ - 42
+            'TB',                // AR - 43
+            'T01',               // AS - 44
+            'T02',               // AT - 45
+            'T03',               // AU - 46
+            'T04',               // AV - 47
+            'T05',               // AW - 48
+            'T06',               // AX - 49
+            'Memory Twist',      // AY - 50
         ];
     }
 

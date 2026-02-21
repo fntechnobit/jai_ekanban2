@@ -352,7 +352,16 @@
                             <div style="width:110px;height:110px;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR CODE</div>
                         @endif
                     </td>
-                    <td colspan="4" class="value-cell text-left">{{ $circuit->carline ?? '' }}</td>
+                    <td colspan="2" class="value-cell text-left">{{ $circuit->carline ?? '' }}</td>
+                    <td colspan="2" rowspan="4" class="qrcode-cell">
+                        <div class="qr-label">QRCODE SHIKAKE</div>
+                        @if(isset($circuit->qr_shikake_path))
+                            <img src="{{ $circuit->qr_shikake_path }}" alt="QR Shikake" class="qr-img">
+                            <div class="qr-text">{{ $circuit->qrcode_shikake ?? '' }}</div>
+                        @elseif(!empty($circuit->qrcode_shikake))
+                            <div class="qr-text" style="font-size:14px;">{{ $circuit->qrcode_shikake }}</div>
+                        @endif
+                    </td>
                     <td colspan="2" rowspan="4" class="barcode-cell">
                         <div class="barcode-label">BARCODE MESIN</div>
                         @if(isset($circuit->barcode_path))
@@ -365,17 +374,17 @@
                 </tr>
                 <!-- Bottom Section - Row 2 -->
                 <tr>
-                    <td colspan="4" class="value-cell text-left">{{ $circuit->conveyor ?? '' }}</td>
+                    <td colspan="2" class="value-cell text-left">{{ $circuit->conveyor ?? '' }}</td>
                 </tr>
                 <!-- Bottom Section - Row 3 -->
                 <tr>
-                    <td colspan="4" class="value-cell text-left">
+                    <td colspan="2" class="value-cell text-left">
                         {{ $circuit->release_date ? \Carbon\Carbon::parse($circuit->release_date)->format('d-M-y') : '' }}
                     </td>
                 </tr>
                 <!-- Bottom Section - Row 4 -->
                 <tr>
-                    <td colspan="4" class="value-cell text-left">{{ $circuit->released_note ?? '' }}</td>
+                    <td colspan="2" class="value-cell text-left">{{ $circuit->released_note ?? '' }}</td>
                 </tr>
             </tbody>
         </table>

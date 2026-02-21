@@ -94,16 +94,23 @@ class MasterShikakeService
                 $currentUser = Auth::user();
                 $actions = '<div class="btn-group" role="group">';
                 $hasActions = false;
+                $identifier = $this->getIdentifierByProcess($row);
 
-                // View button
-                if ($currentUser && $currentUser->hasMenuPermission('master_shikake', 'can_update')) {
+                // View button (read permission)
+                if ($currentUser && $currentUser->hasMenuPermission('master_shikake', 'can_read')) {
                     $actions .= '<button type="button" class="btn btn-soft-info btn-sm btn-view" data-id="' . $row->id . '" title="View"><i class="ti ti-eye"></i></button>';
                     $hasActions = true;
                 }
 
-                // Delete button
+                // Edit button (update permission)
+                if ($currentUser && $currentUser->hasMenuPermission('master_shikake', 'can_update')) {
+                    $actions .= '<button type="button" class="btn btn-soft-primary btn-sm btn-edit" data-id="' . $row->id . '" title="Edit"><i class="ti ti-pencil"></i></button>';
+                    $hasActions = true;
+                }
+
+                // Delete button (delete permission)
                 if ($currentUser && $currentUser->hasMenuPermission('master_shikake', 'can_delete')) {
-                    $actions .= '<button type="button" class="btn btn-soft-danger btn-sm btn-delete" data-id="' . $row->id . '" data-name="' . htmlspecialchars($row->barcode_kanban ?? '-', ENT_QUOTES) . '" data-barcode="' . htmlspecialchars($row->barcode_kanban ?? '-', ENT_QUOTES) . '" title="Delete"><i class="ti ti-trash"></i></button>';
+                    $actions .= '<button type="button" class="btn btn-soft-danger btn-sm btn-delete" data-id="' . $row->id . '" data-process="' . htmlspecialchars($row->process ?? '-', ENT_QUOTES) . '" data-identifier="' . htmlspecialchars($identifier, ENT_QUOTES) . '" data-conveyor="' . htmlspecialchars($row->conveyor ?? '-', ENT_QUOTES) . '" data-carline="' . htmlspecialchars($row->carline ?? '-', ENT_QUOTES) . '" title="Delete"><i class="ti ti-trash"></i></button>';
                     $hasActions = true;
                 }
 

@@ -2,15 +2,15 @@
 
 namespace App\Services;
 
-use App\Models\MasterFamily;
+use App\Models\MasterCarline;
 use Illuminate\Support\Facades\Auth;
 use Yajra\DataTables\Facades\DataTables;
 
-class MasterFamilyService
+class MasterCarlineService
 {
     public function getAll()
     {
-        return MasterFamily::with(['carline.area'])->select('master_family.*');
+        return MasterCarline::with('area')->select('master_carline.*');
     }
 
     public function getDatatable()
@@ -20,13 +20,7 @@ class MasterFamilyService
         return DataTables::of($data)
             ->addIndexColumn()
             ->addColumn('area_name', function ($row) {
-                return $row->carline && $row->carline->area ? $row->carline->area->area : '-';
-            })
-            ->addColumn('carline_code', function ($row) {
-                return $row->carline ? $row->carline->code : '-';
-            })
-            ->addColumn('carline_name', function ($row) {
-                return $row->carline ? $row->carline->name : '-';
+                return $row->area ? $row->area->area : '-';
             })
             ->addColumn('action', function ($row) {
                 /** @var \App\Models\User|null $currentUser */
@@ -34,12 +28,12 @@ class MasterFamilyService
                 $actions = '<div class="btn-group" role="group">';
                 $hasActions = false;
 
-                if ($currentUser && $currentUser->hasMenuPermission('master_family', 'can_update')) {
+                if ($currentUser && $currentUser->hasMenuPermission('master_carline', 'can_update')) {
                     $actions .= '<button type="button" class="btn btn-soft-primary btn-sm btn-edit" data-id="' . $row->id . '" title="Edit"><i class="ti ti-pencil"></i></button>';
                     $hasActions = true;
                 }
 
-                if ($currentUser && $currentUser->hasMenuPermission('master_family', 'can_delete')) {
+                if ($currentUser && $currentUser->hasMenuPermission('master_carline', 'can_delete')) {
                     $actions .= '<button type="button" class="btn btn-soft-danger btn-sm btn-delete" data-id="' . $row->id . '" title="Delete"><i class="ti ti-trash"></i></button>';
                     $hasActions = true;
                 }
@@ -54,26 +48,26 @@ class MasterFamilyService
     public function create(array $data)
     {
         $data['created_by'] = Auth::id();
-        return MasterFamily::create($data);
+        return MasterCarline::create($data);
     }
 
-    public function update(MasterFamily $masterFamily, array $data)
+    public function update(MasterCarline $masterCarline, array $data)
     {
         $data['updated_by'] = Auth::id();
-        $masterFamily->update($data);
-        return $masterFamily;
+        $masterCarline->update($data);
+        return $masterCarline;
     }
 
-    public function delete(MasterFamily $masterFamily)
+    public function delete(MasterCarline $masterCarline)
     {
-        $masterFamily->deleted_by = Auth::id();
-        $masterFamily->save();
-        $masterFamily->delete();
+        $masterCarline->deleted_by = Auth::id();
+        $masterCarline->save();
+        $masterCarline->delete();
         return true;
     }
 
     public function findById($id)
     {
-        return MasterFamily::with(['carline.area'])->findOrFail($id);
+        return MasterCarline::with('area')->findOrFail($id);
     }
 }

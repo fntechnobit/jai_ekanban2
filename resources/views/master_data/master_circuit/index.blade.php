@@ -9,11 +9,11 @@
 @section('content')
     <div class="container-fluid">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
                 <h5 class="card-title mb-0">Master Circuit (Cutting) Data List</h5>
-                <div class="card-tools float-end">
+                <div class="d-flex gap-2">
                     @if(auth()->user()->hasMenuPermission('master_circuit', 'can_create'))
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-import">
+                        <button type="button" class="btn btn-success btn-sm" id="btn-import">
                             <i class="fa-solid fa-upload"></i> Import/Upload Circuit
                         </button>
                     @endif
@@ -27,22 +27,27 @@
             <div class="card-body">
                 <!-- Filters -->
                 <div class="row mb-3">
-                    <div class="col-md-4">
-                        <label for="filter_area_id" class="form-label">Area * :</label>
-                        <select class="form-select select2" id="filter_area_id" style="width: 100%;">
+                    <div class="col-md-3">
+                        <select class="form-select select2" id="filter_area_id" data-placeholder="- All Area -" style="width: 100%;">
                             <option value="">- All Area -</option>
                             @foreach($areas as $area)
                                 <option value="{{ $area->id }}">{{ $area->area }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label for="filter_conveyor_id" class="form-label">Conveyor * :</label>
-                        <select class="form-select select2" id="filter_conveyor_id" style="width: 100%;">
+                    <div class="col-md-3">
+                        <select class="form-select select2" id="filter_conveyor_id" data-placeholder="- All Conveyor -" style="width: 100%;">
                             <option value="">- All Conveyor -</option>
                             @foreach($conveyors as $conveyor)
                                 <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
                             @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select select2" id="filter_type" data-placeholder="- All Type -" style="width: 100%;">
+                            <option value="">- All Type -</option>
+                            <option value="CUTTING">CUTTING</option>
+                            <option value="CUTTING_TWIST">CUTTING TWIST</option>
                         </select>
                     </div>
                 </div>
@@ -51,14 +56,16 @@
                     <thead>
                         <tr>
                             <th width="5%">No</th>
+                            <th width="10%">Type</th>
                             <th>Carline</th>
                             <th>Conveyor</th>
                             <th>CCT No</th>
+                            <th>CCT Code</th>
                             <th>Family</th>
                             <th>QTY</th>
                             <th>Machine</th>
                             <th>Sequence</th>
-                            <th width="12%">Action</th>
+                            <th width="15%">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -70,6 +77,7 @@
 
     @include('master_data.master_circuit.import_modal')
     @include('master_data.master_circuit.detail_modal')
+    @include('master_data.master_circuit.edit_modal')
     @include('master_data.master_circuit.remove_modal')
 @endsection
 
@@ -77,7 +85,7 @@
     <script>
         $(function () {
             // Initialize Select2 for filters
-            $('#filter_area_id, #filter_conveyor_id').select2({
+            $('#filter_area_id, #filter_conveyor_id, #filter_type').select2({
                 theme: 'bootstrap-5',
                 allowClear: true,
                 placeholder: function() {
@@ -94,13 +102,16 @@
                     data: function(d) {
                         d.area_id = $('#filter_area_id').val();
                         d.conveyor_id = $('#filter_conveyor_id').val();
+                        d.type = $('#filter_type').val();
                     }
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                    { data: 'type_badge', name: 'type', orderable: true, searchable: false },
                     { data: 'carline', name: 'carline' },
                     { data: 'conveyor_name', name: 'conveyor_name' },
                     { data: 'cct_no', name: 'cct_no' },
+                    { data: 'cct_code', name: 'cct_code' },
                     { data: 'family', name: 'family' },
                     { data: 'qty', name: 'qty' },
                     { data: 'machine', name: 'machine' },
@@ -113,7 +124,7 @@
             });
 
             // Filter handlers
-            $('#filter_area_id, #filter_conveyor_id').on('change', function() {
+            $('#filter_area_id, #filter_conveyor_id, #filter_type').on('change', function() {
                 table.ajax.reload();
             });
 
@@ -222,14 +233,18 @@
             // Delete button handler
             $(document).on('click', '.btn-delete', function() {
                 var id = $(this).data('id');
-                var name = $(this).data('name');
-                var barcode = $(this).data('barcode');
+                var type = $(this).data('type');
+                var cctNo = $(this).data('cct-no');
+                var conveyor = $(this).data('conveyor');
+                var carline = $(this).data('carline');
                 
                 Swal.fire({
                     title: 'Delete Circuit Data?',
                     html: `<div style="text-align: left;">
-                        <p><strong>Machine Sequence:</strong> ${name}</p>
-                        <p><strong>Barcode Kanban:</strong> ${barcode}</p>
+                        <p><strong>Type:</strong> ${type}</p>
+                        <p><strong>CCT No:</strong> ${cctNo}</p>
+                        <p><strong>Conveyor:</strong> ${conveyor}</p>
+                        <p><strong>Carline:</strong> ${carline}</p>
                         <p class="text-danger mt-3">This action cannot be undone!</p>
                     </div>`,
                     icon: 'warning',
@@ -258,87 +273,88 @@
                 });
             });
 
-            // Handle View button click
+            // === VIEW (Read-Only) handler ===
             $('#master-circuit-table').on('click', '.btn-view', function() {
                 const id = $(this).data('id');
-                
-                // Show modal
                 $('#detailCircuitModal').modal('show');
-                
-                // Fetch data via AJAX
+
                 $.ajax({
                     url: "{{ route('master-data.master-circuit.show', ':id') }}".replace(':id', id),
                     type: 'GET',
                     dataType: 'json',
                     success: function(response) {
-                        if (response.success) {
-                            const data = response.data;
-                            console.log('Circuit data:', data);
-                            
-                            // Populate form fields
-                            $('#circuit_id').val(data.id);
-                            $('#conveyor').val(data.conveyor ? data.conveyor.conveyor : '');
-                            $('#carline').val(data.carline);
-                            $('#cct_no').val(data.cct_no);
-                            $('#family').val(data.family);
-                            $('#qty').val(data.qty);
-                            $('#machine').val(data.machine);
-                            $('#sequence').val(data.sequence);
-                            $('#released_note').val(data.released_note);
-                            $('#cust_no').val(data.cust_no);
-                            $('#barcode_mesin').val(data.barcode_mesin);
-                            $('#address').val(data.address);
-                            $('#cct_code').val(data.cct_code);
-                            $('#kind').val(data.kind);
-                            $('#size').val(data.size);
-                            $('#col').val(data.col);
-                            $('#cl').val(data.cl);
-                            
-                            // Terminal 1 fields
-                            $('#terminal_1').val(data.terminal_1);
-                            $('#note_1').val(data.note_1);
-                            $('#gold_1').val(data.gold_1);
-                            $('#strip_1').val(data.strip_1);
-                            $('#acc_1').val(data.acc_1);
-                            $('#acc_1a').val(data.acc_1a);
-                            $('#tube_1').val(data.tube_1);
-                            $('#mark_1').val(data.mark_1);
-                            $('#remark_1').val(data.remark_1);
-                            
-                            // Terminal 2 fields
-                            $('#terminal_2').val(data.terminal_2);
-                            $('#note_2').val(data.note_2);
-                            $('#gold_2').val(data.gold_2);
-                            $('#strip_2').val(data.strip_2);
-                            $('#acc_2').val(data.acc_2);
-                            $('#acc_2a').val(data.acc_2a);
-                            $('#tube_2').val(data.tube_2);
-                            $('#mark_2').val(data.mark_2);
-                            $('#remark_2').val(data.remark_2);
-                            
-                            // T fields
-                            $('#ta').val(data.ta);
-                            $('#tb').val(data.tb);
-                            for(let i = 1; i <= 6; i++) {
-                                const fieldName = 't' + String(i).padStart(2, '0');
-                                $('#' + fieldName).val(data[fieldName]);
-                            }
-                            
-                            // Image preview
-                            if (data.image_path) {
-                                $('#imagePreview').attr('src', '{{ asset("") }}' + data.image_path);
-                                $('#imagePreviewContainer').show();
-                            } else {
-                                $('#imagePreviewContainer').hide();
-                            }
-                            
-                            // Assy list
-                            if (data.assemblies && data.assemblies.length > 0) {
-                                const assyText = data.assemblies.map(a => a.assy).join(', ');
-                                $('#assyList').html('<p class="mb-0 small">' + assyText + '</p>');
-                            } else {
-                                $('#assyList').html('<p class="text-muted mb-0 small">No assembly data</p>');
-                            }
+                        if (!response.success) return;
+                        const d = response.data;
+                        const v = (val) => val || '-';
+                        const typeBadge = (d.type === 'CUTTING_TWIST')
+                            ? '<span class="badge bg-warning text-dark">TWS</span>'
+                            : '<span class="badge bg-info text-white">CCT</span>';
+
+                        // Info Utama
+                        $('#v_type').html(typeBadge);
+                        $('#v_conveyor').text(d.conveyor ? d.conveyor.conveyor : '-');
+                        $('#v_carline').text(v(d.carline));
+                        $('#v_cct_no').text(v(d.cct_no));
+                        $('#v_cct_code').text(v(d.cct_code));
+                        $('#v_shikake_code').text(v(d.shikake_code));
+                        $('#v_family').text(v(d.family));
+                        $('#v_qty').text(v(d.qty));
+                        $('#v_machine').text(v(d.machine));
+                        $('#v_machine_twist').text(v(d.machine_twist));
+                        $('#v_memory_twist').text(v(d.memory_twist));
+                        $('#v_sequence').text(v(d.sequence));
+                        $('#v_sequence_2').text(v(d.sequence_2));
+                        $('#v_released_note').text(v(d.released_note));
+                        $('#v_cust_no').text(v(d.cust_no));
+                        $('#v_kind').text(v(d.kind));
+                        $('#v_size').text(v(d.size));
+                        $('#v_col').text(v(d.col));
+                        $('#v_cl').text(v(d.cl));
+                        $('#v_to_store').text(v(d.to_store));
+                        $('#v_address').text(v(d.address));
+                        $('#v_barcode_mesin').text(v(d.barcode_mesin));
+                        $('#v_barcode_navigasi').text(v(d.barcode_navigasi));
+                        $('#v_barcode_process').text(v(d.barcode_process));
+                        $('#v_barcode_shikake').text(v(d.barcode_shikake));
+
+                        // Terminal 1
+                        $('#v_terminal_1').text(v(d.terminal_1));
+                        $('#v_note_1').text(v(d.note_1));
+                        $('#v_gold_1').text(v(d.gold_1));
+                        $('#v_strip_1').text(v(d.strip_1));
+                        $('#v_acc_1').text(v(d.acc_1));
+                        $('#v_acc_1a').text(v(d.acc_1a));
+                        $('#v_tube_1').text(v(d.tube_1));
+                        $('#v_mark_1').text(v(d.mark_1));
+
+                        // Terminal 2
+                        $('#v_terminal_2').text(v(d.terminal_2));
+                        $('#v_note_2').text(v(d.note_2));
+                        $('#v_gold_2').text(v(d.gold_2));
+                        $('#v_strip_2').text(v(d.strip_2));
+                        $('#v_acc_2').text(v(d.acc_2));
+                        $('#v_acc_2a').text(v(d.acc_2a));
+                        $('#v_tube_2').text(v(d.tube_2));
+                        $('#v_mark_2').text(v(d.mark_2));
+
+                        // T fields
+                        $('#v_t01').text(v(d.t01));
+                        $('#v_t02').text(v(d.t02));
+                        $('#v_t03').text(v(d.t03));
+
+                        // Assy
+                        if (d.assemblies && d.assemblies.length > 0) {
+                            $('#v_assy_list').html(d.assemblies.map(a => '<span class="badge bg-light text-dark me-1 mb-1">' + a.assy + '</span>').join(''));
+                        } else {
+                            $('#v_assy_list').html('<span class="text-muted">-</span>');
+                        }
+
+                        // Drawing (only for CUTTING_TWIST)
+                        if (d.type === 'CUTTING_TWIST' && d.image_path) {
+                            $('#v_drawing_img').attr('src', '{{ asset("") }}' + d.image_path);
+                            $('#v_drawing_container').show();
+                        } else {
+                            $('#v_drawing_container').hide();
                         }
                     },
                     error: function(xhr) {
@@ -348,31 +364,108 @@
                 });
             });
 
-            // Handle image preview on file select
-            $('#imageInput').on('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        $('#imagePreview').attr('src', e.target.result);
-                        $('#imagePreviewContainer').show();
+            // === EDIT handler ===
+            function loadEditModal(id) {
+                $.ajax({
+                    url: "{{ route('master-data.master-circuit.show', ':id') }}".replace(':id', id),
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (!response.success) return;
+                        const d = response.data;
+
+                        $('#edit_circuit_id').val(d.id);
+                        $('#edit_conveyor').val(d.conveyor ? d.conveyor.conveyor : '');
+                        $('#edit_carline').val(d.carline);
+                        $('#edit_cct_no').val(d.cct_no);
+                        $('#edit_cct_code').val(d.cct_code);
+                        $('#edit_shikake_code').val(d.shikake_code);
+                        $('#edit_family').val(d.family);
+                        $('#edit_qty').val(d.qty);
+                        $('#edit_machine').val(d.machine);
+                        $('#edit_machine_twist').val(d.machine_twist);
+                        $('#edit_memory_twist').val(d.memory_twist);
+                        $('#edit_sequence').val(d.sequence);
+                        $('#edit_sequence_2').val(d.sequence_2);
+                        $('#edit_released_note').val(d.released_note);
+                        $('#edit_cust_no').val(d.cust_no);
+                        $('#edit_kind').val(d.kind);
+                        $('#edit_size').val(d.size);
+                        $('#edit_col').val(d.col);
+                        $('#edit_cl').val(d.cl);
+                        $('#edit_to_store').val(d.to_store);
+                        $('#edit_address').val(d.address);
+
+                        // Terminal 1
+                        $('#edit_terminal_1').val(d.terminal_1);
+                        $('#edit_note_1').val(d.note_1);
+                        $('#edit_gold_1').val(d.gold_1);
+                        $('#edit_strip_1').val(d.strip_1);
+                        $('#edit_acc_1').val(d.acc_1);
+                        $('#edit_acc_1a').val(d.acc_1a);
+                        $('#edit_tube_1').val(d.tube_1);
+                        $('#edit_mark_1').val(d.mark_1);
+
+                        // Terminal 2
+                        $('#edit_terminal_2').val(d.terminal_2);
+                        $('#edit_note_2').val(d.note_2);
+                        $('#edit_gold_2').val(d.gold_2);
+                        $('#edit_strip_2').val(d.strip_2);
+                        $('#edit_acc_2').val(d.acc_2);
+                        $('#edit_acc_2a').val(d.acc_2a);
+                        $('#edit_tube_2').val(d.tube_2);
+                        $('#edit_mark_2').val(d.mark_2);
+
+                        // Drawing section (only for CUTTING_TWIST)
+                        $('#edit_drawing_file').val('');
+                        if (d.type === 'CUTTING_TWIST') {
+                            $('#edit_drawing_section').show();
+                            if (d.image_path) {
+                                $('#edit_drawing_preview').attr('src', '{{ asset("") }}' + d.image_path);
+                                $('#edit_drawing_preview_container').show();
+                            } else {
+                                $('#edit_drawing_preview_container').hide();
+                            }
+                        } else {
+                            $('#edit_drawing_section').hide();
+                        }
+
+                        $('#editCircuitModal').modal('show');
+                    },
+                    error: function(xhr) {
+                        Swal.fire('Error!', xhr.responseJSON?.message || 'Failed to load data', 'error');
                     }
+                });
+            }
+
+            $('#master-circuit-table').on('click', '.btn-edit', function() {
+                loadEditModal($(this).data('id'));
+            });
+
+            // Preview new drawing in edit modal
+            $('#edit_drawing_file').on('change', function(e) {
+                var file = e.target.files[0];
+                if (file) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        $('#edit_drawing_preview').attr('src', e.target.result);
+                        $('#edit_drawing_preview_container').show();
+                    };
                     reader.readAsDataURL(file);
                 }
             });
 
-            // Handle form submission
-            $('#circuitDetailForm').on('submit', function(e) {
+            // Submit edit form
+            $('#editCircuitForm').on('submit', function(e) {
                 e.preventDefault();
-                
+
                 const formData = new FormData(this);
-                const id = $('#circuit_id').val();
+                const id = $('#edit_circuit_id').val();
                 formData.append('_method', 'PUT');
-                
-                // Disable form inputs during upload
-                $('#circuitDetailForm input, #circuitDetailForm textarea, #circuitDetailForm select').prop('disabled', true);
-                $('#detailCircuitModal .btn-primary').prop('disabled', true).html('<i class="fa-solid fa-spinner ti-spin"></i> Saving...');
-                
+
+                var submitBtn = $('#btn-submit-edit');
+                submitBtn.prop('disabled', true).html('<i class="ti ti-loader ti-spin me-1"></i> Saving...');
+
                 $.ajax({
                     url: "{{ route('master-data.master-circuit.update', ':id') }}".replace(':id', id),
                     type: 'POST',
@@ -381,7 +474,7 @@
                     contentType: false,
                     success: function(response) {
                         if (response.success) {
-                            $('#detailCircuitModal').modal('hide');
+                            $('#editCircuitModal').modal('hide');
                             table.ajax.reload();
                             Swal.fire('Success!', response.message, 'success');
                         }
@@ -390,9 +483,7 @@
                         Swal.fire('Error!', xhr.responseJSON?.message || 'Failed to update data', 'error');
                     },
                     complete: function() {
-                        // Re-enable form inputs
-                        $('#circuitDetailForm input, #circuitDetailForm textarea, #circuitDetailForm select').prop('disabled', false);
-                        $('#detailCircuitModal .btn-primary').prop('disabled', false).html('<i class="fa-solid fa-floppy-disk"></i> Save');
+                        submitBtn.prop('disabled', false).html('<i class="ti ti-device-floppy me-1"></i> Save');
                     }
                 });
             });
@@ -423,7 +514,7 @@
 
                 Swal.fire({
                     title: 'Are you sure?',
-                    html: `You are about to delete all Circuit data for:<br><strong>${conveyorName}</strong><br><br>This action cannot be undone!`,
+                    html: `<p>Semua data Circuit pada conveyor <strong>${conveyorName}</strong> akan dihapus permanen.</p><p class="text-danger mb-0">Tindakan ini tidak dapat dibatalkan!</p>`,
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#d33',

@@ -202,7 +202,7 @@
     <!-- BARCODE SECTION -->
     <table class="barcode-section">
         <tr>
-            <td class="barcode-header" style="width: 50%;">BARCODE KANBAN</td>
+            <td class="barcode-header" style="width: 50%;">QRCODE KANBAN</td>
             <td class="barcode-header" style="width: 50%;">SUMMARY</td>
         </tr>
         <tr>

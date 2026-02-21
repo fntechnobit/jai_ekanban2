@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Services\MasterFamilyService;
 use App\Http\Requests\MasterFamilyRequest;
 use App\Helpers\ResponseHelper;
+use App\Models\MasterArea;
+use App\Models\MasterCarline;
 use Illuminate\Http\Request;
 
 class MasterFamilyController extends Controller
@@ -24,7 +26,9 @@ class MasterFamilyController extends Controller
 
     public function index()
     {
-        return view('master_data.master_family.index');
+        $areas = MasterArea::orderBy('area')->get();
+        $carlines = MasterCarline::with('area')->orderBy('code')->get();
+        return view('master_data.master_family.index', compact('areas', 'carlines'));
     }
 
     public function datatable(Request $request)

@@ -211,6 +211,7 @@ class EkanbanCircuitService
                 // Kanban fields from assy_schedule_circuit
                 'assy_schedule_circuit.issue',
                 'assy_schedule_circuit.barcode_kanban',
+                'assy_schedule_circuit.qrcode_shikake',
                 'assy_schedule_circuit.release_date',
                 'assy_schedule_circuit.qty_listing',
                 'assy_schedule_circuit.qty_kanban',
@@ -247,6 +248,7 @@ class EkanbanCircuitService
                 DB::raw('MAX(assy_schedule_circuit.cutoff) as cutoff'),
                 // Aggregated fields for grouping
                 DB::raw('GROUP_CONCAT(assy_schedule_circuit.barcode_kanban ORDER BY assy_schedule_circuit.issue SEPARATOR ", ") as barcodes'),
+                DB::raw('GROUP_CONCAT(assy_schedule_circuit.qrcode_shikake ORDER BY assy_schedule_circuit.issue SEPARATOR ", ") as qrcodes_shikake'),
                 DB::raw('COUNT(*) as issue_count'),
                 // Print status - MIN means all must be printed for group to be "printed"
                 DB::raw('MIN(assy_schedule_circuit.is_printed) as is_printed'),

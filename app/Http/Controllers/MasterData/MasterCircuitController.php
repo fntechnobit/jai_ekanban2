@@ -20,7 +20,7 @@ class MasterCircuitController extends Controller
 
         $this->middleware('check.menu:master_circuit,can_read')->only(['index', 'datatable', 'show']);
         $this->middleware('check.menu:master_circuit,can_create')->only(['create', 'store', 'importForm', 'import']);
-        $this->middleware('check.menu:master_circuit,can_update')->only(['edit', 'update']);
+        $this->middleware('check.menu:master_circuit,can_update')->only(['edit', 'update', 'uploadDrawing']);
         $this->middleware('check.menu:master_circuit,can_delete')->only(['destroy', 'removeByConveyor']);
     }
 
@@ -36,7 +36,8 @@ class MasterCircuitController extends Controller
         if ($request->ajax()) {
             $areaId = $request->get('area_id');
             $conveyorId = $request->get('conveyor_id');
-            return $this->masterCircuitService->getDatatable($areaId, $conveyorId);
+            $type = $request->get('type');
+            return $this->masterCircuitService->getDatatable($areaId, $conveyorId, $type);
         }
     }
 
@@ -179,6 +180,41 @@ class MasterCircuitController extends Controller
         }
         
         return response()->download($filePath, 'Template_Cutting.xlsx');
+    }
+
+    public function uploadDrawing(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'drawing' => 'required|file|mimes:jpg,jpeg,png,webp|max:5120',
+            ]);
+
+            $circuit = $this->masterCircuitService->findById($id);
+
+            $drawing = $request->file('drawing');
+            $imageName = ImageHelper::resizeAndSave($drawing, 'uploads/circuit', 1200, 800);
+            $newImagePath = 'uploads/circuit/' . $imageName;
+
+            // Delete old image if exists
+            if ($circuit->image_path && file_exists(public_path($circuit->image_path))) {
+                unlink(public_path($circuit->image_path));
+            }
+
+            $this->masterCircuitService->update($circuit, ['image_path' => $newImagePath]);
+
+            return ResponseHelper::success(
+                ['image_path' => $newImagePath, 'image_url' => asset($newImagePath)],
+                'Drawing uploaded successfully'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = [];
+            foreach ($e->errors() as $field => $messages) {
+                $errors[$field] = $messages[0];
+            }
+            return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $errors], 422);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 422);
+        }
     }
 
     public function removeByConveyor(Request $request)

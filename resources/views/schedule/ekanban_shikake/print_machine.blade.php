@@ -126,7 +126,7 @@
                                     <th>Family</th>
                                     <th>Qty</th>
                                     <th>Issue</th>
-                                    <th>Barcode</th>
+                                    <th>QRCode</th>
                                     <th>Date</th>
                                     <th>Shift</th>
                                     <th>CO</th>
@@ -427,26 +427,24 @@
             }
 
             try {
-                // Fetch HTML payload
-                const response = await fetch("{{ route('schedule.ekanban-shikake.print') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({ ids: ids })
-                });
+                // Step 1: Fetch HTML payload via GET with print mode (no side effects)
+                const previewResponse = await fetch("{{ route('schedule.ekanban-shikake.print-preview') }}?ids=" + encodeURIComponent(ids) + "&mode=print");
                 
-                const data = await response.json();
-                
-                if (!data.ok || !data.html) {
-                    Swal.fire('Error!', 'Failed to get print data', 'error');
+                if (!previewResponse.ok) {
+                    Swal.fire('Error!', 'Failed to get print data (HTTP ' + previewResponse.status + ')', 'error');
+                    return;
+                }
+
+                const html = await previewResponse.text();
+
+                if (!html || html.trim() === '') {
+                    Swal.fire('Error!', 'No print data returned', 'error');
                     return;
                 }
 
                 // Parse HTML and install styles
                 const parser = new DOMParser();
-                const doc = parser.parseFromString(data.html, 'text/html');
+                const doc = parser.parseFromString(html, 'text/html');
                 
                 doc.querySelectorAll('style').forEach(styleEl => {
                     const css = (styleEl.textContent || '').trim();
@@ -480,20 +478,58 @@
                 if (!holder) {
                     holder = document.createElement('div');
                     holder.id = 'print_area_ajax_holder';
+                    holder.style.position = 'fixed';
+                    holder.style.left = '-9999px';
+                    holder.style.top = '0';
                     holder.style.visibility = 'hidden';
-                    holder.style.height = '0';
-                    holder.style.overflow = 'hidden';
+                    holder.style.overflow = 'visible';
                     document.body.appendChild(holder);
                 }
                 holder.innerHTML = '';
                 holder.appendChild(stack);
 
-                await printStackNow('#print_stack_ajax', selectedPrinter);
-                
-                Swal.fire('Success!', 'Print completed successfully!', 'success');
-                if (typeof table !== 'undefined') {
-                    table.ajax.reload();
+                // Wait for all images inside tickets to load before capturing
+                const imgs = stack.querySelectorAll('img');
+                if (imgs.length > 0) {
+                    await Promise.all(Array.from(imgs).map(img => {
+                        if (img.complete) return Promise.resolve();
+                        return new Promise((resolve) => {
+                            img.onload = resolve;
+                            img.onerror = resolve;
+                        });
+                    }));
                 }
+
+                // Allow browser to complete layout before capture
+                await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+                // Step 2: Print via QZ Tray
+                await printStackNow('#print_stack_ajax', selectedPrinter);
+
+                // Step 3: Mark as printed ONLY after successful QZ print
+                try {
+                    const markResponse = await fetch("{{ route('schedule.ekanban-shikake.print') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ ids: ids, mark_only: true })
+                    });
+                    const markData = await markResponse.json();
+                    if (!markData.ok) {
+                        console.warn('Failed to update print status:', markData);
+                    }
+                } catch (markErr) {
+                    console.error('Failed to update print status:', markErr);
+                }
+
+                // Step 4: Reload table to show updated status
+                if (typeof table !== 'undefined') {
+                    table.ajax.reload(null, false);
+                }
+
+                Swal.fire('Success!', 'Print completed successfully!', 'success');
 
             } catch (err) {
                 console.error('Print error:', err);

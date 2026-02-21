@@ -34,6 +34,7 @@ class MasterCircuit extends Model
         'to_store',
         'address',
         'cct_code',
+        'shikake_code',
         'kind',
         'size',
         'col',

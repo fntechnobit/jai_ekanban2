@@ -227,7 +227,7 @@
     <!-- BARCODE SECTION -->
     <table class="barcode-section" style="margin-top: 3px;">
         <tr>
-            <td class="barcode-header" style="width: 35%;">BARCODE KANBAN</td>
+            <td class="barcode-header" style="width: 35%;">QRCODE KANBAN</td>
             <td style="text-align: left; width: 30%;">{{ $shikake->family ?? '' }}</td>
             <td class="barcode-header" style="width: 35%;">BARCODE NAVIGASI</td>
         </tr>

@@ -33,7 +33,7 @@ return new class extends Migration {
         // Create Master Area menu under Master Data
         DB::table('menus')->insert([
             'code' => 'master_area',
-            'name' => 'Preassy Area Data',
+            'name' => 'Area Data',
             'url' => 'system/master-area',
             'icon' => 'fas fa-map-marked-alt',
             'parent_id' => $masterDataId,

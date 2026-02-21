@@ -22,6 +22,7 @@ class AssyScheduleCircuit extends Model
         'issue',
         'nomor_urut',
         'barcode_kanban',
+        'qrcode_shikake',
         'release_date',
         'qty_listing',
         'qty_kanban',

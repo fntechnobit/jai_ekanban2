@@ -14,7 +14,7 @@ class MasterCircuitService
         return MasterCircuit::with(['conveyor'])->select('master_circuit.*');
     }
 
-    public function getDatatable($areaId = null, $conveyorId = null)
+    public function getDatatable($areaId = null, $conveyorId = null, $type = null)
     {
         $query = MasterCircuit::with(['conveyor'])
             ->select('master_circuit.*');
@@ -31,8 +31,20 @@ class MasterCircuitService
             $query->where('conveyor_id', $conveyorId);
         }
 
+        // Filter by type
+        if ($type) {
+            $query->where('type', $type);
+        }
+
         return DataTables::of($query)
             ->addIndexColumn()
+            ->addColumn('type_badge', function ($row) {
+                $type = $row->type ?? 'CUTTING';
+                if ($type === 'CUTTING_TWIST') {
+                    return '<span class="badge bg-warning text-dark fw-semibold">TWS</span>';
+                }
+                return '<span class="badge bg-info text-white fw-semibold">CCT</span>';
+            })
             ->addColumn('carline', function ($row) {
                 return $row->carline ?? '-';
             })
@@ -48,22 +60,29 @@ class MasterCircuitService
                 $actions = '<div class="btn-group" role="group">';
                 $hasActions = false;
 
-                // View button
-                if ($currentUser && $currentUser->hasMenuPermission('master_circuit', 'can_update')) {
+                // View button (read-only)
+                if ($currentUser && $currentUser->hasMenuPermission('master_circuit', 'can_read')) {
                     $actions .= '<button type="button" class="btn btn-soft-info btn-sm btn-view" data-id="' . $row->id . '" title="View"><i class="ti ti-eye"></i></button>';
+                    $hasActions = true;
+                }
+
+                // Edit button
+                if ($currentUser && $currentUser->hasMenuPermission('master_circuit', 'can_update')) {
+                    $actions .= '<button type="button" class="btn btn-soft-primary btn-sm btn-edit" data-id="' . $row->id . '" title="Edit"><i class="ti ti-pencil"></i></button>';
                     $hasActions = true;
                 }
 
                 // Delete button
                 if ($currentUser && $currentUser->hasMenuPermission('master_circuit', 'can_delete')) {
-                    $actions .= '<button type="button" class="btn btn-soft-danger btn-sm btn-delete" data-id="' . $row->id . '" data-name="' . htmlspecialchars($row->machine_sequence ?? '-', ENT_QUOTES) . '" data-barcode="' . htmlspecialchars($row->barcode_kanban ?? '-', ENT_QUOTES) . '" title="Delete"><i class="ti ti-trash"></i></button>';
+                    $conveyorName = $row->getRelation('conveyor') ? $row->getRelation('conveyor')->conveyor : '-';
+                    $actions .= '<button type="button" class="btn btn-soft-danger btn-sm btn-delete" data-id="' . $row->id . '" data-type="' . htmlspecialchars($row->type ?? 'CUTTING', ENT_QUOTES) . '" data-cct-no="' . htmlspecialchars($row->cct_no ?? '-', ENT_QUOTES) . '" data-conveyor="' . htmlspecialchars($conveyorName, ENT_QUOTES) . '" data-carline="' . htmlspecialchars($row->carline ?? '-', ENT_QUOTES) . '" title="Delete"><i class="ti ti-trash"></i></button>';
                     $hasActions = true;
                 }
 
                 $actions .= '</div>';
                 return $hasActions ? $actions : '-';
             })
-            ->rawColumns(['action'])
+            ->rawColumns(['type_badge', 'action'])
             ->make(true);
     }
 

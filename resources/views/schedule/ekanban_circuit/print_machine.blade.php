@@ -123,7 +123,7 @@
                                     <th>Family</th>
                                     <th>Qty</th>
                                     <th>Issue</th>
-                                    <th>Barcode</th>
+                                    <th>QRCode</th>
                                     <th>Date</th>
                                     <th>Shift</th>
                                     <th>CO</th>
@@ -139,6 +139,23 @@
             </div>
         </div>
     </div>
+
+    <!-- Preview Modal Styles -->
+    <style>
+        #previewContent #print_stack_ajax {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #previewContent .ticket {
+            transform: scale(0.7);
+            transform-origin: top center;
+            margin-bottom: -172px; /* compensate 576px * 0.3 wasted space from scale */
+        }
+        #previewContent .ticket:last-child {
+            margin-bottom: 0;
+        }
+    </style>
 
     <!-- Preview Modal -->
     <div class="modal fade" id="previewModal" tabindex="-1"  aria-labelledby="previewModalLabel" aria-hidden="true">
@@ -432,26 +449,24 @@
             }
 
             try {
-                // Fetch HTML payload
-                const response = await fetch("{{ route('schedule.ekanban-circuit.print') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({ ids: ids })
-                });
+                // Step 1: Fetch HTML payload via GET (no side effects)
+                const previewResponse = await fetch("{{ route('schedule.ekanban-circuit.print-preview') }}?ids=" + encodeURIComponent(ids));
                 
-                const data = await response.json();
-                
-                if (!data.ok || !data.html) {
-                    Swal.fire('Error!', 'Failed to get print data', 'error');
+                if (!previewResponse.ok) {
+                    Swal.fire('Error!', 'Failed to get print data (HTTP ' + previewResponse.status + ')', 'error');
+                    return;
+                }
+
+                const html = await previewResponse.text();
+
+                if (!html || html.trim() === '') {
+                    Swal.fire('Error!', 'No print data returned', 'error');
                     return;
                 }
 
                 // Parse HTML and install styles
                 const parser = new DOMParser();
-                const doc = parser.parseFromString(data.html, 'text/html');
+                const doc = parser.parseFromString(html, 'text/html');
                 
                 doc.querySelectorAll('style').forEach(styleEl => {
                     const css = (styleEl.textContent || '').trim();
@@ -511,12 +526,33 @@
                 // Allow browser to complete layout before capture
                 await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
+                // Step 2: Print via QZ Tray
                 await printStackNow('#print_stack_ajax', selectedPrinter);
-                
-                Swal.fire('Success!', 'Print completed successfully!', 'success');
-                if (typeof table !== 'undefined') {
-                    table.ajax.reload();
+
+                // Step 3: Mark as printed ONLY after successful QZ print
+                try {
+                    const markResponse = await fetch("{{ route('schedule.ekanban-circuit.print') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ ids: ids, mark_only: true })
+                    });
+                    const markData = await markResponse.json();
+                    if (!markData.ok) {
+                        console.warn('Failed to update print status:', markData);
+                    }
+                } catch (markErr) {
+                    console.error('Failed to update print status:', markErr);
                 }
+
+                // Step 4: Reload table to show updated status
+                if (typeof table !== 'undefined') {
+                    table.ajax.reload(null, false);
+                }
+
+                Swal.fire('Success!', 'Print completed successfully!', 'success');
 
             } catch (err) {
                 console.error('Print error:', err);

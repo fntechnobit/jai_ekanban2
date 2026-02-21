@@ -28,12 +28,15 @@
     justify-content: center;
     background: white;
     height: 100%;
+    border: 2px solid #000;
+    box-sizing: border-box;
 }
 
 .twist-print-wrapper .twist-image-section img {
     height: 100%;
     width: auto;
     object-fit: contain;
+    display: block;
 }
 
 .ticket-twist-print {
@@ -247,7 +250,7 @@
 <div class="ticket twist-print-wrapper" data-orientation="landscape">
     @if(!empty($circuit->image_path))
     <div class="twist-image-section">
-        <img src="{{ asset($circuit->image_path) }}" alt="Circuit Image">
+        <img src="{{ asset($circuit->image_path) }}" alt="Circuit Drawing">
     </div>
     @endif
 
@@ -379,7 +382,7 @@
             <!-- Bottom Section - Row 1 -->
             <tr>
                 <td colspan="3" rowspan="4" class="twist-qrcode-cell">
-                    <div class="twist-qr-label">BARCODE KANBAN</div>
+                    <div class="twist-qr-label">QRCODE KANBAN</div>
                     @if(isset($circuit->qr_code_path))
                         <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="twist-qr-img">
                         <div class="twist-qr-text">{{ $circuit->barcode_kanban ?? '' }}</div>
@@ -391,7 +394,10 @@
                 <td colspan="3" class="twist-value-cell text-left">{{ $circuit->conveyor ?? '-' }}</td>
                 <td colspan="2" rowspan="4" class="twist-qrcode-cell">
                     <div class="twist-qr-label">QRCODE SHIKAKE</div>
-                    @if(isset($circuit->qr_shikake_path))
+                    @if(isset($circuit->qr_qrcode_shikake_path))
+                        <img src="{{ $circuit->qr_qrcode_shikake_path }}" alt="QR Shikake" class="twist-qr-img">
+                        <div class="twist-qr-text">{{ $circuit->qrcode_shikake ?? '' }}</div>
+                    @elseif(isset($circuit->qr_shikake_path))
                         <img src="{{ $circuit->qr_shikake_path }}" alt="QR Shikake" class="twist-qr-img">
                         <div class="twist-qr-text">{{ $circuit->barcode_shikake ?? '' }}</div>
                     @elseif(!empty($circuit->barcode_shikake))

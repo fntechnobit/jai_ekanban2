@@ -279,10 +279,10 @@
                     <td colspan="2" class="value-cell">{{ $shikake->machine ?? '' }}</td>
                 </tr>
                 
-                <!-- Row 9-13: BARCODE KANBAN Section -->
+                <!-- Row 9-13: QRCODE KANBAN Section -->
                 <tr>
                     <td colspan="2" rowspan="5" class="qrcode-cell">
-                        <div class="qr-label">BARCODE KANBAN</div>
+                        <div class="qr-label">QRCODE KANBAN</div>
                         @if(isset($shikake->qr_code_path))
                             <img src="{{ $shikake->qr_code_path }}" alt="QR Code" class="qr-img">
                             <div style="font-size: 10px; margin-top: 1px; font-weight: bold;">{{ $shikake->barcode_kanban ?? '' }}</div>

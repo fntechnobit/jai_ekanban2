@@ -24,6 +24,9 @@
                     <thead>
                         <tr>
                             <th width="5%">No</th>
+                            <th>Area</th>
+                            <th>Carline Code</th>
+                            <th>Carline Name</th>
                             <th>Family</th>
                             <th width="15%">Action</th>
                         </tr>
@@ -48,6 +51,9 @@
                 ajax: "{{ route('master-data.master-family.datatable') }}",
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+                    { data: 'area_name', name: 'carline.area.area' },
+                    { data: 'carline_code', name: 'carline.code' },
+                    { data: 'carline_name', name: 'carline.name' },
                     { data: 'family', name: 'family' },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
                 ]
@@ -57,6 +63,8 @@
             $('#btn-add').click(function () {
                 $('#masterFamilyForm')[0].reset();
                 $('#family_id').val('');
+                $('#area_id').val('').trigger('change');
+                $('#carline_id').val('').trigger('change');
                 $('#masterFamilyModalLabel').text('Add Family Data');
                 $('.error-text').text('');
                 $('#masterFamilyModal').modal('show');
@@ -73,6 +81,15 @@
 
                         $('#family_id').val(family.id);
                         $('#family').val(family.family);
+                        
+                        // Set area and trigger carline loading
+                        if (family.carline) {
+                            $('#area_id').val(family.carline.area_id).trigger('change');
+                            // Set carline after brief delay to allow options to load
+                            setTimeout(function() {
+                                $('#carline_id').val(family.carline_id).trigger('change');
+                            }, 100);
+                        }
 
                         $('#masterFamilyModalLabel').text('Edit Family Data');
                         $('.error-text').text('');
@@ -150,6 +167,25 @@
                         });
                     }
                 });
+            });
+
+            // Area change handler - load carlines
+            $('#area_id').on('change', function() {
+                var areaId = $(this).val();
+                var $carlineSelect = $('#carline_id');
+                
+                $carlineSelect.html('<option value="">- Select Carline -</option>');
+                
+                if (areaId) {
+                    var carlines = @json($carlines);
+                    var filteredCarlines = carlines.filter(function(carline) {
+                        return carline.area_id == areaId;
+                    });
+                    
+                    filteredCarlines.forEach(function(carline) {
+                        $carlineSelect.append(new Option(carline.code + ' - ' + carline.name, carline.id));
+                    });
+                }
             });
         });
     </script>

@@ -152,7 +152,10 @@ class KanbanGeneratorService
                     'master_circuit_id' => $circuitData['master_circuit_id'],
                     'issue' => $kanban['issue'],
                     'nomor_urut' => $kanban['nomor_urut'],
-                    'barcode_kanban' => $this->generateBarcode($conveyorCode, $circuitData['cct_code'], $kanban['nomor_urut']),
+                    'barcode_kanban' => $this->generateBarcode($circuitData['carline'], $circuitData['cct_code'], $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut']),
+                    'qrcode_shikake' => !empty($circuitData['shikake_code'])
+                        ? $this->generateBarcode($circuitData['carline'], $circuitData['shikake_code'], $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut'])
+                        : null,
                     'release_date' => $date,
                     'qty_listing' => $kanban['qty_listing'],
                     'qty_kanban' => $kanban['qty_kanban'],
@@ -227,7 +230,7 @@ class KanbanGeneratorService
                     'master_shikake_id' => $shikakeData['master_shikake_id'],
                     'issue' => $kanban['issue'],
                     'nomor_urut' => $kanban['nomor_urut'],
-                    'barcode_kanban' => $this->generateBarcode($conveyorCode, $shikakeData['code'], $kanban['nomor_urut']),
+                    'barcode_kanban' => $this->generateBarcode($shikakeData['carline'], $shikakeData['code'], $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut']),
                     'release_date' => $date,
                     'qty_listing' => $kanban['qty_listing'],
                     'qty_kanban' => $kanban['qty_kanban'],
@@ -310,7 +313,8 @@ class KanbanGeneratorService
             // Open kanbans until sisa >= kebutuhan
             while ($sisa < $kebutuhan) {
                 $sisa += $qtyKanban;
-                $nomorUrut++;
+                // Rollover: after 9999 kembali ke 0001 (scoped per conveyor + circuit)
+                $nomorUrut = ($nomorUrut >= 9999) ? 1 : $nomorUrut + 1;
                 $issueInShift++;
 
                 $kanbanList[] = [
@@ -367,8 +371,10 @@ class KanbanGeneratorService
             if (!isset($circuitGroups[$key])) {
                 $circuitGroups[$key] = [
                     'master_circuit_id' => $circuit->id,
+                    'carline' => $circuit->carline ?? '',
                     'cct_no' => $circuit->cct_no,
                     'cct_code' => $circuit->cct_code,
+                    'shikake_code' => $circuit->shikake_code,
                     'qty_kanban' => $circuit->qty ?? 1, // Fallback to 1 if not set
                     'released_note' => $circuit->released_note ?? null,
                     'assy_codes' => [],
@@ -420,6 +426,7 @@ class KanbanGeneratorService
                 
                 $shikakeGroups[$key] = [
                     'master_shikake_id' => $shikake->id,
+                    'carline' => $shikake->carline ?? '',
                     'code' => $shikakeCode,
                     'process' => $shikake->process,
                     'qty_kanban' => $shikake->qty ?? 1, // Fallback to 1 if not set
@@ -485,16 +492,23 @@ class KanbanGeneratorService
     }
 
     /**
-     * Generate barcode in format: CONVEYOR-CODE-NOMORURUT
+     * Generate barcode kanban.
+     * Format: {carline}{code}{issue_3d}{qty}{nomor_urut_4d}
+     * Contoh: N + DC84 + 001 + 40 + 5833 = NDC84001405833
      * 
-     * @param string $conveyor
-     * @param string $code
-     * @param int $nomorUrut
+     * @param string $carline  - Carline code (misal: N)
+     * @param string $code     - CCT code atau shikake code (misal: DC84)
+     * @param string $issue    - Issue format XXX/YYY, diambil bagian XXX (misal: 001/005 → 001)
+     * @param int    $qty      - Qty per kanban (misal: 40)
+     * @param int    $nomorUrut - Nomor urut 4 digit (misal: 5833)
      * @return string
      */
-    private function generateBarcode(string $conveyor, string $code, int $nomorUrut): string
+    private function generateBarcode(string $carline, string $code, string $issue, int $qty, int $nomorUrut): string
     {
-        return sprintf('%s-%s-%04d', $conveyor, $code, $nomorUrut);
+        // Ambil bagian XXX dari format XXX/YYY
+        $issueNumber = explode('/', $issue)[0] ?? '001';
+
+        return sprintf('%s%s%s%d%04d', $carline, $code, $issueNumber, $qty, $nomorUrut);
     }
 
     /**
