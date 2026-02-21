@@ -93,9 +93,8 @@ class AssySchedulerService
                         })
                         ->where('assy_schedule.is_lock', '!=', 0);
                 })
-                ->orderBy('id', 'asc')
+                ->orderBy('id_listing', 'asc')
                 ->orderBy('listing_date_time', 'asc')
-                ->orderBy('seq', 'asc')
                 ->orderBy('assycode', 'asc');
 
             if ($conveyorId) {
@@ -379,7 +378,7 @@ class AssySchedulerService
                 ->whereDate('schedule', $date)
                 ->with('listingStage')
                 ->orderBy('shift')
-                ->orderBy('seq')
+                ->orderBy('listing_id')
                 ->get();
 
             // Group scheduled items by shift
@@ -573,7 +572,7 @@ class AssySchedulerService
                 ->where('qty', '>', 0)
                 ->orderBy('schedule')
                 ->orderBy('shift')
-                ->orderBy('seq');
+                ->orderBy('listing_id');
 
             // Get paginated results
             $totalCount = $query->count();

@@ -23,9 +23,10 @@ class ListingSyncService
             $startDate = Carbon::parse($startDate)->startOfDay();
             $endDate = Carbon::parse($endDate)->endOfDay();
 
-            // Fetch data from mysql_listing
+            // Fetch data from mysql_listing ordered by id_listing ASC
+            // agar listing_stage.id auto-increment mencerminkan urutan listing asli dari source
             $listings = Listing::whereBetween('time', [$startDate, $endDate])
-                ->orderBy('time', 'desc')
+                ->orderBy('id_listing', 'asc')
                 ->get();
 
             $syncedCount = 0;

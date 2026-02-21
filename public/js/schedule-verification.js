@@ -500,11 +500,11 @@ $(function () {
                         }
                     });
                     
-                    // Sort items: shift -> cutoff -> assy name
+                    // Sort items: shift -> cutoff -> listing_id (urutan dari listing sumber)
                     allItems.sort(function(a, b) {
                         if (a.shift !== b.shift) return a.shift - b.shift;
                         if (a.cutoff !== b.cutoff) return a.cutoff - b.cutoff;
-                        return (a.item.assy || '').localeCompare(b.item.assy || '');
+                        return (parseInt(a.item.listing_id) || 0) - (parseInt(b.item.listing_id) || 0);
                     });
                     
                     // Build HTML from sorted items

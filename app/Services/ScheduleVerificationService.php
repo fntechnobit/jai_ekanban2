@@ -78,7 +78,7 @@ class ScheduleVerificationService
             ->whereDate('schedule', $date)
             ->where('shift', $shift)
             ->orderBy('cutoff', 'asc')
-            ->orderBy('seq', 'asc')
+            ->orderBy('listing_id', 'asc')
             ->get();
 
         if ($schedules->isEmpty()) {
@@ -189,11 +189,11 @@ class ScheduleVerificationService
             'bindings' => $query->getBindings()
         ]);
         
-        // SORT ORDER: shift (ASC) -> cutoff (ASC) -> assy (ASC)
+        // SORT ORDER: shift (ASC) -> cutoff (ASC) -> listing_id (ASC = urutan dari listing sumber)
         $schedules = $query->select('id', 'assy', 'qty', 'cutoff', 'shift', 'listing_id', 'assycode', 'seq', 'plt', 'mode', 'snp', 'snpa', 'verified_at', 'is_lock')
             ->orderBy('shift', 'asc')
             ->orderBy('cutoff', 'asc')
-            ->orderBy('assy', 'asc')
+            ->orderBy('listing_id', 'asc')
             ->get();
 
         \Log::info("Query executed", [
@@ -230,7 +230,7 @@ class ScheduleVerificationService
                 'cutoff' => $cutoff,
                 'items' => $items->sortBy([
                     ['shift', 'asc'],
-                    ['assy', 'asc']
+                    ['listing_id', 'asc']
                 ])->map(function($item) {
                     return [
                         'id' => $item->id,

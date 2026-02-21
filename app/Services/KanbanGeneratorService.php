@@ -40,7 +40,7 @@ class KanbanGeneratorService
             ->whereDate('schedule', $date)
             ->where('shift', $shift)
             ->orderBy('cutoff')
-            ->orderBy('seq')
+            ->orderBy('listing_id')
             ->get();
 
         if ($schedules->isEmpty()) {
