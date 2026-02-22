@@ -23,6 +23,18 @@ class ListingSyncService
             $startDate = Carbon::parse($startDate)->startOfDay();
             $endDate = Carbon::parse($endDate)->endOfDay();
 
+            // Explicit connection test — throw immediately if mysql_listing is unreachable
+            try {
+                DB::connection('mysql_listing')->getPdo();
+            } catch (\Exception $e) {
+                Log::error("mysql_listing connection failed", ['error' => $e->getMessage()]);
+                return [
+                    'success' => false,
+                    'message' => 'Tidak dapat terhubung ke database listing (PPC): ' . $e->getMessage(),
+                    'errors'  => [$e->getMessage()],
+                ];
+            }
+
             // Fetch data from mysql_listing ordered by id_listing ASC
             // agar listing_stage.id auto-increment mencerminkan urutan listing asli dari source
             $listings = Listing::whereBetween('time', [$startDate, $endDate])

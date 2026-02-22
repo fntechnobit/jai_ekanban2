@@ -68,7 +68,7 @@ return [
             'url' => env('DB_LISTING_URL'),
             'host' => env('DB_LISTING_HOST', '127.0.0.1'),
             'port' => env('DB_LISTING_PORT', '3306'),
-            'database' => env('DB_LISTING_DATABASE', 'jai_listing'),
+            'database' => env('DB_LISTING_DATABASE', 'sirep'),
             'username' => env('DB_LISTING_USERNAME', 'root'),
             'password' => env('DB_LISTING_PASSWORD', ''),
             'unix_socket' => env('DB_LISTING_SOCKET', ''),

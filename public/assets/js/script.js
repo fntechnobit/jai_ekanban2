@@ -316,13 +316,3 @@ closeCollaps.forEach(function (element) {
     if (ariaexpand) ariaexpand.setAttribute('aria-expanded', 'true');
   });
 });
-
-// >>-- 12 change title --<<
-const title = document.title;
-window.addEventListener('focus', function() {
-  document.title = title;
-}.bind(window));
-
-window.addEventListener('blur', function() {
-  document.title = "👋🏻 Come Back...";
-}.bind(window));

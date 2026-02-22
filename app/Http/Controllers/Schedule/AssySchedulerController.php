@@ -169,22 +169,33 @@ class AssySchedulerController extends Controller
 
             if ($result['success']) {
                 return response()->json([
-                    'success' => true,
-                    'message' => $result['message'],
-                    'data' => $result
+                    'success'     => true,
+                    'message'     => $result['message'],
+                    'step_failed' => null,
+                    'data'        => [
+                        'generated'   => $result['generated'],
+                        'sync_detail' => $result['sync_detail'] ?? null,
+                    ],
                 ]);
             } else {
                 return response()->json([
-                    'success' => false,
-                    'message' => $result['message']
+                    'success'     => false,
+                    'step_failed' => $result['step_failed'] ?? 'unknown',
+                    'message'     => $result['message'],
+                    'data'        => [
+                        'generated'   => 0,
+                        'sync_detail' => $result['sync_detail'] ?? null,
+                    ],
                 ], 400);
             }
         } catch (\Exception $e) {
             Log::error("Schedule generation error", ['error' => $e->getMessage()]);
-            
+
             return response()->json([
-                'success' => false,
-                'message' => 'Failed to generate schedules: ' . $e->getMessage()
+                'success'     => false,
+                'step_failed' => 'unknown',
+                'message'     => 'Terjadi kesalahan: ' . $e->getMessage(),
+                'data'        => ['generated' => 0, 'sync_detail' => null],
             ], 500);
         }
     }

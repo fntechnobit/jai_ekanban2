@@ -122,9 +122,28 @@
                 table.ajax.reload();
             });
 
-            // Generate button
+            // Generate button → open modal
             $('#btn-generate').click(function() {
+                resetGenerateModal();
                 $('#generateModal').modal('show');
+            });
+
+            // btn-modal-close & btn-cancel-generate: only closeable when not progressing
+            $('#btn-modal-close, #btn-cancel-generate').on('click', function() {
+                $('#generateModal').modal('hide');
+            });
+
+            // After generate done → close & reload
+            $('#btn-close-after-generate').on('click', function() {
+                $('#generateModal').modal('hide');
+                table.ajax.reload();
+            });
+
+            // Back to form
+            $('#btn-back-to-form').on('click', function() {
+                $('#generate-progress-panel').hide();
+                $('#generate-form-panel').show();
+                $('#btn-modal-close').show();
             });
 
             // Initialize Select2 in modal
@@ -137,7 +156,7 @@
 
             // Set default date range for generate modal
             var genStartDate = moment();
-            var genEndDate = moment().add(3, 'days');
+            var genEndDate = moment().add(10, 'days');
 
             $('#generate_dates').daterangepicker({
                 startDate: genStartDate,
@@ -151,37 +170,141 @@
             $('#generateForm').submit(function(e) {
                 e.preventDefault();
 
-                var dates = $('#generate_dates').data('daterangepicker');
-                var submitBtn = $('#btn-submit-generate');
-                
-                submitBtn.prop('disabled', true).html('<i class="fa-solid fa-spinner ti-spin"></i> Generating...');
+                var dates     = $('#generate_dates').data('daterangepicker');
+                var startDate = dates.startDate.format('YYYY-MM-DD');
+                var endDate   = dates.endDate.format('YYYY-MM-DD');
+                var conveyorId = $('#generate_conveyor_id').val();
+
+                // Switch to progress panel
+                var rangeLabel = dates.startDate.format('DD-MM-YYYY') + ' s/d ' + dates.endDate.format('DD-MM-YYYY');
+                $('#progress-date-range').text('Rentang tanggal: ' + rangeLabel);
+                $('#generate-form-panel').hide();
+                $('#generate-progress-panel').show();
+                $('#btn-modal-close').hide();
+
+                // Reset steps ke loading state
+                resetProgressSteps();
 
                 $.ajax({
                     url: "{{ route('schedule.assy-scheduler.generate') }}",
                     type: 'POST',
                     data: {
                         _token: '{{ csrf_token() }}',
-                        start_date: dates.startDate.format('YYYY-MM-DD'),
-                        end_date: dates.endDate.format('YYYY-MM-DD'),
-                        conveyor_id: $('#generate_conveyor_id').val()
+                        start_date: startDate,
+                        end_date: endDate,
+                        conveyor_id: conveyorId
                     },
                     success: function(response) {
-                        $('#generateModal').modal('hide');
-                        table.ajax.reload();
-                        Swal.fire('Success!', response.message, 'success');
+                        renderProgressResult(response, false);
                     },
                     error: function(xhr) {
-                        var message = 'Failed to generate schedules';
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            message = xhr.responseJSON.message;
-                        }
-                        Swal.fire('Error!', message, 'error');
-                    },
-                    complete: function() {
-                        submitBtn.prop('disabled', false).html('<i class="fa-solid fa-gear"></i> Generate');
+                        var res = (xhr.responseJSON) ? xhr.responseJSON : {
+                            success: false,
+                            step_failed: 'unknown',
+                            message: 'Terjadi kesalahan saat menghubungi server.',
+                            data: null
+                        };
+                        renderProgressResult(res, true);
                     }
                 });
             });
+
+            // ─── Helpers ──────────────────────────────────────────────────────
+
+            function resetGenerateModal() {
+                $('#generate-form-panel').show();
+                $('#generate-progress-panel').hide();
+                $('#generate-result-banner').hide().html('');
+                $('#btn-close-after-generate').hide();
+                $('#btn-back-to-form').hide();
+                $('#btn-modal-close').show();
+                resetProgressSteps();
+            }
+
+            function resetProgressSteps() {
+                // Step 1 — loading
+                $('#step1-row').css('border-left-color', '#6c757d').css('opacity', '1');
+                $('#step1-icon').html('<span class="spinner-border spinner-border-sm text-secondary" role="status"></span>');
+                $('#step1-detail').text('Mengambil data terbaru dari database listing...');
+
+                // Step 2 — waiting
+                $('#step2-row').css('border-left-color', '#6c757d').css('opacity', '0.45');
+                $('#step2-icon').html('<i class="fa-solid fa-circle text-secondary f-s-14"></i>');
+                $('#step2-detail').text('Menunggu proses step 1...');
+
+                $('#generate-result-banner').hide().html('');
+                $('#btn-close-after-generate').hide();
+                $('#btn-back-to-form').hide();
+            }
+
+            function renderProgressResult(response, isHttpError) {
+                var stepFailed  = response.step_failed || (response.success ? null : 'unknown');
+                var syncDetail  = (response.data && response.data.sync_detail) ? response.data.sync_detail : null;
+                var generated   = (response.data) ? (response.data.generated || 0) : 0;
+                var msg         = response.message || '';
+
+                // ── Update Step 1 ──
+                if (stepFailed === 'sync_listing' || stepFailed === 'unknown') {
+                    // Step 1 FAILED
+                    setStepFail(1, syncDetail
+                        ? buildSyncText(syncDetail)
+                        : 'Gagal terhubung ke database listing. Proses dihentikan.');
+                    // Step 2 SKIPPED
+                    setStepSkipped(2, 'Dilewati karena step 1 gagal.');
+                } else {
+                    // Step 1 SUCCESS
+                    setStepSuccess(1, syncDetail
+                        ? buildSyncText(syncDetail)
+                        : 'Data listing berhasil di-clone ke listing_stage.');
+
+                    // ── Update Step 2 ──
+                    if (stepFailed === 'generate') {
+                        setStepFail(2, msg);
+                    } else {
+                        setStepSuccess(2, generated > 0
+                            ? generated + ' schedule berhasil dibuat.'
+                            : 'Semua schedule sudah up-to-date, tidak ada data baru.');
+                    }
+                }
+
+                // ── Result Banner ──
+                var bannerType = response.success ? 'success' : 'danger';
+                var bannerIcon = response.success ? 'fa-circle-check' : 'fa-circle-xmark';
+                $('#generate-result-banner')
+                    .removeClass('alert-success alert-danger alert-warning')
+                    .addClass('alert-' + bannerType)
+                    .html('<i class="fa-solid ' + bannerIcon + ' me-2"></i>' + msg)
+                    .fadeIn(300);
+
+                // Show action buttons
+                $('#btn-close-after-generate').show();
+                if (!response.success) {
+                    $('#btn-back-to-form').show();
+                }
+                $('#btn-modal-close').show();
+            }
+
+            function setStepSuccess(num, detail) {
+                $('#step' + num + '-row').css('border-left-color', '#198754').css('opacity', '1');
+                $('#step' + num + '-icon').html('<i class="fa-solid fa-circle-check text-success f-s-18"></i>');
+                $('#step' + num + '-detail').text(detail);
+            }
+
+            function setStepFail(num, detail) {
+                $('#step' + num + '-row').css('border-left-color', '#dc3545').css('opacity', '1');
+                $('#step' + num + '-icon').html('<i class="fa-solid fa-circle-xmark text-danger f-s-18"></i>');
+                $('#step' + num + '-detail').text(detail);
+            }
+
+            function setStepSkipped(num, detail) {
+                $('#step' + num + '-row').css('border-left-color', '#adb5bd').css('opacity', '0.6');
+                $('#step' + num + '-icon').html('<i class="fa-solid fa-circle-minus text-secondary f-s-18"></i>');
+                $('#step' + num + '-detail').text(detail);
+            }
+
+            function buildSyncText(sd) {
+                return 'Clone selesai — Total: ' + sd.total_records + ' | Disync: ' + sd.synced + ' | Dilewati: ' + sd.skipped;
+            }
         });
     </script>
 @endsection

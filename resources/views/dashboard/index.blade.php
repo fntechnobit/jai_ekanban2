@@ -18,6 +18,10 @@
 
 @section('content')
 <div class="container-fluid">
+
+    {{-- Dynamic Flash Banner: Generate Assy Schedule Response --}}
+    <div id="assy-generate-banner" style="display:none;"></div>
+
     <!-- Kanban Printing Statistics -->
     <div class="row">
         <div class="col-xxl-4 col-lg-4 col-md-6">
@@ -363,38 +367,78 @@ $(document).ready(function() {
                 console.log('Generating assy schedules...');
             },
             success: function(response) {
+                var generated = response.data ? (response.data.generated || 0) : 0;
                 if (response.success) {
-                    console.log('✓ Assy Schedule generated successfully:', response.message);
-                    console.log('Details:', response.data);
-                    
-                    // Show notification in navbar
+                    showGenerateBanner(true, generated);
                     showNavbarNotification(response.message, response.data);
-                    
-                    // Optional: Show a subtle notification
-                    if (typeof toastr !== 'undefined') {
-                        toastr.success(response.message, 'Schedule Generated', {
-                            timeOut: 3000,
-                            closeButton: true,
-                            progressBar: true
-                        });
-                    }
                 } else {
-                    console.warn('⚠ Schedule generation warning:', response.message);
+                    var isSyncFail = (response.step_failed === 'sync_listing' || response.step_failed === 'unknown');
+                    showGenerateBanner(false, 0, isSyncFail);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('✗ Failed to generate assy schedule:', error);
-                
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    console.error('Error details:', xhr.responseJSON.message);
-                }
-                
-                // Don't show error toast to user as this is a background operation
-                // Just log it for debugging purposes
+                showGenerateBanner(false, 0, true);
             }
         });
     }
     
+    /**
+     * Show flash banner with generate result between navbar and content
+     * success : true = berhasil, false = gagal
+     * generated : jumlah schedule yang dibuat
+     * isSyncFail : true = gagal di step listing (PPC)
+     */
+    function showGenerateBanner(success, generated, isSyncFail) {
+        var banner = $('#assy-generate-banner');
+
+        var msg, bgColor, textColor, iconClass;
+        if (success) {
+            msg       = 'Berhasil generate jadwal assy dengan <strong>' + generated + '</strong> data.';
+            bgColor   = '#d1e7dd';  // hijau muda
+            textColor = '#0a3622';
+            iconClass = 'fa-circle-check';
+        } else if (isSyncFail) {
+            msg       = 'Gagal mengambil data listing dari PPC.';
+            bgColor   = '#f8d7da';  // merah muda
+            textColor = '#58151c';
+            iconClass = 'fa-circle-xmark';
+        } else {
+            msg       = 'Gagal melakukan generate jadwal assy.';
+            bgColor   = '#f8d7da';
+            textColor = '#58151c';
+            iconClass = 'fa-circle-xmark';
+        }
+
+        var html =
+            '<i class="fa-solid ' + iconClass + ' me-2"></i>' +
+            '<span class="flex-grow-1">' + msg + '</span>' +
+            '<button type="button" class="btn-close ms-3" id="assy-banner-close" aria-label="Close" style="filter: invert(0);"></button>';
+
+        if (window._assyBannerTimer) clearTimeout(window._assyBannerTimer);
+
+        banner
+            .stop(true, true)
+            .attr('class', 'd-flex align-items-center px-3 py-2 rounded mb-4 shadow-sm')
+            .css({ 'display': 'none', 'background-color': bgColor, 'color': textColor, 'font-size': '0.875rem' })
+            .html(html)
+            .fadeIn(400);
+
+        $('#assy-banner-close').on('click', function() { hideBanner(); });
+        window._assyBannerTimer = setTimeout(hideBanner, 8000);
+    }
+
+    function hideBanner() {
+        var banner = $('#assy-generate-banner');
+        if (window._assyBannerTimer) {
+            clearTimeout(window._assyBannerTimer);
+            window._assyBannerTimer = null;
+        }
+        banner.fadeOut(400, function() {
+            // Hapus semua class dan style agar div benar-benar kosong dan tidak meninggalkan ruang
+            $(this).removeAttr('class').removeAttr('role').removeAttr('style').html('').css('display', 'none');
+        });
+    }
+
     /**
      * Helper function to format date as YYYY-MM-DD
      */
@@ -426,9 +470,9 @@ $(document).ready(function() {
         });
         
         var detailsHtml = '';
-        if (data && data.schedules_created > 0) {
+        if (data && data.generated > 0) {
             detailsHtml = '<small class="text-muted d-block mt-1">' +
-                '<i class="fa-solid fa-calendar-plus me-1"></i>' + data.schedules_created + ' schedules created' +
+                '<i class="fa-solid fa-calendar-plus me-1"></i>' + data.generated + ' schedule dibuat' +
                 '</small>';
         }
         
@@ -461,5 +505,6 @@ $(document).ready(function() {
         }, 10000);
     }
 });
+
 </script>
 @endsection

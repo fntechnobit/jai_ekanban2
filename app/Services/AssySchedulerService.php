@@ -45,33 +45,70 @@ class AssySchedulerService
      */
     public function generateSchedules($startDate, $endDate, $conveyorId = null)
     {
+        $startDate = Carbon::parse($startDate)->startOfDay();
+        $endDate   = Carbon::parse($endDate)->endOfDay();
+
+        // ─── STEP 1: Clone listing data from mysql_listing → listing_stage ───
         try {
             DB::beginTransaction();
 
-            $startDate = Carbon::parse($startDate)->startOfDay();
-            $endDate = Carbon::parse($endDate)->endOfDay();
-
-            // Step 1: Delete existing listing_stage data for the date range
             $deleteListingResult = $this->listingSyncService->deleteListingStageData(
                 $startDate->format('Y-m-d'),
                 $endDate->format('Y-m-d')
             );
-            
+
             if (!$deleteListingResult['success']) {
-                throw new \Exception('Failed to clean listing_stage data: ' . $deleteListingResult['message']);
+                DB::rollBack();
+                return [
+                    'success'     => false,
+                    'step_failed' => 'sync_listing',
+                    'message'     => 'Gagal membersihkan data listing_stage: ' . $deleteListingResult['message'],
+                    'sync_detail' => null,
+                    'generated'   => 0,
+                ];
             }
 
-            // Step 2: Sync fresh listing data from mysql_listing
             $syncResult = $this->listingSyncService->syncListingData(
                 $startDate->format('Y-m-d'),
                 $endDate->format('Y-m-d')
             );
-            
+
             if (!$syncResult['success']) {
-                throw new \Exception('Failed to sync listing data: ' . $syncResult['message']);
+                DB::rollBack();
+                return [
+                    'success'     => false,
+                    'step_failed' => 'sync_listing',
+                    'message'     => 'Gagal mengambil data listing terbaru dari database listing: ' . ($syncResult['message'] ?? 'Koneksi database listing tidak tersedia.'),
+                    'sync_detail' => null,
+                    'generated'   => 0,
+                ];
             }
 
-            // Step 3: Get fresh listing data from listing_stage for the date range
+            DB::commit();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Listing sync/clone failed", ['error' => $e->getMessage()]);
+            return [
+                'success'     => false,
+                'step_failed' => 'sync_listing',
+                'message'     => 'Tidak dapat terhubung ke database listing. Proses generate dihentikan. (' . $e->getMessage() . ')',
+                'sync_detail' => null,
+                'generated'   => 0,
+            ];
+        }
+
+        $syncDetail = [
+            'total_records' => $syncResult['total_records'] ?? 0,
+            'synced'        => $syncResult['synced']        ?? 0,
+            'skipped'       => $syncResult['skipped']       ?? 0,
+        ];
+
+        // ─── STEP 2: Generate assy schedules from listing_stage ──────────────
+        try {
+            DB::beginTransaction();
+
+            // Get fresh listing data from listing_stage for the date range
             // Skip listings that already have locked schedules (matching SP logic: NOT EXISTS verified)
             $listingsQuery = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])
                 ->whereNotNull('assycode')
@@ -111,9 +148,11 @@ class AssySchedulerService
             if ($listings->isEmpty()) {
                 DB::commit();
                 return [
-                    'success' => true,
-                    'message' => 'No listings found for the specified date range',
-                    'generated' => 0,
+                    'success'     => true,
+                    'step_failed' => null,
+                    'message'     => 'Tidak ada data listing ditemukan untuk rentang tanggal yang dipilih.',
+                    'generated'   => 0,
+                    'sync_detail' => $syncDetail,
                 ];
             }
 
@@ -223,17 +262,22 @@ class AssySchedulerService
             DB::commit();
 
             return [
-                'success' => true,
-                'message' => "Generated {$generatedCount} schedule(s) successfully",
-                'generated' => $generatedCount,
+                'success'     => true,
+                'step_failed' => null,
+                'message'     => "Berhasil membuat {$generatedCount} schedule.",
+                'generated'   => $generatedCount,
+                'sync_detail' => $syncDetail,
             ];
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Schedule generation failed", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
 
             return [
-                'success' => false,
-                'message' => 'Failed to generate schedules: ' . $e->getMessage(),
+                'success'     => false,
+                'step_failed' => 'generate',
+                'message'     => 'Gagal melakukan generate schedule: ' . $e->getMessage(),
+                'sync_detail' => $syncDetail,
+                'generated'   => 0,
             ];
         }
     }
