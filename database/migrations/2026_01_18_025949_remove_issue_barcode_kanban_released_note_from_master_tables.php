@@ -17,11 +17,24 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('master_shikake', function (Blueprint $table) {
-            $table->dropColumn(['issue', 'barcode_kanban']);
+            if (Schema::hasColumn('master_shikake', 'issue')) {
+                $table->dropColumn('issue');
+            }
+            if (Schema::hasColumn('master_shikake', 'barcode_kanban')) {
+                $table->dropColumn('barcode_kanban');
+            }
         });
 
         Schema::table('master_circuit', function (Blueprint $table) {
-            $table->dropColumn(['issue', 'barcode_kanban', 'release_date']);
+            if (Schema::hasColumn('master_circuit', 'issue')) {
+                $table->dropColumn('issue');
+            }
+            if (Schema::hasColumn('master_circuit', 'barcode_kanban')) {
+                $table->dropColumn('barcode_kanban');
+            }
+            if (Schema::hasColumn('master_circuit', 'release_date')) {
+                $table->dropColumn('release_date');
+            }
         });
     }
 

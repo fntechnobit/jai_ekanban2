@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use App\Models\Menu;
-use App\Models\GroupMenuAccess;
 
 return new class extends Migration
 {
@@ -24,16 +23,6 @@ return new class extends Migration
             'parent_id' => null,
             'order' => $maxOrder + 1,
             'is_active' => true,
-        ]);
-
-        // Grant permissions to Super Admin (group_id = 1)
-        GroupMenuAccess::create([
-            'group_id' => 1,
-            'menu_id' => $defectMenu->id,
-            'can_create' => true,
-            'can_read' => true,
-            'can_update' => true,
-            'can_delete' => true,
         ]);
 
         // Create Defect submenus
@@ -68,17 +57,7 @@ return new class extends Migration
         ];
 
         foreach ($submenus as $submenuData) {
-            $submenu = Menu::create($submenuData);
-
-            // Grant permissions to Super Admin (group_id = 1)
-            GroupMenuAccess::create([
-                'group_id' => 1,
-                'menu_id' => $submenu->id,
-                'can_create' => true,
-                'can_read' => true,
-                'can_update' => true,
-                'can_delete' => true,
-            ]);
+            Menu::create($submenuData);
         }
     }
 
@@ -91,15 +70,10 @@ return new class extends Migration
         $defectMenu = Menu::where('code', 'defect')->first();
         
         if ($defectMenu) {
-            // Delete all submenus and their access rights
-            $submenus = Menu::where('parent_id', $defectMenu->id)->get();
-            foreach ($submenus as $submenu) {
-                GroupMenuAccess::where('menu_id', $submenu->id)->delete();
-                $submenu->delete();
-            }
+            // Delete all submenus
+            Menu::where('parent_id', $defectMenu->id)->delete();
 
-            // Delete parent menu and its access rights
-            GroupMenuAccess::where('menu_id', $defectMenu->id)->delete();
+            // Delete parent menu
             $defectMenu->delete();
         }
     }

@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
         // Create default admin user
         User::create([
             'name' => 'Super Admin',
+            'username' => 'admin',
             'email' => 'admin@example.com',
             'password' => Hash::make('password'),
             'group_id' => 1, // Super Admin group

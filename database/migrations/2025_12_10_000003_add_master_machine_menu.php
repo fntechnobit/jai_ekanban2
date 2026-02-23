@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use App\Models\Menu;
-use App\Models\GroupMenuAccess;
 
 return new class extends Migration
 {
@@ -23,7 +22,7 @@ return new class extends Migration
         $maxOrder = Menu::where('parent_id', $masterDataMenu->id)->max('order') ?? 0;
 
         // Create Master Machine menu
-        $masterMachine = Menu::create([
+        Menu::create([
             'code' => 'master_machine',
             'name' => 'Machine Data',
             'url' => '/master-data/master-machine',
@@ -31,16 +30,6 @@ return new class extends Migration
             'parent_id' => $masterDataMenu->id,
             'order' => $maxOrder + 1,
             'is_active' => true,
-        ]);
-
-        // Grant permissions to Super Admin (group_id = 1)
-        GroupMenuAccess::create([
-            'group_id' => 1,
-            'menu_id' => $masterMachine->id,
-            'can_create' => true,
-            'can_read' => true,
-            'can_update' => true,
-            'can_delete' => true,
         ]);
     }
 
@@ -51,7 +40,6 @@ return new class extends Migration
     {
         $menu = Menu::where('code', 'master_machine')->first();
         if ($menu) {
-            GroupMenuAccess::where('menu_id', $menu->id)->delete();
             $menu->delete();
         }
     }

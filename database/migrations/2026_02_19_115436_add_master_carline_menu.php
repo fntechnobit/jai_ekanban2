@@ -17,7 +17,7 @@ return new class extends Migration
 
         if ($masterDataMenu) {
             // Create Carline menu under Master Data (order 2, after Area which is order 1)
-            $carlineMenuId = DB::table('menus')->insertGetId([
+            DB::table('menus')->insert([
                 'code' => 'master_carline',
                 'name' => 'Carline Data',
                 'url' => 'master-data/master-carline',
@@ -25,18 +25,6 @@ return new class extends Migration
                 'parent_id' => $masterDataMenu->id,
                 'order' => 2,
                 'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            // Grant permissions to Super Admin (group_id = 1)
-            DB::table('group_menu_access')->insert([
-                'group_id' => 1,
-                'menu_id' => $carlineMenuId,
-                'can_create' => true,
-                'can_read' => true,
-                'can_update' => true,
-                'can_delete' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
