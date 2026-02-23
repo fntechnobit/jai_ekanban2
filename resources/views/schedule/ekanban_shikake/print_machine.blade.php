@@ -168,10 +168,10 @@
 
 @section('script')
     <!-- QZ Tray -->
-    <script src="https://unpkg.com/qz-tray@2.2.3/qz-tray.js"></script>
+    <script src="{{ asset('js/qz-tray.js') }}"></script>
     <script src="{{ asset('js/qz-print.js') }}"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="{{ asset('js/crypto-js.min.js') }}"></script>
+    <script src="{{ asset('js/html2canvas.min.js') }}"></script>
     
     <script>
         var qz = window.qz;

@@ -28,11 +28,11 @@
 <script src="{{ asset('assets/vendor/sweetalert2/sweetalert2.min.js') }}"></script>
 
 <!-- jQuery Validation -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/additional-methods.min.js"></script>
+<script src="{{ asset('assets/vendor/jquery-validate/jquery.validate.min.js') }}"></script>
+<script src="{{ asset('assets/vendor/jquery-validate/additional-methods.min.js') }}"></script>
 
 <!-- jQuery UI (for sortable/draggable) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+<script src="{{ asset('assets/vendor/jqueryui/jquery-ui.min.js') }}"></script>
 
 <!-- LocalStorage helper functions -->
 <script>

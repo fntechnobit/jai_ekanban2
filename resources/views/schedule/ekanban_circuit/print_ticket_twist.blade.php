@@ -25,10 +25,11 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     background: white;
     height: 100%;
-    border: 2px solid #000;
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
 }
 
@@ -36,7 +37,12 @@
     height: 100%;
     width: auto;
     object-fit: contain;
+    margin: 0;
+    padding: 0;
     display: block;
+    /* Enhance drawing visibility for thermal printing */
+    filter: contrast(2.0) brightness(0.95);
+    -webkit-filter: contrast(2.0) brightness(0.95);
 }
 
 .ticket-twist-print {

@@ -183,10 +183,10 @@
 
 @section('script')
     <!-- QZ Tray -->
-    <script src="https://unpkg.com/qz-tray@2.2.3/qz-tray.js"></script>
+    <script src="{{ asset('js/qz-tray.js') }}"></script>
     <script src="{{ asset('js/qz-print.js') }}"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="{{ asset('js/crypto-js.min.js') }}"></script>
+    <script src="{{ asset('js/html2canvas.min.js') }}"></script>
     
     <script>
         var qz = window.qz;
@@ -567,7 +567,7 @@
         const SCALE_H = (RASTER_SCALE_MODE & 0x02) ? 2 : 1;
         const BASE_DOTS = Math.floor((TARGET_DOTS / SCALE_W) / 8) * 8;
         const SLICE_ROWS = 256;
-        const THRESHOLD = 145;
+        const THRESHOLD = 190;
         const BLANK_AFTER_PAGE_DOTS = 20;
         const CUT_OFFSET_DOTS = 184; // ~23mm feed to pass cutter blade position
 
@@ -631,7 +631,9 @@
             }
 
             const restore = makeVisibleForCapture(ticket, isLandscape);
-            const canvas = await html2canvas(ticket, { scale: 1, backgroundColor: '#fff', useCORS: true });
+            // Capture at 2x resolution for sharper details (supersampling)
+            const CAPTURE_SCALE = 2;
+            const canvas = await html2canvas(ticket, { scale: CAPTURE_SCALE, backgroundColor: '#fff', useCORS: true });
             restore();
 
             // Restore all saved inline styles
@@ -670,7 +672,9 @@
                 out.width = dstW;
                 out.height = dstH;
                 const ctx = out.getContext('2d');
-                ctx.imageSmoothingEnabled = false;
+                // Enable smoothing for high-quality downscale from 2x capture
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(0, 0, dstW, dstH);
                 ctx.drawImage(finalCanvas, 0, 0, dstW, dstH);

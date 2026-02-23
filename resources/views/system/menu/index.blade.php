@@ -195,7 +195,7 @@
 
 @push('scripts')
 <!-- SortableJS -->
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="{{ asset('assets/vendor/sortablejs/Sortable.min.js') }}"></script>
 <!-- Select2 -->
 <script src="{{ asset('plugins/select2/js/select2.full.min.js') }}"></script>
 <!-- SweetAlert2 -->

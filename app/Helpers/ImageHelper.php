@@ -11,10 +11,10 @@ class ImageHelper
      *
      * @param \Illuminate\Http\UploadedFile $image
      * @param string $path
-     * @param int $height Target height in pixels (default 450px for ~57mm at 203 DPI)
+     * @param int $height Target height in pixels (default 576px = 80mm at 203 DPI, matches print area)
      * @return string filename
      */
-    public static function resizeAndSave($image, $path, $height = 450)
+    public static function resizeAndSave($image, $path, $height = 576)
     {
         // Create directory if not exists
         $fullPath = public_path($path);
@@ -87,22 +87,15 @@ class ImageHelper
             $originalHeight
         );
 
-        // Save resized image
-        switch ($mime) {
-            case 'image/jpeg':
-            case 'image/jpg':
-                imagejpeg($canvas, $destination, 90);
-                break;
-            case 'image/png':
-                imagepng($canvas, $destination, 9);
-                break;
-            case 'image/gif':
-                imagegif($canvas, $destination);
-                break;
-            case 'image/webp':
-                imagewebp($canvas, $destination, 90);
-                break;
-        }
+        // Enhance contrast for thermal printer clarity (makes thin lines bolder)
+        imagefilter($canvas, IMG_FILTER_CONTRAST, -30);
+        imagefilter($canvas, IMG_FILTER_BRIGHTNESS, -5);
+
+        // Always save as PNG for maximum quality (no lossy compression)
+        // Change extension to .png regardless of original format
+        $filename = pathinfo($filename, PATHINFO_FILENAME) . '.png';
+        $destination = $fullPath . '/' . $filename;
+        imagepng($canvas, $destination, 6);
 
         // Free memory
         imagedestroy($source);

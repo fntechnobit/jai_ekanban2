@@ -136,7 +136,7 @@
     <script src="{{ asset('assets/js/jquery-3.6.3.min.js') }}"></script>
     
     <!-- jQuery Validation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="{{ asset('assets/vendor/jquery-validate/jquery.validate.min.js') }}"></script>
 
     @yield('script')
 </body>
