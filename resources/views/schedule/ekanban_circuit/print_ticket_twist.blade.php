@@ -393,7 +393,7 @@
                 <td class="twist-label-cell text-left">CV NO</td>
                 <td colspan="3" class="twist-value-cell text-left">{{ $circuit->conveyor ?? '-' }}</td>
                 <td colspan="2" rowspan="4" class="twist-qrcode-cell">
-                    <div class="twist-qr-label">QRCODE SHIKAKE</div>
+                    <div class="twist-qr-label" style="font-weight:bold;font-size:20px;">{{ $circuit->shikake_code ?? '-' }}</div>
                     @if(isset($circuit->qr_qrcode_shikake_path))
                         <img src="{{ $circuit->qr_qrcode_shikake_path }}" alt="QR Shikake" class="twist-qr-img">
                         <div class="twist-qr-text">{{ $circuit->qrcode_shikake ?? '' }}</div>

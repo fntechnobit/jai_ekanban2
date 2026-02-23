@@ -205,6 +205,7 @@ class EkanbanCircuitService
                 'master_circuit.barcode_navigasi',
                 'master_circuit.barcode_process',
                 'master_circuit.barcode_shikake',
+                'master_circuit.shikake_code',
                 'master_circuit.to_store',
                 'master_circuit.released_note',
                 'master_circuit.image_path',
