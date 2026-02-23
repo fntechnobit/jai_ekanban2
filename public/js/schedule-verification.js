@@ -25,8 +25,8 @@ $(function () {
     });
 
     // Initialize date range picker
-    var startDate = moment().subtract(10, 'days');
-    var endDate = moment().add(31, 'days');
+    var startDate = moment();
+    var endDate = moment().add(10, 'days');
 
     $('#filter_dates').daterangepicker({
         startDate: startDate,
@@ -81,8 +81,8 @@ $(function () {
     $('#btn-reset').click(function() {
         $('#filter_conveyor_id').val('').trigger('change');
         $('#filter_status').val('');
-        $('#filter_dates').data('daterangepicker').setStartDate(moment().subtract(10, 'days'));
-        $('#filter_dates').data('daterangepicker').setEndDate(moment().add(31, 'days'));
+        $('#filter_dates').data('daterangepicker').setStartDate(moment());
+        $('#filter_dates').data('daterangepicker').setEndDate(moment().add(10, 'days'));
         scheduleVerificationTable.ajax.reload();
     });
 

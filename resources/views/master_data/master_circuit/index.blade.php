@@ -61,6 +61,7 @@
                             <th>Conveyor</th>
                             <th>CCT No</th>
                             <th>CCT Code</th>
+                            <th>Shikake</th>
                             <th>Family</th>
                             <th>QTY</th>
                             <th>Machine</th>
@@ -112,6 +113,7 @@
                     { data: 'conveyor_name', name: 'conveyor_name' },
                     { data: 'cct_no', name: 'cct_no' },
                     { data: 'cct_code', name: 'cct_code' },
+                    { data: 'shikake_code', name: 'shikake_code' },
                     { data: 'family', name: 'family' },
                     { data: 'qty', name: 'qty' },
                     { data: 'machine', name: 'machine' },

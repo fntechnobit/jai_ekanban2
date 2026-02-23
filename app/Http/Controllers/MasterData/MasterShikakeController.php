@@ -255,7 +255,7 @@ class MasterShikakeController extends Controller
             // Handle image upload
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
-                $imageName = ImageHelper::resizeAndSave($image, 'uploads/shikake', 400, 233);
+                $imageName = ImageHelper::resizeAndSave($image, 'uploads/shikake', 450);
                 $data['image_path'] = 'uploads/shikake/' . $imageName;
                 
                 // Delete old image if exists

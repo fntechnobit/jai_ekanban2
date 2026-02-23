@@ -93,7 +93,7 @@ class MasterCircuitController extends Controller
             // Handle image upload
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
-                $imageName = ImageHelper::resizeAndSave($image, 'uploads/circuit', 400, 233);
+                $imageName = ImageHelper::resizeAndSave($image, 'uploads/circuit', 450);
                 $data['image_path'] = 'uploads/circuit/' . $imageName;
                 
                 // Delete old image if exists

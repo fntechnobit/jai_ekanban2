@@ -51,8 +51,14 @@ class MasterCircuitService
             ->addColumn('conveyor_name', function ($row) {
                 return $row->getRelation('conveyor') ? $row->getRelation('conveyor')->conveyor : ($row->conveyor ?? '-');
             })
+            ->addColumn('shikake_code', function ($row) {
+                return $row->shikake_code ?? '-';
+            })
             ->filterColumn('carline', function($query, $keyword) {
                 $query->where('master_circuit.carline', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('shikake_code', function($query, $keyword) {
+                $query->where('master_circuit.shikake_code', 'like', "%{$keyword}%");
             })
             ->addColumn('action', function ($row) {
                 /** @var \App\Models\User|null $currentUser */

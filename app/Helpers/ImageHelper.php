@@ -5,15 +5,16 @@ namespace App\Helpers;
 class ImageHelper
 {
     /**
-     * Resize and save image
+     * Resize and save image by height only (width auto-calculated)
+     * Optimized for thermal printer
+     * Height set to match print area, width maintains original aspect ratio
      *
      * @param \Illuminate\Http\UploadedFile $image
      * @param string $path
-     * @param int $width
-     * @param int $height
+     * @param int $height Target height in pixels (default 450px for ~57mm at 203 DPI)
      * @return string filename
      */
-    public static function resizeAndSave($image, $path, $width = 400, $height = 233)
+    public static function resizeAndSave($image, $path, $height = 450)
     {
         // Create directory if not exists
         $fullPath = public_path($path);
@@ -52,46 +53,32 @@ class ImageHelper
         $originalWidth = imagesx($source);
         $originalHeight = imagesy($source);
 
-        // Calculate aspect ratio
+        // Calculate width based on aspect ratio and target height
         $aspectRatio = $originalWidth / $originalHeight;
-        $targetAspectRatio = $width / $height;
+        $newHeight = $height;
+        $newWidth = (int)($height * $aspectRatio);
 
-        // Calculate new dimensions maintaining aspect ratio
-        if ($aspectRatio > $targetAspectRatio) {
-            // Image is wider
-            $newWidth = $width;
-            $newHeight = (int)($width / $aspectRatio);
-        } else {
-            // Image is taller
-            $newHeight = $height;
-            $newWidth = (int)($height * $aspectRatio);
-        }
-
-        // Create blank canvas with target dimensions
-        $canvas = imagecreatetruecolor($width, $height);
+        // Create canvas with calculated dimensions (no padding/border)
+        $canvas = imagecreatetruecolor($newWidth, $newHeight);
         
         // Preserve transparency for PNG and GIF
         if ($mime == 'image/png' || $mime == 'image/gif') {
             imagealphablending($canvas, false);
             imagesavealpha($canvas, true);
             $transparent = imagecolorallocatealpha($canvas, 255, 255, 255, 127);
-            imagefilledrectangle($canvas, 0, 0, $width, $height, $transparent);
+            imagefilledrectangle($canvas, 0, 0, $newWidth, $newHeight, $transparent);
         } else {
             // Fill with white background for JPEG
             $white = imagecolorallocate($canvas, 255, 255, 255);
-            imagefilledrectangle($canvas, 0, 0, $width, $height, $white);
+            imagefilledrectangle($canvas, 0, 0, $newWidth, $newHeight, $white);
         }
 
-        // Calculate position to center the image
-        $offsetX = (int)(($width - $newWidth) / 2);
-        $offsetY = (int)(($height - $newHeight) / 2);
-
-        // Resize and copy to canvas
+        // Resize and copy to canvas (no offset, full canvas usage)
         imagecopyresampled(
             $canvas,
             $source,
-            $offsetX,
-            $offsetY,
+            0,
+            0,
             0,
             0,
             $newWidth,

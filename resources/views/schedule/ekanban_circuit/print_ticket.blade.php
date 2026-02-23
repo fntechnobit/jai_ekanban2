@@ -14,6 +14,7 @@
     flex-wrap: nowrap;
     gap: 0;
     margin: 0;
+    padding: 0;
     justify-content: flex-start;
     align-items: stretch;
     background: white;
@@ -25,15 +26,20 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     background: white;
     height: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 .circuit-print-wrapper .circuit-image-section img {
     height: 100%;
     width: auto;
     object-fit: contain;
+    margin: 0;
+    padding: 0;
+    display: block;
 }
 
 .ticket-circuit-print {
