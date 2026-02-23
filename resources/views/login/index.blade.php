@@ -4,24 +4,20 @@
 
 @section('content')
 <!-- sign in start -->
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-lg-7 col-xl-8 d-none d-lg-block p-0">
-            <div class="image-contentbox">
-                <img src="{{ asset('assets/images/login/01.png') }}" class="img-fluid" alt="Login Background">
-            </div>
-        </div>
-        <div class="col-lg-5 col-xl-4 p-0 bg-white">
-            <div class="form-container">
-                <form class="app-form" action="{{ route('login') }}" method="POST" id="loginForm">
-                    @csrf
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="mb-5 text-center text-lg-start">
-                                <h2 class="text-primary f-w-600">Welcome To E-Kanban!</h2>
-                                <p>Sign in with your credentials to access the system</p>
+<div class="container-fluid h-100">
+    <div class="row h-100 justify-content-center align-items-center" style="padding-top: 3rem; padding-bottom: 3rem;">
+        <div class="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-4">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-body p-4 p-md-5">
+                    <form class="app-form" action="{{ route('login') }}" method="POST" id="loginForm">
+                        @csrf
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-4 text-center">
+                                    <h2 class="text-primary f-w-600 mb-2">Welcome To E-Kanban!</h2>
+                                    <p class="text-muted">Sign in with your credentials to access the system</p>
+                                </div>
                             </div>
-                        </div>
 
                         @if ($errors->any())
                             <div class="col-12">
@@ -41,7 +37,7 @@
                                 <label for="username" class="form-label">Username</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-                                    <input type="text" name="username" class="form-control form-control-sm" placeholder="Enter Your Username" id="username" value="{{ old('username') }}" required>
+                                    <input type="text" name="username" class="form-control" placeholder="Enter Your Username" id="username" value="{{ old('username') }}" required>
                                 </div>
                             </div>
                         </div>
@@ -50,7 +46,7 @@
                                 <label for="password" class="form-label">Password</label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                                    <input type="password" name="password" class="form-control form-control-sm" placeholder="Enter Your Password" id="password" required>
+                                    <input type="password" name="password" class="form-control" placeholder="Enter Your Password" id="password" required>
                                     <button class="btn btn-outline-secondary toggle-password" type="button">
                                         <i class="fa-solid fa-eye"></i>
                                     </button>
@@ -73,7 +69,7 @@
                             </div>
                         </div>
                         <div class="col-12">
-                            <div class="text-center text-muted mt-4">
+                            <div class="text-center text-muted mt-3">
                                 <small>
                                     <i class="fa-solid fa-circle-info me-1"></i>
                                     Contact administrator if you forgot your password
@@ -84,16 +80,19 @@
                 </form>
 
                 <!-- Footer -->
-                <div class="auth-footer">
-                    <p class="text-center mb-0">
-                        © {{ date('Y') }} 
-                        <a href="https://technobit.co.id" target="_blank">Technobit Indonesia</a>. 
-                        All rights reserved.
+                <div class="text-center mt-4 pt-3 border-top">
+                    <p class="text-muted mb-0">
+                        <small>
+                            © {{ date('Y') }} 
+                            <a href="https://technobit.co.id" target="_blank" class="text-decoration-none">Technobit Indonesia</a>. 
+                            All rights reserved.
+                        </small>
                     </p>
                 </div>
             </div>
         </div>
     </div>
+</div>
 </div>
 <!-- sign in end -->
 @endsection

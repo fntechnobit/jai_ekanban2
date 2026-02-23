@@ -26,7 +26,7 @@ return new class extends Migration
             'code' => 'master_conveyor',
             'name' => 'Conveyor Data',
             'url' => '/master-data/master-conveyor',
-            'icon' => 'fas fa-conveyor-belt-boxes',
+            'icon' => 'fa-solid fa-right-left',
             'parent_id' => $masterDataMenu->id,
             'order' => $maxOrder + 1,
             'is_active' => true,

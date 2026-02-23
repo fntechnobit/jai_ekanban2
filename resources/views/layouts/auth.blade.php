@@ -56,49 +56,62 @@
         }
 
         /* Login page styles */
-        .form-container {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 2rem;
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
         }
 
-        .image-contentbox {
-            height: 100vh;
+        .app-wrapper {
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        .card {
+            background: white;
+            border-radius: 1rem !important;
+        }
+
+        .card-body {
+            padding: 2.5rem !important;
+        }
+
+        @media (max-width: 768px) {
+            .card-body {
+                padding: 1.5rem !important;
+            }
+        }
+
+        .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .image-contentbox img {
-            max-width: 100%;
-            height: auto;
-        }
-
-        /* Footer styles */
-        .auth-footer {
-            margin-top: auto;
-            padding-top: 2rem;
-            border-top: 1px solid #e9ecef;
-        }
-
-        .auth-footer p {
-            font-size: 0.875rem;
-            color: #6c757d;
-            margin-bottom: 0;
-        }
-
-        .auth-footer a {
-            color: #667eea;
-            text-decoration: none;
+            border: none;
+            padding: 0.75rem;
             font-weight: 500;
-            transition: color 0.2s;
+            transition: all 0.3s ease;
         }
 
-        .auth-footer a:hover {
-            color: #764ba2;
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .input-group-text {
+            background-color: #f8f9fa;
+            border-right: none;
+        }
+
+        .form-control {
+            border-left: none;
+        }
+
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: none;
+        }
+
+        .form-control:focus + .input-group-text {
+            border-color: #667eea;
         }
     </style>
 

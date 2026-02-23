@@ -34,8 +34,8 @@ return new class extends Migration {
         DB::table('menus')->insert([
             'code' => 'master_area',
             'name' => 'Area Data',
-            'url' => 'system/master-area',
-            'icon' => 'fas fa-map-marked-alt',
+            'url' => '/master-data/master-area',
+            'icon' => 'fa-solid fa-map-location-dot',
             'parent_id' => $masterDataId,
             'order' => 1,
             'is_active' => true,
