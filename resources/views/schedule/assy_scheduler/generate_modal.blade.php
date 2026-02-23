@@ -16,7 +16,7 @@
                         <div class="mb-3">
                             <label for="generate_dates" class="form-label">Date Range <span class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-sm" id="generate_dates" required readonly>
-                            <small class="form-text text-muted">Pilih rentang tanggal untuk generate schedule (default: 3 hari ke depan)</small>
+                            <small class="form-text text-muted">Pilih rentang tanggal untuk generate schedule (default: 10 hari ke depan)</small>
                         </div>
 
                         <div class="mb-3">
