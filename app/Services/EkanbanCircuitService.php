@@ -44,7 +44,8 @@ class EkanbanCircuitService
                 OR machine LIKE ?
                 OR family LIKE ?
                 OR barcodes LIKE ?
-            )", [$escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch]);
+                OR shikake_code LIKE ?
+            )", [$escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch]);
         }
 
         $filteredQuery = clone $query;
@@ -95,6 +96,7 @@ class EkanbanCircuitService
                 'group_id' => $groupId,
                 'master_circuit_id' => $row->master_circuit_id,
                 'type' => $row->type ?? 'CUTTING',
+                'shikake_code' => $row->shikake_code ?? '-',
                 'cct_no' => $row->cct_no,
                 'cct_code' => $row->cct_code,
                 'conveyor' => $row->conveyor,
@@ -237,6 +239,7 @@ class EkanbanCircuitService
                 'assy_schedule_circuit.assy_schedule_id',
                 'assy_schedule_circuit.master_circuit_id',
                 'master_circuit.type',
+                'master_circuit.shikake_code',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
                 'master_circuit.machine',
@@ -260,6 +263,7 @@ class EkanbanCircuitService
                 'assy_schedule_circuit.assy_schedule_id',
                 'assy_schedule_circuit.master_circuit_id',
                 'master_circuit.type',
+                'master_circuit.shikake_code',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
                 'master_circuit.machine',

@@ -1,10 +1,8 @@
 <!-- Animation css -->
 <link rel="stylesheet" href="{{ asset('assets/vendor/animation/animate.min.css') }}">
 
-<!-- Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- Fonts (Local) -->
+<link rel="stylesheet" href="{{ asset('assets/fonts/poppins/poppins.css') }}">
 
 <!-- Weather icon css-->
 <link rel="stylesheet" type="text/css" href="{{ asset('assets/vendor/weather/weather-icons.css') }}">

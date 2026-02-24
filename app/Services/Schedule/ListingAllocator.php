@@ -77,11 +77,12 @@ class ListingAllocator
     }
     
     /**
-     * Allocate listings to all cutoffs (1-4) for a shift
-     * Processes cutoffs sequentially: c1, c2, c3, c4
+     * Allocate listings to all cutoffs (1-5) for a shift
+     * Processes cutoffs sequentially: c1, c2, c3, c4, c5
+     * CO5 capacity is pre-mapped by ShiftCapacityCalculator (0 if not needed)
      * 
      * @param Collection $listings Listings to allocate (modified in place)
-     * @param array $cutoffCapacities ['c1' => 25, 'c2' => 25, 'c3' => 25, 'c4' => 25]
+     * @param array $cutoffCapacities ['c1' => 25, 'c2' => 25, 'c3' => 25, 'c4' => 25, 'c5' => 0|N]
      * @param int $shift Shift number
      * @param int $conveyorId Conveyor ID
      * @param string $scheduleDate Schedule date
@@ -98,8 +99,8 @@ class ListingAllocator
         $allSchedules = [];
         $totalCapacityUsed = 0;
         
-        // Process cutoffs 1-4
-        for ($cutoff = 1; $cutoff <= 4; $cutoff++) {
+        // Process cutoffs 1-5
+        for ($cutoff = 1; $cutoff <= 5; $cutoff++) {
             $cutoffKey = "c{$cutoff}";
             $capacity = $cutoffCapacities[$cutoffKey] ?? 0;
             
@@ -121,124 +122,6 @@ class ListingAllocator
             'schedules' => $allSchedules,
             'capacity_used' => $totalCapacityUsed
         ];
-    }
-    
-    /**
-     * Allocate overflow (cutoff 5) based on lock status
-     * Uses SP formula: S1 cap = FLOOR(0.875 * (capacity / 4))
-     * 
-     * @param Collection $remainingListings Listings with remaining quantity
-     * @param array $lockStatus [1 => bool, 2 => bool]
-     * @param int $maxShifts Maximum number of shifts (shift_qty)
-     * @param int $shiftStart Which shift to start (1 or 2) - used when maxShifts = 1
-     * @param int $shiftCapacity Capacity per shift from conveyor
-     * @param int $conveyorId Conveyor ID
-     * @param string $scheduleDate Schedule date
-     * @return array ['schedules' => array]
-     */
-    public function allocateOverflow(
-        Collection $remainingListings, 
-        array $lockStatus, 
-        int $maxShifts,
-        int $shiftStart,
-        int $shiftCapacity,
-        int $conveyorId,
-        string $scheduleDate
-    ): array
-    {
-        $totalRemaining = $remainingListings->sum('rem_qty');
-        
-        if ($totalRemaining === 0) {
-            return ['schedules' => []];
-        }
-        
-        // Determine overflow distribution based on SP logic
-        $shift1Locked = $lockStatus[1] ?? false;
-        $shift2Locked = $lockStatus[2] ?? false;
-        
-        $co5S1 = 0;
-        $co5S2 = 0;
-        
-        if ($maxShifts === 1) {
-            // Single shift mode - use shift_start to determine which shift
-            if ($shiftStart === 2) {
-                // All overflow to shift 2 (if not locked)
-                if (!$shift2Locked) {
-                    $co5S2 = $totalRemaining;
-                }
-            } else {
-                // All overflow to shift 1 (if not locked)
-                if (!$shift1Locked) {
-                    $co5S1 = $totalRemaining;
-                }
-            }
-        } else {
-            // Two shift mode
-            if ($shift1Locked && $shift2Locked) {
-                // Both locked - cannot allocate
-                Log::warning("Cannot allocate overflow - all shifts locked", [
-                    'total_remaining' => $totalRemaining
-                ]);
-                return ['schedules' => []];
-            } elseif ($shift1Locked) {
-                // S1 locked - all overflow to S2
-                $co5S2 = $totalRemaining;
-            } elseif ($shift2Locked) {
-                // S2 locked - all overflow to S1
-                $co5S1 = $totalRemaining;
-            } else {
-                // Both unlocked - use SP formula: 0.875 * (capacity / 4)
-                $co5S1Cap = (int) floor(0.875 * ($shiftCapacity / 4));
-                if ($co5S1Cap < 0) {
-                    $co5S1Cap = 0;
-                }
-                
-                if ($totalRemaining <= $co5S1Cap) {
-                    // All overflow fits in S1
-                    $co5S1 = $totalRemaining;
-                    $co5S2 = 0;
-                } else {
-                    // S1 gets cap, S2 gets remainder
-                    $co5S1 = $co5S1Cap;
-                    $co5S2 = $totalRemaining - $co5S1Cap;
-                }
-            }
-        }
-        
-        // Build overflow distribution
-        $overflowDistribution = [];
-        if ($co5S1 > 0) {
-            $overflowDistribution[1] = $co5S1;
-        }
-        if ($co5S2 > 0) {
-            $overflowDistribution[2] = $co5S2;
-        }
-        
-        // Allocate overflow to cutoff 5
-        $schedules = [];
-        foreach ($overflowDistribution as $shift => $overflowQty) {
-            if ($overflowQty > 0) {
-                $result = $this->allocateToCutoff(
-                    $remainingListings, 
-                    $overflowQty, 
-                    $shift, 
-                    5, 
-                    $conveyorId, 
-                    $scheduleDate
-                );
-                $schedules = array_merge($schedules, $result['schedules']);
-            }
-        }
-        
-        Log::info("Overflow allocated to cutoff 5 (SP formula)", [
-            'total_remaining' => $totalRemaining,
-            'shift_capacity' => $shiftCapacity,
-            'co5_s1_cap' => isset($co5S1Cap) ? $co5S1Cap : 'N/A',
-            'distribution' => $overflowDistribution,
-            'schedules_created' => count($schedules)
-        ]);
-        
-        return ['schedules' => $schedules];
     }
     
     /**

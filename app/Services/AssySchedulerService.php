@@ -204,51 +204,41 @@ class AssySchedulerService
                     $shiftLockStatus
                 );
 
-                // Step 8: Process shifts SEQUENTIALLY (S1 first, then S2) - matching SP logic
-                // Process Shift 1 cutoffs 1-4 first
-                if (!($shiftLockStatus[1] ?? false) && isset($shiftCapacities[1])) {
-                    $allocationResult = $this->listingAllocator->allocateToShift(
-                        $groupListings,
-                        $shiftCapacities[1],
-                        1,
-                        $conveyor->id,
-                        $scheduleDate->format('Y-m-d')
-                    );
-                    $schedulesToCreate = array_merge($schedulesToCreate, $allocationResult['schedules']);
-                }
-
-                // Check if there's remaining quantity before processing Shift 2
-                $remainingQty = $groupListings->sum('rem_qty');
-                if ($remainingQty === 0) {
-                    // No remaining listings, skip to next conveyor group
-                    continue;
-                }
-
-                // Process Shift 2 cutoffs 1-4 (only if maxShifts >= 2)
-                if ($maxShifts >= 2 && !($shiftLockStatus[2] ?? false) && isset($shiftCapacities[2])) {
-                    $allocationResult = $this->listingAllocator->allocateToShift(
-                        $groupListings,
-                        $shiftCapacities[2],
-                        2,
-                        $conveyor->id,
-                        $scheduleDate->format('Y-m-d')
-                    );
-                    $schedulesToCreate = array_merge($schedulesToCreate, $allocationResult['schedules']);
-                }
-
-                // Step 9: Handle overflow (cutoff 5) for remaining quantities
-                // Using SP formula: S1 cap = FLOOR(0.875 * (capacity / 4))
-                $overflowResult = $this->listingAllocator->allocateOverflow(
-                    $groupListings,
-                    $shiftLockStatus,
-                    $maxShifts,
-                    $conveyor->shift_start ?? 1,
-                    $shiftCapacity,
-                    $conveyor->id,
-                    $scheduleDate->format('Y-m-d')
+                // Step 8: Pre-map CO5 need per shift based on total qty vs shift capacities
+                // Determines which shifts need CO5 before allocation begins
+                $totalQty = $groupListings->sum('rem_qty');
+                $co5Needed = $this->capacityCalculator->preMapCutoff5(
+                    $shiftCapacities, $shiftCapacity, $totalQty
                 );
 
-                $schedulesToCreate = array_merge($schedulesToCreate, $overflowResult['schedules']);
+                Log::info("CO5 pre-mapping result", [
+                    'conveyor_id' => $conveyor->id,
+                    'schedule_date' => $scheduleDate->format('Y-m-d'),
+                    'total_qty' => $totalQty,
+                    'co5_needed' => $co5Needed,
+                    'shift_capacities' => $shiftCapacities,
+                ]);
+
+                // Step 9: Allocate sequentially S1 CO1-CO5, then S2 CO1-CO5
+                for ($shift = 1; $shift <= $maxShifts; $shift++) {
+                    if ($shiftLockStatus[$shift] ?? false) continue;
+                    if (!isset($shiftCapacities[$shift])) continue;
+
+                    $allocationResult = $this->listingAllocator->allocateToShift(
+                        $groupListings,
+                        $shiftCapacities[$shift],
+                        $shift,
+                        $conveyor->id,
+                        $scheduleDate->format('Y-m-d')
+                    );
+                    $schedulesToCreate = array_merge($schedulesToCreate, $allocationResult['schedules']);
+
+                    // Check if there's remaining quantity before processing next shift
+                    $remainingQty = $groupListings->sum('rem_qty');
+                    if ($remainingQty === 0) {
+                        break;
+                    }
+                }
             }
 
             // Step 10: Bulk insert all schedules

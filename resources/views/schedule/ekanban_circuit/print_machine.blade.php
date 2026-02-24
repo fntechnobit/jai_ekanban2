@@ -75,9 +75,9 @@
                             </div>
                             <div class="col-md-3">
                                 <select class="form-select form-select-sm select2" id="filter_print_status">
-                                    <option value="all">- All Status -</option>
-                                    <option value="not_printed" selected>Not Printed</option>
-                                    <option value="printed">Already Printed</option>
+                                    <option value="all">- All Print Status -</option>
+                                    <option value="not_printed" selected>Waiting Print</option>
+                                    <option value="printed">Printed</option>
                                 </select>
                             </div>
                         </div>
@@ -114,21 +114,19 @@
                         <table id="circuit-table" class="table table-bordered table-striped">
                             <thead>
                                 <tr>
-                                    <th width="5%">Num.</th>
+                                    <th width="5%">No</th>
                                     <th>Type</th>
-                                    <th>CCT No.</th>
+                                    <th>Shikake</th>
                                     <th>CCT Code</th>
                                     <th>CV</th>
-                                    <th>Mach.</th>
                                     <th>Family</th>
                                     <th>Qty</th>
                                     <th>Issue</th>
-                                    <th>QRCode</th>
-                                    <th>Date</th>
+                                    <th>Kanban</th>
                                     <th>Shift</th>
-                                    <th>CO</th>
-                                    <th>Status</th>
-                                    <th width="8%">#</th>
+                                    <th>Cutoff</th>
+                                    <th>Print</th>
+                                    <th width="10%">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -148,12 +146,32 @@
             align-items: center;
         }
         #previewContent .ticket {
-            transform: scale(0.7);
+            transform: scale(0.55);
             transform-origin: top center;
-            margin-bottom: -172px; /* compensate 576px * 0.3 wasted space from scale */
+            margin-bottom: -259px; /* compensate 576px * 0.45 wasted space from scale */
         }
         #previewContent .ticket:last-child {
             margin-bottom: 0;
+        }
+        /* Force borders visible inside preview - override Bootstrap resets */
+        #previewContent .ticket-circuit-print {
+            border: 2px solid #000 !important;
+            overflow: visible !important;
+        }
+        #previewContent .ticket-circuit-print table {
+            border-collapse: collapse !important;
+            border: 1px solid #000 !important;
+        }
+        #previewContent .ticket-circuit-print th,
+        #previewContent .ticket-circuit-print td {
+            border: 1px solid #000 !important;
+        }
+        #previewContent .ticket-circuit-print thead th {
+            border: 2px solid #000 !important;
+        }
+        #previewContent .ticket-circuit-print .section-label.black-bg {
+            background-color: #000 !important;
+            color: #fff !important;
         }
     </style>
 
@@ -227,8 +245,8 @@
                 scrollX: true,
                 scrollCollapse: true,
                 fixedColumns: {
-                    leftColumns: 5,  // Freeze: Num, Type, Circuit No, Circuit Code, Conveyor
-                    rightColumns: 1   // Freeze: Actions
+                    leftColumns: 5,  // Freeze: No, Type, Shikake, CCT Code, CV
+                    rightColumns: 1   // Freeze: Action
                 },
                 ajax: {
                     url: "{{ route('schedule.ekanban-circuit.print-machine') }}",
@@ -248,7 +266,7 @@
                     { 
                         data: 'type', 
                         name: 'type', 
-                        width: '8%',
+                        width: '6%',
                         render: function(data) {
                             if (data === 'CUTTING_TWIST') {
                                 return '<span class="badge bg-info">TWS</span>';
@@ -256,16 +274,16 @@
                             return '<span class="badge bg-primary">CCT</span>';
                         }
                     },
-                    { data: 'cct_no', name: 'cct_no', width: '10%' },
+                    { data: 'shikake_code', name: 'shikake_code', width: '10%' },
                     { data: 'cct_code', name: 'cct_code', width: '10%' },
                     { data: 'conveyor', name: 'conveyor', width: '8%' },
-                    { data: 'machine', name: 'machine', width: '8%' },
-                    { data: 'family', name: 'family', width: '8%' },
-                    { data: 'qty', name: 'qty', width: '5%' },
+                    { data: 'family', name: 'family', width: '10%' },
+                    { data: 'qty', name: 'qty', width: '5%', className: 'text-end' },
                     { 
                         data: 'issue_count', 
                         name: 'issue_count', 
-                        width: '5%',
+                        width: '6%',
+                        className: 'text-end',
                         orderable: false,
                         render: function(data, type, row) {
                             if (data > 0) {
@@ -278,7 +296,7 @@
                     { 
                         data: 'barcodes', 
                         name: 'barcodes', 
-                        width: '18%',
+                        width: '15%',
                         orderable: false,
                         render: function(data, type, row) {
                             if (data && data !== '-') {
@@ -290,9 +308,8 @@
                             return '-';
                         }
                     },
-                    { data: 'date', name: 'date', width: '8%' },
-                    { data: 'shift', name: 'shift', width: '6%' },
-                    { data: 'cutoff', name: 'cutoff', width: '8%' },
+                    { data: 'shift', name: 'shift', width: '6%', className: 'text-center' },
+                    { data: 'cutoff', name: 'cutoff', width: '6%', className: 'text-center' },
                     { 
                         data: 'print_status', 
                         name: 'print_status',
@@ -300,20 +317,24 @@
                         orderable: false,
                         render: function(data, type, row) {
                             if (row.is_printed) {
-                                var badge = '<span class="badge bg-success">Printed</span>';
+                                var count = row.print_count > 0 ? ' <small>(' + row.print_count + ')</small>' : '';
+                                var badge = '<span class="badge bg-success">Printed</span>' + count;
                                 if (row.last_printed_at) {
-                                    badge += '<br><small>' + row.last_printed_at + '</small>';
-                                }
-                                if (row.print_count > 1) {
-                                    badge += '<br><small>(' + row.print_count + 'x)</small>';
+                                    var d = new Date(row.last_printed_at);
+                                    var yy = String(d.getFullYear()).slice(2);
+                                    var mm = String(d.getMonth() + 1).padStart(2, '0');
+                                    var dd = String(d.getDate()).padStart(2, '0');
+                                    var hh = String(d.getHours()).padStart(2, '0');
+                                    var min = String(d.getMinutes()).padStart(2, '0');
+                                    badge += '<br><small>' + yy + '-' + mm + '-' + dd + ' ' + hh + ':' + min + '</small>';
                                 }
                                 return badge;
                             } else {
-                                return '<span class="badge bg-warning">Not Printed</span>';
+                                return '<span class="badge bg-warning">Waiting</span>';
                             }
                         }
                     },
-                    { data: 'actions', name: 'actions', orderable: false, searchable: false, width: '8%' }
+                    { data: 'actions', name: 'actions', orderable: false, searchable: false, width: '10%' }
                 ],
                 pageLength: 100,
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
