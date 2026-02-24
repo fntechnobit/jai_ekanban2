@@ -493,14 +493,15 @@ class KanbanGeneratorService
 
     /**
      * Generate barcode kanban.
-     * Format: {carline}{code}{issue_3d}{qty}{nomor_urut_4d}
-     * Contoh: N + DC84 + 001 + 40 + 5833 = NDC84001405833
+     * Format: {carline}.{code}.{issue_3d}.{qty}.{nomor_urut_4d}
+     * Contoh: T.TD36.002.40.0002
+     * Contoh: T.T-AK30.002.40.0002
      * 
-     * @param string $carline  - Carline code (misal: N)
-     * @param string $code     - CCT code atau shikake code (misal: DC84)
+     * @param string $carline  - Carline code (misal: T)
+     * @param string $code     - CCT code atau shikake code (misal: TD36, T-AK30)
      * @param string $issue    - Issue format XXX/YYY, diambil bagian XXX (misal: 001/005 → 001)
      * @param int    $qty      - Qty per kanban (misal: 40)
-     * @param int    $nomorUrut - Nomor urut 4 digit (misal: 5833)
+     * @param int    $nomorUrut - Nomor urut 4 digit (misal: 0002)
      * @return string
      */
     private function generateBarcode(string $carline, string $code, string $issue, int $qty, int $nomorUrut): string
@@ -508,7 +509,7 @@ class KanbanGeneratorService
         // Ambil bagian XXX dari format XXX/YYY
         $issueNumber = explode('/', $issue)[0] ?? '001';
 
-        return sprintf('%s%s%s%d%04d', $carline, $code, $issueNumber, $qty, $nomorUrut);
+        return sprintf('%s.%s.%s.%d.%04d', $carline, $code, $issueNumber, $qty, $nomorUrut);
     }
 
     /**
