@@ -186,16 +186,14 @@ class AssySchedulerService
                 // Step 5: Check shift lock status for this conveyor on this date
                 $shiftLockStatus = $this->lockChecker->getShiftLockStatus(
                     $scheduleDate,
-                    $conveyor->id,
-                    $maxShifts
+                    $conveyor->id
                 );
 
                 // Step 6: Delete only unlocked schedules
                 $this->scheduleCleanup->deleteUnlockedSchedulesInRange(
                     $scheduleDate,
                     $scheduleDate,
-                    $conveyor->id,
-                    $shiftLockStatus
+                    $conveyor->id
                 );
 
                 // Step 7: Calculate cutoff capacities for each shift
