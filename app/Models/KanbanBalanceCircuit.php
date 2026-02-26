@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property \Carbon\Carbon|null $last_schedule_date
+ */
 class KanbanBalanceCircuit extends Model
 {
     protected $table = 'kanban_balance_circuit';
