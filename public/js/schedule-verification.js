@@ -9,6 +9,7 @@ var routeUrls = {
     datatable: '',
     details: '',
     availableAssy: '',
+    availableDates: '',
     verify: '',
     unverify: '',
     csrfToken: ''
@@ -22,6 +23,11 @@ $(function () {
     $('#filter_conveyor_id').select2({
         allowClear: true,
         placeholder: '- All Conveyor -'
+    });
+
+    $('#filter_status').select2({
+        allowClear: true,
+        placeholder: '- All Status -'
     });
 
     // Initialize date range picker
@@ -80,7 +86,7 @@ $(function () {
     // Reset button
     $('#btn-reset').click(function() {
         $('#filter_conveyor_id').val('').trigger('change');
-        $('#filter_status').val('');
+        $('#filter_status').val('').trigger('change');
         $('#filter_dates').data('daterangepicker').setStartDate(moment());
         $('#filter_dates').data('daterangepicker').setEndDate(moment().add(10, 'days'));
         scheduleVerificationTable.ajax.reload();
@@ -327,27 +333,78 @@ $(function () {
         $('#verificationModal').modal('show');
     }
 
-    // Initialize source date options from H to H+10
+    // Initialize source date options from H to H+10 via AJAX
+    // Only shows dates that actually have unverified schedules
     function initializeSourceDateOptions(currentDate, conveyorId, currentShift) {
-        var $dateSelect = $('#source-date');
-        $dateSelect.html('<option value="">-- Pilih Tanggal --</option>');
+        var $dateSelect = $('#available-date');
+        var $shiftSelect = $('#available-shift');
+        var $info = $('#available-info');
         
-        var startDate = moment(currentDate);
+        $dateSelect.html('<option value="">-- Memuat tanggal... --</option>');
+        $shiftSelect.html('<option value="all">Semua Shift</option>');
         
-        // Jika shift target adalah Shift 2 (shift terakhir), mulai dari H+1
-        // Karena tidak mungkin lagi mengambil data dari tanggal yang sama
-        var startIndex = (parseInt(currentShift) === 2) ? 1 : 0;
-        
-        // Generate dates from H (or H+1) to H+10
-        for (var i = startIndex; i <= 10; i++) {
-            var date = moment(startDate).add(i, 'days');
-            var dateStr = date.format('YYYY-MM-DD');
-            var label = date.format('DD MMM YYYY');
-            var isCurrent = (i === 0) ? ' (Current)' : '';
-            
-            $dateSelect.append('<option value="' + dateStr + '" data-current="' + (i === 0 ? '1' : '0') + '">' + 
-                              label + isCurrent + '</option>');
-        }
+        // Fetch available dates via AJAX
+        $.ajax({
+            url: routeUrls.availableDates,
+            type: 'GET',
+            data: {
+                conveyor_id: conveyorId,
+                current_date: currentDate,
+                current_shift: currentShift,
+                days_range: 10
+            },
+            success: function(response) {
+                $dateSelect.html('<option value="">-- Pilih Tanggal --</option>');
+                
+                if (response.success && response.data && response.data.length > 0) {
+                    // Group by date
+                    var grouped = {};
+                    var shiftsPerDate = {};
+                    
+                    response.data.forEach(function(row) {
+                        var dt = row.schedule_date;
+                        if (!grouped[dt]) {
+                            grouped[dt] = [];
+                        }
+                        grouped[dt].push(row);
+                        
+                        if (!shiftsPerDate[dt]) shiftsPerDate[dt] = [];
+                        shiftsPerDate[dt].push({
+                            shift: row.shift,
+                            count: row.item_count,
+                            qty: row.total_qty
+                        });
+                    });
+                    
+                    // Store shiftsPerDate for later use
+                    $dateSelect.data('shifts-per-date', shiftsPerDate);
+                    
+                    // Build date options
+                    Object.keys(grouped).sort().forEach(function(dt) {
+                        var isCurrent = (dt === currentDate);
+                        var totalItems = grouped[dt].reduce(function(sum, r) { return sum + parseInt(r.item_count); }, 0);
+                        var label = moment(dt).format('DD MMM YYYY') + ' (' + totalItems + ' item)';
+                        if (isCurrent) label += ' - Current';
+                        
+                        $dateSelect.append('<option value="' + dt + '">' + label + '</option>');
+                    });
+                    
+                    if ($info.length) {
+                        $info.html('<span class="text-muted">Pilih tanggal untuk memuat data sumber (' + Object.keys(grouped).length + ' tanggal tersedia)</span>');
+                    }
+                } else {
+                    if ($info.length) {
+                        $info.html('<span class="text-warning">Tidak ada tanggal dengan jadwal tersedia dalam 10 hari ke depan</span>');
+                    }
+                }
+            },
+            error: function() {
+                $dateSelect.html('<option value="">-- Gagal memuat --</option>');
+                if ($info.length) {
+                    $info.html('<span class="text-danger">Gagal memuat daftar tanggal</span>');
+                }
+            }
+        });
         
         // Store conveyor and shift info
         $dateSelect.data('conveyor-id', conveyorId);
@@ -358,26 +415,34 @@ $(function () {
         $dateSelect.off('change').on('change', function() {
             var selectedDate = $(this).val();
             if (selectedDate) {
-                // Update shift dropdown
-                updateShiftOptions(selectedDate, currentDate, currentShift);
+                // Update shift dropdown based on available data
+                var shiftsPerDate = $dateSelect.data('shifts-per-date') || {};
+                updateShiftOptions(selectedDate, currentDate, currentShift, shiftsPerDate);
                 // Load source items
                 loadSourceItems();
             } else {
-                $('#source-shift').html('<option value="all">Semua Shift</option>');
-                $('#source-items-list').html('');
-                $('#source-info').html('<span class="text-muted">Pilih tanggal untuk memuat data sumber</span>');
+                $shiftSelect.html('<option value="all">Semua Shift</option>');
+                $('#available-assy-container').html('');
+                if ($info.length) {
+                    $info.html('<span class="text-muted">Pilih tanggal untuk memuat data sumber</span>');
+                }
             }
         });
         
         // Event handler for shift change
-        $('#source-shift').off('change').on('change', function() {
+        $shiftSelect.off('change').on('change', function() {
             loadSourceItems();
+        });
+        
+        // Refresh button
+        $('#btn-refresh-available').off('click').on('click', function() {
+            initializeSourceDateOptions(currentDate, conveyorId, currentShift);
         });
     }
 
-    // Update shift options based on selected date
-    function updateShiftOptions(selectedDate, currentDate, currentShift) {
-        var $shiftSelect = $('#source-shift');
+    // Update shift options based on selected date and available data
+    function updateShiftOptions(selectedDate, currentDate, currentShift, shiftsPerDate) {
+        var $shiftSelect = $('#available-shift');
         $shiftSelect.html('');
         
         var isSameDate = (selectedDate === currentDate);
@@ -387,13 +452,23 @@ $(function () {
             $shiftSelect.append('<option value="all">Semua Shift</option>');
         }
         
-        // Add shift options (1 and 2)
-        for (var i = 1; i <= 2; i++) {
+        // Add shift options from available data
+        var shifts = (shiftsPerDate && shiftsPerDate[selectedDate]) || [];
+        shifts.forEach(function(s) {
             // Skip current shift if same date
-            if (isSameDate && i === parseInt(currentShift)) {
-                continue;
+            if (isSameDate && parseInt(s.shift) === parseInt(currentShift)) {
+                return;
             }
-            $shiftSelect.append('<option value="' + i + '">Shift ' + i + '</option>');
+            var label = 'Shift ' + s.shift + ' (' + s.count + ' item, ' + s.qty + ' qty)';
+            $shiftSelect.append('<option value="' + s.shift + '">' + label + '</option>');
+        });
+        
+        // If no shifts from data, add default options
+        if (shifts.length === 0) {
+            for (var i = 1; i <= 2; i++) {
+                if (isSameDate && i === parseInt(currentShift)) continue;
+                $shiftSelect.append('<option value="' + i + '">Shift ' + i + '</option>');
+            }
         }
         
         // Auto-select first available option
@@ -404,14 +479,14 @@ $(function () {
 
     // Load source items based on selected date and shift
     function loadSourceItems() {
-        var date = $('#source-date').val();
-        var shift = $('#source-shift').val();
-        var conveyorId = $('#source-date').data('conveyor-id');
-        var currentDate = $('#source-date').data('current-date');
-        var currentShift = $('#source-date').data('current-shift');
+        var date = $('#available-date').val();
+        var shift = $('#available-shift').val();
+        var conveyorId = $('#available-date').data('conveyor-id');
+        var currentDate = $('#available-date').data('current-date');
+        var currentShift = $('#available-date').data('current-shift');
         
-        var $list = $('#source-items-list');
-        var $info = $('#source-info');
+        var $list = $('#available-assy-container');
+        var $info = $('#available-info');
         
         if (!date) {
             $list.html('');
@@ -645,16 +720,16 @@ $(function () {
         });
 
         // Allow dragging back to source list (to remove from target)
-        $(document).on('dragover', '#source-items-list', function(e) {
+        $(document).on('dragover', '#available-assy-container', function(e) {
             e.preventDefault();
             $(this).addClass('drag-over');
         });
 
-        $(document).on('dragleave', '#source-items-list', function(e) {
+        $(document).on('dragleave', '#available-assy-container', function(e) {
             $(this).removeClass('drag-over');
         });
 
-        $(document).on('drop', '#source-items-list', function(e) {
+        $(document).on('drop', '#available-assy-container', function(e) {
             e.preventDefault();
             $(this).removeClass('drag-over');
             

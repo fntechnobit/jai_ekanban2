@@ -112,9 +112,12 @@
     }
     
     .twist-preview-container .twist-barcode-cell img {
-        max-width: 90%;
-        width: auto;
-        height: 40px;
+        width: 80%;
+        max-height: 10mm;
+        height: auto;
+        object-fit: contain;
+        display: block;
+        margin: 0 auto;
     }
     
     .twist-preview-container .twist-qr-label {

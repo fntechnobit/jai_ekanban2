@@ -93,9 +93,12 @@
     }
     
     .twist-kanban-container .twist-barcode-cell img {
-        max-width: 80%;
-        width: auto;
-        height: 5mm;
+        width: 80%;
+        max-height: 10mm;
+        height: auto;
+        object-fit: contain;
+        display: block;
+        margin: 0 auto;
     }
     
     .twist-kanban-container .twist-qr-label {
@@ -171,8 +174,12 @@
         }
         
         .twist-kanban-container .twist-barcode-cell img {
-            max-width: 80%;
-            height: 6mm;
+            width: 80%;
+            max-height: 10mm;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
         }
     }
 </style>

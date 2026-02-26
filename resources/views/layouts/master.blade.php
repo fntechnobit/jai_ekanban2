@@ -36,11 +36,6 @@
 
             <!-- Main Section start -->
             <main class="p-0">
-                {{-- Breadcrumb --}}
-                @hasSection('breadcrumb')
-                    @yield('breadcrumb')
-                @endif
-
                 {{-- Main content --}}
                 @yield('content')
             </main>

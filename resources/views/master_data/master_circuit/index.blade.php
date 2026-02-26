@@ -11,47 +11,40 @@
         <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
                 <h5 class="card-title mb-0">Master Circuit (Cutting) Data List</h5>
-                <div class="d-flex gap-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <select class="form-select form-select-sm select2" id="filter_area_id" data-placeholder="- All Area -" style="width: 160px;">
+                        <option value="">- All Area -</option>
+                        @foreach($areas as $area)
+                            <option value="{{ $area->id }}">{{ $area->area }}</option>
+                        @endforeach
+                    </select>
+                    <select class="form-select form-select-sm select2" id="filter_conveyor_id" data-placeholder="- All Conveyor -" style="width: 180px;">
+                        <option value="">- All Conveyor -</option>
+                        @foreach($conveyors as $conveyor)
+                            <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
+                        @endforeach
+                    </select>
+                    <select class="form-select form-select-sm select2" id="filter_type" data-placeholder="- All Type -" style="width: 160px;">
+                        <option value="">- All Type -</option>
+                        <option value="CUTTING">CUTTING</option>
+                        <option value="CUTTING_TWIST">CUTTING TWIST</option>
+                    </select>
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="btn-reset-filter" title="Reset Filter">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
                     @if(auth()->user()->hasMenuPermission('master_circuit', 'can_create'))
                         <button type="button" class="btn btn-success btn-sm" id="btn-import">
-                            <i class="fa-solid fa-upload"></i> Import/Upload Circuit
+                            <i class="fa-solid fa-upload"></i> Import
                         </button>
                     @endif
                     @if(auth()->user()->hasMenuPermission('master_circuit', 'can_delete'))
-                        <button type="button" class="btn btn-danger btn-sm" id="btn-remove-data">
-                            <i class="fa-solid fa-trash"></i> Remove Data
+                        <button type="button" class="btn btn-danger btn-sm" id="btn-remove-data" title="Remove Data">
+                            <i class="fa-solid fa-trash"></i>
                         </button>
                     @endif
                 </div>
             </div>
             <div class="card-body">
-                <!-- Filters -->
-                <div class="row mb-3">
-                    <div class="col-md-3">
-                        <select class="form-select select2" id="filter_area_id" data-placeholder="- All Area -" style="width: 100%;">
-                            <option value="">- All Area -</option>
-                            @foreach($areas as $area)
-                                <option value="{{ $area->id }}">{{ $area->area }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select select2" id="filter_conveyor_id" data-placeholder="- All Conveyor -" style="width: 100%;">
-                            <option value="">- All Conveyor -</option>
-                            @foreach($conveyors as $conveyor)
-                                <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select class="form-select select2" id="filter_type" data-placeholder="- All Type -" style="width: 100%;">
-                            <option value="">- All Type -</option>
-                            <option value="CUTTING">CUTTING</option>
-                            <option value="CUTTING_TWIST">CUTTING TWIST</option>
-                        </select>
-                    </div>
-                </div>
-
                 <table id="master-circuit-table" class="table table-bordered table-striped">
                     <thead>
                         <tr>
@@ -92,6 +85,13 @@
                 placeholder: function() {
                     return $(this).data('placeholder') || 'Select...';
                 }
+            });
+
+            // Reset filter button
+            $('#btn-reset-filter').on('click', function () {
+                $('#filter_area_id').val('').trigger('change');
+                $('#filter_conveyor_id').val('').trigger('change');
+                $('#filter_type').val('').trigger('change');
             });
 
             // Initialize DataTable

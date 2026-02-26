@@ -2,6 +2,10 @@
 
 @section('title', 'Assy Scheduler')
 
+@section('breadcrumb')
+    <x-page-header menu-code="assy_scheduler" />
+@endsection
+
 @section('content')
     <div class="container-fluid">
         <div class="card">

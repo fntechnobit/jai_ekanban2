@@ -3,6 +3,7 @@
 @section('title', 'Cutting - Print Per Machine')
 
 @section('breadcrumb')
+    <x-page-header menu-code="ekanban_cutting" />
 @endsection
 
 @section('content')

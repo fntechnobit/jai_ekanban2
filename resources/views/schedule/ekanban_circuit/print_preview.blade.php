@@ -3,7 +3,7 @@
 @section('title', 'eKanban Circuit - Print Preview')
 
 @section('breadcrumb')
-    <x-page-header menu-code="ekanban_circuit_print_preview" />
+    <x-page-header menu-code="ekanban_cutting" />
 @endsection
 
 @section('content')

@@ -3,6 +3,7 @@
 @section('title', 'Shikake - Print Per Machine')
 
 @section('breadcrumb')
+    <x-page-header menu-code="ekanban_shikake" />
 @endsection
 
 @section('content')

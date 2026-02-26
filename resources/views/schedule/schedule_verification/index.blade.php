@@ -2,6 +2,10 @@
 
 @section('title', 'Schedule Verification')
 
+@section('breadcrumb')
+    <x-page-header menu-code="schedule_verification" />
+@endsection
+
 @section('css')
 <link rel="stylesheet" href="{{ url('css/schedule-verification.css') }}">
 @endsection
@@ -22,10 +26,11 @@
                             <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
                         @endforeach
                     </select>
-                    <select class="form-select form-select-sm" id="filter_status" style="width: 140px;">
-                        <option value="">- All -</option>
+                    <select class="form-select form-select-sm select2" id="filter_status" style="width: 160px;">
+                        <option value="">- All Status -</option>
                         <option value="verified">Verified</option>
                         <option value="pending">Pending</option>
+                        <option value="no_data">No Data</option>
                     </select>
                     <button type="button" class="btn btn-secondary btn-sm" id="btn-reset" title="Reset Filter">
                         <i class="fa-solid fa-arrows-rotate"></i>
@@ -97,11 +102,11 @@
                                 <div class="card-header bg-info text-white">
                                     <h6 class="mb-0">Generated Assy Data</h6>
                                     <div class="date-filter-controls d-flex mt-2">
-                                        <input type="text" id="available-date" class="form-control form-control-sm" 
-                                               style="width: 140px;" placeholder="Select date">
-                                        <select id="available-shift" class="form-select form-select-sm ms-2" style="width: 100px;">
-                                            <option value="1">Shift 1</option>
-                                            <option value="2">Shift 2</option>
+                                        <select id="available-date" class="form-select form-select-sm" style="width: 160px;">
+                                            <option value="">-- Pilih Tanggal --</option>
+                                        </select>
+                                        <select id="available-shift" class="form-select form-select-sm ms-2" style="width: 140px;">
+                                            <option value="all">Semua Shift</option>
                                         </select>
                                         <button type="button" id="btn-refresh-available" class="btn btn-sm btn-light ms-2">
                                             <i class="fa-solid fa-arrows-rotate"></i>
@@ -109,14 +114,9 @@
                                     </div>
                                 </div>
                                 <div class="card-body" style="max-height: 600px; overflow-y: auto;">
-                                    <!-- Results summary -->
-                                    <div id="available-results-info" class="text-muted small mb-2" style="display: none;">
-                                        Showing <span id="results-start">1</span>-<span id="results-end">20</span> of <span id="results-total">0</span> items
-                                    </div>
-                                    
-                                    <!-- Loading indicator -->
-                                    <div id="available-loading" class="text-center py-3" style="display: none;">
-                                        <i class="fa-solid fa-spinner ti-spin"></i> Loading...
+                                    <!-- Info & Loading -->
+                                    <div id="available-info" class="text-muted small mb-2">
+                                        <span>Pilih tanggal untuk memuat data sumber</span>
                                     </div>
                                     
                                     <div id="available-assy-container">
@@ -141,13 +141,14 @@
 @endsection
 
 @section('script')
-    <script src="{{ url('js/schedule-verification.js') }}"></script>
+    <script src="{{ url('js/schedule-verification.js') }}?v={{ time() }}"></script>
     <script>
         // Set route URLs for the external JavaScript file
         routeUrls = {
             datatable: "{{ route('schedule.schedule-verification.datatable') }}",
             details: "{{ route('schedule.schedule-verification.details') }}",
             availableAssy: "{{ route('schedule.schedule-verification.available-assy') }}",
+            availableDates: "{{ route('schedule.schedule-verification.available-dates') }}",
             verify: "{{ route('schedule.schedule-verification.verify') }}",
             unverify: "{{ route('schedule.schedule-verification.unverify') }}",
             csrfToken: '{{ csrf_token() }}'

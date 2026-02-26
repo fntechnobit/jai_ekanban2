@@ -147,6 +147,13 @@
     .btn-sm i {
         flex-shrink: 0;
     }
+
+    /* Align card-header buttons height with Select2 small */
+    .card-header .btn-sm {
+        height: calc(1.5em + 0.5rem + 2px);
+        font-size: 0.875rem;
+        padding: 0 0.5rem;
+    }
     
     /* DataTables action column */
     table.dataTable td .btn-group,

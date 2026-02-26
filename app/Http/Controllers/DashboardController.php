@@ -9,9 +9,6 @@ class DashboardController extends Controller
 {
     protected $dashboardService;
 
-    /**
-     * Constructor
-     */
     public function __construct(DashboardService $dashboardService)
     {
         $this->dashboardService = $dashboardService;
@@ -22,23 +19,43 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        $printingStats = $this->dashboardService->getPrintingStats();
-        $scheduleOverview = $this->dashboardService->getScheduleOverview();
-        $recentActivity = $this->dashboardService->getRecentActivity(10);
-
-        return view('dashboard.index', compact(
-            'printingStats',
-            'scheduleOverview',
-            'recentActivity'
-        ));
+        return view('dashboard.index');
     }
 
     /**
-     * Get printing trend data for chart (AJAX endpoint)
+     * Get chart data: kanban printed per machine (AJAX)
      */
-    public function getPrintingTrendData()
+    public function getChartData()
     {
-        $printingTrend = $this->dashboardService->getPrintingTrend();
-        return response()->json($printingTrend);
+        $chartData = $this->dashboardService->getChartDataPerMachine();
+        return response()->json($chartData);
+    }
+
+    /**
+     * Get cutting datatable data (AJAX)
+     */
+    public function getCuttingDatatable(Request $request)
+    {
+        $data = $this->dashboardService->getKanbanPerMachineCutting();
+
+        return datatables()->of($data)
+            ->addIndexColumn()
+            ->editColumn('total_printed', fn($row) => number_format($row->total_printed))
+            ->editColumn('total_print_count', fn($row) => number_format($row->total_print_count))
+            ->make(true);
+    }
+
+    /**
+     * Get shikake datatable data (AJAX)
+     */
+    public function getShikakeDatatable(Request $request)
+    {
+        $data = $this->dashboardService->getKanbanPerMachineShikake();
+
+        return datatables()->of($data)
+            ->addIndexColumn()
+            ->editColumn('total_printed', fn($row) => number_format($row->total_printed))
+            ->editColumn('total_print_count', fn($row) => number_format($row->total_print_count))
+            ->make(true);
     }
 }

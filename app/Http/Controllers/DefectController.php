@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MasterArea;
 use App\Models\MasterConveyor;
 use App\Models\MasterShikake;
 use App\Models\MasterCircuit;
@@ -20,20 +21,38 @@ class DefectController extends Controller
         $this->defectService = $defectService;
     }
 
+    // =============================================
+    // DEFECT CUTTING
+    // =============================================
+
     /**
-     * Display cutting defect form
+     * Display cutting defect page with datatable
      */
     public function cuttingIndex()
     {
-        $conveyors = MasterConveyor::orderBy('conveyor')->get();
+        $areas = MasterArea::whereNull('deleted_at')->orderBy('area')->get();
+        $conveyors = MasterConveyor::whereNull('deleted_at')->orderBy('conveyor')->get();
         
         return view('defect.cutting', [
+            'areas' => $areas,
             'conveyors' => $conveyors,
         ]);
     }
 
     /**
-     * Store cutting defect
+     * Server-side datatable for cutting circuits with balance
+     */
+    public function cuttingDatatable(Request $request)
+    {
+        return $this->defectService->getCuttingDatatable(
+            $request->input('conveyor_id'),
+            $request->input('type'),
+            $request->input('area_id')
+        );
+    }
+
+    /**
+     * Store cutting defect (AJAX)
      */
     public function cuttingStore(Request $request)
     {
@@ -56,18 +75,11 @@ class DefectController extends Controller
             [
                 'date' => $validated['defect_date'],
                 'shift' => $validated['shift'],
-                'reason' => $validated['reason'],
+                'reason' => $validated['reason'] ?? null,
             ]
         );
 
-        if ($result['success']) {
-            return redirect()->route('defect.cutting.index')
-                ->with('success', $result['message']);
-        }
-
-        return redirect()->back()
-            ->withInput()
-            ->with('error', $result['message']);
+        return response()->json($result, $result['success'] ? 200 : 422);
     }
 
     /**
@@ -76,7 +88,6 @@ class DefectController extends Controller
     public function getCircuits(Request $request)
     {
         $conveyorId = $request->input('conveyor_id');
-
         if (!$conveyorId) {
             return response()->json([]);
         }
@@ -90,7 +101,6 @@ class DefectController extends Controller
                 'cct_no' => $circuit ? $circuit->cct_no : 'Unknown',
                 'cct_code' => $circuit ? $circuit->cct_code : 'Unknown',
                 'sisa' => $balance->sisa,
-                'display' => ($circuit ? "{$circuit->cct_no} - {$circuit->cct_code}" : "Circuit #{$balance->master_circuit_id}") . " (Balance: {$balance->sisa})",
             ];
         }));
     }
@@ -112,36 +122,54 @@ class DefectController extends Controller
         return response()->json($balance);
     }
 
+    // =============================================
+    // DEFECT SHIKAKE
+    // =============================================
+
     /**
-     * Display shikake defect form
+     * Display shikake defect page with datatable
      */
     public function shikakeIndex()
     {
-        $conveyors = MasterConveyor::orderBy('conveyor')->get();
+        $areas = MasterArea::whereNull('deleted_at')->orderBy('area')->get();
+        $conveyors = MasterConveyor::whereNull('deleted_at')->orderBy('conveyor')->get();
         
         $shikakeTypes = [
             'BONDER' => 'Bonder',
-            'DBL_CRIMP' => 'Dbl Crimp',
+            'DBL CRIMP' => 'Dbl Crimp',
             'JOINT' => 'Joint',
             'SHIELD' => 'Shield',
             'TWIST' => 'Twist',
         ];
 
         return view('defect.shikake', [
+            'areas' => $areas,
             'conveyors' => $conveyors,
             'shikakeTypes' => $shikakeTypes,
         ]);
     }
 
     /**
-     * Store shikake defect
+     * Server-side datatable for shikake with balance
+     */
+    public function shikakeDatatable(Request $request)
+    {
+        return $this->defectService->getShikakeDatatable(
+            $request->input('conveyor_id'),
+            $request->input('process_type'),
+            $request->input('area_id')
+        );
+    }
+
+    /**
+     * Store shikake defect (AJAX)
      */
     public function shikakeStore(Request $request)
     {
         $validated = $request->validate([
             'conveyor_id' => 'required|exists:master_conveyor,id',
             'master_shikake_id' => 'required|exists:master_shikake,id',
-            'shikake_type' => 'required|string|in:BONDER,DBL_CRIMP,JOINT,SHIELD,TWIST',
+            'shikake_type' => 'required|string',
             'defect_date' => 'required|date|before_or_equal:today',
             'shift' => 'required|integer|in:1,2,3',
             'qty_defect' => 'required|integer|min:1',
@@ -159,18 +187,11 @@ class DefectController extends Controller
             [
                 'date' => $validated['defect_date'],
                 'shift' => $validated['shift'],
-                'reason' => $validated['reason'],
+                'reason' => $validated['reason'] ?? null,
             ]
         );
 
-        if ($result['success']) {
-            return redirect()->route('defect.shikake.index')
-                ->with('success', $result['message']);
-        }
-
-        return redirect()->back()
-            ->withInput()
-            ->with('error', $result['message']);
+        return response()->json($result, $result['success'] ? 200 : 422);
     }
 
     /**
@@ -197,7 +218,6 @@ class DefectController extends Controller
                 'code' => $code,
                 'process' => $process,
                 'sisa' => $balance->sisa,
-                'display' => "{$code} - {$process} (Balance: {$balance->sisa})",
             ];
         }));
     }
@@ -219,30 +239,17 @@ class DefectController extends Controller
         return response()->json($balance);
     }
 
+    // =============================================
+    // DEFECT HISTORY
+    // =============================================
+
     /**
-     * Display defect history
+     * Display defect history page
      */
     public function history(Request $request)
     {
-        $conveyors = MasterConveyor::orderBy('conveyor')->get();
+        $conveyors = MasterConveyor::whereNull('deleted_at')->orderBy('conveyor')->get();
         
-        $type = $request->input('type', 'circuit'); // Default to circuit
-        
-        $filters = [
-            'date_from' => $request->input('date_from'),
-            'date_to' => $request->input('date_to'),
-            'conveyor_id' => $request->input('conveyor_id'),
-            'shift' => $request->input('shift'),
-        ];
-
-        // Add shikake_type filter only for shikake
-        if ($type === 'shikake') {
-            $filters['shikake_type'] = $request->input('shikake_type');
-            $history = $this->defectService->getShikakeDefectHistory($filters, 20);
-        } else {
-            $history = $this->defectService->getCircuitDefectHistory($filters, 20);
-        }
-
         $shikakeTypes = [
             'BONDER' => 'Bonder',
             'DBL_CRIMP' => 'Dbl Crimp',
@@ -253,10 +260,25 @@ class DefectController extends Controller
 
         return view('defect.history', [
             'conveyors' => $conveyors,
-            'history' => $history,
-            'filters' => array_merge($filters, ['type' => $type]),
             'shikakeTypes' => $shikakeTypes,
         ]);
+    }
+
+    /**
+     * Server-side datatable for defect history
+     */
+    public function historyDatatable(Request $request)
+    {
+        return $this->defectService->getHistoryDatatable(
+            $request->input('type', 'circuit'),
+            [
+                'date_from' => $request->input('date_from'),
+                'date_to' => $request->input('date_to'),
+                'conveyor_id' => $request->input('conveyor_id'),
+                'shift' => $request->input('shift'),
+                'shikake_type' => $request->input('shikake_type'),
+            ]
+        );
     }
 
     /**

@@ -34,7 +34,9 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard/printing-trend', [DashboardController::class, 'getPrintingTrendData'])->name('dashboard.printing-trend');
+    Route::get('/dashboard/chart-data', [DashboardController::class, 'getChartData'])->name('dashboard.chart-data');
+    Route::get('/dashboard/cutting-datatable', [DashboardController::class, 'getCuttingDatatable'])->name('dashboard.cutting-datatable');
+    Route::get('/dashboard/shikake-datatable', [DashboardController::class, 'getShikakeDatatable'])->name('dashboard.shikake-datatable');
 
     // System Module Routes
     Route::prefix('system')->name('system.')->group(function () {
@@ -120,6 +122,7 @@ Route::middleware('auth')->group(function () {
         Route::get('schedule-verification/datatable', [ScheduleVerificationController::class, 'datatable'])->name('schedule-verification.datatable');
         Route::get('schedule-verification/details', [ScheduleVerificationController::class, 'details'])->name('schedule-verification.details');
         Route::get('schedule-verification/available-assy', [ScheduleVerificationController::class, 'availableAssyData'])->name('schedule-verification.available-assy');
+        Route::get('schedule-verification/available-dates', [ScheduleVerificationController::class, 'availableDates'])->name('schedule-verification.available-dates');
         Route::post('schedule-verification/save', [ScheduleVerificationController::class, 'save'])->name('schedule-verification.save');
         Route::post('schedule-verification/verify', [ScheduleVerificationController::class, 'verify'])->name('schedule-verification.verify');
         Route::post('schedule-verification/unverify', [ScheduleVerificationController::class, 'unverify'])->name('schedule-verification.unverify');
@@ -141,18 +144,21 @@ Route::middleware('auth')->group(function () {
     Route::prefix('defect')->name('defect.')->group(function () {
         // Defect Cutting
         Route::get('cutting', [DefectController::class, 'cuttingIndex'])->name('cutting.index');
+        Route::get('cutting/datatable', [DefectController::class, 'cuttingDatatable'])->name('cutting.datatable');
         Route::post('cutting', [DefectController::class, 'cuttingStore'])->name('cutting.store');
         Route::get('cutting/circuits', [DefectController::class, 'getCircuits'])->name('cutting.circuits');
         Route::get('cutting/balance', [DefectController::class, 'getCircuitBalance'])->name('cutting.balance');
         
         // Defect Shikake
         Route::get('shikake', [DefectController::class, 'shikakeIndex'])->name('shikake.index');
+        Route::get('shikake/datatable', [DefectController::class, 'shikakeDatatable'])->name('shikake.datatable');
         Route::post('shikake', [DefectController::class, 'shikakeStore'])->name('shikake.store');
         Route::get('shikake/list', [DefectController::class, 'getShikakes'])->name('shikake.list');
         Route::get('shikake/balance', [DefectController::class, 'getShikakeBalance'])->name('shikake.balance');
         
         // Defect History
         Route::get('history', [DefectController::class, 'history'])->name('history');
+        Route::get('history/datatable', [DefectController::class, 'historyDatatable'])->name('history.datatable');
         Route::get('summary', [DefectController::class, 'getSummary'])->name('summary');
     });
 });

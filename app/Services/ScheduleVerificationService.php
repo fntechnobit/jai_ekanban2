@@ -19,43 +19,125 @@ class ScheduleVerificationService
     }
 
     /**
-     * Get datatable query for schedule verification
+     * Get datatable query for schedule verification.
+     * Generates ALL date×conveyor×shift combinations for "active" conveyors
+     * (those with any assy_schedule data in the range), then LEFT JOINs with actual
+     * assy data so gap dates appear as "No Data" rows.
      */
     public function getDatatableQuery($startDate = null, $endDate = null, $conveyorId = null, $status = null)
     {
-        $query = AssySchedule::with('conveyor')
-            ->select(
-                'conveyor_id',
-                DB::raw('DATE(schedule) as schedule_date'),
-                'shift',
-                DB::raw('GROUP_CONCAT(DISTINCT assy ORDER BY assy SEPARATOR ", ") as assy_list'),
-                DB::raw('SUM(qty) as total_listing'),
-                DB::raw('MAX(is_lock) as is_lock'),
-                DB::raw('MIN(id) as first_id')
-            )
-            ->groupBy('conveyor_id', 'schedule_date', 'shift');
+        // --- Step 1: Determine date range ---
+        $start = $startDate ? Carbon::parse($startDate) : Carbon::today();
+        $end   = $endDate   ? Carbon::parse($endDate)   : Carbon::today()->addDays(10);
 
-        // Apply filters
-        if ($startDate && $endDate) {
-            $query->whereBetween('schedule', [$startDate, $endDate]);
-        }
+        // --- Step 2: Get ACTIVE conveyors (those with any assy_schedule in range) ---
+        $conveyorQuery = DB::table('assy_schedule AS a')
+            ->join('master_conveyor AS mc', 'a.conveyor_id', '=', 'mc.id')
+            ->whereNull('mc.deleted_at')
+            ->whereRaw('DATE(a.schedule) BETWEEN ? AND ?', [$start->format('Y-m-d'), $end->format('Y-m-d')])
+            ->select('mc.id AS conveyor_id', 'mc.conveyor AS conveyor_name', 'mc.capacity', 'mc.shift_qty', 'mc.shift_start')
+            ->distinct();
 
         if ($conveyorId) {
-            $query->where('conveyor_id', $conveyorId);
+            $conveyorQuery->where('mc.id', $conveyorId);
         }
 
-        // Filter by status
-        if ($status === 'verified') {
-            $query->having('is_lock', '=', 1);
-        } elseif ($status === 'pending') {
-            $query->having('is_lock', '=', 0);
+        $activeConveyors = $conveyorQuery->get();
+
+        if ($activeConveyors->isEmpty()) {
+            return collect();
         }
 
-        $query->orderBy('schedule_date', 'asc')
-              ->orderBy('conveyor_id', 'asc')
-              ->orderBy('shift', 'asc');
+        // --- Step 3: Get actual assy_schedule aggregated data for the range ---
+        $assyQuery = DB::table('assy_schedule')
+            ->selectRaw('DATE(schedule) AS schedule_date, conveyor_id, shift, GROUP_CONCAT(DISTINCT assy ORDER BY assy SEPARATOR ", ") AS assy_list, SUM(qty) AS total_listing, MAX(is_lock) AS is_lock, MIN(id) AS first_id')
+            ->whereRaw('DATE(schedule) BETWEEN ? AND ?', [$start->format('Y-m-d'), $end->format('Y-m-d')])
+            ->groupByRaw('DATE(schedule), conveyor_id, shift');
 
-        return $query->get();
+        if ($conveyorId) {
+            $assyQuery->where('conveyor_id', $conveyorId);
+        }
+
+        // Index actual data by "date|conveyor_id|shift" for O(1) lookup
+        $assyData = [];
+        foreach ($assyQuery->get() as $row) {
+            $key = $row->schedule_date . '|' . $row->conveyor_id . '|' . $row->shift;
+            $assyData[$key] = $row;
+        }
+
+        // --- Step 4: Generate full grid: all dates × active conveyors × shifts ---
+        $rows = [];
+        $current = $start->copy();
+
+        while ($current->lte($end)) {
+            $dateStr = $current->format('Y-m-d');
+
+            foreach ($activeConveyors as $conv) {
+                $shiftStart = (int) ($conv->shift_start ?? 1);
+                $shiftQty   = (int) ($conv->shift_qty   ?? 1);
+
+                for ($s = $shiftStart; $s < $shiftStart + $shiftQty; $s++) {
+                    $key   = $dateStr . '|' . $conv->conveyor_id . '|' . $s;
+                    $assy  = $assyData[$key] ?? null;
+
+                    $hasAssy  = $assy !== null ? 1 : 0;
+                    $isLock   = $assy ? (int) $assy->is_lock : 0;
+
+                    // Apply status filter
+                    if ($status === 'verified'  && !($hasAssy && $isLock == 1)) continue;
+                    if ($status === 'pending'   && !($hasAssy && $isLock == 0)) continue;
+                    if ($status === 'no_data'   && $hasAssy) continue;
+
+                    $rows[] = (object) [
+                        'schedule_date' => $dateStr,
+                        'conveyor_id'   => $conv->conveyor_id,
+                        'conveyor_name' => $conv->conveyor_name,
+                        'capacity'      => $conv->capacity,
+                        'shift'         => $s,
+                        'total_listing' => $assy ? (int) $assy->total_listing : 0,
+                        'assy_list'     => $assy ? ($assy->assy_list ?? '') : '',
+                        'is_lock'       => $isLock,
+                        'first_id'      => $assy ? $assy->first_id : null,
+                        'has_assy'      => $hasAssy,
+                    ];
+                }
+            }
+
+            $current->addDay();
+        }
+
+        return collect($rows);
+    }
+
+    /**
+     * Get available dates (H to H+days_range) that have unverified schedules for a conveyor
+     * Used by the right panel date selector in verification modal
+     */
+    public function getAvailableDates($conveyorId, $currentDate, $currentShift, $daysRange = 10)
+    {
+        $endDate = Carbon::parse($currentDate)->addDays((int) $daysRange)->format('Y-m-d');
+
+        $rows = DB::select("
+            SELECT 
+                DATE(schedule) AS schedule_date,
+                shift,
+                COUNT(*) AS item_count,
+                SUM(qty) AS total_qty
+            FROM assy_schedule
+            WHERE conveyor_id = ?
+              AND DATE(schedule) >= ?
+              AND DATE(schedule) <= ?
+              AND is_lock = 0
+              AND verified_at IS NULL
+              AND NOT (DATE(schedule) = ? AND shift = ?)
+            GROUP BY DATE(schedule), shift
+            ORDER BY DATE(schedule) ASC, shift ASC
+        ", [$conveyorId, $currentDate, $endDate, $currentDate, $currentShift]);
+
+        return [
+            'success' => true,
+            'data' => $rows
+        ];
     }
 
     /**
@@ -81,10 +163,26 @@ class ScheduleVerificationService
             ->orderBy('listing_id', 'asc')
             ->get();
 
+        // Calculate capacities
+        $normalCutOffCapacity = round($conveyor->capacity / 4, 2);
+        $cutOff5Capacity      = round($normalCutOffCapacity * 0.875, 2);
+
         if ($schedules->isEmpty()) {
+            // Return success with empty cut-offs so the modal can open
+            // (allows user to drag data from other dates into this empty slot)
             return [
-                'success' => false,
-                'message' => 'No schedules found'
+                'success'               => true,
+                'conveyor_id'           => $conveyorId,
+                'conveyor'              => $conveyor->conveyor,
+                'date'                  => $date,
+                'shift'                 => $shift,
+                'capacity'              => $conveyor->capacity,
+                'normal_cutoff_capacity'=> $normalCutOffCapacity,
+                'cutoff5_capacity'      => $cutOff5Capacity,
+                'assy_count'            => 0,
+                'total_listing'         => 0,
+                'cut_offs'              => array_map(fn($i) => ['cutoff' => $i, 'items' => []], range(1, 5)),
+                'is_empty'              => true,
             ];
         }
 
@@ -134,10 +232,6 @@ class ScheduleVerificationService
         // Get unique assy count
         $assyCount = $schedules->pluck('assy')->unique()->count();
         $totalListing = $schedules->sum('qty');
-        
-        // Calculate Cut Off 5 capacity (0.875 x capacity per normal CO)
-        $normalCutOffCapacity = $conveyor->capacity / 4;
-        $cutOff5Capacity = round($normalCutOffCapacity * 0.875, 2);
 
         return [
             'success' => true,

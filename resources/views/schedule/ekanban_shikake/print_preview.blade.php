@@ -3,7 +3,7 @@
 @section('title', 'eKanban Shikake - Print Preview')
 
 @section('breadcrumb')
-    <x-page-header menu-code="ekanban_shikake_print_preview" />
+    <x-page-header menu-code="ekanban_shikake" />
 @endsection
 
 @section('content')

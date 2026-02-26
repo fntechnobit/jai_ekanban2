@@ -43,7 +43,7 @@ class ScheduleVerificationController extends Controller
         return DataTables::of($schedules)
             ->addIndexColumn()
             ->addColumn('conveyor_name', function ($schedule) {
-                return $schedule->conveyor ? $schedule->conveyor->conveyor : '-';
+                return $schedule->conveyor_name ?? '-';
             })
             ->addColumn('dates', function ($schedule) {
                 return Carbon::parse($schedule->schedule_date)->format('Y-m-d');
@@ -52,26 +52,26 @@ class ScheduleVerificationController extends Controller
                 return 'Shift ' . $schedule->shift;
             })
             ->addColumn('capacity', function ($schedule) {
-                if ($schedule->conveyor) {
-                    return $schedule->conveyor->capacity;
-                }
-                return 0;
+                return $schedule->capacity ?? 0;
             })
             ->addColumn('listing', function ($schedule) {
-                return $schedule->total_listing;
+                return $schedule->has_assy ? $schedule->total_listing : 0;
             })
             ->addColumn('assy', function ($schedule) {
-                return $schedule->assy_list ?: '-';
+                return $schedule->has_assy ? ($schedule->assy_list ?: '-') : '-';
             })
             ->addColumn('status', function ($schedule) {
+                if (!$schedule->has_assy) {
+                    return '<span class="badge bg-secondary">No Data</span>';
+                }
                 if ($schedule->is_lock == 1) {
                     return '<span class="badge bg-success">Verified</span>';
                 }
                 return '<span class="badge bg-danger">Pending</span>';
             })
             ->addColumn('action', function ($schedule) {
-                if ($schedule->is_lock == 1) {
-                    // Show Detail and Unverify buttons for verified schedules
+                if ($schedule->has_assy && $schedule->is_lock == 1) {
+                    // Verified — show Detail + Unverify
                     return '<div class="btn-group" role="group">
                         <button type="button" class="btn btn-soft-info btn-sm btn-detail" 
                             data-conveyor-id="' . $schedule->conveyor_id . '" 
@@ -86,15 +86,16 @@ class ScheduleVerificationController extends Controller
                             <i class="ti ti-lock-open"></i> Unverify
                         </button>
                     </div>';
-                } else {
-                    // Show Verify button for pending schedules
-                    return '<div class="btn-group" role="group"><button type="button" class="btn btn-soft-success btn-sm btn-verify" 
+                }
+                // Pending OR No Data — show Verify button (allows opening modal to drag-in from other dates)
+                return '<div class="btn-group" role="group">
+                    <button type="button" class="btn btn-soft-success btn-sm btn-verify" 
                         data-conveyor-id="' . $schedule->conveyor_id . '" 
                         data-date="' . $schedule->schedule_date . '" 
                         data-shift="' . $schedule->shift . '">
                         <i class="ti ti-check"></i> Verify
-                    </button></div>';
-                }
+                    </button>
+                </div>';
             })
             ->rawColumns(['status', 'action'])
             ->make(true);
@@ -128,6 +129,23 @@ class ScheduleVerificationController extends Controller
         $shift = $request->input('shift');
 
         $result = $this->scheduleVerificationService->getAvailableAssyData($conveyorId, $date, $shift);
+
+        return response()->json($result);
+    }
+
+    /**
+     * Get available dates (H to H+10) that have schedules for a conveyor
+     */
+    public function availableDates(Request $request)
+    {
+        $conveyorId = $request->input('conveyor_id');
+        $currentDate = $request->input('current_date');
+        $currentShift = $request->input('current_shift');
+        $daysRange = $request->input('days_range', 10);
+
+        $result = $this->scheduleVerificationService->getAvailableDates(
+            $conveyorId, $currentDate, $currentShift, $daysRange
+        );
 
         return response()->json($result);
     }

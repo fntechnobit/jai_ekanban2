@@ -149,10 +149,12 @@
 }
 
 .ticket-circuit-print .barcode-cell img {
-    width: 100%;
-    max-width: 100%;
-    height: 80px;
+    width: 80%;
+    max-height: 10mm;
+    height: auto;
+    object-fit: contain;
     display: block;
+    margin: 0 auto;
     box-sizing: border-box;
 }
 
