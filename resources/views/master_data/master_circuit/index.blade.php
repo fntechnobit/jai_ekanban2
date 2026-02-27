@@ -110,7 +110,7 @@
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                     { data: 'type_badge', name: 'type', orderable: true, searchable: false },
                     { data: 'carline', name: 'carline' },
-                    { data: 'conveyor_name', name: 'conveyor_name' },
+                    { data: 'conveyor_name', name: 'conveyor_name', searchable: false },
                     { data: 'cct_no', name: 'cct_no' },
                     { data: 'cct_code', name: 'cct_code' },
                     { data: 'shikake_code', name: 'shikake_code' },

@@ -191,7 +191,7 @@ $(function () {
         columns: [
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center' },
             { data: 'machine', name: 'machine' },
-            { data: 'conveyor_name', name: 'conveyor_name' },
+            { data: 'conveyor_name', name: 'master_conveyor.conveyor' },
             { data: 'total_printed', name: 'total_printed', className: 'text-end' },
             { data: 'total_print_count', name: 'total_print_count', className: 'text-end' }
         ],
@@ -209,7 +209,7 @@ $(function () {
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center' },
             { data: 'machine', name: 'machine' },
             { data: 'process', name: 'process' },
-            { data: 'conveyor_name', name: 'conveyor_name' },
+            { data: 'conveyor_name', name: 'master_conveyor.conveyor' },
             { data: 'total_printed', name: 'total_printed', className: 'text-end' },
             { data: 'total_print_count', name: 'total_print_count', className: 'text-end' }
         ],

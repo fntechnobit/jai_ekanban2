@@ -176,7 +176,7 @@ $(function () {
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center' },
             { data: 'type_badge', name: 'type', orderable: true, searchable: false, className: 'text-center' },
             { data: 'carline', name: 'carline' },
-            { data: 'conveyor_name', name: 'conveyor_name' },
+            { data: 'conveyor_name', name: 'master_conveyor.conveyor' },
             { data: 'cct_no', name: 'cct_no' },
             { data: 'cct_code', name: 'cct_code' },
             { data: 'shikake_code', name: 'shikake_code' },
@@ -184,7 +184,7 @@ $(function () {
             { data: 'qty', name: 'qty', className: 'text-center' },
             { data: 'machine', name: 'machine' },
             { data: 'sequence', name: 'sequence', className: 'text-center' },
-            { data: 'balance_display', name: 'balance', className: 'text-center', orderable: true },
+            { data: 'balance_display', name: 'balance', className: 'text-center', orderable: true, searchable: false },
             { data: 'action', name: 'action', orderable: false, searchable: false, className: 'text-center' }
         ],
         pageLength: 50,
