@@ -116,18 +116,16 @@
                             <thead>
                                 <tr>
                                     <th width="5%">No</th>
-                                    <th>Type</th>
+                                    <th>Type / CCT</th>
                                     <th>Shikake</th>
-                                    <th>CCT Code</th>
                                     <th>CV</th>
                                     <th>Family</th>
                                     <th>Qty</th>
                                     <th>Issue</th>
                                     <th>Kanban</th>
-                                    <th>Shift</th>
-                                    <th>Cutoff</th>
+                                    <th>CutOff</th>
                                     <th>Print</th>
-                                    <th width="10%">Action</th>
+                                    <th width="12%">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -171,6 +169,26 @@
             border: 2px solid #000 !important;
         }
         #previewContent .ticket-circuit-print .section-label.black-bg {
+            background-color: #000 !important;
+            color: #fff !important;
+        }
+        /* Twist ticket borders */
+        #previewContent .ticket-twist-print {
+            border: 2px solid #000 !important;
+            overflow: visible !important;
+        }
+        #previewContent .ticket-twist-print table {
+            border-collapse: collapse !important;
+            border: 1px solid #000 !important;
+        }
+        #previewContent .ticket-twist-print th,
+        #previewContent .ticket-twist-print td {
+            border: 1px solid #000 !important;
+        }
+        #previewContent .ticket-twist-print thead th {
+            border: 2px solid #000 !important;
+        }
+        #previewContent .ticket-twist-print .twist-section-label.black-bg {
             background-color: #000 !important;
             color: #fff !important;
         }
@@ -246,7 +264,7 @@
                 scrollX: true,
                 scrollCollapse: true,
                 fixedColumns: {
-                    leftColumns: 5,  // Freeze: No, Type, Shikake, CCT Code, CV
+                    leftColumns: 4,  // Freeze: No, Type/CCT, Shikake, CV
                     rightColumns: 1   // Freeze: Action
                 },
                 ajax: {
@@ -263,27 +281,26 @@
                     }
                 },
                 columns: [
-                    { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '5%' },
+                    { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '4%' },
                     { 
                         data: 'type', 
                         name: 'type', 
-                        width: '6%',
-                        render: function(data) {
-                            if (data === 'CUTTING_TWIST') {
-                                return '<span class="badge bg-info">TWS</span>';
-                            }
-                            return '<span class="badge bg-primary">CCT</span>';
+                        width: '14%',
+                        render: function(data, type, row) {
+                            var badge = data === 'CUTTING_TWIST'
+                                ? '<span class="badge bg-info">TWS</span>'
+                                : '<span class="badge bg-primary">CCT</span>';
+                            return badge + ' <span class="text-muted">' + (row.cct_code || '') + '</span>';
                         }
                     },
                     { data: 'shikake_code', name: 'shikake_code', width: '10%' },
-                    { data: 'cct_code', name: 'cct_code', width: '10%' },
-                    { data: 'conveyor', name: 'conveyor', width: '8%' },
+                    { data: 'conveyor', name: 'conveyor', width: '7%' },
                     { data: 'family', name: 'family', width: '10%' },
-                    { data: 'qty', name: 'qty', width: '5%', className: 'text-end' },
+                    { data: 'qty', name: 'qty', width: '4%', className: 'text-end' },
                     { 
                         data: 'issue_count', 
                         name: 'issue_count', 
-                        width: '6%',
+                        width: '5%',
                         className: 'text-end',
                         orderable: false,
                         render: function(data, type, row) {
@@ -297,7 +314,7 @@
                     { 
                         data: 'barcodes', 
                         name: 'barcodes', 
-                        width: '15%',
+                        width: '14%',
                         orderable: false,
                         render: function(data, type, row) {
                             if (data && data !== '-') {
@@ -309,8 +326,16 @@
                             return '-';
                         }
                     },
-                    { data: 'shift', name: 'shift', width: '6%', className: 'text-center' },
-                    { data: 'cutoff', name: 'cutoff', width: '6%', className: 'text-center' },
+                    { 
+                        data: 'shift', 
+                        name: 'shift', 
+                        width: '9%', 
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            var colorClass = (row.shift == 1) ? 'bg-primary' : 'bg-danger';
+                            return '<span class="badge ' + colorClass + '">' + (row.shift || '-') + '/' + (row.cutoff || '-') + '</span>';
+                        }
+                    },
                     { 
                         data: 'print_status', 
                         name: 'print_status',
@@ -335,7 +360,7 @@
                             }
                         }
                     },
-                    { data: 'actions', name: 'actions', orderable: false, searchable: false, width: '10%' }
+                    { data: 'actions', name: 'actions', orderable: false, searchable: false, width: '12%' }
                 ],
                 pageLength: 100,
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],

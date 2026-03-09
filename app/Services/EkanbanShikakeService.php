@@ -64,16 +64,14 @@ class EkanbanShikakeService
         $columns = [
             'assy_schedule_id',              // 0 - Num (DT_RowIndex)
             'process',                       // 1 - Process
-            'identifier',                    // 2 - Identifier
-            'conveyor',                      // 3 - Conveyor
-            'machine',                       // 4 - Machine
-            'family',                        // 5 - Family
-            'master_shikake.qty',            // 6 - Qty
-            'issue_count',                   // 7 - Issue count
-            'barcodes',                      // 8 - Barcode Kanban
-            'date',                          // 9 - Date
-            'shift',                         // 10 - Shift
-            'cutoff'                         // 11 - Cut Off
+            'identifier',                    // 2 - Code
+            'conveyor',                      // 3 - CV
+            'family',                        // 4 - Family
+            'master_shikake.qty',            // 5 - Qty
+            'issue_count',                   // 6 - Issue count
+            'barcodes',                      // 7 - Kanban
+            'shift',                         // 8 - Shift
+            'cutoff'                         // 9 - CO
         ];
         
         if (isset($columns[$orderColumn])) {

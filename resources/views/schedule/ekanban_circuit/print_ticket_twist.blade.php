@@ -117,9 +117,11 @@
 }
 
 .twist-qrcode-cell {
-    padding: 4px;
+    padding: 2px;
     vertical-align: middle;
     text-align: center;
+    overflow: hidden;
+    max-width: 0; /* force cell to respect colgroup width */
 }
 
 .twist-qr-label {
@@ -129,17 +131,23 @@
 }
 
 .twist-qr-img {
+    max-width: 100%;
     width: 110px;
-    height: 110px;
+    height: auto;
+    aspect-ratio: 1 / 1;
     display: block;
     margin: 0 auto;
+    object-fit: contain;
 }
 
 .twist-qr-text {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: bold;
     margin-top: 1px;
     word-break: break-all;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    white-space: normal;
 }
 
 .twist-barcode-cell {
@@ -265,9 +273,9 @@
     <div class="ticket-twist-print">
     <table>
         <colgroup>
-            <col style="width: 38px">   {{-- Col 1: Section label --}}
-            <col style="width: 96px">   {{-- Col 2: Label --}}
-            <col style="width: 96px">   {{-- Col 3: Value --}}
+            <col style="width: 50px">   {{-- Col 1: Section label --}}
+            <col style="width: 112px">  {{-- Col 2: Label --}}
+            <col style="width: 112px">  {{-- Col 3: Value --}}
             <col style="width: 72px">   {{-- Col 4: Label/Value (MACHINE/SIZE) --}}
             <col style="width: 72px">   {{-- Col 5: Label (MACHINE/COLOR) --}}
             <col style="width: 72px">   {{-- Col 6: Value (SEQ/C-L) --}}
@@ -331,9 +339,9 @@
             <tr>
                 <td rowspan="3" class="twist-section-label">A</td>
                 <td class="twist-label-cell text-left">TERM.</td>
-                <td colspan="2" class="twist-value-cell text-left">{{ $circuit->terminal_1 ?? '' }}</td>
+                <td colspan="2" class="twist-value-cell text-left"@if(!empty($circuit->gold_1)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_1 ?? '' }}</td>
                 <td class="twist-label-cell text-left">NOTE</td>
-                <td class="twist-value-cell text-left">{{ $circuit->note_1 ?? '' }}</td>
+                <td class="twist-value-cell text-left"@if(!empty($circuit->note_1) && preg_match('/^\*+$/', trim($circuit->note_1))) style="overflow:hidden;"@endif>@if(!empty($circuit->note_1) && preg_match('/^\*+$/', trim($circuit->note_1)))<span style="display:inline-block;transform:scale(2);line-height:1;">{{ $circuit->note_1 }}</span>@else{{ $circuit->note_1 ?? '' }}@endif</td>
                 <td colspan="2" class="twist-label-cell">MACH. TWIST</td>
                 <td class="twist-label-cell">SEQ</td>
             </tr>
@@ -352,7 +360,7 @@
                 <td colspan="2" class="twist-value-cell text-left">{{ $circuit->tube_1 ?? '' }}</td>
                 <td class="twist-label-cell text-left">MARK</td>
                 <td class="twist-value-cell text-left">{{ $circuit->mark_1 ?? '' }}</td>
-                <td colspan="3" rowspan="2" class="twist-barcode-cell">
+                <td colspan="3" rowspan="3" class="twist-barcode-cell">
                     @if(isset($circuit->barcode_process_path))
                         <img src="{{ $circuit->barcode_process_path }}" alt="Barcode Process">
                         <div class="twist-barcode-label">{{ $circuit->barcode_process ?? '' }}</div>
@@ -366,9 +374,9 @@
             <tr>
                 <td rowspan="3" class="twist-section-label black-bg">B</td>
                 <td class="twist-label-cell text-left">TERM.</td>
-                <td colspan="2" class="twist-value-cell text-left">{{ $circuit->terminal_2 ?? '' }}</td>
+                <td colspan="2" class="twist-value-cell text-left"@if(!empty($circuit->gold_2)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_2 ?? '' }}</td>
                 <td class="twist-label-cell text-left">NOTE</td>
-                <td class="twist-value-cell text-left">{{ $circuit->note_2 ?? '' }}</td>
+                <td class="twist-value-cell text-left"@if(!empty($circuit->note_2) && preg_match('/^\*+$/', trim($circuit->note_2))) style="overflow:hidden;"@endif>@if(!empty($circuit->note_2) && preg_match('/^\*+$/', trim($circuit->note_2)))<span style="display:inline-block;transform:scale(2);line-height:1;">{{ $circuit->note_2 }}</span>@else{{ $circuit->note_2 ?? '' }}@endif</td>
             </tr>
             <!-- Section B - Row 2 -->
             <tr>
@@ -376,7 +384,6 @@
                 <td colspan="2" class="twist-value-cell text-left">{{ $circuit->acc_2a ?? '' }}</td>
                 <td class="twist-label-cell text-left">STRIP</td>
                 <td class="twist-value-cell text-left">{{ $circuit->strip_2 ?? '' }}</td>
-                <td colspan="3" class="twist-label-cell">TO STORE</td>
             </tr>
             <!-- Section B - Row 3 -->
             <tr>
@@ -384,24 +391,17 @@
                 <td colspan="2" class="twist-value-cell text-left">{{ $circuit->tube_2 ?? '' }}</td>
                 <td class="twist-label-cell text-left">MARK</td>
                 <td class="twist-value-cell text-left">{{ $circuit->mark_2 ?? '' }}</td>
-                <td colspan="3" class="twist-value-cell">{{ $circuit->to_store ?? '' }}</td>
+                <td colspan="1" class="twist-label-cell">ADDR.</td>
+                <td colspan="2" class="twist-value-cell">{{ $circuit->address ?? '' }}</td>
             </tr>
 
             <!-- Bottom Section - Row 1 -->
             <tr>
-                <td colspan="3" rowspan="4" class="twist-qrcode-cell">
-                    <div class="twist-qr-label">QRCODE KANBAN</div>
-                    @if(isset($circuit->qr_code_path))
-                        <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="twist-qr-img">
-                        <div class="twist-qr-text">{{ $circuit->barcode_kanban ?? '' }}</div>
-                    @else
-                        <div style="width:110px;height:110px;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR CODE</div>
-                    @endif
-                </td>
+                <td class="twist-label-cell text-left">STR</td>
+                <td colspan="2" class="twist-value-cell" style="text-align:center;font-size:28px;">{{ $circuit->to_store ?? '' }}</td>
                 <td class="twist-label-cell text-left">CV NO</td>
                 <td colspan="3" class="twist-value-cell text-left">{{ $circuit->conveyor ?? '-' }}</td>
                 <td colspan="2" rowspan="4" class="twist-qrcode-cell">
-                    <div class="twist-qr-label" style="font-weight:bold;font-size:20px;">{{ $circuit->shikake_code ?? '-' }}</div>
                     @if(isset($circuit->qr_qrcode_shikake_path))
                         <img src="{{ $circuit->qr_qrcode_shikake_path }}" alt="QR Shikake" class="twist-qr-img">
                         <div class="twist-qr-text">{{ $circuit->qrcode_shikake ?? '' }}</div>
@@ -415,6 +415,15 @@
             </tr>
             <!-- Bottom Section - Row 2 -->
             <tr>
+                <td colspan="2" rowspan="3" class="twist-value-cell text-left" style="font-size:18px;">{{ $circuit->shikake_code ?? '-' }}</td>
+                <td colspan="1" rowspan="3" class="twist-qrcode-cell">
+                    @if(isset($circuit->qr_code_path))
+                        <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="twist-qr-img">
+                        <div class="twist-qr-text">{{ $circuit->barcode_kanban ?? '' }}</div>
+                    @else
+                        <div style="width:100%;max-width:88px;aspect-ratio:1/1;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR</div>
+                    @endif
+                </td>
                 <td class="twist-label-cell text-left">FAM.</td>
                 <td colspan="3" class="twist-value-cell text-left">{{ $circuit->family ?? '-' }}</td>
             </tr>

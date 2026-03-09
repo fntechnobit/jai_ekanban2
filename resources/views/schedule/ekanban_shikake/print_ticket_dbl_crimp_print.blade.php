@@ -14,7 +14,8 @@
     flex-direction: row;
     flex-wrap: nowrap;
     gap: 0;
-    margin: 10px auto;
+    margin: 0;
+    padding: 0;
     justify-content: flex-start;
     align-items: stretch;
     background: white;
@@ -26,26 +27,34 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     background: white;
     height: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 .dbl-crimp-print-wrapper .shikake-image-section img {
     height: 100%;
     width: auto;
     object-fit: contain;
+    margin: 0;
+    padding: 0;
+    display: block;
+    /* Enhance drawing visibility for thermal printing */
+    filter: contrast(2.0) brightness(0.95);
+    -webkit-filter: contrast(2.0) brightness(0.95);
 }
 
 .ticket-dbl-crimp-print {
-    width: 987px;
-    min-width: 987px;
+    width: 654px;
+    min-width: 654px;
     height: 100%;
     flex-shrink: 0;
     background: white;
     margin: 0;
     padding: 0;
-    border: 2px solid #ddd;
+    border: 2px solid #000;
     overflow: hidden;
     font-family: Arial, sans-serif;
 }
@@ -216,10 +225,10 @@
     <div class="ticket-dbl-crimp-print">
         <table>
             <colgroup>
-                <col style="width: 25%">
-                <col style="width: 25%">
-                <col style="width: 25%">
-                <col style="width: 25%">
+                <col style="width: 19%">
+                <col style="width: 38%">
+                <col style="width: 19%">
+                <col style="width: 24%">
             </colgroup>
             <thead>
                 <tr>
@@ -246,8 +255,8 @@
                 </tr>
                 <!-- Row 4-6: CCT 1-3 with BARCODE MESIN (rowspan=3) -->
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_1 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->address_1 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_1 ?? '-' }}</td>
+                    <td class="value-cell">{{ $processData->address_1 ?? '-' }}</td>
                     <td colspan="2" rowspan="3" class="barcode-cell">
                         @if(isset($processData->barcode_mesin_path))
                             <img src="{{ $processData->barcode_mesin_path }}" alt="Barcode Mesin">
@@ -258,24 +267,24 @@
                     </td>
                 </tr>
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_2 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->address_2 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_2 ?? '-' }}</td>
+                    <td class="value-cell">{{ $processData->address_2 ?? '-' }}</td>
                 </tr>
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_3 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->address_3 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_3 ?? '-' }}</td>
+                    <td class="value-cell">{{ $processData->address_3 ?? '-' }}</td>
                 </tr>
                 
                 <!-- Row 7: CCT 4 + MACHINE Label -->
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_4 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->address_4 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_4 ?? '-' }}</td>
+                    <td class="value-cell">{{ $processData->address_4 ?? '-' }}</td>
                     <td colspan="2" class="label-cell">MACHINE</td>
                 </tr>
                 <!-- Row 8: CCT 5 + MACHINE Value -->
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_5 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->address_5 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_5 ?? '-' }}</td>
+                    <td class="value-cell">{{ $processData->address_5 ?? '-' }}</td>
                     <td colspan="2" class="value-cell">{{ $shikake->machine ?? '' }}</td>
                 </tr>
                 

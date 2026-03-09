@@ -282,8 +282,8 @@
                 <tr>
                     <td rowspan="4" class="section-label">A</td>
                     <td class="label-cell text-left">TERM.</td>
-                    <td colspan="3" class="value-cell text-left">{{ $circuit->terminal_1 ?? '' }}</td>
-                    <td class="label-cell">{{ $circuit->gold_1 ?? '' }}</td>
+                    <td colspan="3" class="value-cell text-left"@if(!empty($circuit->gold_1)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_1 ?? '' }}</td>
+                    <td class="label-cell"></td>
                     <td class="value-cell">{{ $circuit->seal_1 ?? '' }}</td>
                     <td class="label-cell text-left">TO 1</td>
                     <td class="value-cell text-left">{{ $circuit->t01 ?? '' }}</td>
@@ -293,7 +293,7 @@
                     <td class="label-cell text-left">ACC 1</td>
                     <td colspan="3" class="value-cell text-left">{{ $circuit->acc_1 ?? '' }}</td>
                     <td class="label-cell text-left">NOTE</td>
-                    <td class="value-cell">{{ $circuit->note_1 ?? '' }}</td>
+                    <td class="value-cell"@if(!empty($circuit->note_1) && preg_match('/^\*+$/', trim($circuit->note_1))) style="overflow:hidden;"@endif>@if(!empty($circuit->note_1) && preg_match('/^\*+$/', trim($circuit->note_1)))<span style="display:inline-block;transform:scale(2);line-height:1;">{{ $circuit->note_1 }}</span>@else{{ $circuit->note_1 ?? '' }}@endif</td>
                     <td class="label-cell text-left">TO 2</td>
                     <td class="value-cell text-left">{{ $circuit->t02 ?? '' }}</td>
                 </tr>
@@ -312,24 +312,26 @@
                     <td colspan="3" class="value-cell text-left">{{ $circuit->tube_1 ?? '' }}</td>
                     <td class="label-cell text-left">MARK</td>
                     <td class="value-cell">{{ $circuit->mark_1 ?? '' }}</td>
-                    <td rowspan="2" class="label-cell text-left">TO STORE</td>
-                    <td rowspan="2" class="value-cell text-left">{{ $circuit->to_store ?? '' }}</td>
+                    <td class="label-cell text-left">STORE</td>
+                    <td class="value-cell text-left">{{ $circuit->to_store ?? '' }}</td>
                 </tr>
 
                 <!-- Section B - Row 1 -->
                 <tr>
                     <td rowspan="4" class="section-label black-bg">B</td>
                     <td class="label-cell text-left">TERM.</td>
-                    <td colspan="3" class="value-cell text-left">{{ $circuit->terminal_2 ?? '' }}</td>
-                    <td class="label-cell">{{ $circuit->gold_2 ?? '' }}</td>
+                    <td colspan="3" class="value-cell text-left"@if(!empty($circuit->gold_2)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_2 ?? '' }}</td>
+                    <td class="label-cell"></td>
                     <td class="value-cell">{{ $circuit->seal_2 ?? '' }}</td>
+                    <td class="label-cell text-left">ADDR</td>
+                    <td class="value-cell text-left">{{ $circuit->address ?? '' }}</td>
                 </tr>
                 <!-- Section B - Row 2 -->
                 <tr>
                     <td class="label-cell text-left">ACC 1</td>
                     <td colspan="3" class="value-cell text-left">{{ $circuit->acc_2 ?? '' }}</td>
                     <td class="label-cell text-left">NOTE</td>
-                    <td class="value-cell">{{ $circuit->note_2 ?? '' }}</td>
+                    <td class="value-cell"@if(!empty($circuit->note_2) && preg_match('/^\*+$/', trim($circuit->note_2))) style="overflow:hidden;"@endif>@if(!empty($circuit->note_2) && preg_match('/^\*+$/', trim($circuit->note_2)))<span style="display:inline-block;transform:scale(2);line-height:1;">{{ $circuit->note_2 }}</span>@else{{ $circuit->note_2 ?? '' }}@endif</td>
                     <td class="label-cell text-left">CCT CODE</td>
                     <td class="value-cell text-left">{{ $circuit->cct_code ?? '' }}</td>
                 </tr>

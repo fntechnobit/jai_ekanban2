@@ -80,9 +80,9 @@
                             </div>
                             <div class="col-md-3">
                                 <select class="form-select form-select-sm select2" id="filter_print_status">
-                                    <option value="all">- All Status -</option>
-                                    <option value="not_printed" selected>Not Printed</option>
-                                    <option value="printed">Already Printed</option>
+                                    <option value="all">- All Print Status -</option>
+                                    <option value="not_printed" selected>Waiting Print</option>
+                                    <option value="printed">Printed</option>
                                 </select>
                             </div>
                         </div>
@@ -119,20 +119,16 @@
                         <table id="shikake-table" class="table table-bordered table-striped" style="width:100%">
                             <thead>
                                 <tr>
-                                    <th width="5%">Num.</th>
-                                    <th>Process</th>
-                                    <th>Identifier</th>
+                                    <th width="5%">No</th>
+                                    <th>Process / Code</th>
                                     <th>CV</th>
-                                    <th>Mach.</th>
                                     <th>Family</th>
                                     <th>Qty</th>
                                     <th>Issue</th>
-                                    <th>QRCode</th>
-                                    <th>Date</th>
-                                    <th>Shift</th>
-                                    <th>CO</th>
-                                    <th>Status</th>
-                                    <th width="8%">#</th>
+                                    <th>Kanban</th>
+                                    <th>CutOff</th>
+                                    <th>Print</th>
+                                    <th width="12%">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -213,7 +209,7 @@
                 scrollX: true,
                 scrollCollapse: true,
                 fixedColumns: {
-                    leftColumns: 4,  // Freeze: Num, Process, Identifier, Conveyor
+                    leftColumns: 3,  // Freeze: No, Process/Code, CV
                     rightColumns: 1   // Freeze: Actions
                 },
                 ajax: {
@@ -230,11 +226,11 @@
                     }
                 },
                 columns: [
-                    { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '5%' },
+                    { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '4%' },
                     { 
                         data: 'process', 
                         name: 'process', 
-                        width: '8%',
+                        width: '16%',
                         render: function(data, type, row) {
                             var processMap = {
                                 'TWIST': { label: 'TWS', class: 'bg-primary' },
@@ -243,19 +239,19 @@
                                 'SHIELD': { label: 'SHL', class: 'bg-warning' },
                                 'DBL CRIMP': { label: 'DBC', class: 'bg-secondary' }
                             };
-                            var process = processMap[data] || { label: data, class: 'bg-dark' };
-                            return '<span class="badge ' + process.class + '">' + process.label + '</span>';
+                            var p = processMap[data] || { label: data, class: 'bg-dark' };
+                            return '<span class="badge ' + p.class + '">' + p.label + '</span> <span class="text-muted">' + (row.identifier || '') + '</span>';
                         }
                     },
-                    { data: 'identifier', name: 'identifier', width: '10%' },
-                    { data: 'conveyor', name: 'conveyor', width: '8%' },
-                    { data: 'machine', name: 'machine', width: '8%' },
+                    { data: 'conveyor', name: 'conveyor', width: '7%' },
                     { data: 'family', name: 'family', width: '8%' },
-                    { data: 'qty', name: 'qty', width: '5%' },
+                    { data: 'qty', name: 'qty', width: '4%', className: 'text-end' },
                     { 
                         data: 'issue_count', 
                         name: 'issue_count', 
                         width: '5%',
+                        className: 'text-end',
+                        orderable: false,
                         render: function(data, type, row) {
                             if (data && data > 0) {
                                 return '<span class="badge bg-secondary fw-bold">' + data + '</span>';
@@ -267,18 +263,28 @@
                     { 
                         data: 'barcodes', 
                         name: 'barcodes', 
-                        width: '12%',
+                        width: '14%',
                         orderable: false,
                         render: function(data, type, row) {
                             if (data && data !== '-') {
-                                return '<code>' + data + '</code>';
+                                var barcodes = data.split(', ');
+                                return barcodes.map(function(b) {
+                                    return '<code>' + b + '</code>';
+                                }).join('<br>');
                             }
                             return '-';
                         }
                     },
-                    { data: 'date', name: 'date', width: '8%' },
-                    { data: 'shift', name: 'shift', width: '6%' },
-                    { data: 'cutoff', name: 'cutoff', width: '8%' },
+                    { 
+                        data: 'shift', 
+                        name: 'shift', 
+                        width: '9%', 
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            var colorClass = (row.shift == 1) ? 'bg-primary' : 'bg-danger';
+                            return '<span class="badge ' + colorClass + '">' + (row.shift || '-') + '/' + (row.cutoff || '-') + '</span>';
+                        }
+                    },
                     { 
                         data: 'print_status', 
                         name: 'print_status',
@@ -286,24 +292,22 @@
                         orderable: false,
                         render: function(data, type, row) {
                             if (row.is_printed) {
-                                var badge = '<span class="badge bg-success">Printed</span>';
+                                var count = row.print_count > 0 ? ' <small>(' + row.print_count + ')</small>' : '';
+                                var badge = '<span class="badge bg-success">Printed</span>' + count;
                                 if (row.last_printed_at) {
                                     badge += '<br><small>' + row.last_printed_at + '</small>';
                                 }
-                                if (row.print_count > 1) {
-                                    badge += '<br><small>(' + row.print_count + 'x)</small>';
-                                }
                                 return badge;
                             } else {
-                                return '<span class="badge bg-warning">Not Printed</span>';
+                                return '<span class="badge bg-warning">Waiting</span>';
                             }
                         }
                     },
-                    { data: 'actions', name: 'actions', orderable: false, searchable: false, width: '8%' }
+                    { data: 'actions', name: 'actions', orderable: false, searchable: false, width: '12%' }
                 ],
                 pageLength: 100,
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                order: [[3, 'asc']]
+                order: [[2, 'asc']]
             });
 
             // Auto-reload on all filter changes
@@ -411,9 +415,9 @@
         const SCALE_H = (RASTER_SCALE_MODE & 0x02) ? 2 : 1;
         const BASE_DOTS = Math.floor((TARGET_DOTS / SCALE_W) / 8) * 8;
         const SLICE_ROWS = 256;
-        const THRESHOLD = 145;
-        const BLANK_AFTER_PAGE_DOTS = 250;
-        const CUT_OFFSET_DOTS = 8;
+        const THRESHOLD = 190;
+        const BLANK_AFTER_PAGE_DOTS = 20;
+        const CUT_OFFSET_DOTS = 184; // ~23mm feed to pass cutter blade position
 
         async function printShikake(ids) {
             if (!QZPrint.isConnected) {

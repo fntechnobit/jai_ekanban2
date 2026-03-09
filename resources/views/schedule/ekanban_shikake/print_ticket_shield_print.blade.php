@@ -14,7 +14,8 @@
     flex-direction: row;
     flex-wrap: nowrap;
     gap: 0;
-    margin: 10px auto;
+    margin: 0;
+    padding: 0;
     justify-content: flex-start;
     align-items: stretch;
     background: white;
@@ -26,26 +27,34 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     background: white;
     height: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 .shield-print-wrapper .shikake-image-section img {
     height: 100%;
     width: auto;
     object-fit: contain;
+    margin: 0;
+    padding: 0;
+    display: block;
+    /* Enhance drawing visibility for thermal printing */
+    filter: contrast(2.0) brightness(0.95);
+    -webkit-filter: contrast(2.0) brightness(0.95);
 }
 
 .ticket-shield-print {
-    width: 987px;
-    min-width: 987px;
+    width: 642px;
+    min-width: 642px;
     height: 100%;
     flex-shrink: 0;
     background: white;
     margin: 0;
     padding: 0;
-    border: 2px solid #ddd;
+    border: 2px solid #000;
     overflow: hidden;
     font-family: Arial, sans-serif;
 }

@@ -3,13 +3,13 @@
     <button type="button" class="btn btn-soft-info btn-preview" 
             data-group-id="{{ $groupId }}" 
             title="Preview all {{ $row->issue_count }} issue(s)"
-            style="padding: 0.4rem 0.65rem; font-size: 0.9rem;">
+            style="padding: 0.55rem 1rem; font-size: 1rem;">
             <i class="fa-solid fa-eye"></i>
     </button>
     <button type="button" class="btn btn-soft-success btn-print" data-group-id="{{ $groupId }}" 
             title="Print all {{ $row->issue_count }} issue(s)"
-            style="padding: 0.4rem 0.65rem; font-size: 0.9rem;">
-        <i class="fa-solid fa-print"></i>
+            style="padding: 0.55rem 1rem; font-size: 1rem;">
+        <i class="fa-solid fa-print"></i> Print
     </button>
 @else
     @php
