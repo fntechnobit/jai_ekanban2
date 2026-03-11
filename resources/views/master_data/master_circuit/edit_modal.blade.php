@@ -159,6 +159,33 @@
                         </div>
                     </div>
 
+                    <!-- Barcode Fields -->
+                    <div class="row g-2 mt-1">
+                        <div class="col-12">
+                            <div class="border rounded p-2">
+                                <h6 class="fw-semibold small mb-1 text-primary">Barcodes</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label small mb-0">Barcode Mesin</label>
+                                        <input type="text" name="barcode_mesin" id="edit_barcode_mesin" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label small mb-0">Barcode Navigasi</label>
+                                        <input type="text" name="barcode_navigasi" id="edit_barcode_navigasi" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label small mb-0">Barcode Process</label>
+                                        <input type="text" name="barcode_process" id="edit_barcode_process" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label small mb-0">Barcode Shikake</label>
+                                        <input type="text" name="barcode_shikake" id="edit_barcode_shikake" class="form-control form-control-sm">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Terminal 1 & 2 compact -->
                     <div class="row g-2 mt-1">
                         <div class="col-md-6">

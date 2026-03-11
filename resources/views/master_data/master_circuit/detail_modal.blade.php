@@ -41,6 +41,8 @@
                             <tr><td class="text-muted">Barcode Navigasi</td><td id="v_barcode_navigasi">-</td></tr>
                             <tr><td class="text-muted">Barcode Process</td><td id="v_barcode_process">-</td></tr>
                             <tr><td class="text-muted">Barcode Shikake</td><td id="v_barcode_shikake">-</td></tr>
+                            <tr><td class="text-muted">Barcode Twist</td><td id="v_barcode_twist">-</td></tr>
+                            <tr><td class="text-muted">QRCode Drawing</td><td id="v_qrcode_drawing">-</td></tr>
                         </table>
                     </div>
                 </div>

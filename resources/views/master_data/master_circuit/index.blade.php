@@ -318,6 +318,8 @@
                         $('#v_barcode_navigasi').text(v(d.barcode_navigasi));
                         $('#v_barcode_process').text(v(d.barcode_process));
                         $('#v_barcode_shikake').text(v(d.barcode_shikake));
+                        $('#v_barcode_twist').text(v(d.barcode_twist));
+                        $('#v_qrcode_drawing').text(v(d.qrcode_drawing));
 
                         // Terminal 1
                         $('#v_terminal_1').text(v(d.terminal_1));
@@ -397,6 +399,10 @@
                         $('#edit_cl').val(d.cl);
                         $('#edit_to_store').val(d.to_store);
                         $('#edit_address').val(d.address);
+                        $('#edit_barcode_mesin').val(d.barcode_mesin);
+                        $('#edit_barcode_navigasi').val(d.barcode_navigasi);
+                        $('#edit_barcode_process').val(d.barcode_process);
+                        $('#edit_barcode_shikake').val(d.barcode_shikake);
 
                         // Terminal 1
                         $('#edit_terminal_1').val(d.terminal_1);
