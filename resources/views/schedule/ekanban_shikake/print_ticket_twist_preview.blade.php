@@ -230,10 +230,10 @@
                 <td class="twist-label-cell text-left">MARK</td>
                 <td class="twist-value-cell text-left">{{ $processData->mark_a ?? '-' }}</td>
                 <td colspan="3" rowspan="2" class="twist-barcode-cell">
-                    @if(isset($processData->barcode_process_path))
-                        <img src="{{ $processData->barcode_process_path }}" alt="Barcode">
-                    @else
-                        <span style="font-size:10px;">{{ $processData->barcode_process ?? '-' }}</span>
+                    @if(isset($processData->barcode_twist_path))
+                        <img src="{{ $processData->barcode_twist_path }}" alt="Barcode Twist">
+                    @elseif(!empty($processData->barcode_process))
+                        <span style="font-size:10px;">{{ $processData->barcode_process }}</span>
                     @endif
                 </td>
             </tr>
@@ -276,11 +276,9 @@
                 <td class="twist-label-cell text-left">CV NO</td>
                 <td colspan="3" class="twist-value-cell text-left">{{ $shikake->conveyor ?? '-' }}</td>
                 <td colspan="2" rowspan="4" class="twist-qrcode-cell">
-                    @if(!empty($processData->barcode_shikake))
-                        <div class="twist-qr-label">QRCODE SHIKAKE</div>
-                        @if(isset($processData->barcode_shikake_path))
-                            <img src="{{ $processData->barcode_shikake_path }}" alt="QR Shikake" class="twist-qr-img">
-                        @endif
+                    @if(isset($processData->qr_qrcode_drawing_path))
+                        <div class="twist-qr-label">QRCODE DRAWING</div>
+                        <img src="{{ $processData->qr_qrcode_drawing_path }}" alt="QR Drawing" class="twist-qr-img">
                     @endif
                 </td>
             </tr>

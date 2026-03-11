@@ -140,15 +140,7 @@
     object-fit: contain;
 }
 
-.twist-qr-text {
-    font-size: 11px;
-    font-weight: bold;
-    margin-top: 1px;
-    word-break: break-all;
-    overflow-wrap: break-word;
-    max-width: 100%;
-    white-space: normal;
-}
+
 
 .twist-barcode-cell {
     padding: 2px;
@@ -404,12 +396,6 @@
                 <td colspan="2" rowspan="4" class="twist-qrcode-cell">
                     @if(isset($circuit->qr_qrcode_drawing_path))
                         <img src="{{ $circuit->qr_qrcode_drawing_path }}" alt="QR Drawing" class="twist-qr-img">
-                        <div class="twist-qr-text">{{ $circuit->qrcode_drawing ?? '' }}</div>
-                    @elseif(isset($circuit->qr_shikake_path))
-                        <img src="{{ $circuit->qr_shikake_path }}" alt="QR Shikake" class="twist-qr-img">
-                        <div class="twist-qr-text">{{ $circuit->barcode_shikake ?? '' }}</div>
-                    @elseif(!empty($circuit->qrcode_drawing))
-                        <div class="twist-qr-text" style="font-size:14px;">{{ $circuit->qrcode_drawing }}</div>
                     @endif
                 </td>
             </tr>
@@ -419,7 +405,6 @@
                 <td colspan="1" rowspan="3" class="twist-qrcode-cell">
                     @if(isset($circuit->qr_code_path))
                         <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="twist-qr-img">
-                        <div class="twist-qr-text">{{ $circuit->barcode_kanban ?? '' }}</div>
                     @else
                         <div style="width:100%;max-width:88px;aspect-ratio:1/1;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR</div>
                     @endif

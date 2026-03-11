@@ -124,6 +124,7 @@ class EkanbanShikakeController extends Controller
                 'JOINT' => 'schedule.ekanban_shikake.print_ticket_joint' . $suffix,
                 'SHIELD' => 'schedule.ekanban_shikake.print_ticket_shield' . $suffix,
                 'DBL CRIMP' => 'schedule.ekanban_shikake.print_ticket_dbl_crimp' . $suffix,
+                'TWIST' => 'schedule.ekanban_shikake.print_ticket_twist' . $suffix,
             ];
             
             $template = $templateMap[$process] ?? 'schedule.ekanban_shikake.print_ticket_generic';
@@ -169,6 +170,18 @@ class EkanbanShikakeController extends Controller
         // Barcode for barcode_mesin (DBL CRIMP specific)
         if ($process === 'DBL CRIMP' && $processData && !empty($processData->barcode_mesin)) {
             $processData->barcode_mesin_path = BarcodeHelper::generateBarcodeCached($processData->barcode_mesin, null, 2, 50, 'shikake');
+        }
+
+        // TWIST-specific barcodes: barcode_twist (linear) and qrcode_drawing (QR)
+        if ($process === 'TWIST' && $processData) {
+            // Linear barcode for barcode_process as barcode_twist
+            if (!empty($processData->barcode_process)) {
+                $processData->barcode_twist_path = BarcodeHelper::generateBarcodeCached($processData->barcode_process, null, 2, 50, 'shikake');
+            }
+            // QR code for barcode_shikake as qrcode_drawing
+            if (!empty($processData->barcode_shikake)) {
+                $processData->qr_qrcode_drawing_path = BarcodeHelper::generateQRCodeCached($processData->barcode_shikake, 'shikake');
+            }
         }
     }
 

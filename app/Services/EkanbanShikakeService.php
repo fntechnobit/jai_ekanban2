@@ -7,6 +7,7 @@ use App\Models\MasterShikakeBonder;
 use App\Models\MasterShikakeJoint;
 use App\Models\MasterShikakeShield;
 use App\Models\MasterShikakeDblCrimp;
+use App\Models\MasterShikakeTwist;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -241,6 +242,8 @@ class EkanbanShikakeService
                 return MasterShikakeShield::where('master_shikake_id', $shikakeId)->first();
             case 'DBL CRIMP':
                 return MasterShikakeDblCrimp::where('master_shikake_id', $shikakeId)->first();
+            case 'TWIST':
+                return MasterShikakeTwist::where('master_shikake_id', $shikakeId)->first();
             default:
                 return null;
         }
