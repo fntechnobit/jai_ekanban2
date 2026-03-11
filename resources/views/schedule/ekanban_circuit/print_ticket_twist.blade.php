@@ -332,7 +332,7 @@
                 <td class="twist-value-cell">{{ $circuit->cl ?? '-' }}</td>
                 <td class="twist-value-cell">{{ $circuit->qty ?? '-' }}</td>
                 <td class="twist-value-cell">{{ $circuit->issue ?? '-' }}</td>
-                <td class="twist-value-cell">{{ $circuit->member_twist ?? '-' }}</td>
+                <td class="twist-value-cell">{{ $circuit->memory_twist ?? '-' }}</td>
             </tr>
 
             <!-- Section A - Row 1 -->
@@ -361,11 +361,11 @@
                 <td class="twist-label-cell text-left">MARK</td>
                 <td class="twist-value-cell text-left">{{ $circuit->mark_1 ?? '' }}</td>
                 <td colspan="3" rowspan="3" class="twist-barcode-cell">
-                    @if(isset($circuit->barcode_process_path))
-                        <img src="{{ $circuit->barcode_process_path }}" alt="Barcode Process">
-                        <div class="twist-barcode-label">{{ $circuit->barcode_process ?? '' }}</div>
-                    @elseif(!empty($circuit->barcode_process))
-                        <div style="font-size:18px;font-weight:bold;">{{ $circuit->barcode_process }}</div>
+                    @if(isset($circuit->barcode_twist_path))
+                        <img src="{{ $circuit->barcode_twist_path }}" alt="Barcode Twist">
+                        <div class="twist-barcode-label">{{ $circuit->barcode_twist ?? '' }}</div>
+                    @elseif(!empty($circuit->barcode_twist))
+                        <div style="font-size:18px;font-weight:bold;">{{ $circuit->barcode_twist }}</div>
                     @endif
                 </td>
             </tr>
@@ -402,20 +402,20 @@
                 <td class="twist-label-cell text-left">CV NO</td>
                 <td colspan="3" class="twist-value-cell text-left">{{ $circuit->conveyor ?? '-' }}</td>
                 <td colspan="2" rowspan="4" class="twist-qrcode-cell">
-                    @if(isset($circuit->qr_qrcode_shikake_path))
-                        <img src="{{ $circuit->qr_qrcode_shikake_path }}" alt="QR Shikake" class="twist-qr-img">
-                        <div class="twist-qr-text">{{ $circuit->qrcode_shikake ?? '' }}</div>
+                    @if(isset($circuit->qr_qrcode_drawing_path))
+                        <img src="{{ $circuit->qr_qrcode_drawing_path }}" alt="QR Drawing" class="twist-qr-img">
+                        <div class="twist-qr-text">{{ $circuit->qrcode_drawing ?? '' }}</div>
                     @elseif(isset($circuit->qr_shikake_path))
                         <img src="{{ $circuit->qr_shikake_path }}" alt="QR Shikake" class="twist-qr-img">
                         <div class="twist-qr-text">{{ $circuit->barcode_shikake ?? '' }}</div>
-                    @elseif(!empty($circuit->barcode_shikake))
-                        <div class="twist-qr-text" style="font-size:14px;">{{ $circuit->barcode_shikake }}</div>
+                    @elseif(!empty($circuit->qrcode_drawing))
+                        <div class="twist-qr-text" style="font-size:14px;">{{ $circuit->qrcode_drawing }}</div>
                     @endif
                 </td>
             </tr>
             <!-- Bottom Section - Row 2 -->
             <tr>
-                <td colspan="2" rowspan="3" class="twist-value-cell text-left" style="font-size:18px;">{{ $circuit->shikake_code ?? '-' }}</td>
+                <td colspan="2" rowspan="3" class="twist-value-cell" style="font-size:28px;font-weight:bold;text-align:center;vertical-align:middle;word-break:break-all;">{{ $circuit->shikake_code ?? '-' }}</td>
                 <td colspan="1" rowspan="3" class="twist-qrcode-cell">
                     @if(isset($circuit->qr_code_path))
                         <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="twist-qr-img">

@@ -422,6 +422,8 @@
                         $('#edit_drawing_file').val('');
                         if (d.type === 'CUTTING_TWIST') {
                             $('#edit_drawing_section').show();
+                            $('#edit_barcode_twist').val(d.barcode_twist);
+                            $('#edit_qrcode_drawing').val(d.qrcode_drawing);
                             if (d.image_path) {
                                 $('#edit_drawing_preview').attr('src', '{{ asset("") }}' + d.image_path);
                                 $('#edit_drawing_preview_container').show();

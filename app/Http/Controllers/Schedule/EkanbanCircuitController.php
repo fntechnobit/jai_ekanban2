@@ -162,6 +162,16 @@ class EkanbanCircuitController extends Controller
         if (!empty($circuit->barcode_process)) {
             $circuit->barcode_process_path = BarcodeHelper::generateBarcodeCached($circuit->barcode_process, null, 4, 90, 'circuit');
         }
+
+        // Linear barcode for barcode_twist (replaces barcode_process in twist print)
+        if (!empty($circuit->barcode_twist)) {
+            $circuit->barcode_twist_path = BarcodeHelper::generateBarcodeCached($circuit->barcode_twist, null, 4, 90, 'circuit');
+        }
+
+        // QR code for qrcode_drawing (replaces qrcode_shikake in twist print)
+        if (!empty($circuit->qrcode_drawing)) {
+            $circuit->qr_qrcode_drawing_path = BarcodeHelper::generateQRCodeCached($circuit->qrcode_drawing, 'circuit');
+        }
     }
 
     /**

@@ -141,6 +141,20 @@
                                 <div id="edit_drawing_preview_container" class="text-center mt-2" style="display:none;">
                                     <img id="edit_drawing_preview" src="" alt="Drawing" class="img-fluid rounded" style="max-height: 180px;">
                                 </div>
+                                <div class="row g-2 mt-1">
+                                    <div class="col-6">
+                                        <div class="mb-2">
+                                            <label class="form-label small mb-0">Barcode Twist</label>
+                                            <input type="text" name="barcode_twist" id="edit_barcode_twist" class="form-control form-control-sm">
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="mb-2">
+                                            <label class="form-label small mb-0">QRCode Drawing</label>
+                                            <input type="text" name="qrcode_drawing" id="edit_qrcode_drawing" class="form-control form-control-sm">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

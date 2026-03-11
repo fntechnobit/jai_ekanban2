@@ -31,6 +31,8 @@ class MasterCircuit extends Model
         'barcode_navigasi',
         'barcode_process',
         'barcode_shikake',
+        'barcode_twist',
+        'qrcode_drawing',
         'to_store',
         'address',
         'cct_code',
