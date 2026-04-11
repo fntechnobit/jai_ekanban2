@@ -35,6 +35,9 @@
                     <button type="button" class="btn btn-secondary btn-sm" id="btn-reset" title="Reset Filter">
                         <i class="fa-solid fa-arrows-rotate"></i>
                     </button>
+                    <button type="button" class="btn btn-danger btn-sm" id="btn-reset-balance" title="Reset All Kanban Balance">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Reset Balance
+                    </button>
                 </div>
             </div>
         </div>
@@ -138,6 +141,56 @@
             </div>
         </div>
     </div>
+<!-- Reset Balance Confirmation Modal -->
+<div class="modal fade" id="resetBalanceModal" tabindex="-1" aria-labelledby="resetBalanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="resetBalanceModalLabel">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i> PERINGATAN: Reset Kanban Balance
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger border-danger mb-3">
+                    <h6 class="alert-heading fw-bold"><i class="fa-solid fa-skull-crossbones me-1"></i> TINDAKAN INI TIDAK DAPAT DIBATALKAN!</h6>
+                    <hr>
+                    <p class="mb-1">Anda akan <strong>mereset SEMUA sisa balance kanban</strong> (circuit &amp; shikake) menjadi <strong>0 (nol)</strong>.</p>
+                    <p class="mb-1">Ini berarti:</p>
+                    <ul class="mb-1">
+                        <li>Semua <strong>sisa carry-over</strong> akan hilang</li>
+                        <li>Semua <strong>nomor urut</strong> akan kembali ke 0</li>
+                        <li>Perhitungan issue pada verifikasi berikutnya akan <strong>dimulai dari awal</strong></li>
+                    </ul>
+                    <p class="mb-0 fw-bold text-danger">Gunakan fitur ini HANYA untuk keperluan trial/testing!</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Pilih Conveyor:</label>
+                    <select class="form-select form-select-sm" id="reset-conveyor-select">
+                        <option value="">Semua Conveyor</option>
+                        @foreach($conveyors as $conveyor)
+                            <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Ketik <code>RESET SEMUA BALANCE</code> untuk konfirmasi:</label>
+                    <input type="text" class="form-control" id="reset-confirmation-input" placeholder="Ketik konfirmasi di sini..." autocomplete="off">
+                    <div class="form-text text-danger">Perhatikan huruf besar/kecil dan spasi.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-xmark"></i> Batal
+                </button>
+                <button type="button" class="btn btn-danger btn-sm" id="btn-confirm-reset-balance" disabled>
+                    <i class="fa-solid fa-trash"></i> Reset Semua Balance
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('script')
@@ -153,5 +206,55 @@
             unverify: "{{ route('schedule.schedule-verification.unverify') }}",
             csrfToken: '{{ csrf_token() }}'
         };
+
+        // Reset Balance functionality
+        $(function() {
+            $('#btn-reset-balance').click(function() {
+                $('#reset-confirmation-input').val('');
+                $('#reset-conveyor-select').val('');
+                $('#btn-confirm-reset-balance').prop('disabled', true);
+                $('#resetBalanceModal').modal('show');
+            });
+
+            $('#reset-confirmation-input').on('input', function() {
+                var val = $(this).val().trim();
+                $('#btn-confirm-reset-balance').prop('disabled', val !== 'RESET SEMUA BALANCE');
+            });
+
+            $('#btn-confirm-reset-balance').click(function() {
+                var confirmation = $('#reset-confirmation-input').val().trim();
+                if (confirmation !== 'RESET SEMUA BALANCE') return;
+
+                var $btn = $(this);
+                $btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> Memproses...');
+
+                $.ajax({
+                    url: "{{ route('schedule.schedule-verification.reset-balance') }}",
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        confirmation: confirmation,
+                        conveyor_id: $('#reset-conveyor-select').val()
+                    },
+                    success: function(response) {
+                        $('#resetBalanceModal').modal('hide');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Reset Berhasil',
+                            text: response.message,
+                            timer: 3000,
+                            showConfirmButton: true
+                        });
+                    },
+                    error: function(xhr) {
+                        var msg = xhr.responseJSON?.message || 'Terjadi kesalahan saat reset.';
+                        Swal.fire('Error', msg, 'error');
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false).html('<i class="fa-solid fa-trash"></i> Reset Semua Balance');
+                    }
+                });
+            });
+        });
     </script>
 @endsection

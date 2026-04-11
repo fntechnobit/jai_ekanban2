@@ -390,12 +390,17 @@
             <!-- Bottom Section - Row 1 -->
             <tr>
                 <td class="twist-label-cell text-left">STR</td>
-                <td colspan="2" class="twist-value-cell" style="text-align:center;font-size:28px;">{{ $circuit->to_store ?? '' }}</td>
+                <td colspan="2" class="twist-value-cell">{{ $circuit->to_store ?? '' }}</td>
                 <td class="twist-label-cell text-left">CV NO</td>
                 <td colspan="3" class="twist-value-cell text-left">{{ $circuit->conveyor ?? '-' }}</td>
                 <td colspan="2" rowspan="4" class="twist-qrcode-cell">
-                    @if(isset($circuit->qr_qrcode_drawing_path))
-                        <img src="{{ $circuit->qr_qrcode_drawing_path }}" alt="QR Drawing" class="twist-qr-img">
+                    @if(isset($circuit->qr_code_path))
+                        <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="twist-qr-img">
+                    @else
+                        <div style="width:100%;max-width:110px;aspect-ratio:1/1;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR</div>
+                    @endif
+                    @if(!empty($circuit->barcode_kanban))
+                        <div style="font-size:11px;font-weight:bold;margin-top:2px;word-break:break-all;line-height:1.2;">{{ $circuit->barcode_kanban }}</div>
                     @endif
                 </td>
             </tr>
@@ -403,10 +408,12 @@
             <tr>
                 <td colspan="2" rowspan="3" class="twist-value-cell" style="font-size:28px;font-weight:bold;text-align:center;vertical-align:middle;word-break:break-all;">{{ $circuit->shikake_code ?? '-' }}</td>
                 <td colspan="1" rowspan="3" class="twist-qrcode-cell">
-                    @if(isset($circuit->qr_code_path))
-                        <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="twist-qr-img">
+                    @if(isset($circuit->qr_qrcode_drawing_path))
+                        <img src="{{ $circuit->qr_qrcode_drawing_path }}" alt="QR Drawing" class="twist-qr-img">
+                    @elseif(!empty($circuit->qrcode_drawing))
+                        <div style="width:100%;max-width:88px;aspect-ratio:1/1;border:1px solid #ccc;margin:0 auto;font-size:10px;display:flex;align-items:center;justify-content:center;word-break:break-all;padding:2px;">{{ $circuit->qrcode_drawing }}</div>
                     @else
-                        <div style="width:100%;max-width:88px;aspect-ratio:1/1;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR</div>
+                        <div style="width:100%;max-width:88px;aspect-ratio:1/1;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">DRW</div>
                     @endif
                 </td>
                 <td class="twist-label-cell text-left">FAM.</td>

@@ -107,6 +107,7 @@ class EkanbanShikakeService
                 'family' => $row->family ?? '-',
                 'qty' => $row->qty,
                 'issue_count' => $row->issue_count,
+                'sequence' => $row->sequence ?? '-',
                 'barcodes' => $row->barcodes ?? '-',
                 'date' => Carbon::parse($row->date)->format('d-m-Y'),
                 'shift' => $row->shift,
@@ -271,6 +272,7 @@ class EkanbanShikakeService
                 'master_shikake.machine',
                 'master_shikake.family',
                 'master_shikake.qty',
+                'master_shikake.sequence',
                 'master_conveyor.conveyor',
                 'master_conveyor.pallet_qty',
                 'assy_schedule.assy',
@@ -300,6 +302,7 @@ class EkanbanShikakeService
                 'master_shikake.machine',
                 'master_shikake.family',
                 'master_shikake.qty',
+                'master_shikake.sequence',
                 'master_conveyor.conveyor',
                 'master_conveyor.pallet_qty',
                 'assy_schedule.assy',
@@ -313,16 +316,10 @@ class EkanbanShikakeService
                     '-'
                 )")
             ])
-            ->orderBy('master_shikake.process', 'ASC')
-            ->orderBy(DB::raw("COALESCE(
-                master_shikake_bonder.bonder_no,
-                master_shikake_joint.bonder_no,
-                master_shikake_shield.shield_no,
-                master_shikake_dbl_crimp.drawing_no,
-                '-'
-            )"), 'ASC')
-            ->orderBy('assy_schedule.schedule', 'ASC')
-            ->orderBy('assy_schedule.shift', 'ASC');
+            ->orderBy('assy_schedule.shift', 'ASC')
+            ->orderBy(DB::raw('MAX(assy_schedule_shikake.cutoff)'), 'ASC')
+            ->orderBy('master_shikake.sequence', 'ASC')
+            ->orderBy('master_conveyor.conveyor', 'ASC');
     }
 
     /**

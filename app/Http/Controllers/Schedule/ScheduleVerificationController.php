@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Schedule;
 
 use App\Http\Controllers\Controller;
+use App\Models\KanbanBalanceCircuit;
+use App\Models\KanbanBalanceShikake;
 use App\Models\MasterConveyor;
 use App\Services\ScheduleVerificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 
@@ -234,5 +238,73 @@ class ScheduleVerificationController extends Controller
         }
 
         return response()->json($result);
+    }
+
+    /**
+     * Reset all kanban balance (sisa & nomor_urut) to zero
+     */
+    public function resetBalance(Request $request)
+    {
+        $request->validate([
+            'confirmation' => 'required|in:RESET SEMUA BALANCE',
+            'conveyor_id' => 'nullable|integer|exists:master_conveyor,id',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $conveyorId = $request->input('conveyor_id');
+
+            if ($conveyorId) {
+                // Reset only for the selected conveyor
+                $circuitCount = KanbanBalanceCircuit::where('conveyor_id', $conveyorId)->count();
+                $shikakeCount = KanbanBalanceShikake::where('conveyor_id', $conveyorId)->count();
+
+                KanbanBalanceCircuit::where('conveyor_id', $conveyorId)->update(['sisa' => 0, 'last_nomor_urut' => 0]);
+                KanbanBalanceShikake::where('conveyor_id', $conveyorId)->update(['sisa' => 0, 'last_nomor_urut' => 0]);
+
+                $conveyor = MasterConveyor::find($conveyorId);
+                $conveyorName = $conveyor ? $conveyor->conveyor : $conveyorId;
+
+                DB::commit();
+
+                Log::warning('KANBAN BALANCE RESET: Balance reset to 0 for conveyor ' . $conveyorName . ' by user ' . auth()->id(), [
+                    'conveyor_id' => $conveyorId,
+                    'circuit_records' => $circuitCount,
+                    'shikake_records' => $shikakeCount,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Reset berhasil untuk conveyor {$conveyorName}. {$circuitCount} record circuit dan {$shikakeCount} record shikake di-reset ke 0.",
+                ]);
+            } else {
+                // Reset all
+                $circuitCount = KanbanBalanceCircuit::count();
+                $shikakeCount = KanbanBalanceShikake::count();
+
+                KanbanBalanceCircuit::query()->update(['sisa' => 0, 'last_nomor_urut' => 0]);
+                KanbanBalanceShikake::query()->update(['sisa' => 0, 'last_nomor_urut' => 0]);
+
+                DB::commit();
+
+                Log::warning('KANBAN BALANCE RESET: All balance reset to 0 by user ' . auth()->id(), [
+                    'circuit_records' => $circuitCount,
+                    'shikake_records' => $shikakeCount,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Reset berhasil. {$circuitCount} record circuit dan {$shikakeCount} record shikake di-reset ke 0.",
+                ]);
+            }
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('KANBAN BALANCE RESET FAILED: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Reset gagal: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

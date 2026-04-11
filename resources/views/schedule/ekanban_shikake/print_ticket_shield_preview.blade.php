@@ -164,6 +164,9 @@
                         @else
                             <div class="qrcode-placeholder">QR CODE</div>
                         @endif
+                        @if(!empty($shikake->barcode_kanban))
+                            <div style="font-size: 10px; margin-top: 4px; font-weight: bold;">{{ $shikake->barcode_kanban }}</div>
+                        @endif
                     </td>
                 </tr>
                 <!-- Row 7: MACHINE Value -->

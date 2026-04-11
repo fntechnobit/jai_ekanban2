@@ -53,25 +53,51 @@ class EkanbanCircuitService
             ->mergeBindings($filteredQuery)
             ->count();
 
-        // Order
-        $orderColumn = $request->input('order.0.column', 0);
-        $orderDir = $request->input('order.0.dir', 'asc');
+        // Order - column mapping matches DataTable column indices
         $columns = [
-            'assy_schedule_id', 
-            'cct_no', 
-            'cct_code', 
-            'machine', 
-            'family', 
-            'master_circuit.qty', 
-            'barcodes',
-            'issue_count',
-            'date', 
-            'shift', 
-            'cutoff'
+            null,                          // 0 - No (not orderable)
+            'master_circuit.cct_no',       // 1 - Type / CCT
+            'master_circuit.shikake_code', // 2 - Shikake
+            'master_conveyor.conveyor',    // 3 - CV
+            'master_circuit.family',       // 4 - Family
+            'master_circuit.qty',          // 5 - Qty
+            null,                          // 6 - Issue (not orderable)
+            'master_circuit.sequence',     // 7 - Seq
+            null,                          // 8 - Kanban (not orderable)
+            'assy_schedule.shift',         // 9 - CutOff (shift + cutoff)
+            null,                          // 10 - # (not orderable)
+            null,                          // 11 - Action (not orderable)
         ];
-        
-        if (isset($columns[$orderColumn])) {
-            $query->orderBy($columns[$orderColumn], $orderDir);
+
+        $hasOrder = false;
+        $orderIndex = 0;
+        while ($request->has("order.{$orderIndex}.column")) {
+            $col = intval($request->input("order.{$orderIndex}.column"));
+            $dir = $request->input("order.{$orderIndex}.dir", 'asc');
+
+            if ($col == 9) {
+                // Column 9 displays shift/cutoff combined, order by both
+                $query->orderBy('assy_schedule.shift', $dir);
+                $query->orderBy('cutoff', $dir);
+                $hasOrder = true;
+            } elseif ($col == 7) {
+                // Column 7 is Seq - cast to numeric for proper sorting
+                $query->orderBy(DB::raw('CAST(master_circuit.sequence AS UNSIGNED)'), $dir);
+                $hasOrder = true;
+            } elseif (isset($columns[$col]) && $columns[$col] !== null) {
+                $query->orderBy($columns[$col], $dir);
+                $hasOrder = true;
+            }
+
+            $orderIndex++;
+        }
+
+        if (!$hasOrder) {
+            // Default: shift asc, cutoff asc, seq asc, cv asc
+            $query->orderBy('assy_schedule.shift', 'asc');
+            $query->orderBy('cutoff', 'asc');
+            $query->orderBy(DB::raw('CAST(master_circuit.sequence AS UNSIGNED)'), 'asc');
+            $query->orderBy('master_conveyor.conveyor', 'asc');
         }
 
         // Pagination
@@ -105,6 +131,7 @@ class EkanbanCircuitService
                 'qty' => $row->qty,
                 'barcodes' => $row->barcodes ?? '-',
                 'issue_count' => $row->issue_count,
+                'sequence' => $row->sequence ?? '-',
                 'date' => Carbon::parse($row->date)->format('d-m-Y'),
                 'shift' => $row->shift,
                 'cutoff' => $row->cutoff,
@@ -248,6 +275,7 @@ class EkanbanCircuitService
                 'master_circuit.family',
                 'master_circuit.qty',
                 'master_conveyor.conveyor',
+                'master_circuit.sequence',
                 'assy_schedule.assy',
                 'assy_schedule.schedule as date',
                 'assy_schedule.shift',
@@ -272,13 +300,12 @@ class EkanbanCircuitService
                 'master_circuit.family',
                 'master_circuit.qty',
                 'master_conveyor.conveyor',
+                'master_circuit.sequence',
                 'assy_schedule.assy',
                 'assy_schedule.schedule',
                 'assy_schedule.shift'
             ])
-            ->orderBy('master_circuit.cct_no', 'ASC')
-            ->orderBy('assy_schedule.schedule', 'ASC')
-            ->orderBy('assy_schedule.shift', 'ASC');
+;
     }
 
     /**

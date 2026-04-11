@@ -261,6 +261,9 @@
                         @else
                             <div class="qrcode-placeholder">QR</div>
                         @endif
+                        @if(!empty($shikake->barcode_kanban))
+                            <div style="font-size: 10px; margin-top: 4px; font-weight: bold;">{{ $shikake->barcode_kanban }}</div>
+                        @endif
                     </td>
                 </tr>
                 <tr>

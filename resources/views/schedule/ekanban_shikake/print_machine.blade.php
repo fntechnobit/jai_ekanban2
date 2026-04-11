@@ -120,14 +120,15 @@
                             <thead>
                                 <tr>
                                     <th width="5%">No</th>
-                                    <th>Process / Code</th>
+                                    <th>Code</th>
                                     <th>CV</th>
                                     <th>Family</th>
                                     <th>Qty</th>
                                     <th>Issue</th>
+                                    <th>Seq</th>
                                     <th>Kanban</th>
-                                    <th>CutOff</th>
-                                    <th>Print</th>
+                                    <th>CO</th>
+                                    <th>#</th>
                                     <th width="12%">Action</th>
                                 </tr>
                             </thead>
@@ -261,6 +262,12 @@
                         }
                     },
                     { 
+                        data: 'sequence', 
+                        name: 'sequence', 
+                        width: '4%',
+                        className: 'text-center'
+                    },
+                    { 
                         data: 'barcodes', 
                         name: 'barcodes', 
                         width: '14%',
@@ -305,9 +312,9 @@
                     },
                     { data: 'actions', name: 'actions', orderable: false, searchable: false, width: '12%' }
                 ],
+                ordering: false,
                 pageLength: 100,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                order: [[2, 'asc']]
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
             });
 
             // Auto-reload on all filter changes

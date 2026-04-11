@@ -116,15 +116,16 @@
                             <thead>
                                 <tr>
                                     <th width="5%">No</th>
-                                    <th>Type / CCT</th>
+                                    <th>CCT</th>
                                     <th>Shikake</th>
                                     <th>CV</th>
                                     <th>Family</th>
                                     <th>Qty</th>
                                     <th>Issue</th>
+                                    <th>Seq</th>
                                     <th>Kanban</th>
-                                    <th>CutOff</th>
-                                    <th>Print</th>
+                                    <th>CO</th>
+                                    <th>#</th>
                                     <th width="12%">Action</th>
                                 </tr>
                             </thead>
@@ -293,14 +294,14 @@
                             return badge + ' <span class="text-muted">' + (row.cct_code || '') + '</span>';
                         }
                     },
-                    { data: 'shikake_code', name: 'shikake_code', width: '10%' },
+                    { data: 'shikake_code', name: 'shikake_code', width: '7%' },
                     { data: 'conveyor', name: 'conveyor', width: '7%' },
                     { data: 'family', name: 'family', width: '10%' },
                     { data: 'qty', name: 'qty', width: '4%', className: 'text-end' },
                     { 
                         data: 'issue_count', 
                         name: 'issue_count', 
-                        width: '5%',
+                        width: '4%',
                         className: 'text-end',
                         orderable: false,
                         render: function(data, type, row) {
@@ -310,6 +311,12 @@
                                 return '<span class="badge bg-light text-dark border">0</span>';
                             }
                         }
+                    },
+                    { 
+                        data: 'sequence', 
+                        name: 'sequence', 
+                        width: '4%',
+                        className: 'text-center'
                     },
                     { 
                         data: 'barcodes', 
@@ -329,7 +336,7 @@
                     { 
                         data: 'shift', 
                         name: 'shift', 
-                        width: '9%', 
+                        width: '4%', 
                         className: 'text-center',
                         render: function(data, type, row) {
                             var colorClass = (row.shift == 1) ? 'bg-primary' : 'bg-danger';
@@ -339,32 +346,22 @@
                     { 
                         data: 'print_status', 
                         name: 'print_status',
-                        width: '10%',
+                        width: '4%',
+                        className: 'text-center',
                         orderable: false,
                         render: function(data, type, row) {
                             if (row.is_printed) {
-                                var count = row.print_count > 0 ? ' <small>(' + row.print_count + ')</small>' : '';
-                                var badge = '<span class="badge bg-success">Printed</span>' + count;
-                                if (row.last_printed_at) {
-                                    var d = new Date(row.last_printed_at);
-                                    var yy = String(d.getFullYear()).slice(2);
-                                    var mm = String(d.getMonth() + 1).padStart(2, '0');
-                                    var dd = String(d.getDate()).padStart(2, '0');
-                                    var hh = String(d.getHours()).padStart(2, '0');
-                                    var min = String(d.getMinutes()).padStart(2, '0');
-                                    badge += '<br><small>' + yy + '-' + mm + '-' + dd + ' ' + hh + ':' + min + '</small>';
-                                }
-                                return badge;
+                                return '<span class="badge bg-success" title="Printed"><i class="fa-solid fa-print"></i></span>';
                             } else {
-                                return '<span class="badge bg-warning">Waiting</span>';
+                                return '<span class="badge bg-warning" title="Waiting"><i class="fa-solid fa-clock"></i></span>';
                             }
                         }
                     },
                     { data: 'actions', name: 'actions', orderable: false, searchable: false, width: '12%' }
                 ],
+                ordering: false,
                 pageLength: 100,
-                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-                order: [[3, 'asc']]
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
             });
 
             // Auto-reload on all filter changes

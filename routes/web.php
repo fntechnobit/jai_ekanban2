@@ -126,6 +126,7 @@ Route::middleware('auth')->group(function () {
         Route::post('schedule-verification/save', [ScheduleVerificationController::class, 'save'])->name('schedule-verification.save');
         Route::post('schedule-verification/verify', [ScheduleVerificationController::class, 'verify'])->name('schedule-verification.verify');
         Route::post('schedule-verification/unverify', [ScheduleVerificationController::class, 'unverify'])->name('schedule-verification.unverify');
+        Route::post('schedule-verification/reset-balance', [ScheduleVerificationController::class, 'resetBalance'])->name('schedule-verification.reset-balance');
         
         // eKanban Circuit
         Route::get('ekanban-circuit/print-machine', [EkanbanCircuitController::class, 'printMachine'])->name('ekanban-circuit.print-machine');

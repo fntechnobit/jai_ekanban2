@@ -410,10 +410,12 @@ class KanbanGeneratorService
         }
 
         // Get shikakes linked to these assy records AND belonging to this conveyor
+        // Eager-load sub-table relationships to resolve the code per process
         $shikakes = MasterShikake::whereHas('assemblies', function ($query) use ($assyIds) {
             $query->whereIn('master_assy_id', $assyIds);
         })
             ->where('conveyor_id', $conveyorId)
+            ->with(['bonderData', 'dblCrimpData', 'jointData', 'shieldData', 'twistData'])
             ->get();
 
         // Group by master_shikake_id (each shikake is unique)
@@ -421,8 +423,7 @@ class KanbanGeneratorService
             $key = $shikake->id;
             
             if (!isset($shikakeGroups[$key])) {
-                // Generate a code for the shikake (use process + sequence as identifier)
-                $shikakeCode = strtoupper(substr($shikake->process ?? 'SHK', 0, 3)) . '-' . str_pad($shikake->sequence ?? $shikake->id, 3, '0', STR_PAD_LEFT);
+                $shikakeCode = $this->resolveShikakeCode($shikake);
                 
                 $shikakeGroups[$key] = [
                     'master_shikake_id' => $shikake->id,
@@ -510,6 +511,31 @@ class KanbanGeneratorService
         $issueNumber = explode('/', $issue)[0] ?? '001';
 
         return sprintf('%s.%s.%s.%d.%04d', $carline, $code, $issueNumber, $qty, $nomorUrut);
+    }
+
+    /**
+     * Resolve shikake code based on process type from the related sub-table.
+     *
+     * - BONDER    → master_shikake_bonder.bonder_no
+     * - DBL CRIMP → master_shikake_dbl_crimp.drawing_no
+     * - JOINT     → master_shikake_joint.bonder_no
+     * - SHIELD    → master_shikake_shield.shield_no
+     * - TWIST     → master_shikake_twist.cct_code
+     */
+    private function resolveShikakeCode($shikake): string
+    {
+        $process = strtoupper(trim($shikake->process ?? ''));
+
+        $code = match ($process) {
+            'BONDER'    => $shikake->bonderData?->bonder_no,
+            'DBL CRIMP' => $shikake->dblCrimpData?->drawing_no,
+            'JOINT'     => $shikake->jointData?->bonder_no,
+            'SHIELD'    => $shikake->shieldData?->shield_no,
+            'TWIST'     => $shikake->twistData?->cct_code,
+            default     => null,
+        };
+
+        return $code ?? ('SHK-' . str_pad($shikake->sequence ?? $shikake->id, 3, '0', STR_PAD_LEFT));
     }
 
     /**
