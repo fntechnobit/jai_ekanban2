@@ -118,50 +118,104 @@ $(function () {
         var date = $(this).data('date');
         var shift = $(this).data('shift');
 
-        Swal.fire({
-            title: 'Unverify Schedule?',
-            text: 'This will unlock the schedule and allow it to be modified or regenerated. Are you sure?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#f39c12',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, unverify it!',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: routeUrls.unverify,
-                    type: 'POST',
-                    data: {
-                        _token: routeUrls.csrfToken,
-                        conveyor_id: conveyorId,
-                        date: date,
-                        shift: shift
-                    },
-                    beforeSend: function() {
-                        Swal.fire({
-                            title: 'Processing...',
-                            allowOutsideClick: false,
-                            didOpen: () => {
-                                Swal.showLoading();
-                            }
-                        });
-                    },
-                    success: function(response) {
-                        scheduleVerificationTable.ajax.reload();
-                        Swal.fire('Unverified!', response.message, 'success');
-                    },
-                    error: function(xhr) {
-                        var message = 'Failed to unverify schedule';
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            message = xhr.responseJSON.message;
-                        }
-                        Swal.fire('Error!', message, 'error');
-                    }
+        // Step 1: Preview impact first (check for transferred items that may be lost)
+        $.ajax({
+            url: routeUrls.previewUnverify,
+            type: 'GET',
+            data: {
+                conveyor_id: conveyorId,
+                date: date,
+                shift: shift
+            },
+            beforeSend: function() {
+                Swal.fire({
+                    title: 'Memeriksa dampak unverify...',
+                    allowOutsideClick: false,
+                    didOpen: function() { Swal.showLoading(); }
                 });
+            },
+            success: function(preview) {
+                Swal.close();
+                showUnverifyConfirmation(conveyorId, date, shift, preview);
+            },
+            error: function() {
+                // If preview fails, fall back to the basic confirmation
+                showUnverifyConfirmation(conveyorId, date, shift, null);
             }
         });
     });
+
+    function showUnverifyConfirmation(conveyorId, date, shift, preview) {
+        var html = '<p class="mb-2">Tindakan ini akan <strong>membuka kunci jadwal</strong> dan meregenerasi ulang dari listing asli.</p>';
+
+        if (preview && preview.has_transfer) {
+            if (preview.restorable && preview.restorable.length > 0) {
+                html += '<div class="alert alert-info text-start mb-2" style="font-size: 12px;">';
+                html += '<strong><i class="fa-solid fa-rotate-left me-1"></i>' + preview.restorable.length + ' item akan dikembalikan ke jadwal asal:</strong>';
+                html += '<ul class="mb-0 mt-1" style="padding-left: 18px;">';
+                preview.restorable.forEach(function(it) {
+                    html += '<li>' + it.assy + ' <span class="text-muted">(Qty ' + it.qty + ')</span> &rarr; '
+                         + moment(it.origin_date).format('DD MMM') + ' Shift ' + it.origin_shift + ' CO' + it.origin_cutoff + '</li>';
+                });
+                html += '</ul></div>';
+            }
+            if (preview.has_warning && preview.lost && preview.lost.length > 0) {
+                html += '<div class="alert alert-danger text-start mb-2" style="font-size: 12px;">';
+                html += '<strong><i class="fa-solid fa-triangle-exclamation me-1"></i>PERINGATAN: ' + preview.lost.length + ' item AKAN HILANG</strong><br>';
+                html += 'Jadwal asal sudah diverifikasi sehingga data tidak dapat dikembalikan:';
+                html += '<ul class="mb-0 mt-1" style="padding-left: 18px;">';
+                preview.lost.forEach(function(it) {
+                    html += '<li>' + it.assy + ' <span class="text-muted">(Qty ' + it.qty + ')</span> &rarr; '
+                         + moment(it.origin_date).format('DD MMM') + ' Shift ' + it.origin_shift + ' CO' + it.origin_cutoff + ' <span class="badge bg-success">Verified</span></li>';
+                });
+                html += '</ul></div>';
+            }
+        }
+
+        html += '<p class="mb-0">Lanjutkan?</p>';
+
+        Swal.fire({
+            title: 'Unverify Schedule?',
+            html: html,
+            icon: (preview && preview.has_warning) ? 'warning' : 'question',
+            showCancelButton: true,
+            confirmButtonColor: (preview && preview.has_warning) ? '#dc3545' : '#f39c12',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: (preview && preview.has_warning) ? 'Ya, tetap unverify!' : 'Ya, unverify!',
+            cancelButtonText: 'Batal',
+            width: 600
+        }).then(function(result) {
+            if (!result.isConfirmed) return;
+            $.ajax({
+                url: routeUrls.unverify,
+                type: 'POST',
+                data: {
+                    _token: routeUrls.csrfToken,
+                    conveyor_id: conveyorId,
+                    date: date,
+                    shift: shift
+                },
+                beforeSend: function() {
+                    Swal.fire({
+                        title: 'Processing...',
+                        allowOutsideClick: false,
+                        didOpen: function() { Swal.showLoading(); }
+                    });
+                },
+                success: function(response) {
+                    scheduleVerificationTable.ajax.reload();
+                    Swal.fire('Unverified!', response.message, 'success');
+                },
+                error: function(xhr) {
+                    var message = 'Failed to unverify schedule';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    }
+                    Swal.fire('Error!', message, 'error');
+                }
+            });
+        });
+    }
 
     // Load verification details
     function loadVerificationDetails(conveyorId, date, shift, readOnly) {
@@ -270,7 +324,8 @@ $(function () {
             shiftsHtml += '<div class="cutoff-drop-zone target-list" data-cutoff="' + i + '" data-shift="' + data.shift + '">';
             
             items.forEach(function(item) {
-                shiftsHtml += '<div class="cutoff-item item-target" ';
+                var isTransferred = !!item.transferred_from_date;
+                shiftsHtml += '<div class="cutoff-item item-target' + (isTransferred ? ' is-transferred' : '') + '" ';
                 shiftsHtml += 'data-id="' + item.id + '" ';
                 shiftsHtml += 'data-cutoff="' + item.cutoff + '" ';
                 shiftsHtml += 'data-shift="' + data.shift + '" ';
@@ -292,6 +347,14 @@ $(function () {
                 shiftsHtml += '<div class="item-head flex-grow-1">';
                 shiftsHtml += '<span class="item-code">' + (item.assycode || '') + '</span> ';
                 shiftsHtml += '<span class="item-name">' + item.assy + '</span>';
+                if (isTransferred) {
+                    shiftsHtml += '<div class="source-info-badges mt-1">';
+                    shiftsHtml += '<span class="badge bg-light text-dark border"><i class="fa-solid fa-right-left me-1"></i>Dari:</span> ';
+                    shiftsHtml += '<span class="badge bg-info badge-sm">' + moment(item.transferred_from_date).format('DD MMM') + '</span> ';
+                    shiftsHtml += '<span class="badge bg-warning badge-sm">Shift ' + item.transferred_from_shift + '</span> ';
+                    shiftsHtml += '<span class="badge bg-primary badge-sm">CO' + item.transferred_from_cutoff + '</span>';
+                    shiftsHtml += '</div>';
+                }
                 shiftsHtml += '</div>';
                 shiftsHtml += '<input type="number" class="form-control form-control-sm w-60 text-end vs-item-qty ms-2" value="' + item.qty + '" min="1"';
                 if (readOnly) {

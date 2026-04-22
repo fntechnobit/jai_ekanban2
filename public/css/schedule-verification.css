@@ -142,6 +142,18 @@
     font-weight: 600;
 }
 
+/* Persisted transferred items (rendered in detail/edit mode from DB) */
+.cutoff-item.is-transferred {
+    background: #fffbe6 !important;
+    border: 1px solid #f0ad4e;
+    border-left: 4px solid #f0ad4e;
+    color: #212529 !important;
+}
+.cutoff-item.is-transferred .item-name {
+    color: #212529 !important;
+    font-weight: 600;
+}
+
 .cutoff-item.dragging {
     opacity: 0.4;
 }

@@ -125,6 +125,7 @@ Route::middleware('auth')->group(function () {
         Route::get('schedule-verification/available-dates', [ScheduleVerificationController::class, 'availableDates'])->name('schedule-verification.available-dates');
         Route::post('schedule-verification/save', [ScheduleVerificationController::class, 'save'])->name('schedule-verification.save');
         Route::post('schedule-verification/verify', [ScheduleVerificationController::class, 'verify'])->name('schedule-verification.verify');
+        Route::get('schedule-verification/preview-unverify', [ScheduleVerificationController::class, 'previewUnverify'])->name('schedule-verification.preview-unverify');
         Route::post('schedule-verification/unverify', [ScheduleVerificationController::class, 'unverify'])->name('schedule-verification.unverify');
         Route::post('schedule-verification/reset-balance', [ScheduleVerificationController::class, 'resetBalance'])->name('schedule-verification.reset-balance');
         

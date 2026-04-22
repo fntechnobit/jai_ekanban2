@@ -217,6 +217,11 @@ class ScheduleVerificationService
                         'mode' => $item->mode,
                         'snp' => $item->snp,
                         'snpa' => $item->snpa,
+                        'transferred_from_date' => $item->transferred_from_date
+                            ? Carbon::parse($item->transferred_from_date)->format('Y-m-d')
+                            : null,
+                        'transferred_from_shift'  => $item->transferred_from_shift,
+                        'transferred_from_cutoff' => $item->transferred_from_cutoff,
                     ];
                 })->values()->toArray()
             ];
@@ -437,6 +442,10 @@ class ScheduleVerificationService
             $mode = 0;
             $snp = 0;
             $snpa = 0;
+            $transferredFromDate    = null;
+            $transferredFromShift   = null;
+            $transferredFromCutoff  = null;
+            $transferredFromListing = null;
             
             // Check if this item has source_id (dragged from available)
             if (isset($item['source_id'])) {
@@ -452,6 +461,13 @@ class ScheduleVerificationService
                     $mode = $sourceItem->mode ?? 0;
                     $snp = $sourceItem->snp ?? 0;
                     $snpa = $sourceItem->snpa ?? 0;
+
+                    $transferredFromDate = $sourceItem->transferred_from_date
+                        ? Carbon::parse($sourceItem->transferred_from_date)->format('Y-m-d')
+                        : Carbon::parse($sourceItem->schedule)->format('Y-m-d');
+                    $transferredFromShift   = $sourceItem->transferred_from_shift  ?? $sourceItem->shift;
+                    $transferredFromCutoff  = $sourceItem->transferred_from_cutoff ?? $sourceItem->cutoff;
+                    $transferredFromListing = $sourceItem->transferred_from_listing_id ?? $sourceItem->listing_id;
                     
                     // Deduct quantity from source
                     $this->deductSourceQuantity($sourceItem, $item['qty']);
@@ -473,6 +489,10 @@ class ScheduleVerificationService
                 'mode' => $mode,
                 'snp' => $snp,
                 'snpa' => $snpa,
+                'transferred_from_date'       => $transferredFromDate,
+                'transferred_from_shift'      => $transferredFromShift,
+                'transferred_from_cutoff'     => $transferredFromCutoff,
+                'transferred_from_listing_id' => $transferredFromListing,
                 'is_lock' => 0,
                 'created_by' => Auth::id(),
                 'updated_by' => Auth::id(),
@@ -575,6 +595,16 @@ class ScheduleVerificationService
                                 if ($sourceItem) {
                                     Log::info("Creating schedule from source", ['source_id' => $sourceId]);
                                     
+                                    // Capture source position BEFORE deduction.
+                                    // If source item was itself transferred from another place,
+                                    // propagate that original origin so the trail is preserved.
+                                    $originDate    = $sourceItem->transferred_from_date
+                                        ? Carbon::parse($sourceItem->transferred_from_date)->format('Y-m-d')
+                                        : Carbon::parse($sourceItem->schedule)->format('Y-m-d');
+                                    $originShift   = $sourceItem->transferred_from_shift  ?? $sourceItem->shift;
+                                    $originCutoff  = $sourceItem->transferred_from_cutoff ?? $sourceItem->cutoff;
+                                    $originListing = $sourceItem->transferred_from_listing_id ?? $sourceItem->listing_id;
+
                                     // Create new schedule from source
                                     AssySchedule::create([
                                         'schedule' => $date,
@@ -590,6 +620,10 @@ class ScheduleVerificationService
                                         'mode' => $sourceItem->mode ?? 0,
                                         'snp' => $sourceItem->snp ?? 0,
                                         'snpa' => $sourceItem->snpa ?? 0,
+                                        'transferred_from_date'       => $originDate,
+                                        'transferred_from_shift'      => $originShift,
+                                        'transferred_from_cutoff'     => $originCutoff,
+                                        'transferred_from_listing_id' => $originListing,
                                         'created_by' => Auth::id(),
                                         'updated_by' => Auth::id(),
                                     ]);
@@ -713,6 +747,141 @@ class ScheduleVerificationService
     }
 
     /**
+     * Preview unverify side effects: which transferred items can be restored to their origin,
+     * and which ones will be lost because the origin schedule has already been verified.
+     */
+    public function previewUnverify($conveyorId, $date, $shift)
+    {
+        $date = Carbon::parse($date)->format('Y-m-d');
+
+        $transferredItems = AssySchedule::where('conveyor_id', $conveyorId)
+            ->whereDate('schedule', $date)
+            ->where('shift', $shift)
+            ->whereNotNull('transferred_from_date')
+            ->get();
+
+        $restorable = [];
+        $lost       = [];
+
+        foreach ($transferredItems as $item) {
+            $originDate  = Carbon::parse($item->transferred_from_date)->format('Y-m-d');
+            $originShift = (int) $item->transferred_from_shift;
+
+            $isOriginVerified = AssySchedule::where('conveyor_id', $conveyorId)
+                ->whereDate('schedule', $originDate)
+                ->where('shift', $originShift)
+                ->where('is_lock', 1)
+                ->exists();
+
+            $info = [
+                'assy'          => $item->assy,
+                'assycode'      => $item->assycode,
+                'qty'           => $item->qty,
+                'origin_date'   => $originDate,
+                'origin_shift'  => $originShift,
+                'origin_cutoff' => (int) $item->transferred_from_cutoff,
+            ];
+
+            if ($isOriginVerified) {
+                $lost[] = $info;
+            } else {
+                $restorable[] = $info;
+            }
+        }
+
+        return [
+            'success'    => true,
+            'restorable' => $restorable,
+            'lost'       => $lost,
+            'has_warning'=> count($lost) > 0,
+            'has_transfer' => count($restorable) + count($lost) > 0,
+        ];
+    }
+
+    /**
+     * Restore transferred items back to their origin schedule group.
+     * If origin is still unverified, qty is merged into an existing origin record
+     * or a new record is recreated. If origin has been verified, the item is lost
+     * (skipped). Must be called BEFORE deleting the current schedule group records.
+     */
+    private function restoreTransferredItemsToOrigin($conveyorId, $dateStr, $shift)
+    {
+        $transferredItems = AssySchedule::where('conveyor_id', $conveyorId)
+            ->whereDate('schedule', $dateStr)
+            ->where('shift', $shift)
+            ->whereNotNull('transferred_from_date')
+            ->get();
+
+        $restoredCount = 0;
+        $lostCount     = 0;
+
+        foreach ($transferredItems as $item) {
+            $originDate    = Carbon::parse($item->transferred_from_date)->format('Y-m-d');
+            $originShift   = (int) $item->transferred_from_shift;
+            $originCutoff  = (int) ($item->transferred_from_cutoff ?? 0);
+            $originListing = (int) ($item->transferred_from_listing_id ?? $item->listing_id);
+
+            $isOriginVerified = AssySchedule::where('conveyor_id', $conveyorId)
+                ->whereDate('schedule', $originDate)
+                ->where('shift', $originShift)
+                ->where('is_lock', 1)
+                ->exists();
+
+            if ($isOriginVerified) {
+                $lostCount++;
+                Log::info('Unverify: origin already verified, item lost', [
+                    'conveyor_id' => $conveyorId,
+                    'assy'        => $item->assy,
+                    'qty'         => $item->qty,
+                    'origin'      => "$originDate shift $originShift CO$originCutoff",
+                ]);
+                continue;
+            }
+
+            // Merge into existing origin record with same listing/cutoff if present
+            $existing = AssySchedule::where('conveyor_id', $conveyorId)
+                ->whereDate('schedule', $originDate)
+                ->where('shift', $originShift)
+                ->where('cutoff', $originCutoff)
+                ->where('listing_id', $originListing)
+                ->where('is_lock', 0)
+                ->first();
+
+            if ($existing) {
+                $existing->qty = (int) $existing->qty + (int) $item->qty;
+                $existing->updated_by = Auth::id();
+                $existing->save();
+            } else {
+                AssySchedule::create([
+                    'schedule'    => $originDate,
+                    'conveyor_id' => $conveyorId,
+                    'listing_id'  => $originListing,
+                    'shift'       => $originShift,
+                    'assycode'    => $item->assycode,
+                    'assy'        => $item->assy,
+                    'qty'         => $item->qty,
+                    'cutoff'      => $originCutoff,
+                    'seq'         => $item->seq ?? 0,
+                    'plt'         => $item->plt ?? 0,
+                    'mode'        => $item->mode ?? 0,
+                    'snp'         => $item->snp ?? 0,
+                    'snpa'        => $item->snpa ?? 0,
+                    'is_lock'     => 0,
+                    'created_by'  => Auth::id(),
+                    'updated_by'  => Auth::id(),
+                ]);
+            }
+
+            $restoredCount++;
+        }
+
+        return [
+            'restored_count' => $restoredCount,
+            'lost_count'     => $lostCount,
+        ];
+    }
+
+    /**
      * Unverify schedule - unlock the schedule for specific conveyor, date, and shift.
      * Reverses balance, clears kanbans, then regenerates schedules from listing_stage
      * to restore the pre-verification state.
@@ -724,6 +893,9 @@ class ScheduleVerificationService
 
             $date = Carbon::parse($date);
             $dateStr = $date->format('Y-m-d');
+
+            // Step 0: Restore transferred items back to their origin (if origin still unverified)
+            $restoreResult = $this->restoreTransferredItemsToOrigin($conveyorId, $dateStr, $shift);
 
             // Step 1: Reverse balance contributions from existing kanbans BEFORE clearing
             $this->kanbanGenerator->reverseBalanceForScheduleGroup($conveyorId, $dateStr, $shift);
@@ -810,10 +982,20 @@ class ScheduleVerificationService
 
             DB::commit();
 
+            $message = "Schedule berhasil di-unverify. {$deletedCount} record dihapus, {$regeneratedCount} record di-regenerate dari data listing asli.";
+            if (!empty($restoreResult['restored_count'])) {
+                $message .= " {$restoreResult['restored_count']} item transfer dikembalikan ke jadwal asal.";
+            }
+            if (!empty($restoreResult['lost_count'])) {
+                $message .= " {$restoreResult['lost_count']} item transfer HILANG karena jadwal asal sudah diverifikasi.";
+            }
+
             return [
                 'success' => true,
-                'message' => "Schedule berhasil di-unverify. {$deletedCount} record dihapus, {$regeneratedCount} record di-regenerate dari data listing asli.",
+                'message' => $message,
                 'affected' => $regeneratedCount,
+                'restored_count' => $restoreResult['restored_count'] ?? 0,
+                'lost_count'     => $restoreResult['lost_count'] ?? 0,
             ];
 
         } catch (\Exception $e) {

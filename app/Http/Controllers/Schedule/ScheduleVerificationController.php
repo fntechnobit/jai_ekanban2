@@ -220,6 +220,26 @@ class ScheduleVerificationController extends Controller
     }
 
     /**
+     * Preview unverify impact - show which transferred items will be restored or lost.
+     */
+    public function previewUnverify(Request $request)
+    {
+        $request->validate([
+            'conveyor_id' => 'required|integer',
+            'date' => 'required|date',
+            'shift' => 'required|integer',
+        ]);
+
+        $result = $this->scheduleVerificationService->previewUnverify(
+            $request->input('conveyor_id'),
+            $request->input('date'),
+            $request->input('shift')
+        );
+
+        return response()->json($result);
+    }
+
+    /**
      * Unverify a schedule - unlock it for specific conveyor, date and shift
      */
     public function unverify(Request $request)
