@@ -69,4 +69,9 @@ class MasterShikakeShieldImport extends BaseShikakeImport
     {
         MasterShikakeShield::create($processData);
     }
+
+    protected function deleteProcessRecord(int $shikakeId): void
+    {
+        MasterShikakeShield::where('master_shikake_id', $shikakeId)->delete();
+    }
 }

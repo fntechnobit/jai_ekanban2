@@ -330,6 +330,7 @@
                         $('#v_acc_1a').text(v(d.acc_1a));
                         $('#v_tube_1').text(v(d.tube_1));
                         $('#v_mark_1').text(v(d.mark_1));
+                        $('#v_ta').text(v(d.ta));
 
                         // Terminal 2
                         $('#v_terminal_2').text(v(d.terminal_2));
@@ -340,6 +341,7 @@
                         $('#v_acc_2a').text(v(d.acc_2a));
                         $('#v_tube_2').text(v(d.tube_2));
                         $('#v_mark_2').text(v(d.mark_2));
+                        $('#v_tb').text(v(d.tb));
 
                         // T fields
                         $('#v_t01').text(v(d.t01));

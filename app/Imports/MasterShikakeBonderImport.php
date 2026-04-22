@@ -88,4 +88,9 @@ class MasterShikakeBonderImport extends BaseShikakeImport
     {
         MasterShikakeBonder::create($processData);
     }
+
+    protected function deleteProcessRecord(int $shikakeId): void
+    {
+        MasterShikakeBonder::where('master_shikake_id', $shikakeId)->delete();
+    }
 }

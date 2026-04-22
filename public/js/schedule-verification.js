@@ -202,6 +202,14 @@ $(function () {
     function displayVerificationModal(data, readOnly) {
         readOnly = readOnly || false;
         
+        // Reset modal state from previous session
+        $('#available-assy-container').html('');
+        $('#available-date').html('<option value="">-- Pilih Tanggal --</option>');
+        $('#available-shift').html('<option value="all">Semua Shift</option>');
+        if ($('#available-info').length) {
+            $('#available-info').html('<span class="text-muted">Pilih tanggal untuk memuat data sumber</span>');
+        }
+
         // Store read-only state
         $('#verificationModal').data('read-only', readOnly);
         

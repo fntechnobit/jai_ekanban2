@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Schedule;
 
 use App\Http\Controllers\Controller;
+use App\Models\AssySchedule;
+use App\Models\AssyScheduleCircuit;
+use App\Models\AssyScheduleShikake;
 use App\Models\KanbanBalanceCircuit;
 use App\Models\KanbanBalanceShikake;
 use App\Models\MasterConveyor;
@@ -241,7 +244,9 @@ class ScheduleVerificationController extends Controller
     }
 
     /**
-     * Reset all kanban balance (sisa & nomor_urut) to zero
+     * Reset all kanban balance (sisa & nomor_urut) to zero.
+     * Also clears all generated kanbans and unverifies all schedules
+     * to ensure full consistency.
      */
     public function resetBalance(Request $request)
     {
@@ -260,42 +265,90 @@ class ScheduleVerificationController extends Controller
                 $circuitCount = KanbanBalanceCircuit::where('conveyor_id', $conveyorId)->count();
                 $shikakeCount = KanbanBalanceShikake::where('conveyor_id', $conveyorId)->count();
 
+                // 1. Reset balance to zero
                 KanbanBalanceCircuit::where('conveyor_id', $conveyorId)->update(['sisa' => 0, 'last_nomor_urut' => 0]);
                 KanbanBalanceShikake::where('conveyor_id', $conveyorId)->update(['sisa' => 0, 'last_nomor_urut' => 0]);
+
+                // 2. Delete all generated kanbans for this conveyor
+                $scheduleIds = AssySchedule::where('conveyor_id', $conveyorId)->pluck('id');
+                $deletedCircuitKanbans = 0;
+                $deletedShikakeKanbans = 0;
+                if ($scheduleIds->isNotEmpty()) {
+                    $deletedCircuitKanbans = AssyScheduleCircuit::whereIn('assy_schedule_id', $scheduleIds)->delete();
+                    $deletedShikakeKanbans = AssyScheduleShikake::whereIn('assy_schedule_id', $scheduleIds)->delete();
+                }
+
+                // 3. Unverify all verified schedules for this conveyor
+                $unverifiedCount = AssySchedule::where('conveyor_id', $conveyorId)
+                    ->where('is_lock', 1)
+                    ->update([
+                        'is_lock' => 0,
+                        'verified_at' => null,
+                        'verified_by' => null,
+                        'updated_by' => auth()->id(),
+                        'updated_at' => now(),
+                    ]);
 
                 $conveyor = MasterConveyor::find($conveyorId);
                 $conveyorName = $conveyor ? $conveyor->conveyor : $conveyorId;
 
                 DB::commit();
 
-                Log::warning('KANBAN BALANCE RESET: Balance reset to 0 for conveyor ' . $conveyorName . ' by user ' . auth()->id(), [
+                Log::warning('KANBAN BALANCE RESET: Full reset for conveyor ' . $conveyorName . ' by user ' . auth()->id(), [
                     'conveyor_id' => $conveyorId,
-                    'circuit_records' => $circuitCount,
-                    'shikake_records' => $shikakeCount,
+                    'circuit_balance_records' => $circuitCount,
+                    'shikake_balance_records' => $shikakeCount,
+                    'deleted_circuit_kanbans' => $deletedCircuitKanbans,
+                    'deleted_shikake_kanbans' => $deletedShikakeKanbans,
+                    'unverified_schedules' => $unverifiedCount,
                 ]);
 
                 return response()->json([
                     'success' => true,
-                    'message' => "Reset berhasil untuk conveyor {$conveyorName}. {$circuitCount} record circuit dan {$shikakeCount} record shikake di-reset ke 0.",
+                    'message' => "Reset berhasil untuk conveyor {$conveyorName}. "
+                        . "{$circuitCount} balance circuit dan {$shikakeCount} balance shikake di-reset ke 0. "
+                        . "{$deletedCircuitKanbans} kanban circuit dan {$deletedShikakeKanbans} kanban shikake dihapus. "
+                        . "{$unverifiedCount} schedule di-unverify.",
                 ]);
             } else {
                 // Reset all
                 $circuitCount = KanbanBalanceCircuit::count();
                 $shikakeCount = KanbanBalanceShikake::count();
 
+                // 1. Reset all balances to zero
                 KanbanBalanceCircuit::query()->update(['sisa' => 0, 'last_nomor_urut' => 0]);
                 KanbanBalanceShikake::query()->update(['sisa' => 0, 'last_nomor_urut' => 0]);
 
+                // 2. Delete all generated kanbans
+                $deletedCircuitKanbans = AssyScheduleCircuit::query()->delete();
+                $deletedShikakeKanbans = AssyScheduleShikake::query()->delete();
+
+                // 3. Unverify all verified schedules
+                $unverifiedCount = AssySchedule::where('is_lock', 1)
+                    ->update([
+                        'is_lock' => 0,
+                        'verified_at' => null,
+                        'verified_by' => null,
+                        'updated_by' => auth()->id(),
+                        'updated_at' => now(),
+                    ]);
+
                 DB::commit();
 
-                Log::warning('KANBAN BALANCE RESET: All balance reset to 0 by user ' . auth()->id(), [
-                    'circuit_records' => $circuitCount,
-                    'shikake_records' => $shikakeCount,
+                Log::warning('KANBAN BALANCE RESET: Full reset ALL by user ' . auth()->id(), [
+                    'circuit_balance_records' => $circuitCount,
+                    'shikake_balance_records' => $shikakeCount,
+                    'deleted_circuit_kanbans' => $deletedCircuitKanbans,
+                    'deleted_shikake_kanbans' => $deletedShikakeKanbans,
+                    'unverified_schedules' => $unverifiedCount,
                 ]);
 
                 return response()->json([
                     'success' => true,
-                    'message' => "Reset berhasil. {$circuitCount} record circuit dan {$shikakeCount} record shikake di-reset ke 0.",
+                    'message' => "Reset berhasil. "
+                        . "{$circuitCount} balance circuit dan {$shikakeCount} balance shikake di-reset ke 0. "
+                        . "{$deletedCircuitKanbans} kanban circuit dan {$deletedShikakeKanbans} kanban shikake dihapus. "
+                        . "{$unverifiedCount} schedule di-unverify.",
                 ]);
             }
         } catch (\Exception $e) {

@@ -62,6 +62,9 @@ class KanbanGeneratorService
         try {
             DB::beginTransaction();
 
+            // Reverse balance contributions from old kanbans BEFORE clearing them
+            $this->reverseBalanceForScheduleGroup($conveyorId, $date, $shift);
+
             // Clear existing kanban data for this schedule group
             $this->clearKanbanData($conveyorId, $date, $shift);
 
@@ -510,7 +513,7 @@ class KanbanGeneratorService
         // Ambil bagian XXX dari format XXX/YYY
         $issueNumber = explode('/', $issue)[0] ?? '001';
 
-        return sprintf('%s.%s.%s.%d.%04d', $carline, $code, $issueNumber, $qty, $nomorUrut);
+        return sprintf('%s%s%s%d%04d', $carline, $code, $issueNumber, $qty, $nomorUrut);
     }
 
     /**
@@ -536,6 +539,108 @@ class KanbanGeneratorService
         };
 
         return $code ?? ('SHK-' . str_pad($shikake->sequence ?? $shikake->id, 3, '0', STR_PAD_LEFT));
+    }
+
+    /**
+     * Reverse balance contributions from existing kanbans for a schedule group.
+     * Must be called BEFORE clearing kanban data so we can read the old records.
+     * Only reverses sisa (carry-over). nomor_urut is NOT reversed to prevent duplicates.
+     *
+     * @param int $conveyorId
+     * @param string $date
+     * @param int $shift
+     * @return void
+     */
+    public function reverseBalanceForScheduleGroup(int $conveyorId, string $date, int $shift): void
+    {
+        $scheduleIds = AssySchedule::where('conveyor_id', $conveyorId)
+            ->whereDate('schedule', $date)
+            ->where('shift', $shift)
+            ->pluck('id');
+
+        if ($scheduleIds->isEmpty()) {
+            return;
+        }
+
+        // --- Reverse circuit balances ---
+        $circuitGroups = AssyScheduleCircuit::whereIn('assy_schedule_id', $scheduleIds)
+            ->select('master_circuit_id', DB::raw('COUNT(*) as kanban_count'), DB::raw('MAX(qty_kanban) as qty_kanban'))
+            ->groupBy('master_circuit_id')
+            ->get();
+
+        foreach ($circuitGroups as $group) {
+            $balance = KanbanBalanceCircuit::where('conveyor_id', $conveyorId)
+                ->where('master_circuit_id', $group->master_circuit_id)
+                ->first();
+
+            if (!$balance) {
+                continue;
+            }
+
+            // Get total kebutuhan from unique (assy_schedule_id, cutoff) per circuit
+            $totalKebutuhan = AssyScheduleCircuit::whereIn('assy_schedule_id', $scheduleIds)
+                ->where('master_circuit_id', $group->master_circuit_id)
+                ->select('assy_schedule_id', 'cutoff', 'qty_listing')
+                ->distinct()
+                ->get()
+                ->unique(fn($item) => $item->assy_schedule_id . '-' . $item->cutoff)
+                ->sum('qty_listing');
+
+            // sisa_delta = (kanban_count × qty_kanban) - total_kebutuhan
+            $sisaDelta = ($group->kanban_count * $group->qty_kanban) - $totalKebutuhan;
+            $oldSisa = $balance->sisa;
+            $balance->sisa = max(0, $balance->sisa - $sisaDelta);
+            $balance->save();
+
+            Log::info("KanbanGeneratorService: Reversed circuit balance", [
+                'conveyor_id' => $conveyorId,
+                'master_circuit_id' => $group->master_circuit_id,
+                'kanban_count' => $group->kanban_count,
+                'total_kebutuhan' => $totalKebutuhan,
+                'sisa_delta' => $sisaDelta,
+                'old_sisa' => $oldSisa,
+                'new_sisa' => $balance->sisa,
+            ]);
+        }
+
+        // --- Reverse shikake balances ---
+        $shikakeGroups = AssyScheduleShikake::whereIn('assy_schedule_id', $scheduleIds)
+            ->select('master_shikake_id', DB::raw('COUNT(*) as kanban_count'), DB::raw('MAX(qty_kanban) as qty_kanban'))
+            ->groupBy('master_shikake_id')
+            ->get();
+
+        foreach ($shikakeGroups as $group) {
+            $balance = KanbanBalanceShikake::where('conveyor_id', $conveyorId)
+                ->where('master_shikake_id', $group->master_shikake_id)
+                ->first();
+
+            if (!$balance) {
+                continue;
+            }
+
+            $totalKebutuhan = AssyScheduleShikake::whereIn('assy_schedule_id', $scheduleIds)
+                ->where('master_shikake_id', $group->master_shikake_id)
+                ->select('assy_schedule_id', 'cutoff', 'qty_listing')
+                ->distinct()
+                ->get()
+                ->unique(fn($item) => $item->assy_schedule_id . '-' . $item->cutoff)
+                ->sum('qty_listing');
+
+            $sisaDelta = ($group->kanban_count * $group->qty_kanban) - $totalKebutuhan;
+            $oldSisa = $balance->sisa;
+            $balance->sisa = max(0, $balance->sisa - $sisaDelta);
+            $balance->save();
+
+            Log::info("KanbanGeneratorService: Reversed shikake balance", [
+                'conveyor_id' => $conveyorId,
+                'master_shikake_id' => $group->master_shikake_id,
+                'kanban_count' => $group->kanban_count,
+                'total_kebutuhan' => $totalKebutuhan,
+                'sisa_delta' => $sisaDelta,
+                'old_sisa' => $oldSisa,
+                'new_sisa' => $balance->sisa,
+            ]);
+        }
     }
 
     /**

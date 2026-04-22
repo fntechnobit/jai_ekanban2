@@ -57,6 +57,8 @@ class MasterCircuit extends Model
         'acc_2a',
         'tube_2',
         'mark_2',
+        'ta',
+        'tb',
         't01',
         't02',
         't03',

@@ -227,6 +227,8 @@ class EkanbanCircuitService
                 'master_circuit.mark_2',
                 'master_circuit.qty',
                 'master_circuit.address',
+                'master_circuit.ta',
+                'master_circuit.tb',
                 'master_circuit.t01',
                 'master_circuit.t02',
                 'master_circuit.t03',

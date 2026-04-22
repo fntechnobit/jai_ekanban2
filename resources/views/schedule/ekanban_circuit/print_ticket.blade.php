@@ -149,8 +149,8 @@
 }
 
 .ticket-circuit-print .barcode-cell img {
-    width: 80%;
-    max-height: 10mm;
+    width: 95%;
+    max-height: 18mm;
     height: auto;
     object-fit: contain;
     display: block;
@@ -242,12 +242,12 @@
                 <col style="width: 40px">   {{-- Col 1: Section label (5mm) --}}
                 <col style="width: 80px">   {{-- Col 2: Label (10mm) --}}
                 <col style="width: 120px">  {{-- Col 3: Value (15mm) --}}
-                <col style="width: 96px">   {{-- Col 4: (12mm) --}}
-                <col style="width: 96px">   {{-- Col 5: (12mm) --}}
-                <col style="width: 96px">   {{-- Col 6: (12mm) --}}
-                <col style="width: 96px">   {{-- Col 7: (12mm) --}}
-                <col style="width: 60px">   {{-- Col 8: SEQ/TO labels --}}
-                <col style="width: 116px">  {{-- Col 9: MACHINE/TO values --}}
+                <col style="width: 72px">   {{-- Col 4: KIND --}}
+                <col style="width: 72px">   {{-- Col 5: SIZE --}}
+                <col style="width: 72px">   {{-- Col 6: COL --}}
+                <col style="width: 72px">   {{-- Col 7: CL --}}
+                <col style="width: 60px">   {{-- Col 8: SEQ --}}
+                <col style="width: 192px">  {{-- Col 9: MACHINE --}}
             </colgroup>
             <thead>
                 <tr>
@@ -283,7 +283,7 @@
                     <td rowspan="4" class="section-label">A</td>
                     <td class="label-cell text-left">TERM.</td>
                     <td colspan="3" class="value-cell text-left"@if(!empty($circuit->gold_1)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_1 ?? '' }}</td>
-                    <td class="label-cell"></td>
+                    <td class="label-cell" style="overflow:hidden;">@if(!empty($circuit->note_1))<span style="display:inline-block;font-size:32px;font-weight:bold;line-height:0.8;margin-bottom:-8px;">{{ $circuit->note_1 }}</span>@endif</td>
                     <td class="value-cell">{{ $circuit->seal_1 ?? '' }}</td>
                     <td class="label-cell text-left">TO 1</td>
                     <td class="value-cell text-left">{{ $circuit->t01 ?? '' }}</td>
@@ -293,7 +293,7 @@
                     <td class="label-cell text-left">ACC 1</td>
                     <td colspan="3" class="value-cell text-left">{{ $circuit->acc_1 ?? '' }}</td>
                     <td class="label-cell text-left">NOTE</td>
-                    <td class="value-cell"@if(!empty($circuit->note_1) && preg_match('/^\*+$/', trim($circuit->note_1))) style="overflow:hidden;"@endif>@if(!empty($circuit->note_1) && preg_match('/^\*+$/', trim($circuit->note_1)))<span style="display:inline-block;transform:scale(2);line-height:1;">{{ $circuit->note_1 }}</span>@else{{ $circuit->note_1 ?? '' }}@endif</td>
+                    <td class="value-cell">{{ $circuit->ta ?? '' }}</td>
                     <td class="label-cell text-left">TO 2</td>
                     <td class="value-cell text-left">{{ $circuit->t02 ?? '' }}</td>
                 </tr>
@@ -321,7 +321,7 @@
                     <td rowspan="4" class="section-label black-bg">B</td>
                     <td class="label-cell text-left">TERM.</td>
                     <td colspan="3" class="value-cell text-left"@if(!empty($circuit->gold_2)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_2 ?? '' }}</td>
-                    <td class="label-cell"></td>
+                    <td class="label-cell" style="overflow:hidden;">@if(!empty($circuit->note_2))<span style="display:inline-block;font-size:32px;font-weight:bold;line-height:0.8;margin-bottom:-8px;">{{ $circuit->note_2 }}</span>@endif</td>
                     <td class="value-cell">{{ $circuit->seal_2 ?? '' }}</td>
                     <td class="label-cell text-left">ADDR</td>
                     <td class="value-cell text-left">{{ $circuit->address ?? '' }}</td>
@@ -331,7 +331,7 @@
                     <td class="label-cell text-left">ACC 1</td>
                     <td colspan="3" class="value-cell text-left">{{ $circuit->acc_2 ?? '' }}</td>
                     <td class="label-cell text-left">NOTE</td>
-                    <td class="value-cell"@if(!empty($circuit->note_2) && preg_match('/^\*+$/', trim($circuit->note_2))) style="overflow:hidden;"@endif>@if(!empty($circuit->note_2) && preg_match('/^\*+$/', trim($circuit->note_2)))<span style="display:inline-block;transform:scale(2);line-height:1;">{{ $circuit->note_2 }}</span>@else{{ $circuit->note_2 ?? '' }}@endif</td>
+                    <td class="value-cell">{{ $circuit->tb ?? '' }}</td>
                     <td class="label-cell text-left">CCT CODE</td>
                     <td class="value-cell text-left">{{ $circuit->cct_code ?? '' }}</td>
                 </tr>
@@ -383,7 +383,7 @@
                 <!-- Bottom Section - Row 3 -->
                 <tr>
                     <td colspan="3" class="value-cell text-left">
-                        {{ $circuit->release_date ? \Carbon\Carbon::parse($circuit->release_date)->format('d-M-y') : '' }}
+                        {{ \Carbon\Carbon::now()->format('d-M-y') }}
                     </td>
                 </tr>
                 <!-- Bottom Section - Row 4 -->

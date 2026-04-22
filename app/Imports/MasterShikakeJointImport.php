@@ -68,4 +68,9 @@ class MasterShikakeJointImport extends BaseShikakeImport
     {
         MasterShikakeJoint::create($processData);
     }
+
+    protected function deleteProcessRecord(int $shikakeId): void
+    {
+        MasterShikakeJoint::where('master_shikake_id', $shikakeId)->delete();
+    }
 }

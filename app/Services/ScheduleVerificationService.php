@@ -3,7 +3,11 @@
 namespace App\Services;
 
 use App\Models\AssySchedule;
+use App\Models\ListingStage;
 use App\Models\MasterConveyor;
+use App\Services\Schedule\ShiftCapacityCalculator;
+use App\Services\Schedule\ShiftLockChecker;
+use App\Services\Schedule\ListingAllocator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -12,10 +16,20 @@ use Carbon\Carbon;
 class ScheduleVerificationService
 {
     protected KanbanGeneratorService $kanbanGenerator;
+    protected ShiftCapacityCalculator $capacityCalculator;
+    protected ShiftLockChecker $lockChecker;
+    protected ListingAllocator $listingAllocator;
 
-    public function __construct(KanbanGeneratorService $kanbanGenerator)
-    {
+    public function __construct(
+        KanbanGeneratorService $kanbanGenerator,
+        ShiftCapacityCalculator $capacityCalculator,
+        ShiftLockChecker $lockChecker,
+        ListingAllocator $listingAllocator
+    ) {
         $this->kanbanGenerator = $kanbanGenerator;
+        $this->capacityCalculator = $capacityCalculator;
+        $this->lockChecker = $lockChecker;
+        $this->listingAllocator = $listingAllocator;
     }
 
     /**
@@ -669,9 +683,9 @@ class ScheduleVerificationService
             );
 
             if (!$kanbanResult['success']) {
-                Log::warning("Kanban generation failed but schedule is locked", [
-                    'message' => $kanbanResult['message']
-                ]);
+                // Rollback entire transaction if kanban generation fails
+                // Schedule should NOT be locked without corresponding kanbans
+                throw new \RuntimeException('Kanban generation failed: ' . ($kanbanResult['message'] ?? 'Unknown error'));
             }
 
             DB::commit();
@@ -699,37 +713,113 @@ class ScheduleVerificationService
     }
 
     /**
-     * Unverify schedule - unlock the schedule for specific conveyor, date, and shift
+     * Unverify schedule - unlock the schedule for specific conveyor, date, and shift.
+     * Reverses balance, clears kanbans, then regenerates schedules from listing_stage
+     * to restore the pre-verification state.
      */
     public function unverifySchedule($conveyorId, $date, $shift)
     {
         try {
             DB::beginTransaction();
 
-            // Update all schedules for this conveyor, date, and shift
-            $affected = AssySchedule::where('conveyor_id', $conveyorId)
-                ->whereDate('schedule', $date)
+            $date = Carbon::parse($date);
+            $dateStr = $date->format('Y-m-d');
+
+            // Step 1: Reverse balance contributions from existing kanbans BEFORE clearing
+            $this->kanbanGenerator->reverseBalanceForScheduleGroup($conveyorId, $dateStr, $shift);
+
+            // Step 2: Clear generated kanbans for this schedule group
+            $this->kanbanGenerator->clearKanbanData($conveyorId, $dateStr, $shift);
+
+            // Step 3: Delete current assy_schedule records for this conveyor/date/shift
+            $deletedCount = AssySchedule::where('conveyor_id', $conveyorId)
+                ->whereDate('schedule', $dateStr)
                 ->where('shift', $shift)
-                ->where('is_lock', 1) // Only unverify locked schedules
-                ->update([
-                    'is_lock' => 0,
-                    'verified_at' => null,
-                    'verified_by' => null,
-                    'updated_by' => Auth::id(),
-                    'updated_at' => now()
-                ]);
+                ->delete();
+
+            Log::info("unverifySchedule: Deleted schedules", [
+                'conveyor_id' => $conveyorId,
+                'date' => $dateStr,
+                'shift' => $shift,
+                'deleted' => $deletedCount,
+            ]);
+
+            // Step 4: Regenerate from listing_stage (restore original allocation)
+            $conveyor = MasterConveyor::find($conveyorId);
+            $regeneratedCount = 0;
+
+            if ($conveyor) {
+                $listings = ListingStage::where('conveyor', $conveyor->conveyor)
+                    ->whereDate('listing_date_time', $dateStr)
+                    ->where('shift', $shift)
+                    ->whereNotNull('assycode')
+                    ->where('assycode', '!=', '')
+                    ->whereNotNull('assy')
+                    ->where('assy', '!=', '')
+                    ->where('qty', '>', 0)
+                    ->orderBy('id_listing', 'asc')
+                    ->orderBy('seq', 'asc')
+                    ->get();
+
+                if ($listings->isNotEmpty()) {
+                    // Initialize rem_qty tracking
+                    $this->listingAllocator->initializeListings($listings);
+
+                    // Get shift lock status (this shift won't be locked since we just deleted)
+                    $shiftLockStatus = $this->lockChecker->getShiftLockStatus($date, $conveyor->id);
+                    // Force this shift as unlocked
+                    $shiftLockStatus[$shift] = false;
+
+                    // Calculate cutoff capacities
+                    $shiftCapacities = $this->capacityCalculator->calculateShiftCapacities(
+                        $conveyor,
+                        $shiftLockStatus
+                    );
+
+                    if (isset($shiftCapacities[$shift])) {
+                        // Pre-map CO5
+                        $totalQty = $listings->sum('rem_qty');
+                        $co5Needed = $this->capacityCalculator->preMapCutoff5(
+                            $shiftCapacities, $conveyor->capacity, $totalQty
+                        );
+
+                        // Allocate to shift
+                        $allocationResult = $this->listingAllocator->allocateToShift(
+                            $listings,
+                            $shiftCapacities[$shift],
+                            $shift,
+                            $conveyor->id,
+                            $dateStr
+                        );
+
+                        // Bulk insert
+                        if (!empty($allocationResult['schedules'])) {
+                            foreach (array_chunk($allocationResult['schedules'], 500) as $chunk) {
+                                AssySchedule::insert($chunk);
+                            }
+                            $regeneratedCount = count($allocationResult['schedules']);
+                        }
+                    }
+
+                    Log::info("unverifySchedule: Regenerated from listing_stage", [
+                        'listings_found' => $listings->count(),
+                        'schedules_created' => $regeneratedCount,
+                    ]);
+                }
+            }
 
             DB::commit();
 
             return [
                 'success' => true,
-                'message' => "Schedule unverified successfully. {$affected} records unlocked.",
-                'affected' => $affected
+                'message' => "Schedule berhasil di-unverify. {$deletedCount} record dihapus, {$regeneratedCount} record di-regenerate dari data listing asli.",
+                'affected' => $regeneratedCount,
             ];
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+            Log::error("unverifySchedule failed", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+
             return [
                 'success' => false,
                 'message' => 'Failed to unverify schedule: ' . $e->getMessage()

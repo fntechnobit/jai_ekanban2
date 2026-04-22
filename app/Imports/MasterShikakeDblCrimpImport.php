@@ -67,4 +67,9 @@ class MasterShikakeDblCrimpImport extends BaseShikakeImport
     {
         MasterShikakeDblCrimp::create($processData);
     }
+
+    protected function deleteProcessRecord(int $shikakeId): void
+    {
+        MasterShikakeDblCrimp::where('master_shikake_id', $shikakeId)->delete();
+    }
 }

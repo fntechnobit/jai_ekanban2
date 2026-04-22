@@ -61,6 +61,7 @@
                                 <tr><td class="text-muted">Acc A</td><td id="v_acc_1a">-</td></tr>
                                 <tr><td class="text-muted">Tube</td><td id="v_tube_1">-</td></tr>
                                 <tr><td class="text-muted">Mark</td><td id="v_mark_1">-</td></tr>
+                                <tr><td class="text-muted">TA</td><td id="v_ta">-</td></tr>
                             </table>
                         </div>
                     </div>
@@ -76,6 +77,7 @@
                                 <tr><td class="text-muted">Acc A</td><td id="v_acc_2a">-</td></tr>
                                 <tr><td class="text-muted">Tube</td><td id="v_tube_2">-</td></tr>
                                 <tr><td class="text-muted">Mark</td><td id="v_mark_2">-</td></tr>
+                                <tr><td class="text-muted">TB</td><td id="v_tb">-</td></tr>
                             </table>
                         </div>
                     </div>

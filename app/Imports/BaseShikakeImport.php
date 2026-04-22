@@ -67,6 +67,26 @@ abstract class BaseShikakeImport
     abstract protected function createProcessRecord(array $processData): void;
 
     /**
+     * Update or create process-specific record based on master_shikake_id
+     * @param int $shikakeId
+     * @param array $processData
+     * @return void
+     */
+    protected function updateOrCreateProcessRecord(int $shikakeId, array $processData): void
+    {
+        // Default: delete old and create new (subclasses can override for more specific logic)
+        $this->deleteProcessRecord($shikakeId);
+        $this->createProcessRecord($processData);
+    }
+
+    /**
+     * Delete process-specific record by shikake ID
+     * @param int $shikakeId
+     * @return void
+     */
+    abstract protected function deleteProcessRecord(int $shikakeId): void;
+
+    /**
      * Build header name to column index mapping
      * @param array $headerRow
      * @return void
@@ -151,15 +171,31 @@ abstract class BaseShikakeImport
                         continue;
                     }
 
-                    // Map and create MasterShikake
+                    // Map and update or create MasterShikake
                     $shikakeData = $this->mapShikakeData($rowData, $conveyor);
-                    $shikake = MasterShikake::create($shikakeData);
+                    $machine = $shikakeData['machine'] ?? null;
+                    $sequence = $shikakeData['sequence'] ?? null;
                     
-                    // Map and create process-specific record
+                    if ($machine && $sequence !== null) {
+                        $shikake = MasterShikake::updateOrCreate(
+                            [
+                                'conveyor_id' => $this->conveyorId,
+                                'process' => $this->process,
+                                'machine' => $machine,
+                                'sequence' => $sequence,
+                            ],
+                            $shikakeData
+                        );
+                    } else {
+                        $shikake = MasterShikake::create($shikakeData);
+                    }
+                    
+                    // Map and update or create process-specific record
                     $processData = $this->mapProcessData($rowData, $shikake->id);
-                    $this->createProcessRecord($processData);
+                    $this->updateOrCreateProcessRecord($shikake->id, $processData);
                     
-                    // Process assy relationships
+                    // Sync assy relationships (remove old, add new)
+                    $shikake->assemblies()->detach();
                     $this->processAssyRelationships($shikake, $rowData, $assyColumns);
                     
                     $this->successCount++;

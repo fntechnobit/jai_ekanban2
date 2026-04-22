@@ -82,4 +82,9 @@ class MasterShikakeTwistImport extends BaseShikakeImport
     {
         MasterShikakeTwist::create($processData);
     }
+
+    protected function deleteProcessRecord(int $shikakeId): void
+    {
+        MasterShikakeTwist::where('master_shikake_id', $shikakeId)->delete();
+    }
 }

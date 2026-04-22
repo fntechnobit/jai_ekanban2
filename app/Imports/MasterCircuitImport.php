@@ -75,10 +75,22 @@ class MasterCircuitImport
 
                     $data = $this->mapRowToData($rowData, $conveyor);
                     
-                    // Create circuit
-                    $circuit = MasterCircuit::create($data);
+                    // Update or create circuit based on conveyor_id + cct_code
+                    $cctCode = $data['cct_code'] ?? null;
+                    if ($cctCode) {
+                        $circuit = MasterCircuit::updateOrCreate(
+                            [
+                                'conveyor_id' => $this->conveyorId,
+                                'cct_code' => $cctCode,
+                            ],
+                            $data
+                        );
+                    } else {
+                        $circuit = MasterCircuit::create($data);
+                    }
                     
-                    // Process assy relationships
+                    // Sync assy relationships (remove old, add new)
+                    $circuit->assemblies()->detach();
                     $this->processAssyRelationships($circuit, $rowData, $assyColumns);
                     
                     $this->successCount++;
@@ -260,8 +272,8 @@ class MasterCircuitImport
             'tube_2' => ImportHelper::cleanValue($rowData[41] ?? null),         // Column AP - Tube 2
             'mark_2' => ImportHelper::cleanValue($rowData[42] ?? null),         // Column AQ - Mark 2
             // Column AR (index 43) - Remark 2: not in DB schema, skipped
-            // Column AS (index 44) - TA: not in DB schema, skipped
-            // Column AT (index 45) - TB: not in DB schema, skipped
+            'ta' => ImportHelper::cleanValue($rowData[44] ?? null),             // Column AS - TA
+            'tb' => ImportHelper::cleanValue($rowData[45] ?? null),             // Column AT - TB
             't01' => ImportHelper::cleanValue($rowData[46] ?? null),            // Column AU - T01
             't02' => ImportHelper::cleanValue($rowData[47] ?? null),            // Column AV - T02
             't03' => ImportHelper::cleanValue($rowData[48] ?? null),            // Column AW - T03
