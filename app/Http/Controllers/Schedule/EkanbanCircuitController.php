@@ -76,6 +76,30 @@ class EkanbanCircuitController extends Controller
     {
         $ids = is_array($request->ids) ? $request->ids : explode(',', $request->ids);
 
+        // Enforce sequential cutoff rule: cannot print CO N until all earlier CO
+        // are fully printed (rule scoped per machine/date/shift).
+        $violation = $this->ekanbanCircuitService->findPriorCutoffViolation($ids);
+        if ($violation) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'prev_co_pending',
+                'message' => sprintf(
+                    'Tidak dapat print CO%d. CO%d belum selesai diprint untuk mesin %s tanggal %s shift %s.',
+                    $violation['cutoff'],
+                    $violation['pending_cutoff'],
+                    $violation['machine'],
+                    $violation['date'],
+                    $violation['shift']
+                ),
+                'violation' => $violation,
+            ], 422);
+        }
+
+        // If client only wants to validate (no marking, no rendering), respond now.
+        if ($request->boolean('validate_only')) {
+            return response()->json(['ok' => true]);
+        }
+
         // Mark circuits as printed
         $this->ekanbanCircuitService->markAsPrinted($ids, Auth::id());
 

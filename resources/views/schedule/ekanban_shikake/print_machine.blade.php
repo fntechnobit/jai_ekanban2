@@ -394,7 +394,16 @@
 
             // Print button handler
             $(document).on('click', '.btn-print', function() {
-                var groupId = $(this).data('group-id');
+                var $btn = $(this);
+                if ($btn.data('prev-pending') == 1 || $btn.attr('data-prev-pending') === '1') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'CO sebelumnya belum selesai',
+                        text: 'Selesaikan print CO sebelumnya pada tanggal & shift yang sama sebelum mencetak CO ini.'
+                    });
+                    return;
+                }
+                var groupId = $btn.data('group-id');
                 printShikake(groupId);
             });
         });
@@ -439,6 +448,33 @@
             }
 
             try {
+                // Step 0: Server-side validation - block if previous CO is unprinted
+                try {
+                    const validateResponse = await fetch("{{ route('schedule.ekanban-shikake.print') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ ids: ids, validate_only: true })
+                    });
+                    if (!validateResponse.ok) {
+                        const errData = await validateResponse.json().catch(() => ({}));
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'CO sebelumnya belum selesai',
+                            text: errData.message || 'Selesaikan print CO sebelumnya pada tanggal & shift yang sama.'
+                        });
+                        if (typeof table !== 'undefined') {
+                            table.ajax.reload(null, false);
+                        }
+                        return;
+                    }
+                } catch (vErr) {
+                    Swal.fire('Error!', 'Gagal validasi: ' + vErr.toString(), 'error');
+                    return;
+                }
+
                 // Step 1: Fetch HTML payload via GET with print mode (no side effects)
                 const previewResponse = await fetch("{{ route('schedule.ekanban-shikake.print-preview') }}?ids=" + encodeURIComponent(ids) + "&mode=print");
                 

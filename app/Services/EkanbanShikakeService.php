@@ -90,11 +90,21 @@ class EkanbanShikakeService
             $data = $query->skip($start)->take($length)->get();
         }
 
+        // Pre-compute min unprinted cutoff per (machine, date, shift) so we can
+        // determine if a group has a "previous CO not yet finished".
+        $minPendingMap = $this->buildMinPendingCutoffMap($data);
+
         $result = [];
         foreach ($data as $index => $row) {
             // New Group ID format: assyScheduleId-masterShikakeId
             $groupId = $row->assy_schedule_id . '-' . $row->master_shikake_id;
-            
+
+            $dateKey = Carbon::parse($row->date)->format('Y-m-d');
+            $mapKey = $row->machine . '|' . $dateKey . '|' . $row->shift;
+            $minPending = $minPendingMap[$mapKey] ?? null;
+            $prevCoPending = ($minPending !== null && $row->cutoff !== null && $row->cutoff !== '-' && (int) $row->cutoff > $minPending) ? 1 : 0;
+            $row->prev_co_pending = $prevCoPending;
+
             $result[] = [
                 'DT_RowIndex' => $start + $index + 1,
                 'assy_schedule_id' => $row->assy_schedule_id,
@@ -115,6 +125,7 @@ class EkanbanShikakeService
                 'is_printed' => $row->is_printed,
                 'last_printed_at' => $row->last_printed_at,
                 'print_count' => $row->print_count ?? 0,
+                'prev_co_pending' => $prevCoPending,
                 'actions' => view('schedule.ekanban_shikake.actions', ['row' => $row, 'groupId' => $groupId])->render()
             ];
         }
@@ -394,5 +405,98 @@ class EkanbanShikakeService
                     break;
             }
         }
+    }
+
+    /**
+     * Build a map of minimum cutoff that still has unprinted kanbans for each
+     * (machine, date, shift) combination present in the given rows.
+     * Key format: "machine|YYYY-MM-DD|shift" -> int (min unprinted cutoff)
+     */
+    private function buildMinPendingCutoffMap($rows)
+    {
+        $keys = [];
+        foreach ($rows as $row) {
+            $dateKey = Carbon::parse($row->date)->format('Y-m-d');
+            $keys[$row->machine . '|' . $dateKey . '|' . $row->shift] = [
+                'machine' => $row->machine,
+                'date' => $dateKey,
+                'shift' => $row->shift,
+            ];
+        }
+        if (empty($keys)) {
+            return [];
+        }
+
+        $map = [];
+        foreach ($keys as $key => $g) {
+            $map[$key] = $this->getMinUnprintedCutoff($g['machine'], $g['date'], $g['shift']);
+        }
+        return $map;
+    }
+
+    /**
+     * Return the minimum cutoff (machine/date/shift) that still has at least
+     * one unprinted kanban. Returns null if all printed.
+     */
+    public function getMinUnprintedCutoff($machine, $date, $shift)
+    {
+        $value = DB::table('assy_schedule_shikake')
+            ->join('assy_schedule', 'assy_schedule_shikake.assy_schedule_id', '=', 'assy_schedule.id')
+            ->join('master_shikake', 'assy_schedule_shikake.master_shikake_id', '=', 'master_shikake.id')
+            ->where('master_shikake.machine', $machine)
+            ->whereDate('assy_schedule.schedule', $date)
+            ->where('assy_schedule.shift', $shift)
+            ->where('assy_schedule_shikake.is_printed', 0)
+            ->min('assy_schedule_shikake.cutoff');
+
+        return $value !== null ? (int) $value : null;
+    }
+
+    /**
+     * Check if any group violates the "previous CO must be finished" rule.
+     * Returns the first violating group info or null.
+     */
+    public function findPriorCutoffViolation(array $groupIds)
+    {
+        foreach ($groupIds as $groupId) {
+            $parts = explode('-', $groupId, 2);
+            if (count($parts) !== 2) {
+                continue;
+            }
+            [$assyScheduleId, $masterShikakeId] = $parts;
+
+            $info = DB::table('assy_schedule_shikake')
+                ->join('assy_schedule', 'assy_schedule_shikake.assy_schedule_id', '=', 'assy_schedule.id')
+                ->join('master_shikake', 'assy_schedule_shikake.master_shikake_id', '=', 'master_shikake.id')
+                ->where('assy_schedule_shikake.assy_schedule_id', $assyScheduleId)
+                ->where('assy_schedule_shikake.master_shikake_id', $masterShikakeId)
+                ->select(
+                    'master_shikake.machine',
+                    'assy_schedule.schedule as date',
+                    'assy_schedule.shift',
+                    DB::raw('MIN(assy_schedule_shikake.cutoff) as cutoff')
+                )
+                ->groupBy('master_shikake.machine', 'assy_schedule.schedule', 'assy_schedule.shift')
+                ->first();
+
+            if (!$info) {
+                continue;
+            }
+
+            $date = Carbon::parse($info->date)->format('Y-m-d');
+            $minPending = $this->getMinUnprintedCutoff($info->machine, $date, $info->shift);
+
+            if ($minPending !== null && $info->cutoff !== null && (int) $info->cutoff > $minPending) {
+                return [
+                    'group_id' => $groupId,
+                    'machine' => $info->machine,
+                    'date' => $date,
+                    'shift' => $info->shift,
+                    'cutoff' => (int) $info->cutoff,
+                    'pending_cutoff' => $minPending,
+                ];
+            }
+        }
+        return null;
     }
 }
