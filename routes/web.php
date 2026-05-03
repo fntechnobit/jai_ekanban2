@@ -18,6 +18,7 @@ use App\Http\Controllers\MasterData\MasterConveyorController;
 use App\Http\Controllers\MasterData\MasterMachineController;
 use App\Http\Controllers\MasterData\MasterShikakeController;
 use App\Http\Controllers\MasterData\MasterCircuitController;
+use App\Http\Controllers\AdditionController;
 use App\Http\Controllers\Auth\LoginController;
 
 Route::get('/', function () {
@@ -162,5 +163,27 @@ Route::middleware('auth')->group(function () {
         Route::get('history', [DefectController::class, 'history'])->name('history');
         Route::get('history/datatable', [DefectController::class, 'historyDatatable'])->name('history.datatable');
         Route::get('summary', [DefectController::class, 'getSummary'])->name('summary');
+    });
+
+    // Addition Module Routes
+    Route::prefix('addition')->name('addition.')->group(function () {
+        // Add Cutting
+        Route::get('cutting', [AdditionController::class, 'cuttingIndex'])->name('cutting.index');
+        Route::get('cutting/datatable', [AdditionController::class, 'cuttingDatatable'])->name('cutting.datatable');
+        Route::post('cutting', [AdditionController::class, 'cuttingStore'])->name('cutting.store');
+        Route::get('cutting/circuits', [AdditionController::class, 'getCircuits'])->name('cutting.circuits');
+        Route::get('cutting/balance', [AdditionController::class, 'getCircuitBalance'])->name('cutting.balance');
+
+        // Add Shikake
+        Route::get('shikake', [AdditionController::class, 'shikakeIndex'])->name('shikake.index');
+        Route::get('shikake/datatable', [AdditionController::class, 'shikakeDatatable'])->name('shikake.datatable');
+        Route::post('shikake', [AdditionController::class, 'shikakeStore'])->name('shikake.store');
+        Route::get('shikake/list', [AdditionController::class, 'getShikakes'])->name('shikake.list');
+        Route::get('shikake/balance', [AdditionController::class, 'getShikakeBalance'])->name('shikake.balance');
+
+        // Add History
+        Route::get('history', [AdditionController::class, 'history'])->name('history');
+        Route::get('history/datatable', [AdditionController::class, 'historyDatatable'])->name('history.datatable');
+        Route::get('summary', [AdditionController::class, 'getSummary'])->name('summary');
     });
 });
