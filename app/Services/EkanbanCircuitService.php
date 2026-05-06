@@ -111,21 +111,11 @@ class EkanbanCircuitService
             $data = $query->skip($start)->take($length)->get();
         }
 
-        // Pre-compute min unprinted cutoff per (machine, date, shift) so we can
-        // determine if a group has a "previous CO not yet finished".
-        $minPendingMap = $this->buildMinPendingCutoffMap($data, 'circuit');
-
         $result = [];
         foreach ($data as $index => $row) {
             // New Group ID format: assyScheduleId-masterCircuitId
             $groupId = $row->assy_schedule_id . '-' . $row->master_circuit_id;
-
-            $dateKey = Carbon::parse($row->date)->format('Y-m-d');
-            $mapKey = $row->machine . '|' . $dateKey . '|' . $row->shift;
-            $minPending = $minPendingMap[$mapKey] ?? null;
-            $prevCoPending = ($minPending !== null && $row->cutoff > $minPending) ? 1 : 0;
-            $row->prev_co_pending = $prevCoPending;
-
+            
             $result[] = [
                 'DT_RowIndex' => $start + $index + 1,
                 'assy_schedule_id' => $row->assy_schedule_id,
@@ -148,7 +138,6 @@ class EkanbanCircuitService
                 'is_printed' => $row->is_printed,
                 'last_printed_at' => $row->last_printed_at,
                 'print_count' => $row->print_count ?? 0,
-                'prev_co_pending' => $prevCoPending,
                 'actions' => view('schedule.ekanban_circuit.actions', [
                     'row' => $row,
                     'groupId' => $groupId
@@ -394,103 +383,5 @@ class EkanbanCircuitService
                     break;
             }
         }
-    }
-
-    /**
-     * Build a map of minimum cutoff that still has unprinted kanbans for each
-     * (machine, date, shift) combination present in the given rows.
-     * Key format: "machine|YYYY-MM-DD|shift" -> int (min unprinted cutoff)
-     *
-     * Used to enforce the "previous CO must be finished before printing the
-     * next CO" rule. The rule is scoped per date — different dates do not
-     * affect each other.
-     */
-    private function buildMinPendingCutoffMap($rows, $module = 'circuit')
-    {
-        $keys = [];
-        foreach ($rows as $row) {
-            $dateKey = Carbon::parse($row->date)->format('Y-m-d');
-            $keys[$row->machine . '|' . $dateKey . '|' . $row->shift] = [
-                'machine' => $row->machine,
-                'date' => $dateKey,
-                'shift' => $row->shift,
-            ];
-        }
-        if (empty($keys)) {
-            return [];
-        }
-
-        $map = [];
-        foreach ($keys as $key => $g) {
-            $map[$key] = $this->getMinUnprintedCutoff($g['machine'], $g['date'], $g['shift']);
-        }
-        return $map;
-    }
-
-    /**
-     * Return the minimum cutoff value (for a machine/date/shift) that still has
-     * at least one unprinted kanban. Returns null if all kanbans are printed.
-     */
-    public function getMinUnprintedCutoff($machine, $date, $shift)
-    {
-        $value = DB::table('assy_schedule_circuit')
-            ->join('assy_schedule', 'assy_schedule_circuit.assy_schedule_id', '=', 'assy_schedule.id')
-            ->join('master_circuit', 'assy_schedule_circuit.master_circuit_id', '=', 'master_circuit.id')
-            ->where('master_circuit.machine', $machine)
-            ->whereDate('assy_schedule.schedule', $date)
-            ->where('assy_schedule.shift', $shift)
-            ->where('assy_schedule_circuit.is_printed', 0)
-            ->min('assy_schedule_circuit.cutoff');
-
-        return $value !== null ? (int) $value : null;
-    }
-
-    /**
-     * Check if any of the given group IDs would violate the "previous CO must
-     * be finished before printing the next CO" rule. Returns the first violating
-     * group info or null if all groups are allowed.
-     */
-    public function findPriorCutoffViolation(array $groupIds)
-    {
-        foreach ($groupIds as $groupId) {
-            $parts = explode('-', $groupId, 2);
-            if (count($parts) !== 2) {
-                continue;
-            }
-            [$assyScheduleId, $masterCircuitId] = $parts;
-
-            $info = DB::table('assy_schedule_circuit')
-                ->join('assy_schedule', 'assy_schedule_circuit.assy_schedule_id', '=', 'assy_schedule.id')
-                ->join('master_circuit', 'assy_schedule_circuit.master_circuit_id', '=', 'master_circuit.id')
-                ->where('assy_schedule_circuit.assy_schedule_id', $assyScheduleId)
-                ->where('assy_schedule_circuit.master_circuit_id', $masterCircuitId)
-                ->select(
-                    'master_circuit.machine',
-                    'assy_schedule.schedule as date',
-                    'assy_schedule.shift',
-                    DB::raw('MIN(assy_schedule_circuit.cutoff) as cutoff')
-                )
-                ->groupBy('master_circuit.machine', 'assy_schedule.schedule', 'assy_schedule.shift')
-                ->first();
-
-            if (!$info) {
-                continue;
-            }
-
-            $date = Carbon::parse($info->date)->format('Y-m-d');
-            $minPending = $this->getMinUnprintedCutoff($info->machine, $date, $info->shift);
-
-            if ($minPending !== null && $info->cutoff > $minPending) {
-                return [
-                    'group_id' => $groupId,
-                    'machine' => $info->machine,
-                    'date' => $date,
-                    'shift' => $info->shift,
-                    'cutoff' => (int) $info->cutoff,
-                    'pending_cutoff' => $minPending,
-                ];
-            }
-        }
-        return null;
     }
 }
