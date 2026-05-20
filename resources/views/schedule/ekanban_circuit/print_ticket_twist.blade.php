@@ -94,7 +94,28 @@
     padding: 1px;
 }
 
-.twist-section-label.black-bg {
+.twist-punch-strip {
+        width: 30mm;
+        min-width: 30mm;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        background: white;
+        height: 100%;
+    }
+
+    .twist-punch-strip .punch-circle {
+        width: 15mm;
+        height: 15mm;
+        border-radius: 50%;
+        background-color: #000;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        flex-shrink: 0;
+    }
+
+    .twist-section-label.black-bg {
     background-color: #000;
     color: white;
     -webkit-print-color-adjust: exact;
@@ -250,6 +271,19 @@
     @page {
         size: landscape;
         margin: 1mm;
+    }
+
+    .twist-punch-strip {
+        display: flex;
+        width: 30mm;
+        min-width: 30mm;
+        flex-shrink: 0;
+    }
+
+    .twist-punch-strip .punch-circle {
+        background-color: #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 }
 </style>
@@ -460,6 +494,9 @@
             </tr>
         </tbody>
     </table>
+    </div>
+    <div class="twist-punch-strip">
+        <div class="punch-circle"></div>
     </div>
 </div>
 @endforeach

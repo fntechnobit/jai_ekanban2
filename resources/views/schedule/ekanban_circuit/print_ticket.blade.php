@@ -93,7 +93,26 @@
     width: 40px;
     padding: 2px;
 }
+    .circuit-punch-strip {
+        width: 30mm;
+        min-width: 30mm;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        background: white;
+        height: 100%;
+    }
 
+    .circuit-punch-strip .punch-circle {
+        width: 15mm;
+        height: 15mm;
+        border-radius: 50%;
+        background-color: #000;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        flex-shrink: 0;
+    }
 .ticket-circuit-print .section-label.black-bg {
     background-color: #000;
     color: white;
@@ -224,6 +243,19 @@
     @page {
         size: landscape;
         margin: 1mm;
+    }
+
+    .circuit-punch-strip {
+        display: flex;
+        width: 30mm;
+        min-width: 30mm;
+        flex-shrink: 0;
+    }
+
+    .circuit-punch-strip .punch-circle {
+        background-color: #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 }
 </style>
@@ -392,6 +424,9 @@
                 </tr>
             </tbody>
         </table>
+    </div>
+    <div class="circuit-punch-strip">
+        <div class="punch-circle"></div>
     </div>
 </div>
 @endforeach

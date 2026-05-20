@@ -20,6 +20,61 @@
     {{-- Dynamic Flash Banner: Generate Assy Schedule Response --}}
     <div id="assy-generate-banner" style="display:none;"></div>
 
+    <!-- Generate Jadwal Assy Card -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header d-flex align-items-center justify-content-between py-2">
+                    <h5 class="card-title mb-0">
+                        <i class="fa-solid fa-calendar-plus text-primary me-2"></i> Generate Jadwal Assy
+                    </h5>
+                    {{-- Status Badges --}}
+                    <div class="d-flex align-items-center gap-2 flex-wrap" id="sync-status-badges">
+                        <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" id="badge-last-sync" title="Terakhir sinkronisasi data dari PPC">
+                            <i class="fa-solid fa-rotate me-1"></i> Sinkron: <span id="last-sync-time">memuat...</span>
+                        </span>
+                        <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" id="badge-last-generate" title="Terakhir generate jadwal assy">
+                            <i class="fa-solid fa-calendar-check me-1"></i> Generate: <span id="last-generate-time">memuat...</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body py-2">
+                    <form id="form-generate-jadwal" class="row g-2 align-items-end">
+                        @csrf
+                        <div class="col-sm-3">
+                            <label class="form-label form-label-sm mb-1">Tanggal Mulai</label>
+                            <input type="date" class="form-control form-control-sm" id="gen-start-date" name="start_date" required>
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label form-label-sm mb-1">Tanggal Selesai</label>
+                            <input type="date" class="form-control form-control-sm" id="gen-end-date" name="end_date" required>
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label form-label-sm mb-1">Conveyor <span class="text-muted">(opsional)</span></label>
+                            <select class="form-select form-select-sm" id="gen-conveyor" name="conveyor_id">
+                                <option value="">-- Semua Conveyor --</option>
+                                @foreach($conveyors as $conv)
+                                    <option value="{{ $conv->id }}">{{ $conv->conveyor }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-sm-3">
+                            <button type="submit" class="btn btn-primary btn-sm w-100" id="btn-generate-jadwal">
+                                <i class="fa-solid fa-rotate-right me-1"></i> Sinkron &amp; Generate
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-2" id="generate-progress" style="display:none;">
+                        <div class="d-flex align-items-center gap-2 text-muted small">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span>Sedang sinkronisasi data PPC dan generate jadwal, mohon tunggu...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Chart: Kanban Printed per Machine -->
     <div class="row">
         <div class="col-12">
@@ -102,8 +157,97 @@
 <script src="{{ asset('assets/vendor/chartjs/chart.umd.min.js') }}"></script>
 <script>
 $(function () {
-    // Auto-generate Assy Schedule for next 3 days on dashboard load
+    // Set default date range: today → today + 3 days
+    var today = new Date();
+    var endDateDef = new Date(today);
+    endDateDef.setDate(endDateDef.getDate() + 3);
+    $('#gen-start-date').val(formatDate(today));
+    $('#gen-end-date').val(formatDate(endDateDef));
+
+    // Load sync status badges on page load
+    loadSyncStatus();
+
+    // Auto-generate on page load
     autoGenerateAssySchedule();
+
+    // ========== SYNC STATUS BADGES ==========
+    function loadSyncStatus() {
+        $.ajax({
+            url: '{{ route("dashboard.sync-status") }}',
+            type: 'GET',
+            dataType: 'json',
+            success: function (data) {
+                updateSyncBadges(data.last_sync, data.last_generate);
+            }
+        });
+    }
+
+    function updateSyncBadges(lastSync, lastGenerate) {
+        var syncBadge     = $('#badge-last-sync');
+        var generateBadge = $('#badge-last-generate');
+
+        if (lastSync) {
+            $('#last-sync-time').text(lastSync);
+            syncBadge.removeClass('bg-secondary-subtle text-secondary').addClass('bg-info-subtle text-info');
+        } else {
+            $('#last-sync-time').text('Belum pernah');
+        }
+
+        if (lastGenerate) {
+            $('#last-generate-time').text(lastGenerate);
+            generateBadge.removeClass('bg-secondary-subtle text-secondary').addClass('bg-success-subtle text-success');
+        } else {
+            $('#last-generate-time').text('Belum pernah');
+        }
+    }
+
+    // ========== MANUAL GENERATE FORM ==========
+    $('#form-generate-jadwal').on('submit', function (e) {
+        e.preventDefault();
+        var startDate   = $('#gen-start-date').val();
+        var endDate     = $('#gen-end-date').val();
+        var conveyorId  = $('#gen-conveyor').val() || null;
+
+        if (!startDate || !endDate) {
+            Swal.fire('Perhatian', 'Tanggal mulai dan selesai wajib diisi.', 'warning');
+            return;
+        }
+
+        setGenerateLoading(true);
+
+        $.ajax({
+            url:  '{{ route("dashboard.generate") }}',
+            type: 'POST',
+            data: {
+                _token:       '{{ csrf_token() }}',
+                start_date:   startDate,
+                end_date:     endDate,
+                conveyor_id:  conveyorId
+            },
+            success: function (response) {
+                setGenerateLoading(false);
+                var generated = response.data ? (response.data.generated || 0) : 0;
+                showGenerateBanner(response.success, generated, response.step_failed === 'sync_listing');
+                if (response.success) loadSyncStatus();
+            },
+            error: function () {
+                setGenerateLoading(false);
+                showGenerateBanner(false, 0, true);
+            }
+        });
+    });
+
+    function setGenerateLoading(loading) {
+        var btn = $('#btn-generate-jadwal');
+        var progress = $('#generate-progress');
+        if (loading) {
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Memproses...');
+            progress.show();
+        } else {
+            btn.prop('disabled', false).html('<i class="fa-solid fa-rotate-right me-1"></i> Sinkron &amp; Generate');
+            progress.hide();
+        }
+    }
 
     // ========== CHART ==========
     var ctx = document.getElementById('machineChart').getContext('2d');
@@ -227,7 +371,7 @@ $(function () {
         var endDate = formatDate(endDateObj);
 
         $.ajax({
-            url: '{{ route("schedule.assy-scheduler.generate") }}',
+            url: '{{ route("dashboard.generate") }}',
             type: 'POST',
             data: {
                 _token: '{{ csrf_token() }}',
@@ -239,6 +383,7 @@ $(function () {
                 var generated = response.data ? (response.data.generated || 0) : 0;
                 if (response.success) {
                     showGenerateBanner(true, generated);
+                    loadSyncStatus();
                 } else {
                     var isSyncFail = (response.step_failed === 'sync_listing' || response.step_failed === 'unknown');
                     showGenerateBanner(false, 0, isSyncFail);

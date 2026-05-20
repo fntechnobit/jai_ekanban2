@@ -35,8 +35,22 @@ class EkanbanShikakeController extends Controller
         $processTypes = ProcessType::cases();
 
         if ($request->ajax()) {
-            $data = $this->ekanbanShikakeService->getShikakeDataForTable($request);
-            return response()->json($data);
+            try {
+                $data = $this->ekanbanShikakeService->getShikakeDataForTable($request);
+                return response()->json($data);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('EkanbanShikake DataTable error: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                    'filters' => $request->only(['machine', 'date', 'shift', 'cutoff', 'process', 'print_status']),
+                ]);
+                return response()->json([
+                    'draw' => intval($request->input('draw', 1)),
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => [],
+                    'error' => 'Gagal memuat data. Silakan coba lagi atau hubungi administrator.',
+                ]);
+            }
         }
 
         return view('schedule.ekanban_shikake.print_machine', compact('areas', 'conveyors', 'machines', 'processTypes'));
@@ -67,8 +81,22 @@ class EkanbanShikakeController extends Controller
         $processTypes = ProcessType::cases();
 
         if ($request->ajax()) {
-            $data = $this->ekanbanShikakeService->getShikakeDataForTable($request);
-            return response()->json($data);
+            try {
+                $data = $this->ekanbanShikakeService->getShikakeDataForTable($request);
+                return response()->json($data);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('EkanbanShikake PrintPreview DataTable error: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                    'filters' => $request->only(['machine', 'date', 'shift', 'cutoff', 'process', 'print_status']),
+                ]);
+                return response()->json([
+                    'draw' => intval($request->input('draw', 1)),
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => [],
+                    'error' => 'Gagal memuat data. Silakan coba lagi atau hubungi administrator.',
+                ]);
+            }
         }
 
         return view('schedule.ekanban_shikake.print_preview', compact('areas', 'conveyors', 'machines', 'processTypes'));

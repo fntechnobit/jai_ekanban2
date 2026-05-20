@@ -38,6 +38,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/chart-data', [DashboardController::class, 'getChartData'])->name('dashboard.chart-data');
     Route::get('/dashboard/cutting-datatable', [DashboardController::class, 'getCuttingDatatable'])->name('dashboard.cutting-datatable');
     Route::get('/dashboard/shikake-datatable', [DashboardController::class, 'getShikakeDatatable'])->name('dashboard.shikake-datatable');
+    Route::get('/dashboard/sync-status', [DashboardController::class, 'syncStatus'])->name('dashboard.sync-status');
+    Route::post('/dashboard/generate', [DashboardController::class, 'generate'])->name('dashboard.generate');
 
     // System Module Routes
     Route::prefix('system')->name('system.')->group(function () {

@@ -32,8 +32,22 @@ class EkanbanCircuitController extends Controller
         $machines = MasterMachine::orderBy('machine')->get();
 
         if ($request->ajax()) {
-            $data = $this->ekanbanCircuitService->getCircuitDataForTable($request);
-            return response()->json($data);
+            try {
+                $data = $this->ekanbanCircuitService->getCircuitDataForTable($request);
+                return response()->json($data);
+            } catch (\Exception $e) {
+                Log::error('EkanbanCircuit DataTable error: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                    'filters' => $request->only(['machine', 'date', 'shift', 'cutoff', 'type', 'print_status']),
+                ]);
+                return response()->json([
+                    'draw' => intval($request->input('draw', 1)),
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => [],
+                    'error' => 'Gagal memuat data. Silakan coba lagi atau hubungi administrator.',
+                ]);
+            }
         }
 
         return view('schedule.ekanban_circuit.print_machine', compact('areas', 'machines'));
@@ -62,8 +76,22 @@ class EkanbanCircuitController extends Controller
         $machines = MasterMachine::orderBy('machine')->get();
 
         if ($request->ajax()) {
-            $data = $this->ekanbanCircuitService->getCircuitDataForTable($request);
-            return response()->json($data);
+            try {
+                $data = $this->ekanbanCircuitService->getCircuitDataForTable($request);
+                return response()->json($data);
+            } catch (\Exception $e) {
+                Log::error('EkanbanCircuit PrintPreview DataTable error: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                    'filters' => $request->only(['machine', 'date', 'shift', 'cutoff', 'type', 'print_status']),
+                ]);
+                return response()->json([
+                    'draw' => intval($request->input('draw', 1)),
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => [],
+                    'error' => 'Gagal memuat data. Silakan coba lagi atau hubungi administrator.',
+                ]);
+            }
         }
 
         return view('schedule.ekanban_circuit.print_preview', compact('areas', 'conveyors', 'machines'));

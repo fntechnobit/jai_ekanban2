@@ -42,6 +42,9 @@
                             <i class="fa-solid fa-unlink"></i> Disconnect
                         </button>
                         <span id="qz-status" class="mr-2">QZ: Idle</span>
+                        <small id="auto-refresh-indicator" class="text-muted me-2">
+                            <i class="fa-solid fa-rotate text-muted"></i> Auto-refresh: off
+                        </small>
                         <button type="button" class="btn btn-info btn-sm" id="btn-refresh">
                             <i class="fa-solid fa-arrows-rotate"></i> Refresh
                         </button>
@@ -174,7 +177,13 @@
     <script>
         var qz = window.qz;
         var table;
-        
+        var autoRefreshInterval = null;
+        var autoRefreshSeconds = 60;
+        var autoRefreshCountdown = autoRefreshSeconds;
+
+        // Suppress default DataTables error alert (we handle it ourselves)
+        $.fn.dataTable.ext.errMode = 'none';
+
         $(function () {
             // Initialize Select2
             $('.select2').select2({
@@ -224,6 +233,29 @@
                         d.date = date.startDate.format('YYYY-MM-DD');
                         d.shift = $('#filter_shift').val();
                         d.print_status = $('#filter_print_status').val();
+                    },
+                    error: function(xhr, error, thrown) {
+                        if (xhr.status === 401 || xhr.status === 419 ||
+                            (xhr.status === 200 && typeof xhr.responseJSON === 'undefined' &&
+                             xhr.responseText && xhr.responseText.indexOf('<html') !== -1)) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Sesi Berakhir',
+                                text: 'Sesi login Anda telah berakhir. Halaman akan dimuat ulang.',
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(function() {
+                                window.location.reload();
+                            });
+                            return;
+                        }
+                        var msg = (xhr.responseJSON && xhr.responseJSON.error)
+                            ? xhr.responseJSON.error
+                            : 'Gagal memuat data (HTTP ' + xhr.status + '). Coba refresh.';
+                        $('#shikake-table tbody').html(
+                            '<tr><td colspan="11" class="text-center text-danger">' +
+                            '<i class="fa-solid fa-triangle-exclamation"></i> ' + msg + '</td></tr>'
+                        );
                     }
                 },
                 columns: [
@@ -322,6 +354,9 @@
                 var machine = $('#filter_machine').val();
                 if (machine) {
                     table.ajax.reload();
+                    startAutoRefresh();
+                } else {
+                    stopAutoRefresh();
                 }
             });
 
@@ -330,6 +365,7 @@
                 var machine = $('#filter_machine').val();
                 if (machine) {
                     table.ajax.reload();
+                    startAutoRefresh();
                 }
             });
 
@@ -344,9 +380,59 @@
                 $('#filter_date').data('daterangepicker').setStartDate(moment());
                 // Clear table
                 table.clear().draw();
+                stopAutoRefresh();
             });
 
+            // Auto-refresh: reload table data every 60 seconds when machine is selected
+            function startAutoRefresh() {
+                stopAutoRefresh();
+                autoRefreshCountdown = autoRefreshSeconds;
+                updateRefreshIndicator();
+                autoRefreshInterval = setInterval(function() {
+                    autoRefreshCountdown--;
+                    updateRefreshIndicator();
+                    if (autoRefreshCountdown <= 0) {
+                        autoRefreshCountdown = autoRefreshSeconds;
+                        var machine = $('#filter_machine').val();
+                        if (machine) {
+                            table.ajax.reload(null, false);
+                        }
+                    }
+                }, 1000);
+            }
+
+            function stopAutoRefresh() {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+                autoRefreshCountdown = autoRefreshSeconds;
+                updateRefreshIndicator();
+            }
+
+            function updateRefreshIndicator() {
+                var $indicator = $('#auto-refresh-indicator');
+                if (autoRefreshInterval) {
+                    $indicator.html(
+                        '<i class="fa-solid fa-rotate text-success"></i> ' +
+                        'Auto-refresh: <span id="refresh-countdown">' + autoRefreshCountdown + '</span>s'
+                    );
+                } else {
+                    $indicator.html(
+                        '<i class="fa-solid fa-rotate text-muted"></i> Auto-refresh: off'
+                    );
+                }
+            }
+
             $('#btn-refresh').click(function() {
+                // Always reload table data
+                var machine = $('#filter_machine').val();
+                if (machine) {
+                    table.ajax.reload(null, false);
+                    startAutoRefresh();
+                }
+
+                // Also refresh printer list if QZ is connected
                 if (qz.websocket.isActive()) {
                     qz.printers.find().then(function(printers) {
                         var $select = $('#printer-select');
@@ -365,8 +451,6 @@
                     }).catch(function(err) {
                         Swal.fire('Error', 'Failed to refresh printer list: ' + err, 'error');
                     });
-                } else {
-                    Swal.fire('Warning', 'Please connect to QZ Tray first', 'warning');
                 }
             });
 
