@@ -62,12 +62,21 @@ class MenuSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'code'      => 'addition',
+                'name'      => 'Addition',
+                'url'       => '#',
+                'icon'      => 'fa-solid fa-circle-plus',
+                'parent_id' => null,
+                'order'     => 4,
+                'is_active' => true,
+            ],
+            [
                 'code'      => 'defect',
                 'name'      => 'Defect',
                 'url'       => '#',
                 'icon'      => 'fa-solid fa-triangle-exclamation',
                 'parent_id' => null,
-                'order'     => 4,
+                'order'     => 5,
                 'is_active' => true,
             ],
             [
@@ -76,7 +85,7 @@ class MenuSeeder extends Seeder
                 'url'       => '#',
                 'icon'      => 'fa-solid fa-database',
                 'parent_id' => null,
-                'order'     => 5,
+                'order'     => 6,
                 'is_active' => true,
             ],
             [
@@ -85,7 +94,7 @@ class MenuSeeder extends Seeder
                 'url'       => '#',
                 'icon'      => 'fa-solid fa-gear',
                 'parent_id' => null,
-                'order'     => 6,
+                'order'     => 7,
                 'is_active' => true,
             ],
         ];
@@ -232,6 +241,39 @@ class MenuSeeder extends Seeder
             ],
         ];
         $this->upsertSubmenus($systemSubmenus);
+
+        // ── Step 7: Addition submenus ─────────────────────────────────────────────────
+        $additionMenu = Menu::where('code', 'addition')->first();
+        $additionSubmenus = [
+            [
+                'code'      => 'addition_cutting',
+                'name'      => 'Add Cutting',
+                'url'       => '/addition/cutting',
+                'icon'      => 'fa-solid fa-scissors',
+                'parent_id' => $additionMenu->id,
+                'order'     => 1,
+                'is_active' => true,
+            ],
+            [
+                'code'      => 'addition_shikake',
+                'name'      => 'Add Shikake',
+                'url'       => '/addition/shikake',
+                'icon'      => 'fa-solid fa-table',
+                'parent_id' => $additionMenu->id,
+                'order'     => 2,
+                'is_active' => true,
+            ],
+            [
+                'code'      => 'addition_history',
+                'name'      => 'Add History',
+                'url'       => '/addition/history',
+                'icon'      => 'fa-solid fa-clock-rotate-left',
+                'parent_id' => $additionMenu->id,
+                'order'     => 3,
+                'is_active' => true,
+            ],
+        ];
+        $this->upsertSubmenus($additionSubmenus);
     }
 
     /**
