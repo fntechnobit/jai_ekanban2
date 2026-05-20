@@ -25,7 +25,7 @@ class MasterShikakeShieldImport extends BaseShikakeImport
 
     protected function getAssyStartColumn(): int
     {
-        return 22; // After To 9 column (index 21)
+        return 23; // After To 9 column (index 22)
     }
 
     /**
@@ -38,6 +38,7 @@ class MasterShikakeShieldImport extends BaseShikakeImport
             'shield_no' => 'Shield No',
             'address' => 'Address',
             'blade' => 'Blade',
+            'qrcode_drawing' => 'QRCode Drawing',
             'cct_no_1' => 'CCT No 1',
             'address_no_1_1' => 'Address 1',
             'cct_no_2' => 'CCT No 2',

@@ -19,6 +19,7 @@ class MasterShikakeBonder extends Model
         'to_machine',
         'barcode_navigasi',
         'barcode_process',
+        'qrcode_drawing',
         'cct_no_a_1',
         'bonder_no_a_1',
         'cct_no_a_2',

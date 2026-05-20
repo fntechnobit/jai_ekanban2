@@ -501,6 +501,16 @@
                                     </div>
                                 </div>
                             </div>
+                            <!-- QRCode Drawing -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-1">
+                                        <label class="form-label small mb-0">QRCode Drawing</label>
+                                        <input type="text" name="process_data[qrcode_drawing]" id="bonder_qrcode_drawing" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="bonder_qrcode_drawing-error"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -545,6 +555,16 @@
                                         <label class="form-label small mb-0">Barcode Process</label>
                                         <input type="text" name="process_data[barcode_process]" id="joint_barcode_process" class="form-control form-control-sm">
                                         <div class="invalid-feedback" id="joint_barcode_process-error"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- QRCode Drawing -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-1">
+                                        <label class="form-label small mb-0">QRCode Drawing</label>
+                                        <input type="text" name="process_data[qrcode_drawing]" id="joint_qrcode_drawing" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="joint_qrcode_drawing-error"></div>
                                     </div>
                                 </div>
                             </div>
@@ -664,6 +684,16 @@
                                         <label class="form-label small mb-0">Blade</label>
                                         <input type="text" name="process_data[blade]" id="shield_blade" class="form-control form-control-sm">
                                         <div class="invalid-feedback" id="shield_blade-error"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- QRCode Drawing -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-1">
+                                        <label class="form-label small mb-0">QRCode Drawing</label>
+                                        <input type="text" name="process_data[qrcode_drawing]" id="shield_qrcode_drawing" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="shield_qrcode_drawing-error"></div>
                                     </div>
                                 </div>
                             </div>
@@ -820,6 +850,16 @@
                                         <label class="form-label small mb-0">To Machine</label>
                                         <input type="text" name="process_data[to_machine]" id="dbl_crimp_to_machine" class="form-control form-control-sm">
                                         <div class="invalid-feedback" id="dbl_crimp_to_machine-error"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- QRCode Drawing -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-1">
+                                        <label class="form-label small mb-0">QRCode Drawing</label>
+                                        <input type="text" name="process_data[qrcode_drawing]" id="dbl_crimp_qrcode_drawing" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="dbl_crimp_qrcode_drawing-error"></div>
                                     </div>
                                 </div>
                             </div>

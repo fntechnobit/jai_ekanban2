@@ -221,6 +221,15 @@ class MenuSeeder extends Seeder
                 'order'     => 4,
                 'is_active' => true,
             ],
+            [
+                'code'      => 'database_backup',
+                'name'      => 'Backup Database',
+                'url'       => '/system/database-backup',
+                'icon'      => 'fa-solid fa-database',
+                'parent_id' => $systemMenu->id,
+                'order'     => 5,
+                'is_active' => true,
+            ],
         ];
         $this->upsertSubmenus($systemSubmenus);
     }

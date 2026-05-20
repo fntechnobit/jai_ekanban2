@@ -18,6 +18,7 @@ class MasterShikakeJoint extends Model
         'address_store',
         'to_machine',
         'barcode_process',
+        'qrcode_drawing',
         'cct_no_1',
         'bonder_no_1',
         'cct_no_2',

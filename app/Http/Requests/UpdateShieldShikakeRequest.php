@@ -26,6 +26,7 @@ class UpdateShieldShikakeRequest extends FormRequest
             'process_data.shield_no' => 'required|string|max:255',
             'process_data.address' => 'nullable|string|max:255',
             'process_data.blade' => 'nullable|string|max:255',
+            'process_data.qrcode_drawing' => 'nullable|string|max:255',
             
             // CCT/Address pairs
             'process_data.cct_no_1' => 'nullable|string|max:255',

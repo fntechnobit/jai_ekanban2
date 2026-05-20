@@ -28,6 +28,7 @@ class UpdateJointShikakeRequest extends FormRequest
             'process_data.address_store' => 'nullable|string|max:255',
             'process_data.to_machine' => 'nullable|string|max:255',
             'process_data.barcode_process' => 'nullable|string|max:255',
+            'process_data.qrcode_drawing' => 'nullable|string|max:255',
             
             // CCT/Bonder pairs (1-5)
             'process_data.cct_no_1' => 'nullable|string|max:255',

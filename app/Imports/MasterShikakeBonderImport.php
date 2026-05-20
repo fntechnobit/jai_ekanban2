@@ -25,7 +25,7 @@ class MasterShikakeBonderImport extends BaseShikakeImport
 
     protected function getAssyStartColumn(): int
     {
-        return 40; // After Bonder No B 7 column (index 39)
+        return 41; // After Bonder No B 7 column (index 40)
     }
 
     /**
@@ -41,6 +41,7 @@ class MasterShikakeBonderImport extends BaseShikakeImport
             'to_machine' => 'To Machine',
             'barcode_navigasi' => 'Barcode Navigasi',
             'barcode_process' => 'Barcode Process',
+            'qrcode_drawing' => 'QRCode Drawing',
             'released_note' => 'Released Note',
             'cct_no_a_1' => 'CCT No A 1',
             'bonder_no_a_1' => 'Bonder No A 1',

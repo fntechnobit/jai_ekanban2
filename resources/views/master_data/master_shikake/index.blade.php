@@ -450,6 +450,7 @@
                 $('#v_sk_bonder_to_machine').text(pd.to_machine || '-');
                 $('#v_sk_bonder_barcode_navigasi').text(pd.barcode_navigasi || '-');
                 $('#v_sk_bonder_barcode_process').text(pd.barcode_process || '-');
+                $('#v_sk_bonder_qrcode_drawing').text(pd.qrcode_drawing || '-');
                 var sideA = '', sideB = '';
                 for (var i = 1; i <= 7; i++) {
                     var cctA = pd['cct_no_a_' + i] || '', bndA = pd['bonder_no_a_' + i] || '';
@@ -467,6 +468,7 @@
                 $('#v_sk_joint_address_store').text(pd.address_store || '-');
                 $('#v_sk_joint_to_machine').text(pd.to_machine || '-');
                 $('#v_sk_joint_barcode_process').text(pd.barcode_process || '-');
+                $('#v_sk_joint_qrcode_drawing').text(pd.qrcode_drawing || '-');
                 for (var i = 1; i <= 5; i++) {
                     $('#v_sk_joint_cct_' + i).text(pd['cct_no_' + i] || '-');
                     $('#v_sk_joint_bonder_' + i).text(pd['bonder_no_' + i] || '-');
@@ -477,6 +479,7 @@
                 $('#v_sk_shield_no').text(pd.shield_no || '-');
                 $('#v_sk_shield_address').text(pd.address || '-');
                 $('#v_sk_shield_blade').text(pd.blade || '-');
+                $('#v_sk_shield_qrcode_drawing').text(pd.qrcode_drawing || '-');
                 var toList = [];
                 for (var i = 1; i <= 9; i++) {
                     if (pd['to_' + i]) toList.push(pd['to_' + i]);
@@ -495,6 +498,7 @@
                 $('#v_sk_dbl_address').text(pd.address || '-');
                 $('#v_sk_dbl_barcode_mesin').text(pd.barcode_mesin || '-');
                 $('#v_sk_dbl_to_machine').text(pd.to_machine || '-');
+                $('#v_sk_dbl_qrcode_drawing').text(pd.qrcode_drawing || '-');
                 var pairs = '';
                 for (var i = 1; i <= 5; i++) {
                     var cct = pd['cct_no_' + i] || '', addr = pd['address_' + i] || '';
@@ -580,6 +584,7 @@
                 $('#bonder_to_machine').val(data.to_machine);
                 $('#bonder_barcode_navigasi').val(data.barcode_navigasi);
                 $('#bonder_barcode_process').val(data.barcode_process);
+                $('#bonder_qrcode_drawing').val(data.qrcode_drawing);
                 
                 // Populate Side A CCT & Bonder pairs
                 $('#bonder_cct_no_a_1').val(data.cct_no_a_1);
@@ -620,6 +625,7 @@
                 $('#joint_address_store').val(data.address_store);
                 $('#joint_to_machine').val(data.to_machine);
                 $('#joint_barcode_process').val(data.barcode_process);
+                $('#joint_qrcode_drawing').val(data.qrcode_drawing);
                 
                 // Populate CCT & Bonder pairs (1-5)
                 $('#joint_cct_no_1').val(data.cct_no_1);
@@ -638,6 +644,7 @@
                 $('#shield_shield_no').val(data.shield_no);
                 $('#shield_address').val(data.address);
                 $('#shield_blade').val(data.blade);
+                $('#shield_qrcode_drawing').val(data.qrcode_drawing);
                 
                 // Populate TO fields
                 $('#shield_to_1').val(data.to_1);
@@ -662,6 +669,7 @@
                 $('#dbl_crimp_address').val(data.address);
                 $('#dbl_crimp_barcode_mesin').val(data.barcode_mesin);
                 $('#dbl_crimp_to_machine').val(data.to_machine);
+                $('#dbl_crimp_qrcode_drawing').val(data.qrcode_drawing);
                 
                 // Populate CCT No & Address pairs
                 $('#dbl_crimp_cct_no_1').val(data.cct_no_1);

@@ -79,34 +79,35 @@ class ShikakeTemplateConfig
             'To Machine',         // 10
             'Barcode Navigasi',   // 11
             'Barcode Process',    // 12
-            'CCT No A 1',         // 13
-            'Bonder No A 1',      // 14
-            'CCT No A 2',         // 15
-            'Bonder No A 2',      // 16
-            'CCT No A 3',         // 17
-            'Bonder No A 3',      // 18
-            'CCT No A 4',         // 19
-            'Bonder No A 4',      // 20
-            'CCT No A 5',         // 21
-            'Bonder No A 5',      // 22
-            'CCT No A 6',         // 23
-            'Bonder No A 6',      // 24
-            'CCT No A 7',         // 25
-            'Bonder No A 7',      // 26
-            'CCT No B 1',         // 27
-            'Bonder No B 1',      // 28
-            'CCT No B 2',         // 29
-            'Bonder No B 2',      // 30
-            'CCT No B 3',         // 31
-            'Bonder No B 3',      // 32
-            'CCT No B 4',         // 33
-            'Bonder No B 4',      // 34
-            'CCT No B 5',         // 35
-            'Bonder No B 5',      // 36
-            'CCT No B 6',         // 37
-            'Bonder No B 6',      // 38
-            'CCT No B 7',         // 39
-            'Bonder No B 7',      // 40
+            'QRCode Drawing',     // 13
+            'CCT No A 1',         // 14
+            'Bonder No A 1',      // 15
+            'CCT No A 2',         // 16
+            'Bonder No A 2',      // 17
+            'CCT No A 3',         // 18
+            'Bonder No A 3',      // 19
+            'CCT No A 4',         // 20
+            'Bonder No A 4',      // 21
+            'CCT No A 5',         // 22
+            'Bonder No A 5',      // 23
+            'CCT No A 6',         // 24
+            'Bonder No A 6',      // 25
+            'CCT No A 7',         // 26
+            'Bonder No A 7',      // 27
+            'CCT No B 1',         // 28
+            'Bonder No B 1',      // 29
+            'CCT No B 2',         // 30
+            'Bonder No B 2',      // 31
+            'CCT No B 3',         // 32
+            'Bonder No B 3',      // 33
+            'CCT No B 4',         // 34
+            'Bonder No B 4',      // 35
+            'CCT No B 5',         // 36
+            'Bonder No B 5',      // 37
+            'CCT No B 6',         // 38
+            'Bonder No B 6',      // 39
+            'CCT No B 7',         // 40
+            'Bonder No B 7',      // 41
         ]);
     }
 
@@ -121,16 +122,17 @@ class ShikakeTemplateConfig
             'Address Store',      // 9
             'To Machine',         // 10
             'Barcode Process',    // 11
-            'CCT No 1',           // 12
-            'Bonder No 1',        // 13
-            'CCT No 2',           // 14
-            'Bonder No 2',        // 15
-            'CCT No 3',           // 16
-            'Bonder No 3',        // 17
-            'CCT No 4',           // 18
-            'Bonder No 4',        // 19
-            'CCT No 5',           // 20
-            'Bonder No 5',        // 21
+            'QRCode Drawing',     // 12
+            'CCT No 1',           // 13
+            'Bonder No 1',        // 14
+            'CCT No 2',           // 15
+            'Bonder No 2',        // 16
+            'CCT No 3',           // 17
+            'Bonder No 3',        // 18
+            'CCT No 4',           // 19
+            'Bonder No 4',        // 20
+            'CCT No 5',           // 21
+            'Bonder No 5',        // 22
         ]);
     }
 
@@ -143,19 +145,20 @@ class ShikakeTemplateConfig
             'Shield No',          // 7
             'Address',            // 8
             'Blade',              // 9
-            'CCT No 1',           // 10
-            'Address 1',          // 11
-            'CCT No 2',           // 12
-            'Address 2',          // 13
-            'To 1',               // 14
-            'To 2',               // 15
-            'To 3',               // 16
-            'To 4',               // 17
-            'To 5',               // 18
-            'To 6',               // 19
-            'To 7',               // 20
-            'To 8',               // 21
-            'To 9',               // 22
+            'QRCode Drawing',     // 10
+            'CCT No 1',           // 11
+            'Address 1',          // 12
+            'CCT No 2',           // 13
+            'Address 2',          // 14
+            'To 1',               // 15
+            'To 2',               // 16
+            'To 3',               // 17
+            'To 4',               // 18
+            'To 5',               // 19
+            'To 6',               // 20
+            'To 7',               // 21
+            'To 8',               // 22
+            'To 9',               // 23
         ]);
     }
 
@@ -169,16 +172,17 @@ class ShikakeTemplateConfig
             'Address',            // 8
             'Barcode Mesin',      // 9
             'To Machine',         // 10
-            'CCT No 1',           // 11
-            'Address 1',          // 12
-            'CCT No 2',           // 13
-            'Address 2',          // 14
-            'CCT No 3',           // 15
-            'Address 3',          // 16
-            'CCT No 4',           // 17
-            'Address 4',          // 18
-            'CCT No 5',           // 19
-            'Address 5',          // 20
+            'QRCode Drawing',     // 11
+            'CCT No 1',           // 12
+            'Address 1',          // 13
+            'CCT No 2',           // 14
+            'Address 2',          // 15
+            'CCT No 3',           // 16
+            'Address 3',          // 17
+            'CCT No 4',           // 18
+            'Address 4',          // 19
+            'CCT No 5',           // 20
+            'Address 5',          // 21
         ]);
     }
 

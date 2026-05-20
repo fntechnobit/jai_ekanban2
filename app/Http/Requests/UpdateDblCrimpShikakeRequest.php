@@ -27,6 +27,7 @@ class UpdateDblCrimpShikakeRequest extends FormRequest
             'process_data.address' => 'nullable|string|max:255',
             'process_data.barcode_mesin' => 'nullable|string|max:255',
             'process_data.to_machine' => 'nullable|string|max:255',
+            'process_data.qrcode_drawing' => 'nullable|string|max:255',
             'process_data.cct_no_1' => 'nullable|string|max:255',
             'process_data.address_1' => 'nullable|string|max:255',
             'process_data.cct_no_2' => 'nullable|string|max:255',

@@ -81,6 +81,9 @@
                                 <td class="text-muted">Barcode Nav</td><td id="v_sk_bonder_barcode_navigasi">-</td>
                                 <td class="text-muted">Barcode Process</td><td id="v_sk_bonder_barcode_process">-</td>
                             </tr>
+                            <tr>
+                                <td class="text-muted">QRCode Drawing</td><td id="v_sk_bonder_qrcode_drawing" colspan="3">-</td>
+                            </tr>
                         </table>
                         <div class="row g-2">
                             <div class="col-md-6">
@@ -111,6 +114,9 @@
                             <tr>
                                 <td class="text-muted">Barcode Process</td><td id="v_sk_joint_barcode_process" colspan="3">-</td>
                             </tr>
+                            <tr>
+                                <td class="text-muted">QRCode Drawing</td><td id="v_sk_joint_qrcode_drawing" colspan="3">-</td>
+                            </tr>
                         </table>
                         <table class="table table-sm table-bordered mb-0 small text-center">
                             <thead class="table-light"><tr><th>CCT No 1</th><th>Bonder 1</th><th>CCT No 2</th><th>Bonder 2</th><th>CCT No 3</th></tr></thead>
@@ -138,6 +144,9 @@
                             </tr>
                             <tr>
                                 <td class="text-muted">Blade</td><td id="v_sk_shield_blade" colspan="3">-</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">QRCode Drawing</td><td id="v_sk_shield_qrcode_drawing" colspan="3">-</td>
                             </tr>
                         </table>
                         <div class="row g-2">
@@ -167,6 +176,9 @@
                             <tr>
                                 <td class="text-muted">Barcode Mesin</td><td id="v_sk_dbl_barcode_mesin">-</td>
                                 <td class="text-muted">To Machine</td><td id="v_sk_dbl_to_machine">-</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">QRCode Drawing</td><td id="v_sk_dbl_qrcode_drawing" colspan="3">-</td>
                             </tr>
                         </table>
                         <table class="table table-sm table-bordered mb-0 small text-center">
