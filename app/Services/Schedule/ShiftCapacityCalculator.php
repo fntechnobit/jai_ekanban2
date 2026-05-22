@@ -89,54 +89,74 @@ class ShiftCapacityCalculator
     }
 
     /**
-     * Pre-map CO5 need for each shift based on total qty vs shift capacities
-     * Determines which shifts need CO5 and adds c5 capacity to the capacities array
-     * 
-     * Logic: Process shifts sequentially. If total remaining qty exceeds CO1-CO4
-     * capacity for a shift, that shift needs CO5 with additional capacity.
-     * 
+     * Pre-map CO5 need for each shift based on total qty vs shift capacities.
+     *
+     * Allocation order:
+     *   2-shift: S1 CO1-4 → S2 CO1-4 → S1 CO5 → S2 CO5
+     *   1-shift: CO1-4 → CO5 (sequential, single shift)
+     *
+     * CO5 is only activated when totalQty exceeds the combined CO1-4 capacity
+     * of all shifts. CO5 capacity = floor(0.875 × shiftCapacity/4).
+     *
      * @param array &$shiftCapacities Shift capacities array (modified in place)
      * @param int $shiftCapacity Raw capacity per shift from conveyor
      * @param int $totalQty Total quantity to allocate across all shifts
+     * @param int $maxShifts Number of active shifts (1 or 2)
      * @return array CO5 needed status per shift [1 => bool, 2 => bool]
      */
-    public function preMapCutoff5(array &$shiftCapacities, int $shiftCapacity, int $totalQty): array
+    public function preMapCutoff5(array &$shiftCapacities, int $shiftCapacity, int $totalQty, int $maxShifts = 2): array
     {
         $co5Cap = $this->calculateCutoff5Capacity($shiftCapacity);
         $co5Needed = [];
-        $remainingQty = $totalQty;
 
-        // Determine CO5 need per shift sequentially
+        // Initialize c5 = 0 for all shifts
         foreach ($shiftCapacities as $shift => $caps) {
-            if ($caps['locked'] ?? false) {
-                $co5Needed[$shift] = false;
-                $shiftCapacities[$shift]['c5'] = 0;
-                continue;
-            }
-
-            $co1to4Cap = $caps['total'];
-
-            if ($remainingQty > $co1to4Cap) {
-                // This shift needs CO5
-                $co5Needed[$shift] = true;
-                $shiftCapacities[$shift]['c5'] = $co5Cap;
-                $shiftCapacities[$shift]['total'] += $co5Cap;
-                $remainingQty -= ($co1to4Cap + $co5Cap);
-            } else {
-                $co5Needed[$shift] = false;
-                $shiftCapacities[$shift]['c5'] = 0;
-                $remainingQty -= $co1to4Cap;
-            }
-
-            if ($remainingQty <= 0) {
-                break;
-            }
+            $shiftCapacities[$shift]['c5'] = 0;
+            $co5Needed[$shift] = false;
         }
 
-        // Ensure all shifts have c5 key
-        foreach ($shiftCapacities as $shift => $caps) {
-            if (!isset($caps['c5'])) {
-                $shiftCapacities[$shift]['c5'] = 0;
+        if ($maxShifts >= 2) {
+            // 2-shift: simulate Phase 1 (S1 CO1-4 + S2 CO1-4), then assign CO5 to shifts with overflow
+            $totalCo14 = 0;
+            foreach ($shiftCapacities as $caps) {
+                if (!($caps['locked'] ?? false)) $totalCo14 += $caps['total'];
+            }
+            $rem = max(0, $totalQty - $totalCo14);
+            $co5S2Cap = (int) floor($shiftCapacity / 4); // S2 CO5: full capacity/4, no 0.875x penalty
+
+            // S1.CO5: capped at 0.875x CO1-4. S2.CO5: capped at floor(capacity/4)
+            $isFirstCo5 = true;
+            foreach ($shiftCapacities as $shift => $caps) {
+                if ($rem <= 0) break;
+                if ($caps['locked'] ?? false) continue;
+
+                $co5Needed[$shift] = true;
+                if ($isFirstCo5) {
+                    // S1.CO5: dibatasi 0.875x (capped)
+                    $shiftCapacities[$shift]['c5'] = $co5Cap;
+                    $shiftCapacities[$shift]['total'] += $co5Cap;
+                    $rem = max(0, $rem - $co5Cap);
+                    $isFirstCo5 = false;
+                } else {
+                    // S2.CO5: dibatasi floor(capacity/4), bukan semua sisa
+                    $alloc = min($rem, $co5S2Cap);
+                    $shiftCapacities[$shift]['c5'] = $alloc;
+                    $shiftCapacities[$shift]['total'] += $alloc;
+                    $rem = 0;
+                }
+            }
+        } else {
+            // 1-shift: CO5 dibatasi floor(capacity/4), bukan semua sisa
+            $co5S2Cap = (int) floor($shiftCapacity / 4);
+            foreach ($shiftCapacities as $shift => $caps) {
+                if ($caps['locked'] ?? false) continue;
+                $co5Amount = min(max(0, $totalQty - $caps['total']), $co5S2Cap);
+                if ($co5Amount > 0) {
+                    $co5Needed[$shift] = true;
+                    $shiftCapacities[$shift]['c5'] = $co5Amount;
+                    $shiftCapacities[$shift]['total'] += $co5Amount;
+                }
+                break; // Only one active shift
             }
         }
 

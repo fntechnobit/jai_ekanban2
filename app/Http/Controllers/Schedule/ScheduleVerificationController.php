@@ -62,7 +62,8 @@ class ScheduleVerificationController extends Controller
                 return $schedule->capacity ?? 0;
             })
             ->addColumn('listing', function ($schedule) {
-                return $schedule->has_assy ? $schedule->total_listing : 0;
+                if (!$schedule->has_assy) return '0 (0)';
+                return number_format($schedule->total_listing) . ' (' . ($schedule->assy_count ?? 0) . ')';
             })
             ->addColumn('assy', function ($schedule) {
                 return $schedule->has_assy ? ($schedule->assy_list ?: '-') : '-';

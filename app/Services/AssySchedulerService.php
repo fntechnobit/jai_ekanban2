@@ -203,38 +203,87 @@ class AssySchedulerService
                 );
 
                 // Step 8: Pre-map CO5 need per shift based on total qty vs shift capacities
-                // Determines which shifts need CO5 before allocation begins
+                // 2-shift: CO5 activates AFTER all CO1-4 (both shifts) are exhausted
+                // 1-shift: CO5 activates after CO1-4 of the single shift
                 $totalQty = $groupListings->sum('rem_qty');
                 $co5Needed = $this->capacityCalculator->preMapCutoff5(
-                    $shiftCapacities, $shiftCapacity, $totalQty
+                    $shiftCapacities, $shiftCapacity, $totalQty, $maxShifts
                 );
 
                 Log::info("CO5 pre-mapping result", [
-                    'conveyor_id' => $conveyor->id,
-                    'schedule_date' => $scheduleDate->format('Y-m-d'),
-                    'total_qty' => $totalQty,
-                    'co5_needed' => $co5Needed,
-                    'shift_capacities' => $shiftCapacities,
+                    'conveyor_id'     => $conveyor->id,
+                    'schedule_date'   => $scheduleDate->format('Y-m-d'),
+                    'total_qty'       => $totalQty,
+                    'co5_needed'      => $co5Needed,
+                    'shift_capacities'=> $shiftCapacities,
                 ]);
 
-                // Step 9: Allocate sequentially S1 CO1-CO5, then S2 CO1-CO5
-                for ($shift = 1; $shift <= $maxShifts; $shift++) {
-                    if ($shiftLockStatus[$shift] ?? false) continue;
-                    if (!isset($shiftCapacities[$shift])) continue;
+                // Step 9: Allocate
+                //   2-shift: S1-CO1→CO5 → S2-CO1→CO5 (filling order)
+                //   1-shift: CO1 → CO2 → CO3 → CO4 → CO5 (sequential)
+                if ($maxShifts >= 2) {
+                    // Filling order: S1-CO1→5 → S2-CO1→5
+                    // Budget CO5 sudah pre-mapped di $shiftCapacities[shift]['c5']
+                    foreach (range(1, $maxShifts) as $shift) {
+                        if ($shiftLockStatus[$shift] ?? false) continue;
+                        if (!isset($shiftCapacities[$shift])) continue;
 
-                    $allocationResult = $this->listingAllocator->allocateToShift(
-                        $groupListings,
-                        $shiftCapacities[$shift],
-                        $shift,
-                        $conveyor->id,
-                        $scheduleDate->format('Y-m-d')
-                    );
-                    $schedulesToCreate = array_merge($schedulesToCreate, $allocationResult['schedules']);
+                        // CO1-4
+                        $result = $this->listingAllocator->allocateToShift(
+                            $groupListings,
+                            $shiftCapacities[$shift],
+                            $shift,
+                            $conveyor->id,
+                            $scheduleDate->format('Y-m-d'),
+                            [1, 2, 3, 4]
+                        );
+                        $schedulesToCreate = array_merge($schedulesToCreate, $result['schedules']);
+                        if ($groupListings->sum('rem_qty') === 0) break;
 
-                    // Check if there's remaining quantity before processing next shift
-                    $remainingQty = $groupListings->sum('rem_qty');
-                    if ($remainingQty === 0) {
-                        break;
+                        // CO5 (gunakan cap pre-mapped, tidak override)
+                        if (($shiftCapacities[$shift]['c5'] ?? 0) > 0) {
+                            $result = $this->listingAllocator->allocateToShift(
+                                $groupListings,
+                                $shiftCapacities[$shift],
+                                $shift,
+                                $conveyor->id,
+                                $scheduleDate->format('Y-m-d'),
+                                [5]
+                            );
+                            $schedulesToCreate = array_merge($schedulesToCreate, $result['schedules']);
+                            if ($groupListings->sum('rem_qty') === 0) break;
+                        }
+                    }
+                } else {
+                    // ── 1-shift: CO1-4 → CO5 (pre-mapped, capped at floor(capacity/4)) ──────────────────────
+                    for ($shift = 1; $shift <= $maxShifts; $shift++) {
+                        if ($shiftLockStatus[$shift] ?? false) continue;
+                        if (!isset($shiftCapacities[$shift])) continue;
+
+                        // CO1-4 dulu
+                        $result = $this->listingAllocator->allocateToShift(
+                            $groupListings,
+                            $shiftCapacities[$shift],
+                            $shift,
+                            $conveyor->id,
+                            $scheduleDate->format('Y-m-d'),
+                            [1, 2, 3, 4]
+                        );
+                        $schedulesToCreate = array_merge($schedulesToCreate, $result['schedules']);
+
+                        // CO5: gunakan cap pre-mapped (min sisa, floor(capacity/4))
+                        if (($shiftCapacities[$shift]['c5'] ?? 0) > 0) {
+                            $result = $this->listingAllocator->allocateToShift(
+                                $groupListings,
+                                $shiftCapacities[$shift],
+                                $shift,
+                                $conveyor->id,
+                                $scheduleDate->format('Y-m-d'),
+                                [5]
+                            );
+                            $schedulesToCreate = array_merge($schedulesToCreate, $result['schedules']);
+                        }
+                        if ($groupListings->sum('rem_qty') === 0) break;
                     }
                 }
             }

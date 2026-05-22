@@ -77,47 +77,47 @@ class ListingAllocator
     }
     
     /**
-     * Allocate listings to all cutoffs (1-5) for a shift
-     * Processes cutoffs sequentially: c1, c2, c3, c4, c5
+     * Allocate listings to specified cutoffs for a shift.
      * CO5 capacity is pre-mapped by ShiftCapacityCalculator (0 if not needed)
-     * 
+     *
      * @param Collection $listings Listings to allocate (modified in place)
      * @param array $cutoffCapacities ['c1' => 25, 'c2' => 25, 'c3' => 25, 'c4' => 25, 'c5' => 0|N]
      * @param int $shift Shift number
      * @param int $conveyorId Conveyor ID
      * @param string $scheduleDate Schedule date
+     * @param array $cutoffsToProcess Which cutoffs to process (default: all 1-5)
      * @return array ['schedules' => array, 'capacity_used' => int]
      */
     public function allocateToShift(
-        Collection $listings, 
-        array $cutoffCapacities, 
+        Collection $listings,
+        array $cutoffCapacities,
         int $shift,
         int $conveyorId,
-        string $scheduleDate
+        string $scheduleDate,
+        array $cutoffsToProcess = [1, 2, 3, 4, 5]
     ): array
     {
         $allSchedules = [];
         $totalCapacityUsed = 0;
-        
-        // Process cutoffs 1-5
-        for ($cutoff = 1; $cutoff <= 5; $cutoff++) {
+
+        foreach ($cutoffsToProcess as $cutoff) {
             $cutoffKey = "c{$cutoff}";
             $capacity = $cutoffCapacities[$cutoffKey] ?? 0;
-            
+
             if ($capacity > 0) {
                 $result = $this->allocateToCutoff(
-                    $listings, 
-                    $capacity, 
-                    $shift, 
-                    $cutoff, 
-                    $conveyorId, 
+                    $listings,
+                    $capacity,
+                    $shift,
+                    $cutoff,
+                    $conveyorId,
                     $scheduleDate
                 );
                 $allSchedules = array_merge($allSchedules, $result['schedules']);
                 $totalCapacityUsed += $result['capacity_used'];
             }
         }
-        
+
         return [
             'schedules' => $allSchedules,
             'capacity_used' => $totalCapacityUsed

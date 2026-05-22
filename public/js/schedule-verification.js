@@ -311,7 +311,7 @@ $(function () {
             shiftsHtml += '<div class="cutoff-section mb-2">';
             shiftsHtml += '<div class="cutoff-header d-flex justify-content-between align-items-center p-2">';
             shiftsHtml += '<span class="cutoff-title">Cut Off ' + i;
-            if (i === 5) {
+            if (i === 5 && data.cutoff5_capacity < data.normal_cutoff_capacity) {
                 shiftsHtml += ' <small>(0.875x)</small>';
             }
             shiftsHtml += '</span>';

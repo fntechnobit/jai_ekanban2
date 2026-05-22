@@ -64,7 +64,7 @@ class ScheduleVerificationService
 
         // --- Step 3: Get actual assy_schedule aggregated data for the range ---
         $assyQuery = DB::table('assy_schedule')
-            ->selectRaw('DATE(schedule) AS schedule_date, conveyor_id, shift, GROUP_CONCAT(DISTINCT assy ORDER BY assy SEPARATOR ", ") AS assy_list, SUM(qty) AS total_listing, MAX(is_lock) AS is_lock, MIN(id) AS first_id')
+            ->selectRaw('DATE(schedule) AS schedule_date, conveyor_id, shift, GROUP_CONCAT(DISTINCT assy ORDER BY assy SEPARATOR ", ") AS assy_list, SUM(qty) AS total_listing, COUNT(DISTINCT assy) AS assy_count, MAX(is_lock) AS is_lock, MIN(id) AS first_id')
             ->whereRaw('DATE(schedule) BETWEEN ? AND ?', [$start->format('Y-m-d'), $end->format('Y-m-d')])
             ->groupByRaw('DATE(schedule), conveyor_id, shift');
 
@@ -109,6 +109,7 @@ class ScheduleVerificationService
                         'capacity'      => $conv->capacity,
                         'shift'         => $s,
                         'total_listing' => $assy ? (int) $assy->total_listing : 0,
+                        'assy_count'    => $assy ? (int) $assy->assy_count : 0,
                         'assy_list'     => $assy ? ($assy->assy_list ?? '') : '',
                         'is_lock'       => $isLock,
                         'first_id'      => $assy ? $assy->first_id : null,
@@ -179,7 +180,11 @@ class ScheduleVerificationService
 
         // Calculate capacities
         $normalCutOffCapacity = round($conveyor->capacity / 4, 2);
-        $cutOff5Capacity      = round($normalCutOffCapacity * 0.875, 2);
+        // CO5: only S1 on a 2-shift conveyor is capped at 0.875×; S2 or single-shift gets full capacity/4
+        $isS1Co5Capped    = ($shift == 1 && ($conveyor->shift_qty ?? 1) >= 2);
+        $cutOff5Capacity  = $isS1Co5Capped
+            ? round($normalCutOffCapacity * 0.875, 2)
+            : round($normalCutOffCapacity, 2);
 
         if ($schedules->isEmpty()) {
             // Return success with empty cut-offs so the modal can open
