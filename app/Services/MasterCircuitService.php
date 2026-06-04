@@ -101,6 +101,36 @@ class MasterCircuitService
     {
         DB::beginTransaction();
         try {
+            $conveyorId = $data['conveyor_id'] ?? null;
+            $cctCode = $data['cct_code'] ?? null;
+            $toStore = $data['to_store'] ?? null;
+
+            // Enforce uniqueness on (conveyor_id, cct_code, to_store). The same
+            // cct_code may repeat within a conveyor only when to_store differs.
+            if ($conveyorId && $cctCode && $toStore !== null && $toStore !== '') {
+                $existing = MasterCircuit::withTrashed()
+                    ->where('conveyor_id', $conveyorId)
+                    ->where('cct_code', $cctCode)
+                    ->where('to_store', $toStore)
+                    ->first();
+
+                if ($existing) {
+                    // A soft-deleted match is restored and updated instead of
+                    // colliding with the unique constraint.
+                    if ($existing->trashed()) {
+                        $existing->restore();
+                        $data['updated_by'] = Auth::id();
+                        $existing->deleted_by = null;
+                        $existing->update($data);
+
+                        DB::commit();
+                        return $existing;
+                    }
+
+                    throw new \Exception("Circuit with CCT Code '{$cctCode}' and To Store '{$toStore}' already exists on this conveyor.");
+                }
+            }
+
             $data['created_by'] = Auth::id();
             $circuit = MasterCircuit::create($data);
 
@@ -116,6 +146,24 @@ class MasterCircuitService
     {
         DB::beginTransaction();
         try {
+            $conveyorId = $data['conveyor_id'] ?? $circuit->conveyor_id;
+            $cctCode = array_key_exists('cct_code', $data) ? $data['cct_code'] : $circuit->cct_code;
+            $toStore = array_key_exists('to_store', $data) ? $data['to_store'] : $circuit->to_store;
+
+            // Block updates that would duplicate another circuit's
+            // (conveyor_id, cct_code, to_store) combination.
+            if ($conveyorId && $cctCode && $toStore !== null && $toStore !== '') {
+                $duplicate = MasterCircuit::where('conveyor_id', $conveyorId)
+                    ->where('cct_code', $cctCode)
+                    ->where('to_store', $toStore)
+                    ->where('id', '!=', $circuit->id)
+                    ->first();
+
+                if ($duplicate) {
+                    throw new \Exception("Circuit with CCT Code '{$cctCode}' and To Store '{$toStore}' already exists on this conveyor.");
+                }
+            }
+
             $data['updated_by'] = Auth::id();
             $circuit->update($data);
 

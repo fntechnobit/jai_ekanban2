@@ -367,16 +367,20 @@ class KanbanGeneratorService
             ->where('conveyor_id', $conveyorId)
             ->get();
 
-        // Group by cct_no + cct_code (unique key)
+        // Group by cct_no + cct_code + to_store (unique key).
+        // Within one conveyor the same cct_code may exist multiple times as long
+        // as to_store differs, so to_store is part of the grouping key to keep
+        // those circuits as separate kanbans.
         foreach ($circuits as $circuit) {
-            $key = $circuit->cct_no . '-' . $circuit->cct_code;
-            
+            $key = $circuit->cct_no . '-' . $circuit->cct_code . '-' . $circuit->to_store;
+
             if (!isset($circuitGroups[$key])) {
                 $circuitGroups[$key] = [
                     'master_circuit_id' => $circuit->id,
                     'carline' => $circuit->carline ?? '',
                     'cct_no' => $circuit->cct_no,
                     'cct_code' => $circuit->cct_code,
+                    'to_store' => $circuit->to_store,
                     'shikake_code' => $circuit->shikake_code,
                     'qty_kanban' => $circuit->qty ?? 1, // Fallback to 1 if not set
                     'released_note' => $circuit->released_note ?? null,

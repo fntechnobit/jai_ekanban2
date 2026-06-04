@@ -74,17 +74,26 @@ class MasterCircuitImport
                     }
 
                     $data = $this->mapRowToData($rowData, $conveyor);
-                    
-                    // Update or create circuit based on conveyor_id + cct_code
+
+                    // Update or create circuit based on conveyor_id + cct_code + to_store.
+                    // Within one conveyor the same cct_code may appear several times as
+                    // long as to_store differs, so to_store is part of the unique key.
                     $cctCode = $data['cct_code'] ?? null;
                     if ($cctCode) {
-                        $circuit = MasterCircuit::updateOrCreate(
-                            [
-                                'conveyor_id' => $this->conveyorId,
-                                'cct_code' => $cctCode,
-                            ],
-                            $data
-                        );
+                        // Look up including soft-deleted rows so a re-import after a
+                        // "remove by conveyor" restores the existing record instead of
+                        // colliding with the unique constraint.
+                        $circuit = MasterCircuit::withTrashed()->firstOrNew([
+                            'conveyor_id' => $this->conveyorId,
+                            'cct_code' => $cctCode,
+                            'to_store' => $data['to_store'] ?? null,
+                        ]);
+                        if ($circuit->trashed()) {
+                            $circuit->restore();
+                            $circuit->deleted_by = null;
+                        }
+                        $circuit->fill($data);
+                        $circuit->save();
                     } else {
                         $circuit = MasterCircuit::create($data);
                     }

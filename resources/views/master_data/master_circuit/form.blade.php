@@ -88,6 +88,11 @@
                                 </div>
 
                                 <div class="mb-3">
+                                    <label>To Store</label>
+                                    <input type="text" name="to_store" class="form-control form-control-sm" value="{{ $circuit->to_store ?? '' }}">
+                                </div>
+
+                                <div class="mb-3">
                                     <label>Kind</label>
                                     <input type="text" name="kind" class="form-control form-control-sm" value="{{ $circuit->kind ?? '' }}">
                                 </div>
