@@ -143,7 +143,8 @@
                                 <td class="text-muted" width="18%">Address</td><td id="v_sk_shield_address">-</td>
                             </tr>
                             <tr>
-                                <td class="text-muted">Blade</td><td id="v_sk_shield_blade" colspan="3">-</td>
+                                <td class="text-muted">Blade</td><td id="v_sk_shield_blade">-</td>
+                                <td class="text-muted">To Machine</td><td id="v_sk_shield_to_machine">-</td>
                             </tr>
                             <tr>
                                 <td class="text-muted">QRCode Drawing</td><td id="v_sk_shield_qrcode_drawing" colspan="3">-</td>

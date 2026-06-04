@@ -16,6 +16,7 @@ class MasterShikakeShield extends Model
         'shield_no',
         'address',
         'blade',
+        'to_machine',
         'qrcode_drawing',
         'cct_no_1',
         'address_no_1_1',

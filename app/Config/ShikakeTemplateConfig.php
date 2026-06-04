@@ -145,20 +145,21 @@ class ShikakeTemplateConfig
             'Shield No',          // 7
             'Address',            // 8
             'Blade',              // 9
-            'QRCode Drawing',     // 10
-            'CCT No 1',           // 11
-            'Address 1',          // 12
-            'CCT No 2',           // 13
-            'Address 2',          // 14
-            'To 1',               // 15
-            'To 2',               // 16
-            'To 3',               // 17
-            'To 4',               // 18
-            'To 5',               // 19
-            'To 6',               // 20
-            'To 7',               // 21
-            'To 8',               // 22
-            'To 9',               // 23
+            'To Machine',         // 10
+            'QRCode Drawing',     // 11
+            'CCT No 1',           // 12
+            'Address 1',          // 13
+            'CCT No 2',           // 14
+            'Address 2',          // 15
+            'To 1',               // 16
+            'To 2',               // 17
+            'To 3',               // 18
+            'To 4',               // 19
+            'To 5',               // 20
+            'To 6',               // 21
+            'To 7',               // 22
+            'To 8',               // 23
+            'To 9',               // 24
         ]);
     }
 

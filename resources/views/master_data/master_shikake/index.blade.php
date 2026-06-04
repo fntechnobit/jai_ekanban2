@@ -479,6 +479,7 @@
                 $('#v_sk_shield_no').text(pd.shield_no || '-');
                 $('#v_sk_shield_address').text(pd.address || '-');
                 $('#v_sk_shield_blade').text(pd.blade || '-');
+                $('#v_sk_shield_to_machine').text(pd.to_machine || '-');
                 $('#v_sk_shield_qrcode_drawing').text(pd.qrcode_drawing || '-');
                 var toList = [];
                 for (var i = 1; i <= 9; i++) {
@@ -644,6 +645,7 @@
                 $('#shield_shield_no').val(data.shield_no);
                 $('#shield_address').val(data.address);
                 $('#shield_blade').val(data.blade);
+                $('#shield_to_machine').val(data.to_machine);
                 $('#shield_qrcode_drawing').val(data.qrcode_drawing);
                 
                 // Populate TO fields
