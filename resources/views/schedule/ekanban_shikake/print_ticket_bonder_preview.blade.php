@@ -32,7 +32,7 @@
     margin: 0;
     padding: 0;
     border: 2px solid #ddd;
-    overflow: hidden;
+    overflow: visible;
     font-family: Arial, sans-serif;
 }
 
@@ -144,12 +144,12 @@
     <div class="ticket-bonder-preview">
         <table>
             <colgroup>
-                <col style="width: 13%">
-                <col style="width: 15%">
-                <col style="width: 13%">
-                <col style="width: 15%">
+                <col style="width: 12%">
                 <col style="width: 14%">
+                <col style="width: 12%">
                 <col style="width: 14%">
+                <col style="width: 16%">
+                <col style="width: 16%">
                 <col style="width: 16%">
             </colgroup>
             <thead>
@@ -242,9 +242,20 @@
                     <td class="value-cell">{{ $shikake->sequence ?? '' }}</td>
                 </tr>
                 
-                <!-- Row 15-17: BARCODE NAVIGASI + QTY/ISSUE + QRCODE KANBAN -->
+                <!-- Bottom: QR DRAWING (qrcode_drawing) | BARCODE NAVIGASI | QTY/ISSUE | QRCODE KANBAN -->
                 <tr>
-                    <td colspan="3" rowspan="3" class="barcode-navigasi-cell">
+                    <td colspan="2" rowspan="4" class="qrcode-cell">
+                        <div class="label-cell" style="font-size: 9px; margin-bottom: 4px; background: transparent;">QRCODE KANBAN</div>
+                        @if(isset($processData->qrcode_drawing_path))
+                            <img src="{{ $processData->qrcode_drawing_path }}" alt="QR Drawing">
+                        @else
+                            <div class="qrcode-placeholder">QR DRAWING</div>
+                        @endif
+                        @if(!empty($processData->qrcode_drawing))
+                            <div style="font-size: 9px; margin-top: 4px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
+                        @endif
+                    </td>
+                    <td colspan="2" rowspan="2" class="barcode-navigasi-cell">
                         <div class="label-cell" style="font-size: 9px; margin-bottom: 4px; background: transparent;">BARCODE NAVIGASI</div>
                         @if(isset($processData->barcode_navigasi_path))
                             <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi">
@@ -254,7 +265,7 @@
                     </td>
                     <td class="label-cell">QTY</td>
                     <td class="label-cell">ISSUE</td>
-                    <td colspan="2" rowspan="4" class="qrcode-cell">
+                    <td rowspan="4" class="qrcode-cell">
                         <div class="label-cell" style="font-size: 9px; margin-bottom: 4px; background: transparent;">QRCODE KANBAN</div>
                         @if(isset($shikake->qr_code_path))
                             <img src="{{ $shikake->qr_code_path }}" alt="QR Code">
@@ -262,7 +273,7 @@
                             <div class="qrcode-placeholder">QR</div>
                         @endif
                         @if(!empty($shikake->barcode_kanban))
-                            <div style="font-size: 10px; margin-top: 4px; font-weight: bold;">{{ $shikake->barcode_kanban }}</div>
+                            <div style="font-size: 9px; margin-top: 4px; font-weight: bold;">{{ $shikake->barcode_kanban }}</div>
                         @endif
                     </td>
                 </tr>
@@ -271,14 +282,12 @@
                     <td class="value-cell">{{ $shikake->issue ?? '' }}</td>
                 </tr>
                 <tr>
+                    <td colspan="2" class="value-cell">{{ $shikake->conveyor ? 'CV ' . $shikake->conveyor : '' }}</td>
                     <td colspan="2" class="value-cell">{{ $shikake->family ?? '' }}</td>
                 </tr>
-                
-                <!-- Row 18: Footer - CV / DATE / RELEASED NOTE -->
                 <tr>
-                    <td class="value-cell">{{ $shikake->conveyor ? 'CV ' . $shikake->conveyor : '' }}</td>
-                    <td class="value-cell">{{ $shikake->release_date ? \Carbon\Carbon::parse($shikake->release_date)->format('d M y') : '' }}</td>
-                    <td colspan="3" class="value-cell">{{ $shikake->released_note ?? '' }}</td>
+                    <td colspan="2" class="value-cell">{{ $shikake->release_date ? \Carbon\Carbon::parse($shikake->release_date)->format('d M y') : '' }}</td>
+                    <td colspan="2" class="value-cell">{{ $shikake->released_note ?? '' }}</td>
                 </tr>
             </tbody>
         </table>

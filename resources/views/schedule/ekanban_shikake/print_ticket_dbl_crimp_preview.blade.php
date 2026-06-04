@@ -33,7 +33,7 @@
     margin: 0;
     padding: 0;
     border: 2px solid #ddd;
-    overflow: hidden;
+    overflow: visible;
     font-family: Arial, sans-serif;
 }
 
@@ -155,22 +155,24 @@
                     <td colspan="2" class="value-cell">{{ $processData->address ?? '' }}</td>
                 </tr>
                 
-                <!-- Row 3: CCT NO / ADDRESS / BARCODE MESIN Labels -->
+                <!-- Row 3: CCT-NO / ADDRESS / QR DRWG Labels -->
                 <tr>
-                    <td class="label-cell">CCT NO</td>
+                    <td class="label-cell">CCT-NO</td>
                     <td class="label-cell">ADDRESS</td>
-                    <td colspan="2" class="label-cell">BARCODE MESIN</td>
+                    <td colspan="2" class="label-cell">QR DRWG</td>
                 </tr>
-                <!-- Row 4-6: CCT 1-3 with BARCODE MESIN (rowspan=3) -->
+                <!-- Row 4-5: CCT 1-2 with QR Drawing (qrcode_drawing) -->
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_1 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->address_1 ?? '' }}</td>
-                    <td colspan="2" rowspan="3" class="barcode-cell">
-                        @if(isset($processData->barcode_mesin_path))
-                            <img src="{{ $processData->barcode_mesin_path }}" alt="Barcode Mesin">
-                            <div style="font-size: 10px; margin-top: 4px;">{{ $processData->barcode_mesin }}</div>
+                    <td colspan="2" rowspan="2" class="qrcode-cell">
+                        @if(isset($processData->qrcode_drawing_path))
+                            <img src="{{ $processData->qrcode_drawing_path }}" alt="QR Drawing">
                         @else
-                            <div class="barcode-placeholder">-</div>
+                            <div class="qrcode-placeholder">QR</div>
+                        @endif
+                        @if(!empty($processData->qrcode_drawing))
+                            <div style="font-size: 10px; margin-top: 4px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
                         @endif
                     </td>
                 </tr>
@@ -178,21 +180,16 @@
                     <td class="value-cell">{{ $processData->cct_no_2 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->address_2 ?? '' }}</td>
                 </tr>
+
+                <!-- Row 6-7: CCT 3-4 + MACHINE Label/Value -->
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_3 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->address_3 ?? '' }}</td>
+                    <td colspan="2" class="label-cell">MACHINE</td>
                 </tr>
-                
-                <!-- Row 7: CCT 4 + MACHINE Label -->
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_4 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->address_4 ?? '' }}</td>
-                    <td colspan="2" class="label-cell">MACHINE</td>
-                </tr>
-                <!-- Row 8: CCT 5 + MACHINE Value -->
-                <tr>
-                    <td class="value-cell">{{ $processData->cct_no_5 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->address_5 ?? '' }}</td>
                     <td colspan="2" class="value-cell">{{ $shikake->machine ?? '' }}</td>
                 </tr>
                 

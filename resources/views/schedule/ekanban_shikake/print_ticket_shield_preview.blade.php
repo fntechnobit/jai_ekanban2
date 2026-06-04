@@ -32,7 +32,7 @@
     margin: 0;
     padding: 0;
     border: 2px solid #ddd;
-    overflow: hidden;
+    overflow: visible;
     font-family: Arial, sans-serif;
 }
 
@@ -133,55 +133,61 @@
                     <td colspan="2" class="value-cell">{{ $processData->address ?? '' }}</td>
                 </tr>
                 
-                <!-- Row 3: CCT NO 1 / ADDRESS 1 / QTY / ISSUE Labels -->
+                <!-- Row 3: CCT NO 1 / QR DRWG / QTY / ISSUE Labels -->
                 <tr>
                     <td class="label-cell">CCT NO 1</td>
-                    <td class="label-cell">ADDRESS 1</td>
+                    <td class="label-cell">QR DRWG</td>
                     <td class="label-cell">QTY</td>
                     <td class="label-cell">ISSUE</td>
                 </tr>
-                <!-- Row 4: CCT NO 1 / ADDRESS 1 / QTY / ISSUE Values -->
+                <!-- Row 4: CCT value + QR Drawing (rowspan=3) + QTY/ISSUE -->
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_1 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->address_no_1_1 ?? '' }}</td>
+                    <td rowspan="3" class="qrcode-cell">
+                        @if(isset($processData->qrcode_drawing_path))
+                            <img src="{{ $processData->qrcode_drawing_path }}" alt="QR Drawing">
+                        @else
+                            <div class="qrcode-placeholder">QR</div>
+                        @endif
+                        @if(!empty($processData->qrcode_drawing))
+                            <div style="font-size: 9px; margin-top: 4px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
+                        @endif
+                    </td>
                     <td class="value-cell">{{ $shikake->qty ?? '' }}</td>
                     <td class="value-cell">{{ $shikake->issue ?? '' }}</td>
                 </tr>
-                
-                <!-- Row 5: CCT NO 2 / ADDRESS 2 + QRCODE KANBAN Label -->
+                <!-- Row 5: ADDRESS 1 / MACHINE / QRCODE KANBAN Labels -->
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_2 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->address_no_1_2 ?? '' }}</td>
-                    <td colspan="2" class="label-cell">QRCODE KANBAN</td>
+                    <td class="label-cell">ADDRESS 1</td>
+                    <td class="label-cell">MACHINE</td>
+                    <td class="label-cell">QRCODE KANBAN</td>
                 </tr>
-                
-                <!-- Row 6: MACHINE Label + QR Code (rowspan=4) -->
+                <!-- Row 6: ADDRESS 1 value / MACHINE value / QR Kanban (rowspan=3) -->
                 <tr>
-                    <td colspan="2" class="label-cell">MACHINE</td>
-                    <td colspan="2" rowspan="4" class="qrcode-cell">
+                    <td class="value-cell">{{ $processData->address_no_1_1 ?? '' }}</td>
+                    <td class="value-cell">{{ $shikake->machine ?? '' }}</td>
+                    <td rowspan="3" class="qrcode-cell">
                         @if(isset($shikake->qr_code_path))
                             <img src="{{ $shikake->qr_code_path }}" alt="QR Code">
                         @else
-                            <div class="qrcode-placeholder">QR CODE</div>
+                            <div class="qrcode-placeholder">QR</div>
                         @endif
                         @if(!empty($shikake->barcode_kanban))
                             <div style="font-size: 10px; margin-top: 4px; font-weight: bold;">{{ $shikake->barcode_kanban }}</div>
                         @endif
                     </td>
                 </tr>
-                <!-- Row 7: MACHINE Value -->
-                <tr>
-                    <td colspan="2" class="value-cell">{{ $shikake->machine ?? '' }}</td>
-                </tr>
-                <!-- Row 8: SEQ / BLADE Labels -->
+                <!-- Row 7: SEQ / BLADE Labels -->
                 <tr>
                     <td class="label-cell">SEQ</td>
                     <td class="label-cell">BLADE</td>
+                    <td class="label-cell"></td>
                 </tr>
-                <!-- Row 9: SEQ / BLADE Values -->
+                <!-- Row 8: SEQ / BLADE Values -->
                 <tr>
                     <td class="value-cell">{{ $shikake->sequence ?? '' }}</td>
                     <td class="value-cell">{{ $processData->blade ?? '' }}</td>
+                    <td class="value-cell"></td>
                 </tr>
                 
                 <!-- Row 10: TO 1-4 Labels -->

@@ -20,7 +20,7 @@
     align-items: stretch;
     background: white;
     page-break-after: always;
-    height: 576px;
+    min-height: 576px;
 }
 
 .dbl-crimp-print-wrapper .shikake-image-section {
@@ -49,13 +49,12 @@
 .ticket-dbl-crimp-print {
     width: 654px;
     min-width: 654px;
-    height: 100%;
+    min-height: 100%;
     flex-shrink: 0;
     background: white;
     margin: 0;
     padding: 0;
     border: 2px solid #000;
-    overflow: hidden;
     font-family: Arial, sans-serif;
 }
 
@@ -103,15 +102,15 @@
 }
 
 .ticket-dbl-crimp-print .qrcode-cell img {
-    max-width: 180px;
-    max-height: 180px;
+    max-width: 130px;
+    max-height: 130px;
     display: block;
     margin: 0 auto;
 }
 
 .ticket-dbl-crimp-print .qr-img {
-    width: 180px;
-    height: 180px;
+    width: 130px;
+    height: 130px;
 }
 
 .ticket-dbl-crimp-print .qr-label {
@@ -144,8 +143,8 @@
 }
 
 .ticket-dbl-crimp-print .qrcode-placeholder {
-    width: 180px;
-    height: 180px;
+    width: 130px;
+    height: 130px;
 }
 
 .ticket-dbl-crimp-print .barcode-placeholder {
@@ -247,44 +246,41 @@
                     <td colspan="2" class="value-cell">{{ $processData->address ?? '' }}</td>
                 </tr>
                 
-                <!-- Row 3: CCT NO / ADDRESS / BARCODE MESIN Labels -->
+                <!-- Row 3: CCT-NO / ADDRESS / QR DRWG Labels -->
                 <tr>
-                    <td class="label-cell">CCT NO</td>
+                    <td class="label-cell">CCT-NO</td>
                     <td class="label-cell">ADDRESS</td>
-                    <td colspan="2" class="label-cell">BARCODE MESIN</td>
+                    <td colspan="2" class="label-cell">QR DRWG</td>
                 </tr>
-                <!-- Row 4-6: CCT 1-3 with BARCODE MESIN (rowspan=3) -->
+                <!-- Row 4-5: CCT 1-2 with QR Drawing (qrcode_drawing) -->
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_1 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->address_1 ?? '-' }}</td>
-                    <td colspan="2" rowspan="3" class="barcode-cell">
-                        @if(isset($processData->barcode_mesin_path))
-                            <img src="{{ $processData->barcode_mesin_path }}" alt="Barcode Mesin">
-                            <div style="font-size: 6px; margin-top: 1px;">{{ $processData->barcode_mesin }}</div>
+                    <td class="value-cell">{{ $processData->cct_no_1 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->address_1 ?? '' }}</td>
+                    <td colspan="2" rowspan="2" class="qrcode-cell">
+                        @if(isset($processData->qrcode_drawing_path))
+                            <img src="{{ $processData->qrcode_drawing_path }}" alt="QR Drawing" class="qr-img">
                         @else
-                            <div class="barcode-placeholder">-</div>
+                            <div class="qrcode-placeholder">QR</div>
+                        @endif
+                        @if(!empty($processData->qrcode_drawing))
+                            <div style="font-size: 10px; margin-top: 1px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
                         @endif
                     </td>
                 </tr>
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_2 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->address_2 ?? '-' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_2 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->address_2 ?? '' }}</td>
                 </tr>
+
+                <!-- Row 6-7: CCT 3-4 + MACHINE Label/Value -->
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_3 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->address_3 ?? '-' }}</td>
-                </tr>
-                
-                <!-- Row 7: CCT 4 + MACHINE Label -->
-                <tr>
-                    <td class="value-cell">{{ $processData->cct_no_4 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->address_4 ?? '-' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_3 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->address_3 ?? '' }}</td>
                     <td colspan="2" class="label-cell">MACHINE</td>
                 </tr>
-                <!-- Row 8: CCT 5 + MACHINE Value -->
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_5 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->address_5 ?? '-' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_4 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->address_4 ?? '' }}</td>
                     <td colspan="2" class="value-cell">{{ $shikake->machine ?? '' }}</td>
                 </tr>
                 

@@ -7,7 +7,6 @@ use App\Http\Controllers\System\UserController;
 use App\Http\Controllers\System\UserGroupController;
 use App\Http\Controllers\System\MenuController;
 use App\Http\Controllers\System\ListingSyncController;
-use App\Http\Controllers\System\DatabaseBackupController;
 use App\Http\Controllers\Schedule\AssySchedulerController;
 use App\Http\Controllers\Schedule\ScheduleVerificationController;
 use App\Http\Controllers\Schedule\EkanbanCircuitController;
@@ -64,10 +63,6 @@ Route::middleware('auth')->group(function () {
         Route::get('listing-sync', [ListingSyncController::class, 'index'])->name('listing-sync.index');
         Route::post('listing-sync/sync', [ListingSyncController::class, 'sync'])->name('listing-sync.sync');
         Route::get('listing-sync/statistics', [ListingSyncController::class, 'statistics'])->name('listing-sync.statistics');
-
-        // Database Backup
-        Route::get('database-backup', [DatabaseBackupController::class, 'index'])->name('database-backup.index');
-        Route::get('database-backup/download', [DatabaseBackupController::class, 'download'])->name('database-backup.download');
     });
 
     // Master Data Module Routes

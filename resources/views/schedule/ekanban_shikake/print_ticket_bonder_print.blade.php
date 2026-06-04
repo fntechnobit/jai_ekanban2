@@ -20,7 +20,7 @@
     align-items: stretch;
     background: white;
     page-break-after: always;
-    height: 576px;
+    min-height: 576px;
 }
 
 .bonder-print-wrapper .shikake-image-section {
@@ -49,13 +49,12 @@
 .ticket-bonder-print {
     width: 606px;
     min-width: 606px;
-    height: 100%;
+    min-height: 100%;
     flex-shrink: 0;
     background: white;
     margin: 0;
     padding: 0;
     border: 2px solid #000;
-    overflow: hidden;
     font-family: Arial, sans-serif;
 }
 
@@ -232,13 +231,13 @@
     <div class="ticket-bonder-print">
         <table>
             <colgroup>
-                <col style="width: 8mm">
-                <col style="width: 12mm">
-                <col style="width: 8mm">
-                <col style="width: 12mm">
-                <col style="width: 8.5mm">
-                <col style="width: 11mm">
-                <col style="width: 9mm">
+                <col style="width: 14mm">
+                <col style="width: 16mm">
+                <col style="width: 14mm">
+                <col style="width: 16mm">
+                <col style="width: 20mm">
+                <col style="width: 20mm">
+                <col style="width: 20mm">
             </colgroup>
             <thead>
                 <tr>
@@ -330,27 +329,38 @@
                     <td class="value-cell">{{ $shikake->sequence ?? '' }}</td>
                 </tr>
                 
-                <!-- Row 15-17: BARCODE NAVIGASI + QTY/ISSUE + QRCODE KANBAN -->
+                <!-- Bottom: QR DRAWING (qrcode_drawing) | BARCODE NAVIGASI | QTY/ISSUE | QRCODE KANBAN -->
                 <tr>
-                    <td colspan="3" rowspan="3" class="barcode-navigasi-cell">
+                    <td colspan="2" rowspan="4" class="qrcode-cell">
+                        <div class="qr-label">QRCODE KANBAN</div>
+                        @if(isset($processData->qrcode_drawing_path))
+                            <img src="{{ $processData->qrcode_drawing_path }}" alt="QR Drawing" style="width:130px;height:130px;display:block;margin:0 auto;">
+                        @else
+                            <div class="qrcode-placeholder" style="width:120px;height:120px;">QR DRAWING</div>
+                        @endif
+                        @if(!empty($processData->qrcode_drawing))
+                            <div style="font-size: 9px; margin-top: 1px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
+                        @endif
+                    </td>
+                    <td colspan="2" rowspan="2" class="barcode-navigasi-cell">
                         <div class="qr-label">BARCODE NAVIGASI</div>
                         @if(isset($processData->barcode_navigasi_path))
-                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi">
+                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi" style="max-width:140px;height:45px;">
                         @else
                             <div class="barcode-placeholder">BARCODE</div>
                         @endif
                     </td>
                     <td class="label-cell">QTY</td>
                     <td class="label-cell">ISSUE</td>
-                    <td colspan="2" rowspan="4" class="qrcode-cell">
+                    <td rowspan="4" class="qrcode-cell">
                         <div class="qr-label">QRCODE KANBAN</div>
                         @if(isset($shikake->qr_code_path))
-                            <img src="{{ $shikake->qr_code_path }}" alt="QR Code" class="qr-img">
+                            <img src="{{ $shikake->qr_code_path }}" alt="QR Code" style="width:95px;height:95px;display:block;margin:0 auto;">
                         @else
-                            <div class="qrcode-placeholder">QR</div>
+                            <div class="qrcode-placeholder" style="width:90px;height:90px;">QR</div>
                         @endif
                         @if(!empty($shikake->barcode_kanban))
-                            <div style="font-size: 10px; margin-top: 1px; font-weight: bold;">{{ $shikake->barcode_kanban }}</div>
+                            <div style="font-size: 8px; margin-top: 1px; font-weight: bold;">{{ $shikake->barcode_kanban }}</div>
                         @endif
                     </td>
                 </tr>
@@ -359,14 +369,12 @@
                     <td class="value-cell">{{ $shikake->issue ?? '' }}</td>
                 </tr>
                 <tr>
+                    <td colspan="2" class="value-cell">{{ $shikake->conveyor ? 'CV ' . $shikake->conveyor : '' }}</td>
                     <td colspan="2" class="value-cell">{{ $shikake->family ?? '' }}</td>
                 </tr>
-                
-                <!-- Row 18: Footer - CV / DATE / RELEASED NOTE -->
                 <tr>
-                    <td class="value-cell">{{ $shikake->conveyor ? 'CV ' . $shikake->conveyor : '' }}</td>
-                    <td class="value-cell">{{ $shikake->release_date ? \Carbon\Carbon::parse($shikake->release_date)->format('d M y') : '' }}</td>
-                    <td colspan="3" class="value-cell">{{ $shikake->released_note ?? '' }}</td>
+                    <td colspan="2" class="value-cell">{{ $shikake->release_date ? \Carbon\Carbon::parse($shikake->release_date)->format('d M y') : '' }}</td>
+                    <td colspan="2" class="value-cell">{{ $shikake->released_note ?? '' }}</td>
                 </tr>
             </tbody>
         </table>

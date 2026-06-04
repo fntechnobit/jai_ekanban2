@@ -32,7 +32,7 @@
     margin: 0;
     padding: 0;
     border: 2px solid #ddd;
-    overflow: hidden;
+    overflow: visible;
     font-family: Arial, sans-serif;
 }
 
@@ -154,22 +154,24 @@
                     <td colspan="2" class="value-cell">{{ $processData->address ?? '' }}</td>
                 </tr>
                 
-                <!-- Row 3: CCT NO / BONDER NO / BARCODE MESIN Labels -->
+                <!-- Row 3: CCT-NO / ADDRESS / QR DRWG Labels -->
                 <tr>
-                    <td class="label-cell">CCT NO</td>
-                    <td class="label-cell">BONDER NO</td>
-                    <td colspan="2" class="label-cell">BARCODE MESIN</td>
+                    <td class="label-cell">CCT-NO</td>
+                    <td class="label-cell">ADDRESS</td>
+                    <td colspan="2" class="label-cell">QR DRWG</td>
                 </tr>
-                <!-- Row 4-8: CCT NO and Bonder values with Barcode (5 pairs, rowspan=5) -->
+                <!-- Row 4-5: CCT pairs 1-2 + QR Drawing (qrcode_drawing) -->
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_1 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_1 ?? '' }}</td>
-                    <td colspan="2" rowspan="3" class="barcode-cell">
-                        @if(isset($processData->barcode_process_path))
-                            <img src="{{ $processData->barcode_process_path }}" alt="Barcode">
-                            <div style="font-size: 10px; text-align: center; margin-top: 4px;">{{ $processData->barcode_process ?? '' }}</div>
+                    <td colspan="2" rowspan="2" class="qrcode-cell">
+                        @if(isset($processData->qrcode_drawing_path))
+                            <img src="{{ $processData->qrcode_drawing_path }}" alt="QR Drawing">
                         @else
-                            <div class="barcode-placeholder">BARCODE</div>
+                            <div class="qrcode-placeholder">QR</div>
+                        @endif
+                        @if(!empty($processData->qrcode_drawing))
+                            <div style="font-size: 10px; margin-top: 4px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
                         @endif
                     </td>
                 </tr>
@@ -177,20 +179,16 @@
                     <td class="value-cell">{{ $processData->cct_no_2 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_2 ?? '' }}</td>
                 </tr>
+
+                <!-- Row 6-7: CCT pairs 3-4 + Machine Label/Value -->
                 <tr>
                     <td class="value-cell">{{ $processData->cct_no_3 ?? '' }}</td>
                     <td class="value-cell">{{ $processData->bonder_no_3 ?? '' }}</td>
-                </tr>
-                
-                <!-- Row 9-10: Machine Label/Value -->
-                <tr>
-                    <td class="value-cell">{{ $processData->cct_no_4 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_4 ?? '' }}</td>
                     <td colspan="2" class="label-cell">MACHINE</td>
                 </tr>
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_5 ?? '' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_5 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->cct_no_4 ?? '' }}</td>
+                    <td class="value-cell">{{ $processData->bonder_no_4 ?? '' }}</td>
                     <td colspan="2" class="value-cell">{{ $shikake->machine ?? '' }}</td>
                 </tr>
                 
@@ -208,7 +206,7 @@
                         @endif
                     </td>
                     <td class="label-cell">SEQ</td>
-                    <td class="label-cell">TO MACHINE</td>
+                    <td class="label-cell">TO MACH</td>
                 </tr>
                 <tr>
                     <td class="value-cell">{{ $shikake->sequence ?? '' }}</td>

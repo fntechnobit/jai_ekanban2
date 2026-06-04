@@ -182,12 +182,17 @@ class EkanbanShikakeController extends Controller
             if (!empty($processData->barcode_shikake)) {
                 $processData->barcode_shikake_path = BarcodeHelper::generateQRCodeCached($processData->barcode_shikake, 'shikake');
             }
-            
+
+            // QR code for qrcode_drawing (drawing QR - common to all processes)
+            if (!empty($processData->qrcode_drawing)) {
+                $processData->qrcode_drawing_path = BarcodeHelper::generateQRCodeCached($processData->qrcode_drawing, 'shikake');
+            }
+
             // Barcode for barcode_navigasi (top-right)
             if (!empty($processData->barcode_navigasi)) {
                 $processData->barcode_navigasi_path = BarcodeHelper::generateBarcodeCached($processData->barcode_navigasi, null, 2, 50, 'shikake');
             }
-            
+
             // Barcode for barcode_process (middle-right)
             if (!empty($processData->barcode_process)) {
                 $processData->barcode_process_path = BarcodeHelper::generateBarcodeCached($processData->barcode_process, null, 2, 50, 'shikake');
