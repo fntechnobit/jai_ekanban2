@@ -159,6 +159,28 @@
     height: 60px;
 }
 
+/* Punch strip - right-side spacing with punch circle (same as cutting/twist) */
+.bonder-punch-strip {
+    width: 30mm;
+    min-width: 30mm;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    background: white;
+    height: 100%;
+}
+
+.bonder-punch-strip .punch-circle {
+    width: 15mm;
+    height: 15mm;
+    border-radius: 50%;
+    background-color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    flex-shrink: 0;
+}
+
 /* Thermal Printer Optimization */
 @media print {
     body {
@@ -210,7 +232,20 @@
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
-    
+
+    .bonder-punch-strip {
+        display: flex;
+        width: 30mm;
+        min-width: 30mm;
+        flex-shrink: 0;
+    }
+
+    .bonder-punch-strip .punch-circle {
+        background-color: #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
     @page {
         size: landscape;
         margin: 1mm;
@@ -378,6 +413,11 @@
                 </tr>
             </tbody>
         </table>
+    </div>
+
+    {{-- Punch strip (RIGHT) - spacing + punch circle, same as cutting/twist --}}
+    <div class="bonder-punch-strip">
+        <div class="punch-circle"></div>
     </div>
 </div>
 {{-- End of bonder-print-wrapper --}}

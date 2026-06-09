@@ -236,6 +236,44 @@
         var autoRefreshSeconds = 60;
         var autoRefreshCountdown = autoRefreshSeconds;
 
+        // localStorage key for persisting filters
+        var FILTER_STORAGE_KEY = 'ekanban_circuit_print_machine_filters';
+
+        function saveFilters() {
+            var filters = {
+                area: $('#filter_area').val(),
+                machine: $('#filter_machine').val(),
+                type: $('#filter_type').val(),
+                print_status: $('#filter_print_status').val(),
+                date: $('#filter_date').data('daterangepicker').startDate.format('YYYY-MM-DD'),
+                shift: $('#filter_shift').val(),
+                cutoff: $('#filter_cutoff').val()
+            };
+            try {
+                localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(filters));
+            } catch (e) {
+                console.warn('Failed to save filters:', e);
+            }
+        }
+
+        function loadFilters() {
+            try {
+                var raw = localStorage.getItem(FILTER_STORAGE_KEY);
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                console.warn('Failed to load filters:', e);
+                return null;
+            }
+        }
+
+        function clearFilters() {
+            try {
+                localStorage.removeItem(FILTER_STORAGE_KEY);
+            } catch (e) {
+                console.warn('Failed to clear filters:', e);
+            }
+        }
+
         // Suppress default DataTables error alert (we handle it ourselves)
         $.fn.dataTable.ext.errMode = 'none';
 
@@ -254,8 +292,13 @@
                 });
             }, 100);
 
-            // Initialize single date picker
-            var currentDate = moment();
+            // Load saved filters from localStorage
+            var savedFilters = loadFilters();
+
+            // Initialize single date picker (restore saved date if present)
+            var currentDate = (savedFilters && savedFilters.date)
+                ? moment(savedFilters.date, 'YYYY-MM-DD')
+                : moment();
 
             $('#filter_date').daterangepicker({
                 singleDatePicker: true,
@@ -265,6 +308,17 @@
                     format: 'DD-MM-YYYY'
                 }
             });
+
+            // Restore non-machine filters from localStorage (machine restored after AJAX load)
+            if (savedFilters) {
+                if (savedFilters.area) $('#filter_area').val(savedFilters.area);
+                if (savedFilters.type) $('#filter_type').val(savedFilters.type);
+                if (savedFilters.shift) $('#filter_shift').val(savedFilters.shift);
+                if (savedFilters.cutoff) $('#filter_cutoff').val(savedFilters.cutoff);
+                if (savedFilters.print_status) $('#filter_print_status').val(savedFilters.print_status);
+                // Refresh select2 display for restored values
+                $('#filter_area, #filter_type, #filter_shift, #filter_cutoff, #filter_print_status').trigger('change.select2');
+            }
 
             // DataTable - Don't load data initially
             table = $('#circuit-table').DataTable({
@@ -400,6 +454,7 @@
 
             // Auto-reload on all filter changes
             $('#filter_area, #filter_machine, #filter_type, #filter_shift, #filter_cutoff, #filter_print_status').on('change', function() {
+                saveFilters();
                 var machine = $('#filter_machine').val();
                 if (machine) {
                     table.ajax.reload();
@@ -411,6 +466,7 @@
 
             // Auto-reload when date changes
             $('#filter_date').on('apply.daterangepicker', function() {
+                saveFilters();
                 var machine = $('#filter_machine').val();
                 if (machine) {
                     table.ajax.reload();
@@ -419,13 +475,15 @@
             });
 
             $('#btn-reset').click(function() {
+                // Clear saved filters from localStorage
+                clearFilters();
                 // Reset all filters
                 $('#filter_area').val('').trigger('change');
                 $('#filter_type').val('all').trigger('change');
                 $('#filter_shift').val('').trigger('change');
                 $('#filter_cutoff').val('').trigger('change');
                 $('#filter_print_status').val('not_printed').trigger('change');
-                $('#filter_machine').empty().append('<option value="">- Choose Machine -</option>');
+                $('#filter_machine').val('').trigger('change');
                 $('#filter_date').data('daterangepicker').setStartDate(moment());
                 // Clear table
                 table.clear().draw();
@@ -476,7 +534,7 @@
             // Load all machines on page load (independent of conveyor)
             function loadAllMachines() {
                 var machineSelect = $('#filter_machine');
-                
+
                 $.ajax({
                     url: "{{ route('schedule.ekanban-circuit.machines-by-conveyor') }}",
                     type: 'GET',
@@ -485,13 +543,21 @@
                         $.each(machines, function(index, machine) {
                             machineSelect.append('<option value="' + machine.machine + '">' + machine.name + '</option>');
                         });
+
+                        // Restore previously selected machine and auto-load data
+                        if (savedFilters && savedFilters.machine &&
+                            machineSelect.find('option[value="' + savedFilters.machine + '"]').length) {
+                            machineSelect.val(savedFilters.machine).trigger('change.select2');
+                            table.ajax.reload();
+                            startAutoRefresh();
+                        }
                     },
                     error: function() {
                         console.error('Failed to load machines');
                     }
                 });
             }
-            
+
             // Load machines when page loads
             loadAllMachines();
 
