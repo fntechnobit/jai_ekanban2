@@ -32,7 +32,11 @@ class UserGroupSeeder extends Seeder
         ];
 
         foreach ($groups as $group) {
-            UserGroup::create($group);
+            // Idempotent: avoid creating duplicate groups when reseeding.
+            UserGroup::firstOrCreate(
+                ['name' => $group['name']],
+                $group
+            );
         }
     }
 }
