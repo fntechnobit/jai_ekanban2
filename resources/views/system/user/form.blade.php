@@ -40,6 +40,18 @@
                         <span class="text-danger error-text group_id_error"></span>
                     </div>
 
+                    <div class="mb-3">
+                        <label for="area_id" class="form-label">Pembatasan Area</label>
+                        <select class="form-select select2" id="area_id" name="area_id" style="width: 100%;">
+                            <option value="">Semua Area</option>
+                            @foreach($areas as $area)
+                                <option value="{{ $area->id }}">{{ $area->area }}</option>
+                            @endforeach
+                        </select>
+                        <small class="form-text text-muted">Kunci user ke satu area. "Semua Area" = akses tanpa batas.</small>
+                        <span class="text-danger error-text area_id_error"></span>
+                    </div>
+
                     <div class="mb-3" id="password-group">
                         <label for="password" class="form-label">Password <span class="text-danger password-required">*</span></label>
                         <input type="password" class="form-control form-control-sm" id="password" name="password">

@@ -40,7 +40,18 @@ class UserRequest extends FormRequest
             ],
             'password' => $isUpdate ? 'nullable|string|min:8|confirmed' : 'required|string|min:8|confirmed',
             'group_id' => 'required|exists:user_groups,id',
+            'area_id' => 'nullable|exists:master_area,id',
             'is_active' => 'required|boolean',
         ];
+    }
+
+    /**
+     * Normalize empty area ("Semua Area") to null before validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('area_id') === '') {
+            $this->merge(['area_id' => null]);
+        }
     }
 }

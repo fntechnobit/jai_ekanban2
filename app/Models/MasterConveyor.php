@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RestrictedByArea;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MasterConveyor extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, RestrictedByArea;
 
     protected $table = 'master_conveyor';
+
+    /** Restricted directly by the master_area_id column. */
+    protected $areaColumn = 'master_area_id';
 
     protected $fillable = [
         'master_area_id',

@@ -2,15 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RestrictedByArea;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MasterShikake extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, RestrictedByArea;
 
     protected $table = 'master_shikake';
+
+    /** Restricted through its conveyor, which is itself area-scoped. */
+    protected $areaRelation = 'conveyor';
 
     protected $fillable = [
         'conveyor_id',

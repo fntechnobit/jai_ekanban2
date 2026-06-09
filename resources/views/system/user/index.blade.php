@@ -43,6 +43,7 @@
                             <th>Username</th>
                             <th>Email</th>
                             <th>User Group</th>
+                            <th>Area</th>
                             <th width="10%">Status</th>
                             <th width="15%">Action</th>
                         </tr>
@@ -96,6 +97,7 @@
                     { data: 'username', name: 'username' },
                     { data: 'email', name: 'email' },
                     { data: 'group_label', name: 'group.name', orderable: false, searchable: false },
+                    { data: 'area_label', name: 'area.area', orderable: false, searchable: false },
                     { data: 'status', name: 'is_active', orderable: false },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
                 ]
@@ -139,6 +141,7 @@
                         $('#username').val(user.username);
                         $('#email').val(user.email);
                         $('#group_id').val(user.group_id).trigger('change');
+                        $('#area_id').val(user.area_id ? user.area_id : '').trigger('change');
 
                         if (user.is_active == 1) {
                             $('#is_active_yes').prop('checked', true);

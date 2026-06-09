@@ -4,6 +4,7 @@ namespace App\Http\Controllers\System;
 
 use App\Http\Controllers\Controller;
 use App\Models\UserGroup;
+use App\Models\MasterArea;
 use App\Services\UserService;
 use App\Http\Requests\UserRequest;
 use App\Helpers\ResponseHelper;
@@ -25,7 +26,8 @@ class UserController extends Controller
     public function index()
     {
         $groups = UserGroup::where('is_active', 1)->orderBy('name')->get();
-        return view('system.user.index', compact('groups'));
+        $areas = MasterArea::orderBy('area')->get();
+        return view('system.user.index', compact('groups', 'areas'));
     }
 
     public function datatable(Request $request)

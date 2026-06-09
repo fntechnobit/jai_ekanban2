@@ -11,7 +11,7 @@ class UserService
 {
     public function getAllWithGroups(?int $groupId = null)
     {
-        $query = User::with('group')->select('users.*');
+        $query = User::with(['group', 'area'])->select('users.*');
 
         if (!is_null($groupId)) {
             $query->where('group_id', $groupId);
@@ -35,6 +35,13 @@ class UserService
                 }
 
                 return '<span class="text-muted">Unassigned</span>';
+            })
+            ->addColumn('area_label', function($row){
+                if ($row->area) {
+                    return '<span class="badge bg-info">'.e($row->area->area).'</span>';
+                }
+
+                return '<span class="text-muted">Semua Area</span>';
             })
             ->addColumn('status', function($row){
                 if ($row->is_active) {
@@ -61,7 +68,7 @@ class UserService
                 $actions .= '</div>';
                 return $hasActions ? $actions : '-';
             })
-            ->rawColumns(['status', 'action', 'group_label'])
+            ->rawColumns(['status', 'action', 'group_label', 'area_label'])
             ->make(true);
     }
 

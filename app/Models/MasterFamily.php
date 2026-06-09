@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RestrictedByArea;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MasterFamily extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, RestrictedByArea;
 
     protected $table = 'master_family';
+
+    /** Restricted through its carline, which is itself area-scoped. */
+    protected $areaRelation = 'carline';
 
     protected $fillable = [
         'family',

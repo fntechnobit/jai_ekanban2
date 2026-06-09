@@ -31,6 +31,7 @@ class User extends Authenticatable
         'email',
         'password',
         'group_id',
+        'area_id',
         'is_active',
     ];
 
@@ -64,6 +65,14 @@ class User extends Authenticatable
     public function group()
     {
         return $this->belongsTo(UserGroup::class, 'group_id');
+    }
+
+    /**
+     * Get the area this user is restricted to (null = all areas).
+     */
+    public function area()
+    {
+        return $this->belongsTo(MasterArea::class, 'area_id');
     }
 
     /**

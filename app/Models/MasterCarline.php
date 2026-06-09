@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RestrictedByArea;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MasterCarline extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, RestrictedByArea;
 
     protected $table = 'master_carline';
+
+    /** Restricted directly by the area_id column. */
+    protected $areaColumn = 'area_id';
 
     protected $fillable = [
         'code',

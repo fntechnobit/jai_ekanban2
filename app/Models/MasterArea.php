@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RestrictedByArea;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MasterArea extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, RestrictedByArea;
 
     protected $table = 'master_area';
+
+    /** Area restriction reaches the area via its own primary key. */
+    protected $areaColumn = 'id';
 
     protected $fillable = [
         'area',
