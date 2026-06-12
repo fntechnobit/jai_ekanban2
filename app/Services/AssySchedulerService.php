@@ -128,7 +128,23 @@ class AssySchedulerService
                                 ->whereColumn('master_conveyor.id', 'assy_schedule.conveyor_id')
                                 ->whereColumn('master_conveyor.conveyor', 'listing_stage.conveyor');
                         })
-                        ->where('assy_schedule.is_lock', '!=', 0);
+                        // Skip listings that already belong to a protected schedule: either
+                        // locked/verified OR carrying generated kanbans. The kanban check keeps
+                        // this in sync with ScheduleCleanupService::applyHasKanbanGuard so a
+                        // protected-but-unlocked schedule is not re-generated into a duplicate.
+                        ->where(function ($q) {
+                            $q->where('assy_schedule.is_lock', '!=', 0)
+                                ->orWhereExists(function ($k) {
+                                    $k->select(DB::raw(1))
+                                        ->from('assy_schedule_circuit')
+                                        ->whereColumn('assy_schedule_circuit.assy_schedule_id', 'assy_schedule.id');
+                                })
+                                ->orWhereExists(function ($k) {
+                                    $k->select(DB::raw(1))
+                                        ->from('assy_schedule_shikake')
+                                        ->whereColumn('assy_schedule_shikake.assy_schedule_id', 'assy_schedule.id');
+                                });
+                        });
                 })
                 ->orderBy('id_listing', 'asc')
                 ->orderBy('listing_date_time', 'asc')

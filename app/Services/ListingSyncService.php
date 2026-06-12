@@ -127,24 +127,40 @@ class ListingSyncService
             $startDate = Carbon::parse($startDate)->startOfDay();
             $endDate = Carbon::parse($endDate)->endOfDay();
 
-            // Delete only listing_stage records that do NOT have locked assy_schedules
+            // A listing_stage row is PROTECTED from deletion when it is referenced by an
+            // assy_schedule that is either locked/verified (is_lock != 0) OR already has
+            // generated kanban cards. The kanban guard prevents the FK ON DELETE CASCADE
+            // chain (listing_stage -> assy_schedule -> assy_schedule_circuit/shikake) from
+            // silently wiping a printed kanban list even if the schedule's lock flag is
+            // inconsistent. In normal operation kanban rows only exist on locked schedules,
+            // so this does not change behaviour for clean data.
+            $protectionFilter = function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('assy_schedule')
+                    ->whereColumn('assy_schedule.listing_id', 'listing_stage.id')
+                    ->where(function ($q) {
+                        $q->where('assy_schedule.is_lock', '!=', 0)
+                            ->orWhereExists(function ($k) {
+                                $k->select(DB::raw(1))
+                                    ->from('assy_schedule_circuit')
+                                    ->whereColumn('assy_schedule_circuit.assy_schedule_id', 'assy_schedule.id');
+                            })
+                            ->orWhereExists(function ($k) {
+                                $k->select(DB::raw(1))
+                                    ->from('assy_schedule_shikake')
+                                    ->whereColumn('assy_schedule_shikake.assy_schedule_id', 'assy_schedule.id');
+                            });
+                    });
+            };
+
+            // Delete only listing_stage records that are NOT protected
             $deletedCount = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])
-                ->whereNotExists(function ($query) {
-                    $query->select(DB::raw(1))
-                        ->from('assy_schedule')
-                        ->whereColumn('assy_schedule.listing_id', 'listing_stage.id')
-                        ->where('assy_schedule.is_lock', '!=', 0);
-                })
+                ->whereNotExists($protectionFilter)
                 ->delete();
 
             // Count protected records for logging
             $protectedCount = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])
-                ->whereExists(function ($query) {
-                    $query->select(DB::raw(1))
-                        ->from('assy_schedule')
-                        ->whereColumn('assy_schedule.listing_id', 'listing_stage.id')
-                        ->where('assy_schedule.is_lock', '!=', 0);
-                })
+                ->whereExists($protectionFilter)
                 ->count();
 
             Log::info("Deleted listing_stage records (protected locked schedules)", [

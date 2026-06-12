@@ -4,10 +4,32 @@ namespace App\Services\Schedule;
 
 use App\Models\AssySchedule;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ScheduleCleanupService
 {
+    /**
+     * Safety guard: a schedule that already has generated kanban cards
+     * (circuit/shikake) must NEVER be silently auto-deleted by a sync/generate
+     * run. In correct operation such a schedule is is_lock=1 (already protected),
+     * so this only adds protection for inconsistent "unlocked-but-has-kanban"
+     * states, preventing the printed kanban list from disappearing.
+     */
+    private function applyHasKanbanGuard($query)
+    {
+        return $query
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('assy_schedule_circuit')
+                    ->whereColumn('assy_schedule_circuit.assy_schedule_id', 'assy_schedule.id');
+            })
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('assy_schedule_shikake')
+                    ->whereColumn('assy_schedule_shikake.assy_schedule_id', 'assy_schedule.id');
+            });
+    }
     /**
      * Delete unverified (unlocked) schedules for specific shifts
      * Preserves locked schedules (is_lock = 1)
@@ -29,11 +51,12 @@ class ScheduleCleanupService
         
         $date = Carbon::parse($date);
         
-        $deletedCount = AssySchedule::whereDate('schedule', $date)
+        $query = AssySchedule::whereDate('schedule', $date)
             ->where('conveyor_id', $conveyorId)
             ->whereIn('shift', $unlockedShifts)
-            ->where('is_lock', 0) // Only delete unlocked schedules
-            ->delete();
+            ->where('is_lock', 0); // Only delete unlocked schedules
+        $this->applyHasKanbanGuard($query); // never delete a schedule that has generated kanbans
+        $deletedCount = $query->delete();
         
         Log::info("Deleted unlocked schedules", [
             'date' => $date->format('Y-m-d'),
@@ -58,11 +81,13 @@ class ScheduleCleanupService
     {
         $query = AssySchedule::whereBetween('schedule', [$startDate, $endDate])
             ->where('is_lock', 0);
-        
+
         if ($conveyorId) {
             $query->where('conveyor_id', $conveyorId);
         }
-        
+
+        $this->applyHasKanbanGuard($query); // never delete a schedule that has generated kanbans
+
         $deletedCount = $query->delete();
         
         Log::info("Deleted unlocked schedules in range", [
