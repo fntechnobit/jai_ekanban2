@@ -265,16 +265,26 @@ class ScheduleVerificationController extends Controller
     }
 
     /**
-     * Reset all kanban balance (sisa & nomor_urut) to zero.
-     * Also clears all generated kanbans and unverifies all schedules
-     * to ensure full consistency.
+     * Reset kanban balance (sisa & nomor_urut) to zero.
+     *
+     * Two modes (parameter `reset_mode`):
+     *  - 'full' (default): also clears all generated kanbans and unverifies all
+     *    schedules to ensure full consistency. Verified schedules must be
+     *    re-verified afterwards.
+     *  - 'balance_only': ONLY zeroes sisa & last_nomor_urut. Generated kanbans
+     *    and verification status are left untouched.
+     *    WARNING: if generated kanbans still exist, the next generation will
+     *    restart nomor_urut from 0 and may collide with existing barcodes.
      */
     public function resetBalance(Request $request)
     {
         $request->validate([
             'confirmation' => 'required|in:RESET SEMUA BALANCE',
             'conveyor_id' => 'nullable|integer|exists:master_conveyor,id',
+            'reset_mode' => 'nullable|in:full,balance_only',
         ]);
+
+        $balanceOnly = $request->input('reset_mode') === 'balance_only';
 
         try {
             DB::beginTransaction();
@@ -290,33 +300,38 @@ class ScheduleVerificationController extends Controller
                 KanbanBalanceCircuit::where('conveyor_id', $conveyorId)->update(['sisa' => 0, 'last_nomor_urut' => 0]);
                 KanbanBalanceShikake::where('conveyor_id', $conveyorId)->update(['sisa' => 0, 'last_nomor_urut' => 0]);
 
-                // 2. Delete all generated kanbans for this conveyor
-                $scheduleIds = AssySchedule::where('conveyor_id', $conveyorId)->pluck('id');
                 $deletedCircuitKanbans = 0;
                 $deletedShikakeKanbans = 0;
-                if ($scheduleIds->isNotEmpty()) {
-                    $deletedCircuitKanbans = AssyScheduleCircuit::whereIn('assy_schedule_id', $scheduleIds)->delete();
-                    $deletedShikakeKanbans = AssyScheduleShikake::whereIn('assy_schedule_id', $scheduleIds)->delete();
-                }
+                $unverifiedCount = 0;
 
-                // 3. Unverify all verified schedules for this conveyor
-                $unverifiedCount = AssySchedule::where('conveyor_id', $conveyorId)
-                    ->where('is_lock', 1)
-                    ->update([
-                        'is_lock' => 0,
-                        'verified_at' => null,
-                        'verified_by' => null,
-                        'updated_by' => auth()->id(),
-                        'updated_at' => now(),
-                    ]);
+                if (!$balanceOnly) {
+                    // 2. Delete all generated kanbans for this conveyor
+                    $scheduleIds = AssySchedule::where('conveyor_id', $conveyorId)->pluck('id');
+                    if ($scheduleIds->isNotEmpty()) {
+                        $deletedCircuitKanbans = AssyScheduleCircuit::whereIn('assy_schedule_id', $scheduleIds)->delete();
+                        $deletedShikakeKanbans = AssyScheduleShikake::whereIn('assy_schedule_id', $scheduleIds)->delete();
+                    }
+
+                    // 3. Unverify all verified schedules for this conveyor
+                    $unverifiedCount = AssySchedule::where('conveyor_id', $conveyorId)
+                        ->where('is_lock', 1)
+                        ->update([
+                            'is_lock' => 0,
+                            'verified_at' => null,
+                            'verified_by' => null,
+                            'updated_by' => auth()->id(),
+                            'updated_at' => now(),
+                        ]);
+                }
 
                 $conveyor = MasterConveyor::find($conveyorId);
                 $conveyorName = $conveyor ? $conveyor->conveyor : $conveyorId;
 
                 DB::commit();
 
-                Log::warning('KANBAN BALANCE RESET: Full reset for conveyor ' . $conveyorName . ' by user ' . auth()->id(), [
+                Log::warning('KANBAN BALANCE RESET: ' . ($balanceOnly ? 'Balance-only' : 'Full') . ' reset for conveyor ' . $conveyorName . ' by user ' . auth()->id(), [
                     'conveyor_id' => $conveyorId,
+                    'reset_mode' => $balanceOnly ? 'balance_only' : 'full',
                     'circuit_balance_records' => $circuitCount,
                     'shikake_balance_records' => $shikakeCount,
                     'deleted_circuit_kanbans' => $deletedCircuitKanbans,
@@ -324,12 +339,18 @@ class ScheduleVerificationController extends Controller
                     'unverified_schedules' => $unverifiedCount,
                 ]);
 
-                return response()->json([
-                    'success' => true,
-                    'message' => "Reset berhasil untuk conveyor {$conveyorName}. "
+                $message = $balanceOnly
+                    ? "Reset SALDO SAJA berhasil untuk conveyor {$conveyorName}. "
+                        . "{$circuitCount} balance circuit dan {$shikakeCount} balance shikake di-reset ke 0. "
+                        . "Kanban & status verifikasi tidak diubah."
+                    : "Reset berhasil untuk conveyor {$conveyorName}. "
                         . "{$circuitCount} balance circuit dan {$shikakeCount} balance shikake di-reset ke 0. "
                         . "{$deletedCircuitKanbans} kanban circuit dan {$deletedShikakeKanbans} kanban shikake dihapus. "
-                        . "{$unverifiedCount} schedule di-unverify.",
+                        . "{$unverifiedCount} schedule di-unverify.";
+
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
                 ]);
             } else {
                 // Reset all
@@ -340,23 +361,30 @@ class ScheduleVerificationController extends Controller
                 KanbanBalanceCircuit::query()->update(['sisa' => 0, 'last_nomor_urut' => 0]);
                 KanbanBalanceShikake::query()->update(['sisa' => 0, 'last_nomor_urut' => 0]);
 
-                // 2. Delete all generated kanbans
-                $deletedCircuitKanbans = AssyScheduleCircuit::query()->delete();
-                $deletedShikakeKanbans = AssyScheduleShikake::query()->delete();
+                $deletedCircuitKanbans = 0;
+                $deletedShikakeKanbans = 0;
+                $unverifiedCount = 0;
 
-                // 3. Unverify all verified schedules
-                $unverifiedCount = AssySchedule::where('is_lock', 1)
-                    ->update([
-                        'is_lock' => 0,
-                        'verified_at' => null,
-                        'verified_by' => null,
-                        'updated_by' => auth()->id(),
-                        'updated_at' => now(),
-                    ]);
+                if (!$balanceOnly) {
+                    // 2. Delete all generated kanbans
+                    $deletedCircuitKanbans = AssyScheduleCircuit::query()->delete();
+                    $deletedShikakeKanbans = AssyScheduleShikake::query()->delete();
+
+                    // 3. Unverify all verified schedules
+                    $unverifiedCount = AssySchedule::where('is_lock', 1)
+                        ->update([
+                            'is_lock' => 0,
+                            'verified_at' => null,
+                            'verified_by' => null,
+                            'updated_by' => auth()->id(),
+                            'updated_at' => now(),
+                        ]);
+                }
 
                 DB::commit();
 
-                Log::warning('KANBAN BALANCE RESET: Full reset ALL by user ' . auth()->id(), [
+                Log::warning('KANBAN BALANCE RESET: ' . ($balanceOnly ? 'Balance-only' : 'Full') . ' reset ALL by user ' . auth()->id(), [
+                    'reset_mode' => $balanceOnly ? 'balance_only' : 'full',
                     'circuit_balance_records' => $circuitCount,
                     'shikake_balance_records' => $shikakeCount,
                     'deleted_circuit_kanbans' => $deletedCircuitKanbans,
@@ -364,12 +392,18 @@ class ScheduleVerificationController extends Controller
                     'unverified_schedules' => $unverifiedCount,
                 ]);
 
-                return response()->json([
-                    'success' => true,
-                    'message' => "Reset berhasil. "
+                $message = $balanceOnly
+                    ? "Reset SALDO SAJA berhasil. "
+                        . "{$circuitCount} balance circuit dan {$shikakeCount} balance shikake di-reset ke 0. "
+                        . "Kanban & status verifikasi tidak diubah."
+                    : "Reset berhasil. "
                         . "{$circuitCount} balance circuit dan {$shikakeCount} balance shikake di-reset ke 0. "
                         . "{$deletedCircuitKanbans} kanban circuit dan {$deletedShikakeKanbans} kanban shikake dihapus. "
-                        . "{$unverifiedCount} schedule di-unverify.",
+                        . "{$unverifiedCount} schedule di-unverify.";
+
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
                 ]);
             }
         } catch (\Exception $e) {
