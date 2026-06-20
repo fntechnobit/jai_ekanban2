@@ -235,16 +235,14 @@ class AssySchedulerService
                 ]);
 
                 // Step 9: Allocate
-                //   2-shift: S1-CO1→CO5 → S2-CO1→CO5 (filling order)
+                //   2-shift: S1-CO1→4 → S2-CO1→4 → S2-CO5 (overflow lands on the last
+                //            shift's CO5; Shift 1 stays at base capacity)
                 //   1-shift: CO1 → CO2 → CO3 → CO4 → CO5 (sequential)
                 if ($maxShifts >= 2) {
-                    // Filling order: S1-CO1→5 → S2-CO1→5
-                    // Budget CO5 sudah pre-mapped di $shiftCapacities[shift]['c5']
+                    // Phase 1: CO1-4 for every unlocked shift (base capacity)
                     foreach (range(1, $maxShifts) as $shift) {
-                        if ($shiftLockStatus[$shift] ?? false) continue;
-                        if (!isset($shiftCapacities[$shift])) continue;
+                        if (($shiftLockStatus[$shift] ?? false) || !isset($shiftCapacities[$shift])) continue;
 
-                        // CO1-4
                         $result = $this->listingAllocator->allocateToShift(
                             $groupListings,
                             $shiftCapacities[$shift],
@@ -254,9 +252,15 @@ class AssySchedulerService
                             [1, 2, 3, 4]
                         );
                         $schedulesToCreate = array_merge($schedulesToCreate, $result['schedules']);
-                        if ($groupListings->sum('rem_qty') === 0) break;
+                        if ($groupListings->sum('rem_qty') <= 0) break;
+                    }
 
-                        // CO5 (gunakan cap pre-mapped, tidak override)
+                    // Phase 2: CO5 forward — S1.CO5 (capped at nominal) first, then
+                    // S2.CO5 (catch-all = all remaining). Budgets set by preMapCutoff5.
+                    foreach (range(1, $maxShifts) as $shift) {
+                        if ($groupListings->sum('rem_qty') <= 0) break;
+                        if (($shiftLockStatus[$shift] ?? false) || !isset($shiftCapacities[$shift])) continue;
+
                         if (($shiftCapacities[$shift]['c5'] ?? 0) > 0) {
                             $result = $this->listingAllocator->allocateToShift(
                                 $groupListings,
@@ -267,7 +271,6 @@ class AssySchedulerService
                                 [5]
                             );
                             $schedulesToCreate = array_merge($schedulesToCreate, $result['schedules']);
-                            if ($groupListings->sum('rem_qty') === 0) break;
                         }
                     }
                 } else {

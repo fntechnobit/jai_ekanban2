@@ -62,8 +62,14 @@ class ScheduleVerificationController extends Controller
                 return $schedule->capacity ?? 0;
             })
             ->addColumn('listing', function ($schedule) {
-                if (!$schedule->has_assy) return '0 (0)';
-                return number_format($schedule->total_listing) . ' (' . ($schedule->assy_count ?? 0) . ')';
+                if (!$schedule->has_assy && empty($schedule->total_listing)) return '0 (0)';
+                $txt = number_format($schedule->total_listing) . ' (' . ($schedule->assy_count ?? 0) . ')';
+                if (!empty($schedule->is_over_capacity)) {
+                    $title = 'Terjadwal ' . number_format($schedule->scheduled_qty ?? 0)
+                        . ' dari ' . number_format($schedule->total_listing) . ' (melebihi kapasitas)';
+                    $txt .= ' <span class="badge bg-warning text-dark" title="' . e($title) . '">! over</span>';
+                }
+                return $txt;
             })
             ->addColumn('assy', function ($schedule) {
                 return $schedule->has_assy ? ($schedule->assy_list ?: '-') : '-';
@@ -105,7 +111,7 @@ class ScheduleVerificationController extends Controller
                     </button>
                 </div>';
             })
-            ->rawColumns(['status', 'action'])
+            ->rawColumns(['listing', 'status', 'action'])
             ->make(true);
     }
 

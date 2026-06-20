@@ -273,7 +273,16 @@ $(function () {
         $('#modal-shift').text('Shift ' + data.shift);
         $('#modal-capacity').text(data.capacity + ' Capacity / Shift');
         $('#modal-assy-count').text(data.assy_count + ' Assy');
-        $('#modal-total-listing').text(data.total_listing + ' Listing');
+        if (data.is_over_capacity) {
+            // Demand exceeds nominal capacity; surplus still scheduled in the last shift's CO5
+            $('#modal-total-listing').html(
+                data.total_listing + ' Listing ' +
+                '<span class="badge bg-warning text-dark" title="Demand harian ' + data.listing_demand +
+                '; ' + data.overflow + ' unit di atas kapasitas nominal (tetap terjadwal di CO5 shift terakhir)">! over capacity</span>'
+            );
+        } else {
+            $('#modal-total-listing').text(data.total_listing + ' Listing');
+        }
         
         // Set target shift label
         $('#target-shift-label').text(data.shift + ' (' + moment(data.date).format('DD MMM YYYY') + ')');
@@ -297,7 +306,8 @@ $(function () {
             // Calculate capacity for this cut off
             var cutoffCapacity, cutoffRemain;
             if (i === 5) {
-                // Cut Off 5 uses special formula: 0.875 x (capacity/4)
+                // Cut Off 5 = overflow bucket, only on the last shift (cap = floor(capacity/4));
+                // 0 on earlier shifts.
                 cutoffCapacity = data.cutoff5_capacity;
                 cutoffRemain = cutoffCapacity - used;
             } else {
@@ -305,14 +315,14 @@ $(function () {
                 cutoffCapacity = data.normal_cutoff_capacity;
                 cutoffRemain = cutoffCapacity - used;
             }
-            
+
             var isOverCapacity = used > cutoffCapacity;
-            
+
             shiftsHtml += '<div class="cutoff-section mb-2">';
             shiftsHtml += '<div class="cutoff-header d-flex justify-content-between align-items-center p-2">';
             shiftsHtml += '<span class="cutoff-title">Cut Off ' + i;
-            if (i === 5 && data.cutoff5_capacity < data.normal_cutoff_capacity) {
-                shiftsHtml += ' <small>(0.875x)</small>';
+            if (i === 5) {
+                shiftsHtml += ' <small>(overflow)</small>';
             }
             shiftsHtml += '</span>';
             shiftsHtml += '<div class="cutoff-badges">';

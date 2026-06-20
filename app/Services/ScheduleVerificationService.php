@@ -79,6 +79,27 @@ class ScheduleVerificationService
             $assyData[$key] = $row;
         }
 
+        // --- Step 3b: Get raw SIREP listing demand per date×conveyor from listing_stage ---
+        // The "Listing" column must reflect the true SIREP demand, independent of conveyor
+        // capacity. assy_schedule only holds what fit within capacity, so the difference
+        // (overflow) is surfaced on the last shift and flagged as over-capacity.
+        $demandQuery = DB::table('listing_stage AS ls')
+            ->join('master_conveyor AS mc', 'mc.conveyor', '=', 'ls.conveyor')
+            ->whereNull('mc.deleted_at')
+            ->whereRaw('DATE(ls.listing_date_time) BETWEEN ? AND ?', [$start->format('Y-m-d'), $end->format('Y-m-d')])
+            ->whereNotNull('ls.assy')->where('ls.assy', '!=', '')
+            ->where('ls.qty', '>', 0)
+            ->selectRaw('DATE(ls.listing_date_time) AS d, mc.id AS conveyor_id, SUM(ls.qty) AS demand');
+
+        if ($conveyorId) {
+            $demandQuery->where('mc.id', $conveyorId);
+        }
+
+        $demandMap = [];
+        foreach ($demandQuery->groupByRaw('DATE(ls.listing_date_time), mc.id')->get() as $row) {
+            $demandMap[$row->d . '|' . $row->conveyor_id] = (int) $row->demand;
+        }
+
         // --- Step 4: Generate full grid: all dates × active conveyors × shifts ---
         $rows = [];
         $current = $start->copy();
@@ -89,6 +110,20 @@ class ScheduleVerificationService
             foreach ($activeConveyors as $conv) {
                 $shiftStart = (int) ($conv->shift_start ?? 1);
                 $shiftQty   = (int) ($conv->shift_qty   ?? 1);
+                $lastShift  = $shiftStart + $shiftQty - 1;
+
+                // Total qty actually scheduled (capped) for this date×conveyor across all shifts
+                $scheduledAll = 0;
+                for ($s = $shiftStart; $s < $shiftStart + $shiftQty; $s++) {
+                    $scheduledAll += (int) ($assyData[$dateStr . '|' . $conv->conveyor_id . '|' . $s]->total_listing ?? 0);
+                }
+
+                // True SIREP demand (= scheduled, since CO5 catch-all schedules 100%).
+                $demand   = $demandMap[$dateStr . '|' . $conv->conveyor_id] ?? $scheduledAll;
+                // Day exceeds nominal capacity when demand > shifts × (capacity + nominal CO5).
+                $co5Nominal   = (int) round(0.875 * ((int) $conv->capacity / 4));
+                $nominalTotal = $shiftQty * ((int) $conv->capacity + $co5Nominal);
+                $overCapDay   = ($scheduledAll > 0 && $demand > $nominalTotal);
 
                 for ($s = $shiftStart; $s < $shiftStart + $shiftQty; $s++) {
                     $key   = $dateStr . '|' . $conv->conveyor_id . '|' . $s;
@@ -102,18 +137,26 @@ class ScheduleVerificationService
                     if ($status === 'pending'   && !($hasAssy && $isLock == 0)) continue;
                     if ($status === 'no_data'   && $hasAssy) continue;
 
+                    $scheduledShift = $assy ? (int) $assy->total_listing : 0;
+                    // Defensive: if demand somehow exceeds scheduled, surface it on the last shift
+                    $extra          = ($s === $lastShift) ? max(0, $demand - $scheduledAll) : 0;
+                    $displayListing = $scheduledShift + $extra;
+                    $isOverCapRow   = ($s === $lastShift && $overCapDay);
+
                     $rows[] = (object) [
-                        'schedule_date' => $dateStr,
-                        'conveyor_id'   => $conv->conveyor_id,
-                        'conveyor_name' => $conv->conveyor_name,
-                        'capacity'      => $conv->capacity,
-                        'shift'         => $s,
-                        'total_listing' => $assy ? (int) $assy->total_listing : 0,
-                        'assy_count'    => $assy ? (int) $assy->assy_count : 0,
-                        'assy_list'     => $assy ? ($assy->assy_list ?? '') : '',
-                        'is_lock'       => $isLock,
-                        'first_id'      => $assy ? $assy->first_id : null,
-                        'has_assy'      => $hasAssy,
+                        'schedule_date'    => $dateStr,
+                        'conveyor_id'      => $conv->conveyor_id,
+                        'conveyor_name'    => $conv->conveyor_name,
+                        'capacity'         => $conv->capacity,
+                        'shift'            => $s,
+                        'total_listing'    => $displayListing,
+                        'scheduled_qty'    => $scheduledShift,
+                        'is_over_capacity' => $isOverCapRow ? 1 : 0,
+                        'assy_count'       => $assy ? (int) $assy->assy_count : 0,
+                        'assy_list'        => $assy ? ($assy->assy_list ?? '') : '',
+                        'is_lock'          => $isLock,
+                        'first_id'         => $assy ? $assy->first_id : null,
+                        'has_assy'         => $hasAssy,
                     ];
                 }
             }
@@ -180,11 +223,25 @@ class ScheduleVerificationService
 
         // Calculate capacities
         $normalCutOffCapacity = round($conveyor->capacity / 4, 2);
-        // CO5: only S1 on a 2-shift conveyor is capped at 0.875×; S2 or single-shift gets full capacity/4
-        $isS1Co5Capped    = ($shift == 1 && ($conveyor->shift_qty ?? 1) >= 2);
-        $cutOff5Capacity  = $isS1Co5Capped
-            ? round($normalCutOffCapacity * 0.875, 2)
-            : round($normalCutOffCapacity, 2);
+        // CO5 nominal capacity = round(0.875 × capacity/4), same on every shift's CO5.
+        // The LAST shift's CO5 is a catch-all and may exceed this nominal (Used > Cap → "over").
+        $shiftQty        = (int) ($conveyor->shift_qty ?? 1);
+        $shiftStart      = (int) ($conveyor->shift_start ?? 1);
+        $lastShift       = $shiftStart + $shiftQty - 1;
+        $cutOff5Capacity = (float) $this->capacityCalculator->calculateCutoff5Capacity((int) $conveyor->capacity);
+
+        // SIREP demand & scheduled total (equal now, since CO5 catch-all schedules 100%).
+        $listingDemand = (int) ListingStage::where('conveyor', $conveyor->conveyor)
+            ->whereDate('listing_date_time', $date)
+            ->where('qty', '>', 0)
+            ->sum('qty');
+        $scheduledAll = (int) AssySchedule::where('conveyor_id', $conveyorId)
+            ->whereDate('schedule', $date)
+            ->sum('qty');
+        // Day exceeds nominal capacity when demand > shifts × (capacity + nominal CO5).
+        $nominalTotal   = $shiftQty * ((int) $conveyor->capacity + (int) $cutOff5Capacity);
+        $overflow       = max(0, $listingDemand - $nominalTotal);
+        $isOverCapacity = ($shift == $lastShift && $listingDemand > $nominalTotal);
 
         if ($schedules->isEmpty()) {
             // Return success with empty cut-offs so the modal can open
@@ -200,6 +257,11 @@ class ScheduleVerificationService
                 'cutoff5_capacity'      => $cutOff5Capacity,
                 'assy_count'            => 0,
                 'total_listing'         => 0,
+                'scheduled_qty'         => 0,
+                'scheduled_all'         => $scheduledAll,
+                'listing_demand'        => $listingDemand,
+                'overflow'              => $overflow,
+                'is_over_capacity'      => $isOverCapacity,
                 'cut_offs'              => array_map(fn($i) => ['cutoff' => $i, 'items' => []], range(1, 5)),
                 'is_empty'              => true,
             ];
@@ -268,6 +330,11 @@ class ScheduleVerificationService
             'cutoff5_capacity' => $cutOff5Capacity,
             'assy_count' => $assyCount,
             'total_listing' => $totalListing,
+            'scheduled_qty' => $totalListing,
+            'scheduled_all' => $scheduledAll,
+            'listing_demand' => $listingDemand,
+            'overflow' => $overflow,
+            'is_over_capacity' => $isOverCapacity,
             'cut_offs' => $cutOffs
         ];
     }
@@ -954,16 +1021,19 @@ class ScheduleVerificationService
                     );
 
                     if (isset($shiftCapacities[$shift])) {
-                        // Pre-map CO5
+                        // Pre-map CO5 for THIS shift only. Unverify regenerates a single
+                        // shift, so treat it as single-shift overflow (CO5 capped at
+                        // floor(capacity/4)) — consistent with the generate engine.
                         $totalQty = $listings->sum('rem_qty');
-                        $co5Needed = $this->capacityCalculator->preMapCutoff5(
-                            $shiftCapacities, $conveyor->capacity, $totalQty
+                        $targetCaps = [$shift => $shiftCapacities[$shift]];
+                        $this->capacityCalculator->preMapCutoff5(
+                            $targetCaps, $conveyor->capacity, $totalQty, 1
                         );
 
-                        // Allocate to shift
+                        // Allocate to shift (CO1-4 then CO5)
                         $allocationResult = $this->listingAllocator->allocateToShift(
                             $listings,
-                            $shiftCapacities[$shift],
+                            $targetCaps[$shift],
                             $shift,
                             $conveyor->id,
                             $dateStr
