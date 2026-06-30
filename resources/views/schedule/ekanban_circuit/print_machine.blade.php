@@ -122,6 +122,7 @@
                                     <th>CCT</th>
                                     <th>Shikake</th>
                                     <th>CV</th>
+                                    <th>Store</th>
                                     <th>Family</th>
                                     <th>Qty</th>
                                     <th>Issue</th>
@@ -364,7 +365,7 @@
                             ? xhr.responseJSON.error
                             : 'Gagal memuat data (HTTP ' + xhr.status + '). Coba refresh.';
                         $('#circuit-table tbody').html(
-                            '<tr><td colspan="12" class="text-center text-danger">' +
+                            '<tr><td colspan="13" class="text-center text-danger">' +
                             '<i class="fa-solid fa-triangle-exclamation"></i> ' + msg + '</td></tr>'
                         );
                     }
@@ -384,6 +385,7 @@
                     },
                     { data: 'shikake_code', name: 'shikake_code', width: '7%' },
                     { data: 'conveyor', name: 'conveyor', width: '7%' },
+                    { data: 'to_store', name: 'to_store', width: '9%' },
                     { data: 'family', name: 'family', width: '10%' },
                     { data: 'qty', name: 'qty', width: '4%', className: 'text-end' },
                     { 

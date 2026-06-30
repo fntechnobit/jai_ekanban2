@@ -234,10 +234,10 @@ class AssySchedulerService
                     'shift_capacities'=> $shiftCapacities,
                 ]);
 
-                // Step 9: Allocate
-                //   2-shift: S1-CO1→4 → S2-CO1→4 → S2-CO5 (overflow lands on the last
-                //            shift's CO5; Shift 1 stays at base capacity)
-                //   1-shift: CO1 → CO2 → CO3 → CO4 → CO5 (sequential)
+                // Step 9: Allocate (budgets pre-mapped by preMapCutoff5)
+                //   2-shift: S1-CO1→4 → S2-CO1→4 → S1-CO5 (capped at nominal) → S2-CO5
+                //            (catch-all = all remaining)
+                //   1-shift: CO1 → CO2 → CO3 → CO4 → CO5 (catch-all = all remaining)
                 if ($maxShifts >= 2) {
                     // Phase 1: CO1-4 for every unlocked shift (base capacity)
                     foreach (range(1, $maxShifts) as $shift) {
@@ -274,7 +274,7 @@ class AssySchedulerService
                         }
                     }
                 } else {
-                    // ── 1-shift: CO1-4 → CO5 (pre-mapped, capped at floor(capacity/4)) ──────────────────────
+                    // ── 1-shift: CO1-4 → CO5 (pre-mapped; single shift is the last shift, so CO5 = catch-all) ──
                     for ($shift = 1; $shift <= $maxShifts; $shift++) {
                         if ($shiftLockStatus[$shift] ?? false) continue;
                         if (!isset($shiftCapacities[$shift])) continue;
@@ -290,7 +290,7 @@ class AssySchedulerService
                         );
                         $schedulesToCreate = array_merge($schedulesToCreate, $result['schedules']);
 
-                        // CO5: gunakan cap pre-mapped (min sisa, floor(capacity/4))
+                        // CO5: gunakan budget pre-mapped (catch-all = seluruh sisa listing)
                         if (($shiftCapacities[$shift]['c5'] ?? 0) > 0) {
                             $result = $this->listingAllocator->allocateToShift(
                                 $groupListings,

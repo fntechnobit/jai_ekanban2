@@ -128,12 +128,66 @@ class KanbanGeneratorService
             'circuit_groups_count' => count($circuitGroups)
         ]);
 
+        // Store-split factor per cct_code: when one cct_code exists in several stores
+        // (to_store variants) all serving the same assy demand, the listing qty is split
+        // equally across those stores so the grand total stays equal to the listing.
+        // Variants are ranked by master_circuit_id ASC for a stable, reproducible split.
+        $variantsByCct = [];
+        foreach ($circuitGroups as $cd) {
+            $code = $cd['cct_code'] ?? '';
+            if ($code === '' || $code === null) {
+                continue;
+            }
+            $variantsByCct[$code][] = [
+                'id' => $cd['master_circuit_id'],
+                'assy_codes' => $cd['assy_codes'] ?? [],
+            ];
+        }
+        foreach ($variantsByCct as $code => $vs) {
+            usort($vs, fn($a, $b) => $a['id'] <=> $b['id']);
+            $variantsByCct[$code] = $vs;
+
+            // Splitting by cct_code assumes every store variant serves the same assy
+            // demand. Warn (do not block) if their assy linkage diverges so the case
+            // can be reviewed in master data.
+            if (count($vs) > 1) {
+                $sets = array_map(
+                    fn($v) => collect($v['assy_codes'])->sort()->values()->implode(','),
+                    $vs
+                );
+                if (count(array_unique($sets)) > 1) {
+                    Log::warning("KanbanGeneratorService: store-split cct_code has variants with differing assy links; split-by-cct_code may be inaccurate", [
+                        'cct_code' => $code,
+                        'variants' => $vs,
+                    ]);
+                }
+            }
+        }
+
         foreach ($circuitGroups as $circuitKey => $circuitData) {
             // Get or create balance record
             $balance = KanbanBalanceCircuit::findOrCreate(
                 $conveyorId,
                 $circuitData['master_circuit_id']
             );
+
+            // Resolve this circuit's share of the demand when its cct_code spans
+            // multiple stores (split_count > 1). split_rank picks which slice of the
+            // remainder it gets so the per-store totals stay balanced.
+            $code = $circuitData['cct_code'] ?? '';
+            $variants = ($code !== '' && $code !== null) ? ($variantsByCct[$code] ?? []) : [];
+            $splitCount = max(1, count($variants));
+            $splitRank = 0;
+            if ($splitCount > 1) {
+                foreach ($variants as $i => $v) {
+                    if ($v['id'] === $circuitData['master_circuit_id']) {
+                        $splitRank = $i;
+                        break;
+                    }
+                }
+            }
+            $circuitData['split_count'] = $splitCount;
+            $circuitData['split_rank'] = $splitRank;
 
             // Calculate kebutuhan per cutoff based on schedule qty and circuit's relevant assy codes
             $schedulesWithKebutuhan = $this->calculateKebutuhanPerCutoff($schedules, $circuitData);
@@ -465,15 +519,15 @@ class KanbanGeneratorService
     {
         $result = [];
         $itemAssyCodes = $itemData['assy_codes'] ?? [];
-        
+
         // Group schedules by cutoff
         $byCutoff = $schedules->groupBy('cutoff');
-        
+
         foreach ($byCutoff as $cutoff => $cutoffSchedules) {
             // Sum qty for schedules whose assycode matches any of the item's assy codes
             $kebutuhan = 0;
             $representativeSchedule = null;
-            
+
             foreach ($cutoffSchedules as $schedule) {
                 if (in_array($schedule->assy, $itemAssyCodes) || empty($itemAssyCodes)) {
                     $kebutuhan += $schedule->qty;
@@ -482,7 +536,7 @@ class KanbanGeneratorService
                     }
                 }
             }
-            
+
             // Only include if there's kebutuhan
             if ($kebutuhan > 0 && $representativeSchedule) {
                 $result[] = [
@@ -492,10 +546,35 @@ class KanbanGeneratorService
                 ];
             }
         }
-        
+
         // Sort by cutoff
         usort($result, fn($a, $b) => $a['cutoff'] <=> $b['cutoff']);
-        
+
+        // Store-split: when this circuit's cct_code spans multiple stores, divide the
+        // per-cutoff kebutuhan across the stores so the grand total stays equal to the
+        // listing. The remainder is rotated by cutoff position so each store's overall
+        // total stays balanced (e.g. 75 over 4 cutoffs, 2 stores -> 150 each, not 152/148).
+        // split_count defaults to 1 (single store / shikake), leaving behaviour unchanged.
+        $n = max(1, (int) ($itemData['split_count'] ?? 1));
+        if ($n > 1) {
+            $rank = (int) ($itemData['split_rank'] ?? 0);
+            $split = [];
+            foreach ($result as $idx => $row) {
+                $kebutuhan = (int) $row['kebutuhan'];
+                $base = intdiv($kebutuhan, $n);
+                $rem  = $kebutuhan % $n;
+                // Exactly $rem stores get +1 each cutoff (so the per-cutoff sum is preserved);
+                // rotating by $idx spreads those +1 evenly across stores over the cutoffs.
+                $getsExtra = (((($rank - $idx) % $n) + $n) % $n) < $rem;
+                $share = $base + ($getsExtra ? 1 : 0);
+                if ($share > 0) {
+                    $row['kebutuhan'] = $share;
+                    $split[] = $row;
+                }
+            }
+            return $split;
+        }
+
         return $result;
     }
 

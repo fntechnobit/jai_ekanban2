@@ -41,11 +41,12 @@ class EkanbanCircuitService
             $query->havingRaw("(
                 cct_no LIKE ?
                 OR cct_code LIKE ?
+                OR to_store LIKE ?
                 OR machine LIKE ?
                 OR family LIKE ?
                 OR barcodes LIKE ?
                 OR shikake_code LIKE ?
-            )", [$escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch]);
+            )", [$escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch]);
         }
 
         $filteredQuery = clone $query;
@@ -125,6 +126,7 @@ class EkanbanCircuitService
                 'shikake_code' => $row->shikake_code ?? '-',
                 'cct_no' => $row->cct_no,
                 'cct_code' => $row->cct_code,
+                'to_store' => $row->to_store ?? '-',
                 'conveyor' => $row->conveyor,
                 'machine' => $row->machine,
                 'family' => $row->family,
@@ -273,6 +275,7 @@ class EkanbanCircuitService
                 'master_circuit.shikake_code',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
+                'master_circuit.to_store',
                 'master_circuit.machine',
                 'master_circuit.family',
                 'master_circuit.qty',
@@ -298,6 +301,7 @@ class EkanbanCircuitService
                 'master_circuit.shikake_code',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
+                'master_circuit.to_store',
                 'master_circuit.machine',
                 'master_circuit.family',
                 'master_circuit.qty',
