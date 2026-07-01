@@ -177,15 +177,23 @@ abstract class BaseShikakeImport
                     $sequence = $shikakeData['sequence'] ?? null;
                     
                     if ($machine && $sequence !== null) {
-                        $shikake = MasterShikake::updateOrCreate(
-                            [
-                                'conveyor_id' => $this->conveyorId,
-                                'process' => $this->process,
-                                'machine' => $machine,
-                                'sequence' => $sequence,
-                            ],
-                            $shikakeData
-                        );
+                        // Look up including soft-deleted rows so a re-import after a
+                        // "remove by conveyor" restores the existing master in place
+                        // instead of creating a duplicate. Locked schedules still
+                        // reference the original master_shikake_id, so creating a new
+                        // row would orphan them (e.g. qrcode_drawing not printing).
+                        $shikake = MasterShikake::withTrashed()->firstOrNew([
+                            'conveyor_id' => $this->conveyorId,
+                            'process' => $this->process,
+                            'machine' => $machine,
+                            'sequence' => $sequence,
+                        ]);
+                        if ($shikake->trashed()) {
+                            $shikake->restore();
+                            $shikake->deleted_by = null;
+                        }
+                        $shikake->fill($shikakeData);
+                        $shikake->save();
                     } else {
                         $shikake = MasterShikake::create($shikakeData);
                     }

@@ -160,6 +160,8 @@ class EkanbanShikakeService
             ->leftJoin('master_shikake_shield', 'master_shikake.id', '=', 'master_shikake_shield.master_shikake_id')
             ->leftJoin('master_shikake_dbl_crimp', 'master_shikake.id', '=', 'master_shikake_dbl_crimp.master_shikake_id')
             ->where('assy_schedule.is_lock', '!=', 0)
+            // Only reference live masters (raw joins bypass the SoftDeletes scope).
+            ->whereNull('master_shikake.deleted_at')
             ->where(function($query) use ($conditions) {
                 foreach ($conditions as $condition) {
                     $query->orWhere(function($q) use ($condition) {
@@ -265,6 +267,9 @@ class EkanbanShikakeService
             ->leftJoin('master_shikake_shield', 'master_shikake.id', '=', 'master_shikake_shield.master_shikake_id')
             ->leftJoin('master_shikake_dbl_crimp', 'master_shikake.id', '=', 'master_shikake_dbl_crimp.master_shikake_id')
             ->where('assy_schedule.is_lock', '!=', 0)
+            // Only reference live masters; raw joins ignore the SoftDeletes scope,
+            // so exclude soft-deleted masters explicitly to stay consistent with edit.
+            ->whereNull('master_shikake.deleted_at')
             ->select([
                 'assy_schedule_shikake.assy_schedule_id',
                 'assy_schedule_shikake.master_shikake_id',
