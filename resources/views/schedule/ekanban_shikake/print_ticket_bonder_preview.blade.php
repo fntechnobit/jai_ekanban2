@@ -245,14 +245,14 @@
                 <!-- Bottom: QR DRAWING (qrcode_drawing) | BARCODE NAVIGASI | QTY/ISSUE | QRCODE KANBAN -->
                 <tr>
                     <td colspan="2" rowspan="4" class="qrcode-cell">
-                        <div class="label-cell" style="font-size: 9px; margin-bottom: 4px; background: transparent;">QRCODE KANBAN</div>
+                        <div class="label-cell" style="font-size: 9px; margin-bottom: 4px; background: transparent;">QR DRAWING</div>
+                        @if(!empty($processData->qrcode_drawing))
+                            <div style="font-size: 9px; margin-bottom: 4px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
+                        @endif
                         @if(isset($processData->qrcode_drawing_path))
                             <img src="{{ $processData->qrcode_drawing_path }}" alt="QR Drawing">
                         @else
                             <div class="qrcode-placeholder">QR DRAWING</div>
-                        @endif
-                        @if(!empty($processData->qrcode_drawing))
-                            <div style="font-size: 9px; margin-top: 4px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
                         @endif
                     </td>
                     <td colspan="2" rowspan="2" class="barcode-navigasi-cell">
