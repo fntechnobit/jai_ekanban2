@@ -20,6 +20,7 @@ use App\Http\Controllers\MasterData\MasterMachineController;
 use App\Http\Controllers\MasterData\MasterShikakeController;
 use App\Http\Controllers\MasterData\MasterCircuitController;
 use App\Http\Controllers\AdditionController;
+use App\Http\Controllers\Report\BalanceReportController;
 use App\Http\Controllers\Auth\LoginController;
 
 Route::get('/', function () {
@@ -192,5 +193,12 @@ Route::middleware('auth')->group(function () {
         Route::get('history', [AdditionController::class, 'history'])->name('history');
         Route::get('history/datatable', [AdditionController::class, 'historyDatatable'])->name('history.datatable');
         Route::get('summary', [AdditionController::class, 'getSummary'])->name('summary');
+    });
+
+    // Report Module Routes
+    Route::prefix('report')->name('report.')->group(function () {
+        // Balance History (daily / specific date)
+        Route::get('balance', [BalanceReportController::class, 'index'])->name('balance.index');
+        Route::get('balance/export', [BalanceReportController::class, 'export'])->name('balance.export');
     });
 });

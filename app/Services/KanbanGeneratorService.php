@@ -8,6 +8,7 @@ use App\Models\AssyScheduleCircuit;
 use App\Models\AssyScheduleShikake;
 use App\Models\KanbanBalanceCircuit;
 use App\Models\KanbanBalanceShikake;
+use App\Models\KanbanGenerationLog;
 use App\Models\MasterAssy;
 use App\Models\MasterCircuit;
 use App\Models\MasterConveyor;
@@ -192,6 +193,10 @@ class KanbanGeneratorService
             // Calculate kebutuhan per cutoff based on schedule qty and circuit's relevant assy codes
             $schedulesWithKebutuhan = $this->calculateKebutuhanPerCutoff($schedules, $circuitData);
 
+            // Capture balance state BEFORE this generation for the ledger.
+            $sisaBefore   = (int) $balance->sisa;
+            $totalKebutuhan = (int) array_sum(array_column($schedulesWithKebutuhan, 'kebutuhan'));
+
             // Generate kanbans with carry-over logic
             $result = $this->generateKanbanCarryOver(
                 $schedulesWithKebutuhan,
@@ -230,6 +235,21 @@ class KanbanGeneratorService
                 $schedules->last()->id,
                 $date,
                 $shift
+            );
+
+            // Record the generation in the ledger so reverse can undo it exactly
+            // (delta = produced - kebutuhan) and the balance report can trace it.
+            KanbanGenerationLog::record(
+                $conveyorId,
+                KanbanGenerationLog::TYPE_CIRCUIT,
+                (int) $circuitData['master_circuit_id'],
+                $date,
+                $shift,
+                count($result['kanban_list']),
+                (int) $circuitData['qty_kanban'],
+                $totalKebutuhan,
+                $sisaBefore,
+                (int) $result['sisa_akhir']
             );
         }
 
@@ -272,6 +292,10 @@ class KanbanGeneratorService
             // Calculate kebutuhan per cutoff based on schedule qty
             $schedulesWithKebutuhan = $this->calculateKebutuhanPerCutoff($schedules, $shikakeData);
 
+            // Capture balance state BEFORE this generation for the ledger.
+            $sisaBefore   = (int) $balance->sisa;
+            $totalKebutuhan = (int) array_sum(array_column($schedulesWithKebutuhan, 'kebutuhan'));
+
             // Generate kanbans with carry-over logic
             $result = $this->generateKanbanCarryOver(
                 $schedulesWithKebutuhan,
@@ -306,6 +330,20 @@ class KanbanGeneratorService
                 $schedules->last()->id,
                 $date,
                 $shift
+            );
+
+            // Record the generation in the ledger (see circuit path for rationale).
+            KanbanGenerationLog::record(
+                $conveyorId,
+                KanbanGenerationLog::TYPE_SHIKAKE,
+                (int) $shikakeData['master_shikake_id'],
+                $date,
+                $shift,
+                count($result['kanban_list']),
+                (int) $shikakeData['qty_kanban'],
+                $totalKebutuhan,
+                $sisaBefore,
+                (int) $result['sisa_akhir']
             );
         }
 
@@ -636,6 +674,90 @@ class KanbanGeneratorService
      */
     public function reverseBalanceForScheduleGroup(int $conveyorId, string $date, int $shift): void
     {
+        // --- Preferred path: reverse using the exact generation ledger ---
+        // Each ledger row stores delta = produced - kebutuhan (= sisa_after - sisa_before)
+        // captured at generation time. Reversing is therefore exact and per-group, and
+        // (unlike reconstructing kebutuhan from kanban rows) it does NOT lose cutoffs that
+        // were served entirely from carry-over — the root cause of balance drift.
+        $ledgerRows = KanbanGenerationLog::where('conveyor_id', $conveyorId)
+            ->whereDate('schedule_date', $date)
+            ->where('shift', $shift)
+            ->get();
+
+        $ledgerHandled = [
+            KanbanGenerationLog::TYPE_CIRCUIT => [],
+            KanbanGenerationLog::TYPE_SHIKAKE => [],
+        ];
+
+        foreach ($ledgerRows as $row) {
+            $ledgerHandled[$row->item_type][] = (int) $row->master_id;
+
+            if ($row->item_type === KanbanGenerationLog::TYPE_CIRCUIT) {
+                $balance = KanbanBalanceCircuit::where('conveyor_id', $conveyorId)
+                    ->where('master_circuit_id', $row->master_id)
+                    ->first();
+            } else {
+                $balance = KanbanBalanceShikake::where('conveyor_id', $conveyorId)
+                    ->where('master_shikake_id', $row->master_id)
+                    ->first();
+            }
+
+            if (!$balance) {
+                continue;
+            }
+
+            $oldSisa = (int) $balance->sisa;
+            $newSisa = $oldSisa - (int) $row->delta;
+
+            if ($newSisa < 0) {
+                // Should not happen with exact reversal unless other mutations (defect)
+                // pushed sisa below this generation's surplus. Clamp and flag it.
+                Log::warning("KanbanGeneratorService: ledger reverse would make sisa negative; clamped to 0", [
+                    'conveyor_id' => $conveyorId,
+                    'item_type'   => $row->item_type,
+                    'master_id'   => $row->master_id,
+                    'old_sisa'    => $oldSisa,
+                    'delta'       => $row->delta,
+                ]);
+                $newSisa = 0;
+            }
+
+            $balance->sisa = $newSisa;
+            $balance->save();
+
+            Log::info("KanbanGeneratorService: Reversed balance via ledger", [
+                'conveyor_id' => $conveyorId,
+                'item_type'   => $row->item_type,
+                'master_id'   => $row->master_id,
+                'delta'       => $row->delta,
+                'old_sisa'    => $oldSisa,
+                'new_sisa'    => $newSisa,
+            ]);
+        }
+
+        // The consumed generation no longer exists — drop its ledger rows.
+        if ($ledgerRows->isNotEmpty()) {
+            KanbanGenerationLog::whereIn('id', $ledgerRows->pluck('id'))->delete();
+        }
+
+        // --- Fallback path: schedule groups generated before the ledger existed ---
+        $this->reverseBalanceLegacy($conveyorId, $date, $shift, $ledgerHandled);
+    }
+
+    /**
+     * Legacy reversal that reconstructs kebutuhan from kanban rows. Kept ONLY for
+     * schedule groups that were generated before the generation ledger existed
+     * (i.e. items without a ledger row). Items already reversed via the ledger are
+     * skipped so they are not double-reversed.
+     *
+     * NOTE: this path carries the historical inaccuracy (cutoffs served purely from
+     * carry-over leave no rows, so their kebutuhan is invisible here). It only runs
+     * for pre-existing data and disappears once every group is re-generated.
+     *
+     * @param array{circuit: int[], shikake: int[]} $ledgerHandled master_ids already handled
+     */
+    private function reverseBalanceLegacy(int $conveyorId, string $date, int $shift, array $ledgerHandled): void
+    {
         $scheduleIds = AssySchedule::where('conveyor_id', $conveyorId)
             ->whereDate('schedule', $date)
             ->where('shift', $shift)
@@ -645,6 +767,9 @@ class KanbanGeneratorService
             return;
         }
 
+        $handledCircuits = $ledgerHandled[KanbanGenerationLog::TYPE_CIRCUIT] ?? [];
+        $handledShikakes = $ledgerHandled[KanbanGenerationLog::TYPE_SHIKAKE] ?? [];
+
         // --- Reverse circuit balances ---
         $circuitGroups = AssyScheduleCircuit::whereIn('assy_schedule_id', $scheduleIds)
             ->select('master_circuit_id', DB::raw('COUNT(*) as kanban_count'), DB::raw('MAX(qty_kanban) as qty_kanban'))
@@ -652,6 +777,10 @@ class KanbanGeneratorService
             ->get();
 
         foreach ($circuitGroups as $group) {
+            if (in_array((int) $group->master_circuit_id, $handledCircuits, true)) {
+                continue; // already reversed exactly via the ledger
+            }
+
             $balance = KanbanBalanceCircuit::where('conveyor_id', $conveyorId)
                 ->where('master_circuit_id', $group->master_circuit_id)
                 ->first();
@@ -675,7 +804,7 @@ class KanbanGeneratorService
             $balance->sisa = max(0, $balance->sisa - $sisaDelta);
             $balance->save();
 
-            Log::info("KanbanGeneratorService: Reversed circuit balance", [
+            Log::info("KanbanGeneratorService: Reversed circuit balance (legacy)", [
                 'conveyor_id' => $conveyorId,
                 'master_circuit_id' => $group->master_circuit_id,
                 'kanban_count' => $group->kanban_count,
@@ -693,6 +822,10 @@ class KanbanGeneratorService
             ->get();
 
         foreach ($shikakeGroups as $group) {
+            if (in_array((int) $group->master_shikake_id, $handledShikakes, true)) {
+                continue; // already reversed exactly via the ledger
+            }
+
             $balance = KanbanBalanceShikake::where('conveyor_id', $conveyorId)
                 ->where('master_shikake_id', $group->master_shikake_id)
                 ->first();
@@ -714,7 +847,7 @@ class KanbanGeneratorService
             $balance->sisa = max(0, $balance->sisa - $sisaDelta);
             $balance->save();
 
-            Log::info("KanbanGeneratorService: Reversed shikake balance", [
+            Log::info("KanbanGeneratorService: Reversed shikake balance (legacy)", [
                 'conveyor_id' => $conveyorId,
                 'master_shikake_id' => $group->master_shikake_id,
                 'kanban_count' => $group->kanban_count,
