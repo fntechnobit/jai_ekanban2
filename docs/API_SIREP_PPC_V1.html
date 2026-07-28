@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API SIREP / PPC v1 &mdash; Dokumentasi Teknis</title>
+<style>
+/* ═══════════════════════════════════════════════════════════
+   HALAMAN A4 TETAP
+   Setiap <section class="page"> = tepat satu lembar A4.
+   ═══════════════════════════════════════════════════════════ */
+@page { size: A4 portrait; margin: 0; }
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --line:#c9cdd4; --line-soft:#e4e7eb;
+  --accent:#16467a; --accent-bg:#eef3f9;
+  --warn-bg:#fdf3e3; --warn-line:#d79a2b;
+  --danger-bg:#fceeee; --danger-line:#b03a3a;
+  --ok-bg:#eef7ef; --ok-line:#3f7d47;
+  --code-bg:#f4f5f7;
+}
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body {
+  font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  font-size:10pt; line-height:1.5; color:var(--ink); margin:0; background:#8f9297;
+}
+
+.page {
+  position: relative;
+  width: 210mm;
+  height: 296mm;
+  padding: 15mm 16mm 17mm;
+  margin: 0 auto 8mm;
+  background:#fff;
+  box-shadow: 0 2px 12px rgba(0,0,0,.35);
+  overflow: hidden;
+  break-after: page;
+  page-break-after: always;
+}
+.page:last-of-type { break-after: auto; page-break-after: auto; margin-bottom: 0; }
+
+@media print {
+  body { background:#fff; }
+  .page { margin:0; box-shadow:none; }
+  .no-print { display:none !important; }
+  a { color:var(--ink); text-decoration:none; }
+}
+
+/* Kepala & kaki halaman */
+.page-head {
+  position:absolute; top:9mm; left:16mm; right:16mm;
+  font-size:7.5pt; color:var(--ink-soft); letter-spacing:.06em;
+  border-bottom:1px solid var(--line-soft); padding-bottom:1.5mm;
+  display:flex; justify-content:space-between;
+}
+.page-foot {
+  position:absolute; bottom:9mm; left:16mm; right:16mm;
+  font-size:7.5pt; color:var(--ink-soft);
+  border-top:1px solid var(--line-soft); padding-top:1.5mm;
+  display:flex; justify-content:space-between;
+}
+.page-body > *:first-child { margin-top:0 !important; }
+
+/* ═══════════════════ TIPOGRAFI ═══════════════════ */
+h1,h2,h3,h4 { color:var(--accent); margin:0 0 .35em; line-height:1.22; }
+h1 { font-size:21pt; }
+h2 { font-size:13.5pt; margin-top:1.3em; padding-bottom:.22em; border-bottom:2px solid var(--accent); }
+h3 { font-size:11pt; margin-top:1.1em; }
+h4 {
+  font-size:9pt; color:var(--ink-soft); margin-top:.9em; margin-bottom:.25em;
+  text-transform:uppercase; letter-spacing:.06em;
+}
+p { margin:0 0 .6em; }
+ul,ol { margin:0 0 .7em; padding-left:1.2em; }
+li { margin-bottom:.18em; }
+
+code,kbd {
+  font-family:"Consolas","Courier New",monospace; font-size:8.6pt;
+  background:var(--code-bg); padding:.5pt 3pt; border-radius:2px; border:1px solid var(--line-soft);
+}
+pre {
+  font-family:"Consolas","Courier New",monospace; font-size:8pt; line-height:1.4;
+  background:var(--code-bg); border:1px solid var(--line-soft); border-left:3px solid var(--accent);
+  padding:7px 9px; margin:0 0 .7em; white-space:pre-wrap; word-wrap:break-word;
+}
+pre code { background:none; border:0; padding:0; font-size:inherit; }
+
+/* ═══════════════════ SAMPUL ═══════════════════ */
+.cover-page { padding-top:0; }
+.cover-inner { padding-top:26mm; }
+.cover .eyebrow { font-size:9pt; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:6mm; }
+.cover h1 { font-size:28pt; line-height:1.12; margin-bottom:4mm; }
+.cover .sub { font-size:12pt; color:var(--ink-soft); margin-bottom:14mm; }
+.cover .rule { height:3px; background:var(--accent); width:45mm; margin-bottom:12mm; }
+.meta-table { width:100%; border-collapse:collapse; font-size:9.5pt; margin-top:8mm; }
+.meta-table td { padding:4.5px 0; border-bottom:1px solid var(--line-soft); vertical-align:top; }
+.meta-table td:first-child { width:36mm; color:var(--ink-soft); }
+
+/* ═══════════════════ TABEL ═══════════════════ */
+table.data { width:100%; border-collapse:collapse; font-size:8.5pt; margin:0 0 .8em; }
+table.data thead { display:table-header-group; }
+table.data th {
+  background:var(--accent); color:#fff; text-align:left; font-weight:600;
+  padding:4.5px 6px; border:1px solid var(--accent);
+}
+table.data td { padding:4px 6px; border:1px solid var(--line); vertical-align:top; }
+table.data tbody tr:nth-child(even) { background:#fafbfc; }
+table.data td code { font-size:8pt; }
+.col-narrow { width:13mm; text-align:center; }
+.center { text-align:center; }
+
+/* ═══════════════════ KOTAK CATATAN ═══════════════════ */
+.box {
+  border:1px solid var(--line); border-left:4px solid var(--accent); background:var(--accent-bg);
+  padding:7px 10px; margin:0 0 .8em; font-size:9pt;
+}
+.box .box-title { font-weight:700; display:block; margin-bottom:2px; }
+.box.warn   { border-left-color:var(--warn-line);   background:var(--warn-bg); }
+.box.danger { border-left-color:var(--danger-line); background:var(--danger-bg); }
+.box.ok     { border-left-color:var(--ok-line);     background:var(--ok-bg); }
+
+.badge {
+  display:inline-block; font-size:7.3pt; font-weight:700; padding:1px 6px;
+  border-radius:9px; letter-spacing:.03em; text-transform:uppercase; vertical-align:middle;
+}
+.badge.req { background:#b03a3a; color:#fff; }
+.badge.opt { background:#6b7684; color:#fff; }
+
+.method {
+  display:inline-block; font-family:Consolas,monospace; font-size:8pt; font-weight:700;
+  padding:1px 7px; border-radius:3px; color:#fff; background:#3f7d47; margin-right:7px;
+  vertical-align:middle;
+}
+.endpoint {
+  font-family:Consolas,monospace; font-size:10pt; font-weight:600; color:var(--ink);
+  background:var(--code-bg); border:1px solid var(--line-soft); border-left:3px solid var(--accent);
+  padding:6px 9px; border-radius:3px; margin:0 0 .5em;
+}
+
+.toc { font-size:9.5pt; }
+.toc ol { list-style:none; padding-left:0; counter-reset:sec; }
+.toc ol li { counter-increment:sec; padding:3.5px 0; border-bottom:1px dotted var(--line-soft); }
+.toc ol li::before { content:counter(sec) ". "; font-weight:700; color:var(--accent); }
+.toc .toc-note { color:var(--ink-soft); font-size:8.6pt; }
+.toc .pg { float:right; color:var(--ink-soft); font-size:8.6pt; }
+
+.print-hint {
+  max-width:210mm; margin:6mm auto; padding:10px 14px; background:#fffbe6;
+  border:1px solid #d79a2b; border-radius:4px; font-size:9.5pt; color:#4a3c12;
+}
+</style>
+</head>
+<body>
+
+<div class="print-hint no-print">
+  <strong>Ekspor PDF A4:</strong> <kbd>Ctrl</kbd>+<kbd>P</kbd> &rarr; Destination <em>Save as PDF</em> &rarr;
+  Paper size <em>A4</em> &rarr; Margins <em>None</em> &rarr; Scale <em>100%</em> &rarr; centang
+  <em>Background graphics</em>. Setiap bagian sudah dikunci sebagai satu lembar A4, jadi pilih margin
+  <em>None</em> agar tidak tergeser. Kotak ini tidak ikut tercetak.
+</div>
+
+<!-- ══════════════════════ HAL 1 — SAMPUL ══════════════════════ -->
+<section class="page cover-page">
+  <div class="page-body cover">
+    <div class="cover-inner">
+      <div class="eyebrow">Dokumentasi Teknis API</div>
+      <h1>API SIREP / PPC<br>versi 1</h1>
+      <div class="rule"></div>
+      <div class="sub">Spesifikasi endpoint, parameter, dan skema respons<br>
+      untuk penyediaan data demand harian dan master produksi</div>
+
+      <table class="meta-table">
+        <tr><td>Penyedia API</td><td>Aplikasi SIREP / PPC</td></tr>
+        <tr><td>Konsumen</td><td><strong>jai_ekanban</strong> (EK) &mdash; area assembly<br><strong>jai_filter_kanban</strong> (FK) &mdash; area cutting/filter</td></tr>
+        <tr><td>Versi API</td><td><code>v1</code></td></tr>
+        <tr><td>Protokol</td><td>REST / HTTPS, respons JSON (UTF-8)</td></tr>
+        <tr><td>Autentikasi</td><td>Bearer token (service-to-service)</td></tr>
+        <tr><td>Sifat endpoint</td><td>Baca saja (<code>GET</code>) &mdash; tidak ada operasi tulis dari konsumen</td></tr>
+        <tr><td>Zona waktu</td><td><code>Asia/Jakarta</code> (UTC+07:00)</td></tr>
+        <tr><td>Versi dokumen</td><td>1.0</td></tr>
+        <tr><td>Tanggal</td><td>28 Juli 2026</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="page-foot"><span>Dokumen internal</span><span>Hal. 1 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 2 — DAFTAR ISI ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>Daftar Isi</span></div>
+  <div class="page-body toc">
+    <h2>Daftar Isi</h2>
+    <ol>
+      <li>Informasi Umum <span class="toc-note">&mdash; base URL, header, ringkasan endpoint</span><span class="pg">hal. 3</span></li>
+      <li>Autentikasi<span class="pg">hal. 4</span></li>
+      <li>Konvensi Umum <span class="toc-note">&mdash; format respons, paginasi, urutan, tipe data</span><span class="pg">hal. 4&ndash;5</span></li>
+      <li>Penanganan Kesalahan<span class="pg">hal. 6</span></li>
+      <li><code>GET /listing</code> <span class="toc-note">&mdash; demand harian</span><span class="pg">hal. 7&ndash;10</span></li>
+      <li><code>GET /listing/{id_listing}</code><span class="pg">hal. 11</span></li>
+      <li><code>GET /conveyors</code><span class="pg">hal. 12</span></li>
+      <li><code>GET /assy</code><span class="pg">hal. 13</span></li>
+      <li><code>GET /carline</code><span class="pg">hal. 14</span></li>
+      <li><code>GET /calendar</code><span class="pg">hal. 15</span></li>
+      <li><code>GET /health</code><span class="pg">hal. 16</span></li>
+      <li>Skema Objek<span class="pg">hal. 16</span></li>
+      <li>Kontrak &amp; Batasan Data<span class="pg">hal. 17&ndash;18</span></li>
+      <li>Lampiran A &mdash; Daftar Kode Error<span class="pg">hal. 18</span></li>
+    </ol>
+
+    <div class="box" style="margin-top:10mm">
+      <span class="box-title">Cara membaca kolom &ldquo;Dipakai&rdquo;</span>
+      <strong>EK</strong> = jai_ekanban &middot; <strong>FK</strong> = jai_filter_kanban.
+      Field bertanda &ldquo;EK, FK&rdquo; dikonsumsi kedua aplikasi dan wajib tersedia.
+    </div>
+  </div>
+  <div class="page-foot"><span>Daftar Isi</span><span>Hal. 2 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 3 — §1 ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>1. Informasi Umum</span></div>
+  <div class="page-body">
+    <h2>1. Informasi Umum</h2>
+
+    <h3>1.1 Base URL</h3>
+    <pre>Produksi    : https://&lt;host-ppc&gt;/api/v1
+Pengujian   : https://&lt;host-ppc-uat&gt;/api/v1</pre>
+    <p>Versi dicantumkan pada path. Perubahan yang merusak kompatibilitas diterbitkan sebagai
+    <code>/api/v2</code>; <code>/api/v1</code> tetap dilayani.</p>
+
+    <h3>1.2 Header permintaan</h3>
+    <table class="data">
+      <thead><tr><th style="width:34mm">Header</th><th class="col-narrow">Wajib</th><th>Nilai</th></tr></thead>
+      <tbody>
+        <tr><td><code>Authorization</code></td><td class="center">Ya</td><td><code>Bearer &lt;token&gt;</code></td></tr>
+        <tr><td><code>Accept</code></td><td class="center">Ya</td><td><code>application/json</code></td></tr>
+        <tr><td><code>X-Request-Id</code></td><td class="center">Tidak</td><td>UUID dari konsumen; dikembalikan pada respons dan dicatat di log server untuk penelusuran</td></tr>
+      </tbody>
+    </table>
+
+    <h3>1.3 Header respons</h3>
+    <table class="data">
+      <thead><tr><th style="width:34mm">Header</th><th>Keterangan</th></tr></thead>
+      <tbody>
+        <tr><td><code>Content-Type</code></td><td><code>application/json; charset=utf-8</code></td></tr>
+        <tr><td><code>X-Request-Id</code></td><td>Sama dengan permintaan; dibangkitkan server bila tidak dikirim</td></tr>
+        <tr><td><code>Retry-After</code></td><td>Hanya pada respons <code>429</code> dan <code>503</code>; satuan detik</td></tr>
+      </tbody>
+    </table>
+
+    <h3>1.4 Ringkasan endpoint</h3>
+    <table class="data">
+      <thead>
+        <tr><th style="width:54mm">Endpoint</th><th style="width:16mm">Konsumen</th><th class="col-narrow">Prioritas</th><th>Fungsi</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GET /listing</code></td><td class="center">EK, FK</td><td class="center"><span class="badge req">Wajib</span></td><td>Daftar demand harian per rentang tanggal</td></tr>
+        <tr><td><code>GET /listing/{id_listing}</code></td><td class="center">EK, FK</td><td class="center"><span class="badge opt">Opsional</span></td><td>Ambil satu baris demand berdasarkan ID</td></tr>
+        <tr><td><code>GET /conveyors</code></td><td class="center">EK, FK</td><td class="center"><span class="badge req">Wajib</span></td><td>Master conveyor &mdash; rujukan validasi <code>conveyor_code</code></td></tr>
+        <tr><td><code>GET /assy</code></td><td class="center">EK, FK</td><td class="center"><span class="badge req">Wajib</span></td><td>Master assy &mdash; rujukan validasi <code>assy</code></td></tr>
+        <tr><td><code>GET /carline</code></td><td class="center">EK</td><td class="center"><span class="badge opt">Opsional</span></td><td>Master carline</td></tr>
+        <tr><td><code>GET /calendar</code></td><td class="center">EK, FK</td><td class="center"><span class="badge req">Wajib</span></td><td>Hari kerja, jumlah shift, dan kapasitas per tanggal</td></tr>
+        <tr><td><code>GET /health</code></td><td class="center">EK, FK</td><td class="center"><span class="badge req">Wajib</span></td><td>Uji ketersediaan sebelum sinkronisasi</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-foot"><span>1. Informasi Umum</span><span>Hal. 3 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 4 — §2 + §3.1 ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>2. Autentikasi &middot; 3. Konvensi Umum</span></div>
+  <div class="page-body">
+    <h2>2. Autentikasi</h2>
+
+    <p>Seluruh endpoint memerlukan token <em>service-to-service</em> pada header <code>Authorization</code>.
+    Token mewakili aplikasi, bukan pengguna, dan diterbitkan terpisah untuk setiap konsumen (EK dan FK)
+    agar dapat dicabut atau dirotasi sendiri-sendiri.</p>
+
+    <pre>Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...</pre>
+
+    <table class="data">
+      <thead><tr><th style="width:40mm">Kondisi</th><th class="col-narrow">HTTP</th><th>Kode error</th></tr></thead>
+      <tbody>
+        <tr><td>Header tidak dikirim</td><td class="center">401</td><td><code>UNAUTHENTICATED</code></td></tr>
+        <tr><td>Token tidak valid / kedaluwarsa</td><td class="center">401</td><td><code>UNAUTHENTICATED</code></td></tr>
+        <tr><td>Token valid tetapi tidak berhak</td><td class="center">403</td><td><code>FORBIDDEN</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2>3. Konvensi Umum</h2>
+
+    <h3>3.1 Format respons daftar</h3>
+    <p>Seluruh endpoint daftar memakai amplop yang sama:</p>
+    <pre>{
+  "meta": {
+    "page":         1,
+    "per_page":     500,
+    "total":        1243,
+    "total_pages":  3,
+    "generated_at": "2026-07-28T07:15:22+07:00",
+    "timezone":     "Asia/Jakarta"
+  },
+  "data": [ /* array objek */ ]
+}</pre>
+
+    <table class="data">
+      <thead><tr><th style="width:32mm">Field <code>meta</code></th><th style="width:20mm">Tipe</th><th>Keterangan</th></tr></thead>
+      <tbody>
+        <tr><td><code>page</code></td><td>integer</td><td>Halaman yang dikembalikan</td></tr>
+        <tr><td><code>per_page</code></td><td>integer</td><td>Jumlah baris per halaman yang berlaku</td></tr>
+        <tr><td><code>total</code></td><td>integer</td><td>Total baris untuk seluruh filter &mdash; <strong>wajib akurat</strong>, dipakai konsumen untuk memverifikasi kelengkapan tarikan</td></tr>
+        <tr><td><code>total_pages</code></td><td>integer</td><td><code>ceil(total / per_page)</code></td></tr>
+        <tr><td><code>generated_at</code></td><td>datetime</td><td>Waktu server membangkitkan respons, ISO-8601 dengan offset</td></tr>
+        <tr><td><code>timezone</code></td><td>string</td><td>Selalu <code>Asia/Jakarta</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-foot"><span>2. Autentikasi &middot; 3. Konvensi Umum</span><span>Hal. 4 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 5 — §3.2–3.5 ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>3. Konvensi Umum</span></div>
+  <div class="page-body">
+    <h3>3.2 Paginasi</h3>
+    <table class="data">
+      <thead><tr><th style="width:26mm">Parameter</th><th style="width:20mm">Default</th><th>Aturan</th></tr></thead>
+      <tbody>
+        <tr><td><code>page</code></td><td>1</td><td>Berbasis 1. Nilai melebihi <code>total_pages</code> mengembalikan <code>200</code> dengan <code>data: []</code></td></tr>
+        <tr><td><code>per_page</code></td><td>500</td><td>Maksimum <strong>2000</strong>. Nilai di atas batas mengembalikan <code>422</code> &mdash; tidak dipotong secara diam-diam</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.3 Urutan hasil</h3>
+    <p>Urutan bersifat tetap dan tidak dapat diubah lewat parameter:</p>
+    <table class="data">
+      <thead><tr><th style="width:44mm">Endpoint</th><th>Urutan</th></tr></thead>
+      <tbody>
+        <tr><td><code>/listing</code></td><td><code>id_listing</code> menaik &mdash; konsisten lintas halaman</td></tr>
+        <tr><td><code>/conveyors</code></td><td><code>code</code> menaik</td></tr>
+        <tr><td><code>/assy</code></td><td><code>assy</code> menaik</td></tr>
+        <tr><td><code>/carline</code></td><td><code>code</code> menaik</td></tr>
+        <tr><td><code>/calendar</code></td><td><code>date</code> menaik, lalu <code>conveyor_code</code> menaik</td></tr>
+      </tbody>
+    </table>
+
+    <div class="box warn">
+      <span class="box-title">Urutan <code>/listing</code> bersifat mengikat</span>
+      Konsumen mengalokasikan demand ke cutoff CO1&ndash;CO5 secara FIFO mengikuti urutan baris yang diterima.
+      Urutan yang berubah antar panggilan akan mengubah isi tiap cutoff meskipun rencana produksinya sama.
+    </div>
+
+    <h3>3.4 Tipe data &amp; penulisan nilai</h3>
+    <table class="data">
+      <thead><tr><th style="width:30mm">Tipe</th><th style="width:40mm">Format</th><th>Contoh</th></tr></thead>
+      <tbody>
+        <tr><td>Tanggal</td><td><code>YYYY-MM-DD</code></td><td><code>"2026-07-29"</code> &mdash; tanpa komponen jam</td></tr>
+        <tr><td>Waktu</td><td>ISO-8601 + offset</td><td><code>"2026-07-28T06:40:11+07:00"</code></td></tr>
+        <tr><td>Angka</td><td>numerik JSON</td><td><code>300</code> &mdash; bukan <code>"300"</code></td></tr>
+        <tr><td>Boolean</td><td><code>true</code> / <code>false</code></td><td>Bukan <code>1</code> / <code>0</code></td></tr>
+        <tr><td>Kosong</td><td><code>null</code></td><td>Bukan string kosong</td></tr>
+        <tr><td>Nama field</td><td><code>snake_case</code></td><td><code>conveyor_code</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.5 Idempotensi &amp; caching</h3>
+    <ul>
+      <li>Seluruh endpoint <code>GET</code> bersifat idempoten: parameter yang sama menghasilkan data yang sama.</li>
+      <li>Respons tidak boleh di-<em>cache</em> secara agresif; sertakan <code>Cache-Control: no-store</code> pada <code>/listing</code>.</li>
+    </ul>
+  </div>
+  <div class="page-foot"><span>3. Konvensi Umum</span><span>Hal. 5 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 6 — §4 ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>4. Penanganan Kesalahan</span></div>
+  <div class="page-body">
+    <h2>4. Penanganan Kesalahan</h2>
+
+    <h3>4.1 Format respons error</h3>
+    <pre>{
+  "error": {
+    "code":    "VALIDATION_FAILED",
+    "message": "Parameter tidak valid.",
+    "details": [
+      { "field": "per_page", "issue": "Nilai maksimum adalah 2000." }
+    ]
+  }
+}</pre>
+
+    <table class="data">
+      <thead><tr><th style="width:30mm">Field</th><th style="width:22mm">Tipe</th><th>Keterangan</th></tr></thead>
+      <tbody>
+        <tr><td><code>error.code</code></td><td>string</td><td>Kode mesin; daftar lengkap di Lampiran A</td></tr>
+        <tr><td><code>error.message</code></td><td>string</td><td>Pesan singkat untuk manusia</td></tr>
+        <tr><td><code>error.details</code></td><td>array | null</td><td>Rincian per field pada kesalahan validasi</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.2 Kode status HTTP</h3>
+    <table class="data">
+      <thead><tr><th class="col-narrow">HTTP</th><th style="width:44mm">Kondisi</th><th>Perilaku konsumen</th></tr></thead>
+      <tbody>
+        <tr><td class="center"><code>200</code></td><td>Sukses</td><td>Termasuk saat <code>data</code> kosong</td></tr>
+        <tr><td class="center"><code>400</code></td><td>Permintaan cacat</td><td>Berhenti, catat log</td></tr>
+        <tr><td class="center"><code>401</code></td><td>Autentikasi gagal</td><td>Berhenti, tidak mengulang</td></tr>
+        <tr><td class="center"><code>403</code></td><td>Tidak berhak</td><td>Berhenti, tidak mengulang</td></tr>
+        <tr><td class="center"><code>404</code></td><td>Sumber daya tidak ditemukan</td><td>Hanya pada endpoint detail</td></tr>
+        <tr><td class="center"><code>422</code></td><td>Validasi parameter gagal</td><td>Berhenti, tampilkan <code>details</code></td></tr>
+        <tr><td class="center"><code>429</code></td><td>Melebihi batas laju</td><td>Ulangi setelah <code>Retry-After</code></td></tr>
+        <tr><td class="center"><code>500</code></td><td>Kesalahan server</td><td>Ulangi dengan jeda bertingkat, maksimum 3 kali</td></tr>
+        <tr><td class="center"><code>503</code></td><td>Layanan tidak tersedia</td><td>Ulangi setelah <code>Retry-After</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="box">
+      <span class="box-title">Aturan penting</span>
+      Kondisi &ldquo;tidak ada data&rdquo; <strong>bukan</strong> kesalahan. Rentang tanggal tanpa baris
+      mengembalikan <code>200</code> dengan <code>data: []</code> dan <code>total: 0</code>,
+      bukan <code>404</code>.
+    </div>
+  </div>
+  <div class="page-foot"><span>4. Penanganan Kesalahan</span><span>Hal. 6 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 7 — §5 params ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>5. GET /listing</span></div>
+  <div class="page-body">
+    <h2>5. <code>GET /listing</code></h2>
+
+    <div class="endpoint"><span class="method">GET</span>/api/v1/listing</div>
+
+    <p>Mengembalikan daftar demand harian (<em>Print Listing Box</em>) untuk satu rentang tanggal.
+    Endpoint utama integrasi &mdash; dipanggil kedua konsumen sebelum setiap proses penjadwalan.</p>
+
+    <h4>Parameter query</h4>
+    <table class="data">
+      <thead>
+        <tr>
+          <th style="width:28mm">Parameter</th><th style="width:22mm">Tipe</th>
+          <th class="col-narrow">Wajib</th><th style="width:18mm">Default</th><th>Aturan</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>date_from</code></td><td>date</td><td class="center">Ya</td><td>&mdash;</td>
+          <td>Batas awal, inklusif. Format <code>YYYY-MM-DD</code></td>
+        </tr>
+        <tr>
+          <td><code>date_to</code></td><td>date</td><td class="center">Ya</td><td>&mdash;</td>
+          <td>Batas akhir, inklusif. Harus &ge; <code>date_from</code>. Rentang maksimum <strong>62 hari</strong></td>
+        </tr>
+        <tr>
+          <td><code>conveyor_code</code></td><td>string / CSV</td><td class="center">Tidak</td><td>semua</td>
+          <td>Satu atau beberapa kode dipisah koma, mis. <code>AB16,12B</code>. Kode tak dikenal &rarr; <code>422</code></td>
+        </tr>
+        <tr>
+          <td><code>shift</code></td><td>integer</td><td class="center">Tidak</td><td>semua</td>
+          <td>Filter shift, nilai <code>1</code> atau <code>2</code></td>
+        </tr>
+        <tr>
+          <td><code>status</code></td><td>enum / CSV</td><td class="center">Tidak</td><td><code>released</code></td>
+          <td><code>draft</code> &middot; <code>released</code> &middot; <code>cancelled</code> &middot; <code>all</code></td>
+        </tr>
+        <tr>
+          <td><code>updated_since</code></td><td>datetime</td><td class="center">Tidak</td><td>&mdash;</td>
+          <td>Hanya baris dengan <code>updated_at &gt; nilai ini</code>. <strong>Baris <code>cancelled</code> tetap disertakan</strong> apa pun nilai <code>status</code></td>
+        </tr>
+        <tr>
+          <td><code>page</code></td><td>integer</td><td class="center">Tidak</td><td><code>1</code></td>
+          <td>Berbasis 1</td>
+        </tr>
+        <tr>
+          <td><code>per_page</code></td><td>integer</td><td class="center">Tidak</td><td><code>500</code></td>
+          <td>Maksimum <code>2000</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="box">
+      <span class="box-title">Pola pemakaian konsumen</span>
+      Sinkronisasi penuh memakai <code>date_from</code> + <code>date_to</code> saja. Sinkronisasi berkala
+      menambahkan <code>updated_since</code> + <code>status=all</code> untuk menangkap revisi dan pembatalan.
+      Contoh keduanya ada di halaman 9 dan 10.
+    </div>
+  </div>
+  <div class="page-foot"><span>5. GET /listing</span><span>Hal. 7 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 8 — §5 fields ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>5. GET /listing &mdash; field respons</span></div>
+  <div class="page-body">
+    <h3>5.1 Field respons &mdash; objek <code>ListingItem</code></h3>
+    <table class="data">
+      <thead>
+        <tr>
+          <th style="width:26mm">Field</th><th style="width:20mm">Tipe</th>
+          <th class="col-narrow">Null</th><th style="width:14mm">Dipakai</th><th>Keterangan</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>id_listing</code></td><td>integer (64-bit)</td><td class="center">Tidak</td><td class="center">EK, FK</td><td>Identitas unik baris demand. Stabil, tidak didaur ulang, monoton menaik</td></tr>
+        <tr><td><code>date</code></td><td>date</td><td class="center">Tidak</td><td class="center">EK, FK</td><td>Tanggal produksi, tanpa komponen jam</td></tr>
+        <tr><td><code>conveyor_code</code></td><td>string(25)</td><td class="center">Tidak</td><td class="center">EK, FK</td><td>Kode conveyor; harus terdaftar di <code>/conveyors</code></td></tr>
+        <tr><td><code>conveyor_name</code></td><td>string</td><td class="center">Boleh</td><td class="center">&mdash;</td><td>Nama tampilan; tidak dipakai untuk pencocokan</td></tr>
+        <tr><td><code>shift</code></td><td>integer</td><td class="center">Tidak</td><td class="center">EK, FK</td><td><code>1</code> atau <code>2</code></td></tr>
+        <tr><td><code>assycode</code></td><td>string(20)</td><td class="center">Tidak</td><td class="center">EK, FK</td><td>Kode assy pendek, mis. <code>DXD9</code></td></tr>
+        <tr><td><code>assy</code></td><td>string(100)</td><td class="center">Tidak</td><td class="center">EK, FK</td><td>Nomor assy lengkap, mis. <code>KHFS-67030</code>. Harus terdaftar di <code>/assy</code></td></tr>
+        <tr><td><code>qty</code></td><td>integer</td><td class="center">Tidak</td><td class="center">EK, FK</td><td>Jumlah unit yang diproduksi. Selalu &gt; 0</td></tr>
+        <tr><td><code>seq</code></td><td>integer</td><td class="center">Tidak</td><td class="center">EK, FK</td><td>Nomor urut dalam hari; unik per (<code>date</code>, <code>conveyor_code</code>, <code>assycode</code>)</td></tr>
+        <tr><td><code>snp</code></td><td>integer</td><td class="center">Tidak</td><td class="center">EK, FK</td><td><em>Standard Number per Pack</em>. Jumlah box = <code>qty / snp</code></td></tr>
+        <tr><td><code>snpa</code></td><td>integer</td><td class="center">Tidak</td><td class="center">EK, FK</td><td>SNP alternatif</td></tr>
+        <tr><td><code>plt</code></td><td>integer</td><td class="center">Tidak</td><td class="center">EK, FK</td><td>Pallet</td></tr>
+        <tr><td><code>mode</code></td><td>integer</td><td class="center">Tidak</td><td class="center">EK, FK</td><td>Mode produksi</td></tr>
+        <tr><td><code>carline</code></td><td>string</td><td class="center">Boleh</td><td class="center">EK</td><td>Kode model kendaraan</td></tr>
+        <tr><td><code>level</code></td><td>string</td><td class="center">Boleh</td><td class="center">&mdash;</td><td>Level dari Print Listing Box</td></tr>
+        <tr><td><code>no_box_from</code></td><td>integer</td><td class="center">Boleh</td><td class="center">&mdash;</td><td>Nomor box awal</td></tr>
+        <tr><td><code>no_box_to</code></td><td>integer</td><td class="center">Boleh</td><td class="center">&mdash;</td><td>Nomor box akhir</td></tr>
+        <tr><td><code>status</code></td><td>enum</td><td class="center">Tidak</td><td class="center">EK, FK</td><td><code>draft</code> &middot; <code>released</code> &middot; <code>cancelled</code></td></tr>
+        <tr><td><code>revision</code></td><td>integer</td><td class="center">Tidak</td><td class="center">EK, FK</td><td>Mulai dari <code>1</code>; naik setiap kali nilai baris berubah</td></tr>
+        <tr><td><code>updated_at</code></td><td>datetime</td><td class="center">Tidak</td><td class="center">EK, FK</td><td>Waktu perubahan terakhir baris</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-foot"><span>5. GET /listing</span><span>Hal. 8 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 9 — §5 contoh penuh ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>5. GET /listing &mdash; contoh sinkronisasi penuh</span></div>
+  <div class="page-body">
+    <h3>5.2 Contoh &mdash; sinkronisasi penuh</h3>
+
+    <h4>Permintaan</h4>
+    <pre>curl -X GET \
+  "https://ppc.internal/api/v1/listing?date_from=2026-07-29&amp;date_to=2026-08-04\
+&amp;status=released&amp;per_page=1000" \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -H "Accept: application/json"</pre>
+
+    <h4>Respons &mdash; <code>200 OK</code></h4>
+    <pre>{
+  "meta": {
+    "page": 1,
+    "per_page": 1000,
+    "total": 1243,
+    "total_pages": 2,
+    "generated_at": "2026-07-28T07:15:22+07:00",
+    "timezone": "Asia/Jakarta"
+  },
+  "data": [
+    {
+      "id_listing":    884213,
+      "date":          "2026-07-29",
+      "conveyor_code": "AB16",
+      "conveyor_name": "Assy Board 16",
+      "shift":         1,
+      "assycode":      "DXD9",
+      "assy":          "KHFS-67030",
+      "qty":           380,
+      "seq":           3704,
+      "snp":           20,
+      "snpa":          20,
+      "plt":           4,
+      "mode":          1,
+      "carline":       "DN0A",
+      "level":         "A",
+      "no_box_from":   154,
+      "no_box_to":     168,
+      "status":        "released",
+      "revision":      1,
+      "updated_at":    "2026-07-28T06:40:11+07:00"
+    },
+    {
+      "id_listing":    884214,
+      "date":          "2026-07-29",
+      "conveyor_code": "AB16",
+      "conveyor_name": "Assy Board 16",
+      "shift":         1,
+      "assycode":      "DQM2",
+      "assy":          "DC111-2FE72",
+      "qty":           40,
+      "seq":           3705,
+      "snp":           40,
+      "snpa":          40,
+      "plt":           1,
+      "mode":          1,
+      "carline":       "DN0A",
+      "level":         "A",
+      "no_box_from":   null,
+      "no_box_to":     null,
+      "status":        "released",
+      "revision":      2,
+      "updated_at":    "2026-07-28T09:12:40+07:00"
+    }
+  ]
+}</pre>
+  </div>
+  <div class="page-foot"><span>5. GET /listing</span><span>Hal. 9 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 10 — §5 delta + error ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>5. GET /listing &mdash; delta &amp; error</span></div>
+  <div class="page-body">
+    <h3>5.3 Contoh &mdash; sinkronisasi delta</h3>
+    <p>Dipakai konsumen untuk menangkap revisi dan pembatalan sejak sinkronisasi terakhir.</p>
+
+    <h4>Permintaan</h4>
+    <pre>curl -X GET \
+  "https://ppc.internal/api/v1/listing?date_from=2026-07-29&amp;date_to=2026-08-04\
+&amp;updated_since=2026-07-28T06:00:00%2B07:00&amp;status=all" \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -H "Accept: application/json"</pre>
+
+    <h4>Respons &mdash; <code>200 OK</code></h4>
+    <pre>{
+  "meta": {
+    "page": 1, "per_page": 500, "total": 2, "total_pages": 1,
+    "generated_at": "2026-07-28T10:00:00+07:00",
+    "timezone": "Asia/Jakarta"
+  },
+  "data": [
+    { "id_listing": 884214, "date": "2026-07-29", "conveyor_code": "AB16",
+      "assycode": "DQM2", "assy": "DC111-2FE72", "qty": 40,
+      "status": "released",  "revision": 2,
+      "updated_at": "2026-07-28T09:12:40+07:00" },
+
+    { "id_listing": 884219, "date": "2026-07-30", "conveyor_code": "12B",
+      "assycode": "DXC7", "assy": "KHFG-67030", "qty": 120,
+      "status": "cancelled", "revision": 3,
+      "updated_at": "2026-07-28T09:44:02+07:00" }
+  ]
+}</pre>
+    <p style="font-size:9pt;color:var(--ink-soft)">Field lain tetap dikembalikan lengkap; contoh
+    dipersingkat agar muat satu halaman.</p>
+
+    <h3>5.4 Kemungkinan error</h3>
+    <table class="data">
+      <thead><tr><th class="col-narrow">HTTP</th><th style="width:46mm">Kode</th><th>Penyebab</th></tr></thead>
+      <tbody>
+        <tr><td class="center">422</td><td><code>DATE_RANGE_INVALID</code></td><td><code>date_from &gt; date_to</code> atau rentang melebihi 62 hari</td></tr>
+        <tr><td class="center">422</td><td><code>DATE_FORMAT_INVALID</code></td><td>Format tanggal bukan <code>YYYY-MM-DD</code></td></tr>
+        <tr><td class="center">422</td><td><code>PER_PAGE_EXCEEDED</code></td><td><code>per_page</code> melebihi 2000</td></tr>
+        <tr><td class="center">422</td><td><code>CONVEYOR_UNKNOWN</code></td><td><code>conveyor_code</code> tidak terdaftar</td></tr>
+        <tr><td class="center">422</td><td><code>STATUS_INVALID</code></td><td>Nilai <code>status</code> di luar daftar enum</td></tr>
+        <tr><td class="center">422</td><td><code>SHIFT_INVALID</code></td><td>Nilai <code>shift</code> selain 1 atau 2</td></tr>
+        <tr><td class="center">401</td><td><code>UNAUTHENTICATED</code></td><td>Token tidak ada atau tidak valid</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-foot"><span>5. GET /listing</span><span>Hal. 10 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 11 — §6 ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>6. GET /listing/{id_listing}</span></div>
+  <div class="page-body">
+    <h2>6. <code>GET /listing/{id_listing}</code></h2>
+
+    <div class="endpoint"><span class="method">GET</span>/api/v1/listing/{id_listing}</div>
+
+    <p>Mengambil satu baris demand berdasarkan ID. Dipakai konsumen untuk memverifikasi satu baris tertentu
+    saat menelusuri selisih data, tanpa harus menarik seluruh rentang tanggal.</p>
+
+    <h4>Parameter path</h4>
+    <table class="data">
+      <thead><tr><th style="width:30mm">Parameter</th><th style="width:22mm">Tipe</th><th class="col-narrow">Wajib</th><th>Keterangan</th></tr></thead>
+      <tbody>
+        <tr><td><code>id_listing</code></td><td>integer</td><td class="center">Ya</td><td>ID baris demand</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Permintaan</h4>
+    <pre>curl -X GET "https://ppc.internal/api/v1/listing/884213" \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -H "Accept: application/json"</pre>
+
+    <h4>Respons &mdash; <code>200 OK</code></h4>
+    <p>Objek <code>ListingItem</code> tunggal (field identik dengan &sect;5.1), dibungkus dalam
+    <code>data</code> tanpa <code>meta.page</code>:</p>
+    <pre>{
+  "meta": {
+    "generated_at": "2026-07-28T07:15:22+07:00",
+    "timezone": "Asia/Jakarta"
+  },
+  "data": {
+    "id_listing":    884213,
+    "date":          "2026-07-29",
+    "conveyor_code": "AB16",
+    "conveyor_name": "Assy Board 16",
+    "shift":         1,
+    "assycode":      "DXD9",
+    "assy":          "KHFS-67030",
+    "qty":           380,
+    "seq":           3704,
+    "snp":           20,
+    "snpa":          20,
+    "plt":           4,
+    "mode":          1,
+    "carline":       "DN0A",
+    "level":         "A",
+    "no_box_from":   154,
+    "no_box_to":     168,
+    "status":        "released",
+    "revision":      1,
+    "updated_at":    "2026-07-28T06:40:11+07:00"
+  }
+}</pre>
+
+    <h4>Kemungkinan error</h4>
+    <table class="data">
+      <thead><tr><th class="col-narrow">HTTP</th><th style="width:46mm">Kode</th><th>Penyebab</th></tr></thead>
+      <tbody>
+        <tr><td class="center">404</td><td><code>LISTING_NOT_FOUND</code></td><td><code>id_listing</code> tidak ada</td></tr>
+        <tr><td class="center">401</td><td><code>UNAUTHENTICATED</code></td><td>Token tidak ada atau tidak valid</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-foot"><span>6. GET /listing/{id_listing}</span><span>Hal. 11 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 12 — §7 ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>7. GET /conveyors</span></div>
+  <div class="page-body">
+    <h2>7. <code>GET /conveyors</code></h2>
+
+    <div class="endpoint"><span class="method">GET</span>/api/v1/conveyors</div>
+
+    <p>Master conveyor. Menjadi rujukan tunggal validasi nilai <code>conveyor_code</code> yang muncul
+    pada <code>/listing</code>.</p>
+
+    <h4>Parameter query</h4>
+    <table class="data">
+      <thead><tr><th style="width:28mm">Parameter</th><th style="width:22mm">Tipe</th><th class="col-narrow">Wajib</th><th style="width:18mm">Default</th><th>Aturan</th></tr></thead>
+      <tbody>
+        <tr><td><code>is_active</code></td><td>boolean</td><td class="center">Tidak</td><td>semua</td><td><code>true</code> untuk conveyor aktif saja</td></tr>
+        <tr><td><code>area</code></td><td>string</td><td class="center">Tidak</td><td>semua</td><td>Filter area produksi</td></tr>
+        <tr><td><code>page</code>, <code>per_page</code></td><td>integer</td><td class="center">Tidak</td><td>1 / 500</td><td>Sesuai &sect;3.2</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Field respons &mdash; objek <code>Conveyor</code></h4>
+    <table class="data">
+      <thead><tr><th style="width:28mm">Field</th><th style="width:22mm">Tipe</th><th class="col-narrow">Null</th><th>Keterangan</th></tr></thead>
+      <tbody>
+        <tr><td><code>code</code></td><td>string(25)</td><td class="center">Tidak</td><td>Identitas stabil; nilai inilah yang muncul di <code>ListingItem.conveyor_code</code></td></tr>
+        <tr><td><code>name</code></td><td>string</td><td class="center">Boleh</td><td>Nama tampilan</td></tr>
+        <tr><td><code>area</code></td><td>string</td><td class="center">Boleh</td><td>Area produksi, mis. <code>assembly</code> / <code>cutting</code></td></tr>
+        <tr><td><code>shift_qty</code></td><td>integer</td><td class="center">Tidak</td><td>Jumlah shift standar (1 atau 2)</td></tr>
+        <tr><td><code>capacity</code></td><td>integer</td><td class="center">Tidak</td><td>Kapasitas standar per shift</td></tr>
+        <tr><td><code>is_active</code></td><td>boolean</td><td class="center">Tidak</td><td>Conveyor non-aktif tidak dijadwalkan konsumen</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Permintaan</h4>
+    <pre>curl -X GET "https://ppc.internal/api/v1/conveyors?is_active=true" \
+  -H "Authorization: Bearer &lt;token&gt;"</pre>
+
+    <h4>Respons &mdash; <code>200 OK</code></h4>
+    <pre>{
+  "meta": { "page": 1, "per_page": 500, "total": 42, "total_pages": 1,
+            "generated_at": "2026-07-28T07:15:22+07:00", "timezone": "Asia/Jakarta" },
+  "data": [
+    { "code": "AB16", "name": "Assy Board 16", "area": "assembly",
+      "shift_qty": 2, "capacity": 100, "is_active": true },
+    { "code": "12B",  "name": "Line 12B",      "area": "cutting",
+      "shift_qty": 2, "capacity": 120, "is_active": true }
+  ]
+}</pre>
+  </div>
+  <div class="page-foot"><span>7. GET /conveyors</span><span>Hal. 12 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 13 — §8 ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>8. GET /assy</span></div>
+  <div class="page-body">
+    <h2>8. <code>GET /assy</code></h2>
+
+    <div class="endpoint"><span class="method">GET</span>/api/v1/assy</div>
+
+    <p>Master assy. Menjadi rujukan validasi nilai <code>assy</code> pada <code>/listing</code>. Konsumen
+    memakainya untuk memastikan setiap demand memiliki pemetaan ke master circuit/shikake sebelum jadwal dikunci.</p>
+
+    <h4>Parameter query</h4>
+    <table class="data">
+      <thead><tr><th style="width:28mm">Parameter</th><th style="width:22mm">Tipe</th><th class="col-narrow">Wajib</th><th style="width:18mm">Default</th><th>Aturan</th></tr></thead>
+      <tbody>
+        <tr><td><code>is_active</code></td><td>boolean</td><td class="center">Tidak</td><td>semua</td><td>Filter status aktif</td></tr>
+        <tr><td><code>carline</code></td><td>string</td><td class="center">Tidak</td><td>semua</td><td>Filter model kendaraan</td></tr>
+        <tr><td><code>updated_since</code></td><td>datetime</td><td class="center">Tidak</td><td>&mdash;</td><td>Hanya master yang berubah setelah waktu ini</td></tr>
+        <tr><td><code>page</code>, <code>per_page</code></td><td>integer</td><td class="center">Tidak</td><td>1 / 500</td><td>Sesuai &sect;3.2</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Field respons &mdash; objek <code>Assy</code></h4>
+    <table class="data">
+      <thead><tr><th style="width:28mm">Field</th><th style="width:22mm">Tipe</th><th class="col-narrow">Null</th><th>Keterangan</th></tr></thead>
+      <tbody>
+        <tr><td><code>assycode</code></td><td>string(20)</td><td class="center">Tidak</td><td>Kode assy pendek</td></tr>
+        <tr><td><code>assy</code></td><td>string(100)</td><td class="center">Tidak</td><td>Nomor assy lengkap &mdash; nilai ini harus identik dengan <code>ListingItem.assy</code></td></tr>
+        <tr><td><code>carline</code></td><td>string</td><td class="center">Boleh</td><td>Model kendaraan</td></tr>
+        <tr><td><code>level</code></td><td>string</td><td class="center">Boleh</td><td>Level</td></tr>
+        <tr><td><code>snp</code></td><td>integer</td><td class="center">Boleh</td><td>SNP standar; nilai pada demand harian dapat menimpanya</td></tr>
+        <tr><td><code>snpa</code></td><td>integer</td><td class="center">Boleh</td><td>SNP alternatif standar</td></tr>
+        <tr><td><code>is_active</code></td><td>boolean</td><td class="center">Tidak</td><td>Status aktif</td></tr>
+        <tr><td><code>effective_date</code></td><td>date</td><td class="center">Boleh</td><td>Tanggal berlaku spesifikasi</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Respons &mdash; <code>200 OK</code></h4>
+    <pre>{
+  "meta": { "page": 1, "per_page": 500, "total": 239, "total_pages": 1,
+            "generated_at": "2026-07-28T07:15:22+07:00", "timezone": "Asia/Jakarta" },
+  "data": [
+    { "assycode": "DXD9", "assy": "KHFS-67030", "carline": "DN0A", "level": "A",
+      "snp": 20, "snpa": 20, "is_active": true, "effective_date": "2026-01-01" }
+  ]
+}</pre>
+
+    <div class="box warn">
+      <span class="box-title">Ketentuan yang mengikat</span>
+      Nilai <code>assy</code> di endpoint ini harus <strong>identik karakter per karakter</strong> dengan
+      nilai <code>assy</code> pada <code>/listing</code> &mdash; termasuk huruf besar-kecil, tanda hubung,
+      dan tanpa spasi berlebih. Kedua konsumen memetakan demand ke master circuit/shikake dengan mencocokkan
+      nilai ini secara persis; selisih satu karakter membuat kanban gagal terbentuk meskipun jadwal sudah
+      terverifikasi.
+    </div>
+  </div>
+  <div class="page-foot"><span>8. GET /assy</span><span>Hal. 13 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 14 — §9 ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>9. GET /carline</span></div>
+  <div class="page-body">
+    <h2>9. <code>GET /carline</code></h2>
+
+    <div class="endpoint"><span class="method">GET</span>/api/v1/carline</div>
+
+    <p>Master carline (model kendaraan). Dipakai jai_ekanban untuk menyelaraskan master lokal.
+    Nilai <code>code</code> di sini muncul sebagai <code>ListingItem.carline</code>.</p>
+
+    <h4>Parameter query</h4>
+    <table class="data">
+      <thead><tr><th style="width:28mm">Parameter</th><th style="width:22mm">Tipe</th><th class="col-narrow">Wajib</th><th style="width:18mm">Default</th><th>Aturan</th></tr></thead>
+      <tbody>
+        <tr><td><code>is_active</code></td><td>boolean</td><td class="center">Tidak</td><td>semua</td><td>Filter status aktif</td></tr>
+        <tr><td><code>page</code>, <code>per_page</code></td><td>integer</td><td class="center">Tidak</td><td>1 / 500</td><td>Sesuai &sect;3.2</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Field respons &mdash; objek <code>Carline</code></h4>
+    <table class="data">
+      <thead><tr><th style="width:28mm">Field</th><th style="width:22mm">Tipe</th><th class="col-narrow">Null</th><th>Keterangan</th></tr></thead>
+      <tbody>
+        <tr><td><code>code</code></td><td>string</td><td class="center">Tidak</td><td>Kode carline; muncul di <code>ListingItem.carline</code></td></tr>
+        <tr><td><code>name</code></td><td>string</td><td class="center">Boleh</td><td>Nama model</td></tr>
+        <tr><td><code>is_active</code></td><td>boolean</td><td class="center">Tidak</td><td>Status aktif</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Permintaan</h4>
+    <pre>curl -X GET "https://ppc.internal/api/v1/carline?is_active=true" \
+  -H "Authorization: Bearer &lt;token&gt;"</pre>
+
+    <h4>Respons &mdash; <code>200 OK</code></h4>
+    <pre>{
+  "meta": { "page": 1, "per_page": 500, "total": 18, "total_pages": 1,
+            "generated_at": "2026-07-28T07:15:22+07:00", "timezone": "Asia/Jakarta" },
+  "data": [
+    { "code": "DN0A", "name": "Model DN0A", "is_active": true },
+    { "code": "J72A", "name": "Model J72A", "is_active": true }
+  ]
+}</pre>
+
+    <div class="box">
+      <span class="box-title">Prioritas</span>
+      Endpoint ini bersifat <span class="badge opt">Opsional</span>. Bila belum tersedia, jai_ekanban tetap
+      dapat beroperasi dengan nilai <code>carline</code> yang menempel pada tiap baris <code>/listing</code>.
+    </div>
+  </div>
+  <div class="page-foot"><span>9. GET /carline</span><span>Hal. 14 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 15 — §10 ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>10. GET /calendar</span></div>
+  <div class="page-body">
+    <h2>10. <code>GET /calendar</code></h2>
+
+    <div class="endpoint"><span class="method">GET</span>/api/v1/calendar</div>
+
+    <p>Hari kerja, jumlah shift efektif, dan kapasitas per tanggal per conveyor. Konsumen memakainya
+    untuk menghitung pembagian kapasitas cutoff pada tanggal yang bersangkutan &mdash; menggantikan
+    nilai standar dari <code>/conveyors</code>.</p>
+
+    <h4>Parameter query</h4>
+    <table class="data">
+      <thead><tr><th style="width:28mm">Parameter</th><th style="width:22mm">Tipe</th><th class="col-narrow">Wajib</th><th style="width:18mm">Default</th><th>Aturan</th></tr></thead>
+      <tbody>
+        <tr><td><code>date_from</code></td><td>date</td><td class="center">Ya</td><td>&mdash;</td><td>Inklusif</td></tr>
+        <tr><td><code>date_to</code></td><td>date</td><td class="center">Ya</td><td>&mdash;</td><td>Inklusif. Rentang maksimum 62 hari</td></tr>
+        <tr><td><code>conveyor_code</code></td><td>string / CSV</td><td class="center">Tidak</td><td>semua</td><td>Satu atau beberapa kode dipisah koma</td></tr>
+        <tr><td><code>page</code>, <code>per_page</code></td><td>integer</td><td class="center">Tidak</td><td>1 / 500</td><td>Sesuai &sect;3.2</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Field respons &mdash; objek <code>CalendarDay</code></h4>
+    <table class="data">
+      <thead><tr><th style="width:32mm">Field</th><th style="width:22mm">Tipe</th><th class="col-narrow">Null</th><th>Keterangan</th></tr></thead>
+      <tbody>
+        <tr><td><code>date</code></td><td>date</td><td class="center">Tidak</td><td>Tanggal</td></tr>
+        <tr><td><code>conveyor_code</code></td><td>string(25)</td><td class="center">Tidak</td><td>Conveyor terkait</td></tr>
+        <tr><td><code>is_working_day</code></td><td>boolean</td><td class="center">Tidak</td><td><code>false</code> untuk hari libur</td></tr>
+        <tr><td><code>shift_qty</code></td><td>integer</td><td class="center">Tidak</td><td>Jumlah shift efektif pada tanggal tersebut</td></tr>
+        <tr><td><code>capacity_per_shift</code></td><td>integer</td><td class="center">Tidak</td><td>Kapasitas efektif per shift</td></tr>
+        <tr><td><code>note</code></td><td>string</td><td class="center">Boleh</td><td>Keterangan, mis. <code>"lembur"</code>, <code>"cuti bersama"</code></td></tr>
+      </tbody>
+    </table>
+
+    <h4>Permintaan</h4>
+    <pre>curl -X GET \
+  "https://ppc.internal/api/v1/calendar?date_from=2026-07-29&amp;date_to=2026-08-04" \
+  -H "Authorization: Bearer &lt;token&gt;"</pre>
+
+    <h4>Respons &mdash; <code>200 OK</code></h4>
+    <pre>{
+  "meta": { "page": 1, "per_page": 500, "total": 14, "total_pages": 1,
+            "generated_at": "2026-07-28T07:15:22+07:00", "timezone": "Asia/Jakarta" },
+  "data": [
+    { "date": "2026-07-29", "conveyor_code": "AB16", "is_working_day": true,
+      "shift_qty": 2, "capacity_per_shift": 100, "note": null },
+    { "date": "2026-08-01", "conveyor_code": "AB16", "is_working_day": false,
+      "shift_qty": 0, "capacity_per_shift": 0,   "note": "cuti bersama" }
+  ]
+}</pre>
+  </div>
+  <div class="page-foot"><span>10. GET /calendar</span><span>Hal. 15 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 16 — §11 + §12 ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>11. GET /health &middot; 12. Skema Objek</span></div>
+  <div class="page-body">
+    <h2>11. <code>GET /health</code></h2>
+
+    <div class="endpoint"><span class="method">GET</span>/api/v1/health</div>
+
+    <p>Uji ketersediaan layanan. Dipanggil konsumen sebelum memulai sinkronisasi; bila gagal, proses
+    dihentikan dengan pesan yang jelas alih-alih menghasilkan data separuh jalan.</p>
+
+    <h4>Respons &mdash; <code>200 OK</code></h4>
+    <pre>{
+  "status":      "ok",
+  "version":     "1.4.2",
+  "server_time": "2026-07-28T07:15:22+07:00",
+  "timezone":    "Asia/Jakarta"
+}</pre>
+
+    <table class="data">
+      <thead><tr><th style="width:28mm">Field</th><th style="width:22mm">Tipe</th><th>Keterangan</th></tr></thead>
+      <tbody>
+        <tr><td><code>status</code></td><td>string</td><td><code>ok</code> atau <code>degraded</code></td></tr>
+        <tr><td><code>version</code></td><td>string</td><td>Versi aplikasi PPC</td></tr>
+        <tr><td><code>server_time</code></td><td>datetime</td><td>Waktu server; konsumen memakainya untuk memeriksa selisih jam</td></tr>
+        <tr><td><code>timezone</code></td><td>string</td><td>Selalu <code>Asia/Jakarta</code></td></tr>
+      </tbody>
+    </table>
+
+    <p>Mengembalikan <code>503</code> dengan kode <code>SERVICE_UNAVAILABLE</code> bila basis data sumber
+    tidak dapat dijangkau.</p>
+
+    <h2>12. Skema Objek</h2>
+
+    <table class="data">
+      <thead><tr><th style="width:28mm">Objek</th><th style="width:32mm">Dikembalikan oleh</th><th>Field</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>ListingItem</code></td><td><code>/listing</code>, <code>/listing/{id}</code></td>
+          <td><code>id_listing</code>, <code>date</code>, <code>conveyor_code</code>, <code>conveyor_name</code>, <code>shift</code>, <code>assycode</code>, <code>assy</code>, <code>qty</code>, <code>seq</code>, <code>snp</code>, <code>snpa</code>, <code>plt</code>, <code>mode</code>, <code>carline</code>, <code>level</code>, <code>no_box_from</code>, <code>no_box_to</code>, <code>status</code>, <code>revision</code>, <code>updated_at</code></td>
+        </tr>
+        <tr>
+          <td><code>Conveyor</code></td><td><code>/conveyors</code></td>
+          <td><code>code</code>, <code>name</code>, <code>area</code>, <code>shift_qty</code>, <code>capacity</code>, <code>is_active</code></td>
+        </tr>
+        <tr>
+          <td><code>Assy</code></td><td><code>/assy</code></td>
+          <td><code>assycode</code>, <code>assy</code>, <code>carline</code>, <code>level</code>, <code>snp</code>, <code>snpa</code>, <code>is_active</code>, <code>effective_date</code></td>
+        </tr>
+        <tr>
+          <td><code>Carline</code></td><td><code>/carline</code></td>
+          <td><code>code</code>, <code>name</code>, <code>is_active</code></td>
+        </tr>
+        <tr>
+          <td><code>CalendarDay</code></td><td><code>/calendar</code></td>
+          <td><code>date</code>, <code>conveyor_code</code>, <code>is_working_day</code>, <code>shift_qty</code>, <code>capacity_per_shift</code>, <code>note</code></td>
+        </tr>
+        <tr>
+          <td><code>Meta</code></td><td>endpoint daftar</td>
+          <td><code>page</code>, <code>per_page</code>, <code>total</code>, <code>total_pages</code>, <code>generated_at</code>, <code>timezone</code></td>
+        </tr>
+        <tr>
+          <td><code>Error</code></td><td>seluruh endpoint</td>
+          <td><code>code</code>, <code>message</code>, <code>details</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>Nilai enum</h4>
+    <table class="data">
+      <thead><tr><th style="width:38mm">Field</th><th>Nilai yang diizinkan</th></tr></thead>
+      <tbody>
+        <tr><td><code>ListingItem.status</code></td><td><code>draft</code> &middot; <code>released</code> &middot; <code>cancelled</code></td></tr>
+        <tr><td><code>ListingItem.shift</code></td><td><code>1</code> &middot; <code>2</code></td></tr>
+        <tr><td><code>Health.status</code></td><td><code>ok</code> &middot; <code>degraded</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-foot"><span>11. GET /health &middot; 12. Skema Objek</span><span>Hal. 16 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 17 — §13 ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>13. Kontrak &amp; Batasan Data</span></div>
+  <div class="page-body">
+    <h2>13. Kontrak &amp; Batasan Data</h2>
+
+    <p>Ketentuan berikut adalah bagian dari kontrak API dan berlaku pada setiap respons.</p>
+
+    <table class="data">
+      <thead><tr><th class="col-narrow">No</th><th style="width:42mm">Ketentuan</th><th>Rincian</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="center">1</td><td><code>id_listing</code> stabil</td>
+          <td>Satu baris demand memiliki satu <code>id_listing</code> selamanya, termasuk setelah direvisi. Nilai tidak pernah <code>null</code> dan tidak pernah didaur ulang untuk baris lain.</td>
+        </tr>
+        <tr>
+          <td class="center">2</td><td>Urutan deterministik</td>
+          <td><code>/listing</code> selalu terurut <code>id_listing</code> menaik, konsisten lintas halaman.</td>
+        </tr>
+        <tr>
+          <td class="center">3</td><td>Keunikan <code>seq</code></td>
+          <td><code>seq</code> unik dalam kombinasi (<code>date</code>, <code>conveyor_code</code>, <code>assycode</code>). Konsumen memakai kombinasi ini sebagai kunci deduplikasi.</td>
+        </tr>
+        <tr>
+          <td class="center">4</td><td>Integritas referensi</td>
+          <td>Setiap <code>conveyor_code</code> pada <code>/listing</code> ada di <code>/conveyors</code>; setiap <code>assy</code> ada di <code>/assy</code>.</td>
+        </tr>
+        <tr>
+          <td class="center">5</td><td>Penanda perubahan</td>
+          <td>Setiap perubahan nilai pada baris &mdash; termasuk perubahan <code>status</code> &mdash; menaikkan <code>revision</code> dan memperbarui <code>updated_at</code>.</td>
+        </tr>
+        <tr>
+          <td class="center">6</td><td>Pembatalan tanpa penghapusan</td>
+          <td>Baris yang dibatalkan tetap dikembalikan dengan <code>status: "cancelled"</code>, tidak dihapus dari API.</td>
+        </tr>
+        <tr>
+          <td class="center">7</td><td>Kelengkapan rentang</td>
+          <td>Permintaan <code>date_from=A&amp;date_to=B</code> mencakup seluruh baris <code>A &le; date &le; B</code>. <code>meta.total</code> selalu menunjukkan jumlah sebenarnya.</td>
+        </tr>
+        <tr>
+          <td class="center">8</td><td>Batas panjang field</td>
+          <td><code>conveyor_code</code> &le; 25 karakter &middot; <code>assycode</code> &le; 20 &middot; <code>assy</code> &le; 100. Nilai sudah ter-<em>trim</em>, tanpa spasi ganda.</td>
+        </tr>
+        <tr>
+          <td class="center">9</td><td>Himpunan karakter</td>
+          <td>Field kunci (<code>conveyor_code</code>, <code>assycode</code>, <code>assy</code>) memakai ASCII. Salah satu konsumen masih beroperasi dengan charset <code>latin1</code>.</td>
+        </tr>
+        <tr>
+          <td class="center">10</td><td>Zona waktu tunggal</td>
+          <td><code>date</code> berupa tanggal murni; seluruh <em>timestamp</em> ISO-8601 dengan offset <code>+07:00</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>13.1 Target kinerja</h3>
+    <table class="data">
+      <thead><tr><th style="width:60mm">Skenario</th><th>Target waktu respons</th></tr></thead>
+      <tbody>
+        <tr><td><code>/listing</code>, rentang 7 hari (&plusmn;2.000 baris)</td><td>&lt; 3 detik</td></tr>
+        <tr><td><code>/listing</code>, rentang 31 hari (&plusmn;9.000 baris)</td><td>&lt; 10 detik</td></tr>
+        <tr><td>Endpoint master (<code>/conveyors</code>, <code>/assy</code>, <code>/carline</code>)</td><td>&lt; 2 detik</td></tr>
+        <tr><td><code>/health</code></td><td>&lt; 1 detik</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-foot"><span>13. Kontrak &amp; Batasan Data</span><span>Hal. 17 / 18</span></div>
+</section>
+
+<!-- ══════════════════════ HAL 18 — Lampiran A ══════════════════════ -->
+<section class="page">
+  <div class="page-head"><span>API SIREP / PPC v1</span><span>Lampiran A &mdash; Kode Error</span></div>
+  <div class="page-body">
+    <h3>13.2 Indeks yang disarankan</h3>
+    <p>Pada sumber data, untuk memenuhi target kinerja &sect;13.1:</p>
+    <pre>INDEX (date, conveyor_code)     -- filter utama /listing dan /calendar
+INDEX (updated_at)              -- sinkronisasi delta
+INDEX (id_listing)              -- pengurutan dan endpoint detail</pre>
+
+    <h2>Lampiran A &mdash; Daftar Kode Error</h2>
+
+    <table class="data">
+      <thead><tr><th style="width:48mm">Kode</th><th class="col-narrow">HTTP</th><th>Kapan dikembalikan</th></tr></thead>
+      <tbody>
+        <tr><td><code>VALIDATION_FAILED</code></td><td class="center">422</td><td>Kesalahan validasi umum; rincian pada <code>error.details</code></td></tr>
+        <tr><td><code>DATE_RANGE_INVALID</code></td><td class="center">422</td><td><code>date_from &gt; date_to</code>, atau rentang melebihi 62 hari</td></tr>
+        <tr><td><code>DATE_FORMAT_INVALID</code></td><td class="center">422</td><td>Format tanggal bukan <code>YYYY-MM-DD</code></td></tr>
+        <tr><td><code>PER_PAGE_EXCEEDED</code></td><td class="center">422</td><td><code>per_page</code> melebihi 2000</td></tr>
+        <tr><td><code>CONVEYOR_UNKNOWN</code></td><td class="center">422</td><td><code>conveyor_code</code> pada parameter tidak terdaftar</td></tr>
+        <tr><td><code>STATUS_INVALID</code></td><td class="center">422</td><td>Nilai <code>status</code> di luar daftar enum</td></tr>
+        <tr><td><code>SHIFT_INVALID</code></td><td class="center">422</td><td>Nilai <code>shift</code> selain 1 atau 2</td></tr>
+        <tr><td><code>LISTING_NOT_FOUND</code></td><td class="center">404</td><td><code>id_listing</code> pada endpoint detail tidak ada</td></tr>
+        <tr><td><code>UNAUTHENTICATED</code></td><td class="center">401</td><td>Token tidak ada, tidak valid, atau kedaluwarsa</td></tr>
+        <tr><td><code>FORBIDDEN</code></td><td class="center">403</td><td>Token valid tetapi tidak berhak atas sumber daya</td></tr>
+        <tr><td><code>RATE_LIMITED</code></td><td class="center">429</td><td>Melebihi batas laju; sertakan header <code>Retry-After</code></td></tr>
+        <tr><td><code>SERVICE_UNAVAILABLE</code></td><td class="center">503</td><td>Basis data sumber tidak dapat dijangkau</td></tr>
+        <tr><td><code>INTERNAL_ERROR</code></td><td class="center">500</td><td>Kesalahan tak terduga; jejak tumpukan tidak disertakan pada respons</td></tr>
+      </tbody>
+    </table>
+
+    <div class="box" style="margin-top:8mm">
+      <span class="box-title">Akhir dokumen</span>
+      API SIREP / PPC v1 &mdash; Dokumentasi Teknis, versi 1.0, 28 Juli 2026.
+      Pertanyaan teknis mengenai perilaku konsumen dapat diarahkan ke tim e-Kanban.
+    </div>
+  </div>
+  <div class="page-foot"><span>Lampiran A &mdash; Kode Error</span><span>Hal. 18 / 18</span></div>
+</section>
+
+</body>
+</html>
