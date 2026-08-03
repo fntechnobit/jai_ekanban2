@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Imports\CuttingStoImport;
 use App\Models\DefectLogCircuit;
 use App\Models\DefectLogShikake;
 use App\Models\KanbanBalanceCircuit;
@@ -371,8 +372,69 @@ class DefectService
     }
 
     /**
+     * Parse an STO circuit scan history file (jai_sto_wip export) and match
+     * its CCT Codes against the selected conveyor's circuits, WITHOUT writing
+     * anything to the database. Used to render a preview before commit.
+     */
+    public function previewCuttingSto(string $filePath, int $conveyorId): array
+    {
+        $importer = new CuttingStoImport($conveyorId);
+        $matched = $importer->parse($filePath);
+        $notFoundCodes = $importer->getNotFoundCodes();
+
+        return [
+            'total_rows'      => $importer->getTotalRows(),
+            'matched'         => $matched,
+            'matched_count'   => count($matched),
+            'total_qty'       => array_sum(array_column($matched, 'qty')),
+            'not_found_codes' => $notFoundCodes,
+            'not_found_count' => count($notFoundCodes),
+        ];
+    }
+
+    /**
+     * Apply a batch of previously previewed rows as balance-reducing defects
+     * for the selected conveyor, date and shift. Intended to be called once
+     * per chunk so the caller can render incremental progress.
+     *
+     * @param array $items Each: ['master_circuit_id' => int, 'cct_code' => string, 'qty' => int]
+     */
+    public function commitCuttingDefects(int $conveyorId, string $date, int $shift, array $items): array
+    {
+        $successCount = 0;
+        $errors = [];
+
+        foreach ($items as $item) {
+            $result = $this->recordDefect(
+                'circuit',
+                $conveyorId,
+                ['master_circuit_id' => $item['master_circuit_id']],
+                $item['qty'],
+                [
+                    'date'   => $date,
+                    'shift'  => $shift,
+                    'reason' => 'Import STO Circuit Scan History (CCT ' . $item['cct_code'] . ')',
+                ]
+            );
+
+            if ($result['success']) {
+                $successCount++;
+            } else {
+                $errors[] = "{$item['cct_code']}: {$result['message']}";
+            }
+        }
+
+        return [
+            'success'       => true,
+            'success_count' => $successCount,
+            'failed_count'  => count($items) - $successCount,
+            'errors'        => $errors,
+        ];
+    }
+
+    /**
      * Get current balance for circuit
-     * 
+     *
      * @param int $conveyorId
      * @param int $masterCircuitId
      * @return array|null

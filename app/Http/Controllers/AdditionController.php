@@ -79,6 +79,71 @@ class AdditionController extends Controller
     }
 
     /**
+     * Parse an uploaded STO Circuit Scan History file (jai_sto_wip export) and
+     * return a matched-vs-not-found preview, without writing to the database.
+     */
+    public function cuttingImportStoPreview(Request $request)
+    {
+        $validated = $request->validate([
+            'conveyor_id' => 'required|exists:master_conveyor,id',
+            'file'        => 'required|file|mimes:xlsx,xls|max:10240',
+        ]);
+
+        try {
+            $result = $this->additionService->previewCuttingSto(
+                $request->file('file')->getRealPath(),
+                (int) $validated['conveyor_id']
+            );
+
+            return response()->json([
+                'success' => true,
+                'data'    => $result,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('AdditionController: cuttingImportStoPreview failed', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Apply one chunk of previously previewed STO rows as balance additions
+     * (AJAX). The frontend calls this repeatedly, one chunk at a time, to
+     * drive an incremental progress bar.
+     */
+    public function cuttingImportStoCommit(Request $request)
+    {
+        $validated = $request->validate([
+            'conveyor_id'                => 'required|exists:master_conveyor,id',
+            'addition_date'              => 'required|date|before_or_equal:today',
+            'shift'                      => 'required|integer|in:1,2,3',
+            'items'                      => 'required|array|min:1|max:200',
+            'items.*.master_circuit_id'  => 'required|integer|exists:master_circuit,id',
+            'items.*.cct_code'           => 'required|string',
+            'items.*.qty'                => 'required|integer|min:1',
+        ]);
+
+        try {
+            $result = $this->additionService->commitCuttingAdditions(
+                (int) $validated['conveyor_id'],
+                $validated['addition_date'],
+                (int) $validated['shift'],
+                $validated['items']
+            );
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+            Log::error('AdditionController: cuttingImportStoCommit failed', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
      * Get circuits for a conveyor (AJAX).
      */
     public function getCircuits(Request $request)

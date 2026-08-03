@@ -157,6 +157,8 @@ Route::middleware('auth')->group(function () {
         Route::get('cutting', [DefectController::class, 'cuttingIndex'])->name('cutting.index');
         Route::get('cutting/datatable', [DefectController::class, 'cuttingDatatable'])->name('cutting.datatable');
         Route::post('cutting', [DefectController::class, 'cuttingStore'])->name('cutting.store');
+        Route::post('cutting/import-sto/preview', [DefectController::class, 'cuttingImportStoPreview'])->name('cutting.import-sto.preview');
+        Route::post('cutting/import-sto/commit', [DefectController::class, 'cuttingImportStoCommit'])->name('cutting.import-sto.commit');
         Route::get('cutting/circuits', [DefectController::class, 'getCircuits'])->name('cutting.circuits');
         Route::get('cutting/balance', [DefectController::class, 'getCircuitBalance'])->name('cutting.balance');
         
@@ -179,6 +181,8 @@ Route::middleware('auth')->group(function () {
         Route::get('cutting', [AdditionController::class, 'cuttingIndex'])->name('cutting.index');
         Route::get('cutting/datatable', [AdditionController::class, 'cuttingDatatable'])->name('cutting.datatable');
         Route::post('cutting', [AdditionController::class, 'cuttingStore'])->name('cutting.store');
+        Route::post('cutting/import-sto/preview', [AdditionController::class, 'cuttingImportStoPreview'])->name('cutting.import-sto.preview');
+        Route::post('cutting/import-sto/commit', [AdditionController::class, 'cuttingImportStoCommit'])->name('cutting.import-sto.commit');
         Route::get('cutting/circuits', [AdditionController::class, 'getCircuits'])->name('cutting.circuits');
         Route::get('cutting/balance', [AdditionController::class, 'getCircuitBalance'])->name('cutting.balance');
 
