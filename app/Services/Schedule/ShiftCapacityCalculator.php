@@ -31,16 +31,51 @@ class ShiftCapacityCalculator
     }
     
     /**
+     * Tentukan jumlah shift yang berjalan pada satu hari, berdasarkan volume demand.
+     *
+     * ── Aturan PPC/SIREP ────────────────────────────────────────────────────
+     *   normal_capacity = kapasitas conveyor untuk SATU shift.
+     *   Bila qty listing >= 2 × kapasitas, conveyor berjalan 2 shift.
+     *   Di bawah itu, cukup 1 shift.
+     *
+     * Nilai `shift_qty` pada master tetap berlaku sebagai batas atas: conveyor yang
+     * secara fisik hanya mampu 1 shift tidak akan pernah dijadwalkan 2 shift,
+     * berapa pun volumenya — kelebihannya diserap CO5 sebagai catch-all.
+     *
+     * @param  int  $totalQty  Total qty listing untuk (tanggal × conveyor) tersebut
+     */
+    public function resolveShiftCount(MasterConveyor $conveyor, int $totalQty): int
+    {
+        $maxAllowed = max(1, (int) ($conveyor->shift_qty ?? 1));
+
+        if (!config('sirep.capacity.dynamic_shift', true)) {
+            return $maxAllowed;
+        }
+
+        $shiftCapacity = (int) ($conveyor->capacity ?? 100);
+
+        if ($shiftCapacity <= 0) {
+            return $maxAllowed;
+        }
+
+        $needed = $totalQty >= (2 * $shiftCapacity) ? 2 : 1;
+
+        return min($needed, $maxAllowed);
+    }
+
+    /**
      * Calculate capacities for all shifts based on conveyor config and lock status
      * If shift is locked (is_lock = 1), set all capacities to 0
-     * 
+     *
      * @param MasterConveyor $conveyor The conveyor configuration
      * @param array $lockStatus Lock status for each shift [1 => bool, 2 => bool]
+     * @param int|null $maxShifts Jumlah shift yang berjalan. Bila null, dipakai
+     *                            nilai statis dari master (perilaku lama).
      * @return array Shift capacities indexed by shift number
      */
-    public function calculateShiftCapacities(MasterConveyor $conveyor, array $lockStatus): array
+    public function calculateShiftCapacities(MasterConveyor $conveyor, array $lockStatus, ?int $maxShifts = null): array
     {
-        $maxShifts = $conveyor->shift_qty ?? 2;
+        $maxShifts = $maxShifts ?? ($conveyor->shift_qty ?? 2);
         $shiftCapacity = $conveyor->capacity ?? 100;
         $capacities = [];
         
@@ -83,12 +118,37 @@ class ShiftCapacityCalculator
      * This is a DISPLAY/cap reference; the LAST shift's CO5 is a catch-all and may
      * exceed it (shown as "over" in the form).
      *
+     * CATATAN — selisih dengan SIREP:
+     * Nilai `overtime_capacity` dari API SIREP setara dengan
+     * kapasitas + FLOOR(0.875 × kapasitas/4), bukan round.
+     *   cap 140 -> SIREP 170  (140 + floor 30.625 = 30)
+     *   cap 300 -> SIREP 365  (300 + floor 65.625 = 65)
+     *   cap 120 -> SIREP 146  (120 + floor 26.25  = 26)
+     * Untuk kapasitas 100, aturan kami menghasilkan 22 sedangkan SIREP 21.
+     * Pembulatan dapat disamakan lewat config `sirep.capacity.co5_rounding`
+     * setelah tim PPC mengonfirmasi mana yang benar. Default tetap 'round'
+     * agar perilaku tidak berubah diam-diam.
+     *
      * @param int $shiftCapacity Capacity per shift from conveyor
      * @return int Nominal CO5 capacity
      */
     public function calculateCutoff5Capacity(int $shiftCapacity): int
     {
-        return (int) round(0.875 * ($shiftCapacity / 4));
+        $raw = 0.875 * ($shiftCapacity / 4);
+
+        return (int) (config('sirep.capacity.co5_rounding', 'round') === 'floor'
+            ? floor($raw)
+            : round($raw));
+    }
+
+    /**
+     * Ambang "over capacity" per shift, setara `overtime_capacity` dari SIREP.
+     * Dipakai untuk membandingkan penanda is_overtime dari SIREP dengan hasil
+     * perhitungan sendiri.
+     */
+    public function calculateOvertimeCapacity(int $shiftCapacity): int
+    {
+        return $shiftCapacity + $this->calculateCutoff5Capacity($shiftCapacity);
     }
 
     /**

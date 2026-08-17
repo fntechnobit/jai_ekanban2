@@ -10,6 +10,7 @@ class ListingStage extends Model
 
     protected $fillable = [
         'id_listing',
+        'source',
         'listing_date_time',
         'conveyor',
         'shift',
@@ -20,6 +21,7 @@ class ListingStage extends Model
         'seq',
         'plt',
         'mode',
+        'is_overtime',
         'snp',
         'snpa',
         'synced_at',
@@ -33,6 +35,7 @@ class ListingStage extends Model
         'seq' => 'integer',
         'plt' => 'integer',
         'mode' => 'integer',
+        'is_overtime' => 'boolean',
         'snp' => 'integer',
         'snpa' => 'integer',
     ];

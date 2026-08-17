@@ -194,10 +194,15 @@ class AssySchedulerService
 
                 $scheduleDate = Carbon::parse($date);
                 $shiftCapacity = $conveyor->capacity ?? 100;
-                $maxShifts = $conveyor->shift_qty ?? 2;
 
                 // Step 4: Initialize tracking field for listings (rem_qty)
                 $this->listingAllocator->initializeListings($groupListings);
+
+                // Jumlah shift ditentukan volume demand hari itu, bukan nilai statis master.
+                // Aturan PPC/SIREP: qty listing >= 2 × kapasitas satu shift -> 2 shift.
+                // shift_qty pada master tetap menjadi batas atas kemampuan fisik conveyor.
+                $totalQtyForShift = (int) $groupListings->sum('rem_qty');
+                $maxShifts = $this->capacityCalculator->resolveShiftCount($conveyor, $totalQtyForShift);
 
                 // Step 5: Check shift lock status for this conveyor on this date
                 $shiftLockStatus = $this->lockChecker->getShiftLockStatus(
@@ -215,22 +220,44 @@ class AssySchedulerService
                 // Step 7: Calculate cutoff capacities for each shift
                 $shiftCapacities = $this->capacityCalculator->calculateShiftCapacities(
                     $conveyor,
-                    $shiftLockStatus
+                    $shiftLockStatus,
+                    $maxShifts
                 );
 
                 // Step 8: Pre-map CO5 need per shift based on total qty vs shift capacities
                 // 2-shift: CO5 activates AFTER all CO1-4 (both shifts) are exhausted
                 // 1-shift: CO5 activates after CO1-4 of the single shift
-                $totalQty = $groupListings->sum('rem_qty');
+                $totalQty = $totalQtyForShift;
                 $co5Needed = $this->capacityCalculator->preMapCutoff5(
                     $shiftCapacities, $shiftCapacity, $totalQty, $maxShifts
                 );
+
+                // Bandingkan penanda is_overtime dari SIREP dengan hasil perhitungan sendiri.
+                // Menurut tim PPC, is_overtime = true berarti hari itu ada CO5 / kapasitas over.
+                // Selisih antara keduanya menandakan kapasitas master tidak sinkron dengan SIREP,
+                // dan itu perlu diketahui sebelum jadwal diverifikasi.
+                $sirepOvertime = (bool) $groupListings->contains(fn ($l) => (bool) ($l->is_overtime ?? false));
+                $ownOvertime   = in_array(true, $co5Needed, true);
+
+                if ($sirepOvertime !== $ownOvertime) {
+                    Log::warning('Penanda overtime SIREP tidak sesuai perhitungan lokal', [
+                        'conveyor'       => $conveyorName,
+                        'schedule_date'  => $scheduleDate->format('Y-m-d'),
+                        'total_qty'      => $totalQty,
+                        'capacity'       => $shiftCapacity,
+                        'shift_dipakai'  => $maxShifts,
+                        'sirep_overtime' => $sirepOvertime,
+                        'hitung_lokal'   => $ownOvertime,
+                    ]);
+                }
 
                 Log::info("CO5 pre-mapping result", [
                     'conveyor_id'     => $conveyor->id,
                     'schedule_date'   => $scheduleDate->format('Y-m-d'),
                     'total_qty'       => $totalQty,
+                    'max_shifts'      => $maxShifts,
                     'co5_needed'      => $co5Needed,
+                    'sirep_overtime'  => $sirepOvertime,
                     'shift_capacities'=> $shiftCapacities,
                 ]);
 

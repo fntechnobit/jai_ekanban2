@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rencana Implementasi API SIREP &mdash; e-Kanban &amp; Filter-Kanban</title>
+<style>
+@page { size: A4 portrait; margin: 0; }
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --line:#c9cdd4; --line-soft:#e4e7eb;
+  --accent:#16467a; --accent-bg:#eef3f9;
+  --warn-bg:#fdf3e3; --warn-line:#d79a2b;
+  --danger-bg:#fceeee; --danger-line:#b03a3a;
+  --ok-bg:#eef7ef; --ok-line:#3f7d47;
+  --code-bg:#f4f5f7;
+}
+* { box-sizing:border-box; }
+html { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+body {
+  font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;
+  font-size:9.8pt; line-height:1.48; color:var(--ink); margin:0; background:#8f9297;
+}
+.page {
+  position:relative; width:210mm; height:296mm;
+  padding:15mm 16mm 17mm; margin:0 auto 8mm;
+  background:#fff; box-shadow:0 2px 12px rgba(0,0,0,.35);
+  overflow:hidden; break-after:page; page-break-after:always;
+}
+.page:last-of-type { break-after:auto; page-break-after:auto; margin-bottom:0; }
+@media print {
+  body { background:#fff; }
+  .page { margin:0; box-shadow:none; }
+  .no-print { display:none !important; }
+  a { color:var(--ink); text-decoration:none; }
+}
+.page-head {
+  position:absolute; top:9mm; left:16mm; right:16mm;
+  font-size:7.5pt; color:var(--ink-soft); letter-spacing:.06em;
+  border-bottom:1px solid var(--line-soft); padding-bottom:1.5mm;
+  display:flex; justify-content:space-between;
+}
+.page-foot {
+  position:absolute; bottom:9mm; left:16mm; right:16mm;
+  font-size:7.5pt; color:var(--ink-soft);
+  border-top:1px solid var(--line-soft); padding-top:1.5mm;
+  display:flex; justify-content:space-between;
+}
+.page-body > *:first-child { margin-top:0 !important; }
+
+h1,h2,h3,h4 { color:var(--accent); margin:0 0 .3em; line-height:1.2; }
+h1 { font-size:21pt; }
+h2 { font-size:13pt; margin-top:1.2em; padding-bottom:.2em; border-bottom:2px solid var(--accent); }
+h3 { font-size:10.5pt; margin-top:1em; }
+h4 { font-size:8.8pt; color:var(--ink-soft); margin-top:.8em; margin-bottom:.2em; text-transform:uppercase; letter-spacing:.06em; }
+p { margin:0 0 .55em; }
+ul,ol { margin:0 0 .6em; padding-left:1.15em; }
+li { margin-bottom:.15em; }
+
+code,kbd {
+  font-family:"Consolas","Courier New",monospace; font-size:8.4pt;
+  background:var(--code-bg); padding:.5pt 3pt; border-radius:2px; border:1px solid var(--line-soft);
+}
+pre {
+  font-family:"Consolas","Courier New",monospace; font-size:7.8pt; line-height:1.38;
+  background:var(--code-bg); border:1px solid var(--line-soft); border-left:3px solid var(--accent);
+  padding:6px 8px; margin:0 0 .6em; white-space:pre-wrap; word-wrap:break-word;
+}
+pre code { background:none; border:0; padding:0; font-size:inherit; }
+
+.cover-inner { padding-top:26mm; }
+.cover .eyebrow { font-size:9pt; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:6mm; }
+.cover h1 { font-size:26pt; line-height:1.12; margin-bottom:4mm; }
+.cover .sub { font-size:11.5pt; color:var(--ink-soft); margin-bottom:14mm; }
+.cover .rule { height:3px; background:var(--accent); width:45mm; margin-bottom:12mm; }
+.meta-table { width:100%; border-collapse:collapse; font-size:9.3pt; margin-top:8mm; }
+.meta-table td { padding:4.5px 0; border-bottom:1px solid var(--line-soft); vertical-align:top; }
+.meta-table td:first-child { width:36mm; color:var(--ink-soft); }
+
+table.data { width:100%; border-collapse:collapse; font-size:8.2pt; margin:0 0 .7em; }
+table.data thead { display:table-header-group; }
+table.data th { background:var(--accent); color:#fff; text-align:left; font-weight:600; padding:4px 6px; border:1px solid var(--accent); }
+table.data td { padding:3.5px 6px; border:1px solid var(--line); vertical-align:top; }
+table.data tbody tr:nth-child(even) { background:#fafbfc; }
+table.data td code { font-size:7.8pt; }
+.col-narrow { width:12mm; text-align:center; }
+.center { text-align:center; }
+
+.box { border:1px solid var(--line); border-left:4px solid var(--accent); background:var(--accent-bg); padding:6px 9px; margin:0 0 .7em; font-size:8.8pt; }
+.box .box-title { font-weight:700; display:block; margin-bottom:2px; }
+.box.warn { border-left-color:var(--warn-line); background:var(--warn-bg); }
+.box.danger { border-left-color:var(--danger-line); background:var(--danger-bg); }
+.box.ok { border-left-color:var(--ok-line); background:var(--ok-bg); }
+
+.badge { display:inline-block; font-size:7pt; font-weight:700; padding:1px 5px; border-radius:9px; letter-spacing:.03em; text-transform:uppercase; vertical-align:middle; }
+.badge.p1 { background:#b03a3a; color:#fff; }
+.badge.p2 { background:#d79a2b; color:#fff; }
+.badge.p3 { background:#6b7684; color:#fff; }
+.badge.ok { background:#3f7d47; color:#fff; }
+
+.endpoint { font-family:Consolas,monospace; font-size:8.5pt; font-weight:600; color:var(--ink);
+  background:var(--code-bg); border:1px solid var(--line-soft); border-left:3px solid var(--accent);
+  padding:5px 8px; border-radius:3px; margin:0 0 .5em; word-break:break-all; }
+
+.toc { font-size:9.3pt; }
+.toc ol { list-style:none; padding-left:0; counter-reset:sec; }
+.toc ol li { counter-increment:sec; padding:3px 0; border-bottom:1px dotted var(--line-soft); }
+.toc ol li::before { content:counter(sec) ". "; font-weight:700; color:var(--accent); }
+.toc .pg { float:right; color:var(--ink-soft); font-size:8.4pt; }
+
+.print-hint { max-width:210mm; margin:6mm auto; padding:10px 14px; background:#fffbe6;
+  border:1px solid #d79a2b; border-radius:4px; font-size:9.5pt; color:#4a3c12; }
+</style>
+</head>
+<body>
+
+<div class="print-hint no-print">
+  <strong>Ekspor PDF A4:</strong> <kbd>Ctrl</kbd>+<kbd>P</kbd> &rarr; <em>Save as PDF</em> &rarr; A4 &rarr;
+  Margins <em>None</em> &rarr; Scale 100% &rarr; centang <em>Background graphics</em>.
+</div>
+
+<!-- ═══════════ HAL 1 — SAMPUL ═══════════ -->
+<section class="page">
+  <div class="page-body cover">
+    <div class="cover-inner">
+      <div class="eyebrow">Rencana Implementasi</div>
+      <h1>Integrasi API SIREP<br>ke e-Kanban &amp; Filter-Kanban</h1>
+      <div class="rule"></div>
+      <div class="sub">Analisa kesesuaian API yang telah dibangun tim PPC,<br>
+      pemetaan field, dan rencana penerapan bertahap per conveyor</div>
+
+      <table class="meta-table">
+        <tr><td>Dasar</td><td>Dokumen &ldquo;Spesifikasi endpoint, parameter, dan skema response&rdquo; &mdash; disusun Tim PPC</td></tr>
+        <tr><td>API tersedia</td><td><code>/api/shared/listing</code> &middot; <code>/api/shared/conveyor</code></td></tr>
+        <tr><td>Host</td><td><code>http://10.62.230.51/sirep-backend/public</code></td></tr>
+        <tr><td>Aplikasi terdampak</td><td><strong>jai_ekanban</strong> (Laravel 12) &mdash; sebagian conveyor masih memakai DB SIREP lama<br><strong>jai_filter_kanban</strong> (CodeIgniter 3)</td></tr>
+        <tr><td>Sifat penerapan</td><td>Bertahap per conveyor, dua sumber berjalan berdampingan</td></tr>
+        <tr><td>Versi dokumen</td><td>1.0 &mdash; draft untuk review</td></tr>
+        <tr><td>Tanggal</td><td>28 Juli 2026</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="page-foot"><span>Dokumen internal</span><span>Hal. 1 / 12</span></div>
+</section>
+
+<!-- ═══════════ HAL 2 — RINGKASAN ═══════════ -->
+<section class="page">
+  <div class="page-head"><span>Rencana Implementasi API SIREP</span><span>1. Ringkasan</span></div>
+  <div class="page-body">
+    <h2>1. Ringkasan &amp; Keputusan yang Dibutuhkan</h2>
+
+    <div class="box ok">
+      <span class="box-title">Temuan utama &mdash; kabar baik</span>
+      Field <code>shift</code> memang tidak ada di API baru, dan <strong>itu tidak menjadi masalah</strong>.
+      Hasil penelusuran kode: <em>kedua aplikasi tidak pernah memakai <code>shift</code> dari listing</em>
+      untuk menentukan jadwal. Shift diturunkan dari master conveyor (<code>shift_qty</code> /
+      <code>int_shift_qty</code>) saat alokasi kapasitas. Nilai <code>shift</code> hanya disalin ke staging
+      lalu diabaikan. Ini menghapus satu-satunya calon penghambat besar.
+    </div>
+
+    <p><strong>Kesimpulan kesesuaian:</strong> dari 12 field yang benar-benar dikonsumsi kedua aplikasi,
+    <strong>9 field tersedia langsung</strong>, 2 field perlu aturan konversi (<code>snp</code>/<code>plt</code>
+    yang di API terpecah menjadi versi <em>sea</em> dan <em>air</em>), dan 1 field
+    (<code>mode</code>) perlu penegasan makna. Nama conveyor pada API (<code>AT16</code>, <code>AT19</code>,
+    <code>AB9</code>) <strong>sudah cocok</strong> dengan master conveyor kedua aplikasi.</p>
+
+    <p><strong>Yang menghambat dan harus dijawab tim PPC lebih dulu:</strong></p>
+    <table class="data">
+      <thead><tr><th class="col-narrow">No</th><th style="width:52mm">Isu</th><th>Dampak bila tidak diselesaikan</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="center"><span class="badge p1">1</span></td>
+          <td>Tidak ada penanda perubahan (<code>updated_at</code> / <code>revision</code>)</td>
+          <td>Revisi qty dari PPC <strong>tidak akan pernah sampai</strong> ke lantai produksi. Kedua aplikasi melewati baris yang sudah ada di staging, bukan memperbaruinya.</td>
+        </tr>
+        <tr>
+          <td class="center"><span class="badge p1">2</span></td>
+          <td>Tidak ada penanda pembatalan</td>
+          <td>Baris yang dihapus di SIREP tetap hidup di staging, tetap dijadwalkan, tetap dicetak jadi kanban.</td>
+        </tr>
+        <tr>
+          <td class="center"><span class="badge p1">3</span></td>
+          <td>Parameter <code>conveyor</code> tunggal</td>
+          <td>Sinkronisasi kami menarik <strong>semua</strong> conveyor sekaligus per rentang tanggal. Bila parameter wajib dan hanya menerima satu nilai, satu sinkronisasi menjadi puluhan panggilan HTTP.</td>
+        </tr>
+        <tr>
+          <td class="center"><span class="badge p2">4</span></td>
+          <td>Tidak ada paginasi &amp; jumlah total</td>
+          <td>Tidak ada cara memastikan data yang diterima lengkap. Rentang 31 hari &times; semua conveyor berpotensi ribuan baris dalam satu respons.</td>
+        </tr>
+        <tr>
+          <td class="center"><span class="badge p2">5</span></td>
+          <td>Aturan <code>sea</code> vs <code>air</code></td>
+          <td><code>snp</code> dan <code>plt</code> tidak dapat diisi tanpa aturan pemilihan yang tegas.</td>
+        </tr>
+        <tr>
+          <td class="center"><span class="badge p2">6</span></td>
+          <td>Tanpa autentikasi, HTTP polos</td>
+          <td>Data rencana produksi terbuka bagi siapa pun di jaringan yang sama.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>1.1 Keputusan yang perlu diambil di pihak kita</h3>
+    <table class="data">
+      <thead><tr><th style="width:46mm">Keputusan</th><th style="width:40mm">Rekomendasi</th><th>Alasan</th></tr></thead>
+      <tbody>
+        <tr><td>Cara peralihan</td><td><strong>Per conveyor</strong>, dua sumber berdampingan</td><td>Sesuai kondisi nyata: sebagian conveyor masih di SIREP lama</td></tr>
+        <tr><td>Penanda sumber</td><td>Kolom <code>listing_source</code> di master conveyor</td><td>Peralihan cukup ubah data, tanpa deploy ulang</td></tr>
+        <tr><td>Lapisan adaptasi</td><td>Satu <em>interface</em> + dua implementasi</td><td>Kembali ke cara lama cukup ubah satu nilai</td></tr>
+        <tr><td>Struktur staging</td><td>Tidak diubah</td><td>Seluruh logika penjadwalan tetap utuh, risiko regresi minimal</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-foot"><span>1. Ringkasan</span><span>Hal. 2 / 12</span></div>
+</section>
+
+<!-- ═══════════ HAL 3 — HASIL PEMERIKSAAN API ═══════════ -->
+<section class="page">
+  <div class="page-head"><span>Rencana Implementasi API SIREP</span><span>2. Hasil Pemeriksaan API</span></div>
+  <div class="page-body">
+    <h2>2. Hasil Pemeriksaan API yang Tersedia</h2>
+
+    <h3>2.1 Endpoint Listing</h3>
+    <div class="endpoint">GET http://10.62.230.51/sirep-backend/public/api/shared/listing<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;?conveyor=AT19&amp;start_date=2026-07-01&amp;end_date=2026-07-31</div>
+
+    <table class="data">
+      <thead><tr><th style="width:30mm">Aspek</th><th>Kondisi</th></tr></thead>
+      <tbody>
+        <tr><td>Parameter</td><td><code>conveyor</code>, <code>start_date</code>, <code>end_date</code></td></tr>
+        <tr><td>Bentuk respons</td><td>Array objek langsung &mdash; <strong>tanpa amplop</strong> <code>data</code> dan tanpa <code>meta</code></td></tr>
+        <tr><td>Jumlah field</td><td>21 field per baris</td></tr>
+        <tr><td>Autentikasi</td><td>Tidak ada (dinyatakan sebagai &ldquo;API public&rdquo;)</td></tr>
+        <tr><td>Protokol</td><td>HTTP (bukan HTTPS), host berbasis alamat IP</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.2 Endpoint Conveyor</h3>
+    <div class="endpoint">GET http://10.62.230.51/sirep-backend/public/api/shared/conveyor</div>
+
+    <table class="data">
+      <thead><tr><th style="width:30mm">Aspek</th><th>Kondisi</th></tr></thead>
+      <tbody>
+        <tr><td>Parameter</td><td>Tidak ada</td></tr>
+        <tr><td>Bentuk respons</td><td><code>{ "data": [ { "id": 1, "name": "AB9-EXT" }, &hellip; ] }</code> &mdash; <strong>memakai amplop</strong> <code>data</code></td></tr>
+        <tr><td>Field</td><td>Hanya <code>id</code> dan <code>name</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="box warn">
+      <span class="box-title">Bentuk respons belum seragam</span>
+      Endpoint <code>listing</code> mengembalikan array telanjang, sedangkan <code>conveyor</code> memakai
+      amplop <code>{ "data": [...] }</code>. Perbedaan ini membuat kode konsumen harus menangani dua bentuk
+      berbeda. Sebaiknya diseragamkan sejak awal &mdash; biayanya kecil sekarang, mahal setelah dipakai produksi.
+    </div>
+
+    <h3>2.3 Kecocokan nama conveyor</h3>
+    <p>Nama pada API dibandingkan dengan master conveyor kedua aplikasi:</p>
+    <table class="data">
+      <thead><tr><th style="width:34mm">Nama di API SIREP</th><th style="width:38mm">Ada di master?</th><th>Catatan</th></tr></thead>
+      <tbody>
+        <tr><td><code>AT16</code></td><td class="center"><span class="badge ok">Cocok</span></td><td>Terdaftar di <code>m_conveyor</code> (filter) dan <code>master_conveyor</code> (ekanban)</td></tr>
+        <tr><td><code>AT19</code></td><td class="center"><span class="badge ok">Cocok</span></td><td>Terdaftar</td></tr>
+        <tr><td><code>AB9</code>, <code>AB9-EXT</code></td><td class="center">Perlu dicek</td><td>Belum dipastikan ada di kedua master &mdash; masuk daftar kerja tahap 0</td></tr>
+      </tbody>
+    </table>
+
+    <div class="box danger">
+      <span class="box-title">Perhatian &mdash; spasi pada nama conveyor</span>
+      Pada master filter-kanban ditemukan nilai <code>'AT2&nbsp;'</code> (dengan spasi di belakang).
+      Pencocokan nama harus selalu memakai <code>TRIM</code> di kedua sisi. Bila tidak, conveyor tersebut
+      akan gagal dicocokkan dan <strong>rencana satu hari penuh dilewati tanpa pesan kesalahan</strong>.
+    </div>
+  </div>
+  <div class="page-foot"><span>2. Hasil Pemeriksaan API</span><span>Hal. 3 / 12</span></div>
+</section>
+
+<!-- ═══════════ HAL 4 — PEMETAAN FIELD ═══════════ -->
+<section class="page">
+  <div class="page-head"><span>Rencana Implementasi API SIREP</span><span>3. Pemetaan Field</span></div>
+  <div class="page-body">
+    <h2>3. Pemetaan Field API &rarr; Staging</h2>
+
+    <table class="data">
+      <thead>
+        <tr>
+          <th style="width:32mm">Field API SIREP</th>
+          <th style="width:26mm">ekanban<br><code>listing_stage</code></th>
+          <th style="width:26mm">filter<br><code>t_listing_stage</code></th>
+          <th class="col-narrow">Status</th>
+          <th>Catatan konversi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>id</code></td><td><code>id_listing</code></td><td><code>id_listing</code></td><td class="center"><span class="badge ok">OK</span></td><td>Langsung</td></tr>
+        <tr><td><code>date</code></td><td><code>listing_date_time</code></td><td><code>dt_time</code></td><td class="center"><span class="badge ok">OK</span></td><td>ekanban simpan DATETIME, filter DATE</td></tr>
+        <tr><td><code>conveyor</code></td><td><code>conveyor</code></td><td><code>var_conveyor</code></td><td class="center"><span class="badge ok">OK</span></td><td>Wajib <code>TRIM</code> di kedua sisi</td></tr>
+        <tr><td><code>assy_code</code></td><td><code>assycode</code></td><td><code>var_assycode</code></td><td class="center"><span class="badge ok">OK</span></td><td>Langsung</td></tr>
+        <tr><td><code>assy_number</code></td><td><code>assy</code></td><td><code>var_assy</code></td><td class="center"><span class="badge ok">OK</span></td><td><strong>Kunci pemetaan ke master circuit/shikake</strong></td></tr>
+        <tr><td><code>quantity</code></td><td><code>qty</code></td><td><code>int_qty</code></td><td class="center"><span class="badge ok">OK</span></td><td>Langsung</td></tr>
+        <tr><td><code>seq</code></td><td><code>seq</code></td><td><code>int_seq</code></td><td class="center"><span class="badge ok">OK</span></td><td>Bagian kunci deduplikasi</td></tr>
+        <tr><td><code>carline</code></td><td><code>carline</code></td><td><em>tidak ada</em></td><td class="center"><span class="badge ok">OK</span></td><td>Format berbeda dari data lama &mdash; perlu dipastikan</td></tr>
+        <tr><td><code>level</code></td><td><em>belum dipakai</em></td><td><em>tidak ada</em></td><td class="center"><span class="badge ok">OK</span></td><td>Tersedia, belum dikonsumsi</td></tr>
+        <tr><td><code>standard_packing_sea</code><br><code>standard_packing_air</code></td><td><code>snp</code><br><code>snpa</code></td><td><code>int_snp</code><br><code>int_snpa</code></td><td class="center"><span class="badge p2">Aturan</span></td><td>Usulan: <code>snp</code> = sea, <code>snpa</code> = air. <strong>Perlu konfirmasi PPC</strong></td></tr>
+        <tr><td><code>max_pallet_sea</code><br><code>max_pallet_air</code></td><td><code>plt</code></td><td><code>int_plt</code></td><td class="center"><span class="badge p2">Aturan</span></td><td>Kolom tujuan hanya satu. Usulan: pilih sesuai <code>shipping_method</code></td></tr>
+        <tr><td><code>shipping_method</code></td><td><code>mode</code></td><td><code>int_mode</code></td><td class="center"><span class="badge p2">Aturan</span></td><td>Kolom tujuan integer; API mengirim teks <code>"sea"</code>/<code>"air"</code>. Perlu tabel konversi</td></tr>
+        <tr><td><em>tidak ada</em></td><td><code>shift</code></td><td><code>int_shift</code></td><td class="center"><span class="badge ok">Aman</span></td><td><strong>Tidak dipakai untuk penjadwalan</strong> &mdash; isi <code>0</code>. Shift diturunkan dari master conveyor</td></tr>
+        <tr><td><code>box_start</code>, <code>box_end</code></td><td><em>belum ada kolom</em></td><td><em>belum ada</em></td><td class="center"><span class="badge p3">Opsional</span></td><td>Berguna untuk penelusuran; bisa ditambahkan nanti</td></tr>
+        <tr><td><code>pattern</code> (LHD/RHD)</td><td><em>belum ada</em></td><td><em>belum ada</em></td><td class="center"><span class="badge p3">Opsional</span></td><td>Informasi baru, belum dibutuhkan</td></tr>
+        <tr><td><code>status_assy</code></td><td><em>belum ada</em></td><td><em>belum ada</em></td><td class="center"><span class="badge p3">Opsional</span></td><td>Perlu penjelasan artinya dari PPC</td></tr>
+        <tr><td><code>is_overtime</code></td><td><em>belum ada</em></td><td><em>belum ada</em></td><td class="center"><span class="badge p2">Perlu tanya</span></td><td>Berpotensi terkait kapasitas/lembur &mdash; bisa jadi pengganti endpoint kalender</td></tr>
+        <tr><td><code>estimated_arrival_date</code>, <code>remarks</code></td><td><em>belum ada</em></td><td><em>belum ada</em></td><td class="center"><span class="badge p3">Opsional</span></td><td>Belum dibutuhkan</td></tr>
+        <tr><td><code>is_printing</code><br><code>is_printing_kanban</code></td><td><em>belum ada</em></td><td><em>belum ada</em></td><td class="center"><span class="badge p2">Perlu tanya</span></td><td>Apakah SIREP mengharapkan kami <strong>menulis balik</strong> status cetak? Bila ya, perlu endpoint tulis</td></tr>
+        <tr><td><em>tidak ada</em></td><td colspan="2" class="center"><em>dibutuhkan</em></td><td class="center"><span class="badge p1">Blokir</span></td><td><code>updated_at</code> / <code>revision</code> &mdash; tanpa ini revisi tidak terdeteksi</td></tr>
+        <tr><td><em>tidak ada</em></td><td colspan="2" class="center"><em>dibutuhkan</em></td><td class="center"><span class="badge p1">Blokir</span></td><td>Penanda batal &mdash; tanpa ini pembatalan tidak terdeteksi</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-foot"><span>3. Pemetaan Field</span><span>Hal. 4 / 12</span></div>
+</section>
+
+<!-- ═══════════ HAL 5 — PERTANYAAN P1 ═══════════ -->
+<section class="page">
+  <div class="page-head"><span>Rencana Implementasi API SIREP</span><span>4. Pertanyaan untuk Tim PPC</span></div>
+  <div class="page-body">
+    <h2>4. Daftar Pertanyaan untuk Tim PPC</h2>
+
+    <p>Disusun menurut prioritas. Butir <span class="badge p1">P1</span> menghambat penerapan;
+    <span class="badge p2">P2</span> dapat dikerjakan paralel; <span class="badge p3">P3</span> penyempurnaan.</p>
+
+    <h3>4.1 <span class="badge p1">P1</span> Penanda perubahan data</h3>
+    <p><strong>Pertanyaan:</strong> apakah setiap baris listing dapat dilengkapi field <code>updated_at</code>
+    (waktu perubahan terakhir) dan/atau <code>revision</code> (nomor revisi)?</p>
+    <p><strong>Latar belakang:</strong> kedua aplikasi menyalin listing ke tabel staging lokal. Saat
+    sinkronisasi ulang, baris yang kombinasinya sudah ada <em>dilewati</em>, bukan diperbarui &mdash;
+    di ekanban lewat pemeriksaan <code>exists()</code>, di filter-kanban lewat <code>INSERT IGNORE</code>.
+    Tanpa penanda perubahan, kami tidak punya cara membedakan &ldquo;sudah ada dan sama&rdquo; dari
+    &ldquo;sudah ada tetapi qty-nya berubah&rdquo;.</p>
+    <p><strong>Yang dibutuhkan minimal:</strong> field <code>updated_at</code> pada respons, ditambah
+    parameter <code>updated_since</code> agar kami dapat menarik hanya yang berubah.</p>
+
+    <h3>4.2 <span class="badge p1">P1</span> Penanda pembatalan</h3>
+    <p><strong>Pertanyaan:</strong> apa yang terjadi bila tim PPC membatalkan atau menghapus satu baris
+    listing &mdash; apakah baris itu hilang dari respons API?</p>
+    <p><strong>Latar belakang:</strong> sinkronisasi kami hanya menambah dan melewati, tidak membandingkan
+    isi staging dengan sumber untuk mencari baris yang hilang. Baris yang lenyap dari API akan tetap hidup
+    di staging, tetap dijadwalkan, dan tetap dicetak menjadi kanban.</p>
+    <p><strong>Yang dibutuhkan:</strong> baris yang dibatalkan tetap dikembalikan dengan penanda
+    (mis. <code>status: "cancelled"</code> atau <code>is_cancelled: true</code>) beserta
+    <code>updated_at</code> yang diperbarui.</p>
+
+    <h3>4.3 <span class="badge p1">P1</span> Parameter conveyor</h3>
+    <p><strong>Pertanyaan:</strong> apakah parameter <code>conveyor</code> wajib? Apakah dapat menerima
+    beberapa nilai sekaligus (mis. <code>conveyor=AT16,AT19</code>) atau dikosongkan untuk mengambil semua?</p>
+    <p><strong>Latar belakang:</strong> sinkronisasi kami berbasis rentang tanggal untuk seluruh conveyor
+    sekaligus, dipanggil otomatis sebelum setiap proses penjadwalan. Bila satu panggilan hanya melayani satu
+    conveyor, satu sinkronisasi berubah menjadi puluhan panggilan berurutan &mdash; lambat dan rawan gagal
+    separuh jalan.</p>
+
+    <h3>4.4 <span class="badge p1">P1</span> Kestabilan <code>id</code></h3>
+    <p><strong>Pertanyaan:</strong> apakah nilai <code>id</code> tetap sama sepanjang umur baris, termasuk
+    setelah direvisi? Apakah <code>id</code> yang sudah terpakai bisa dipakai ulang untuk baris lain?</p>
+    <p><strong>Latar belakang:</strong> <code>id</code> menjadi identitas sinkronisasi. Bila berubah saat
+    revisi, satu baris demand akan tercatat dua kali di jadwal kami.</p>
+  </div>
+  <div class="page-foot"><span>4. Pertanyaan untuk Tim PPC</span><span>Hal. 5 / 12</span></div>
+</section>
+
+<!-- ═══════════ HAL 6 — PERTANYAAN P2/P3 ═══════════ -->
+<section class="page">
+  <div class="page-head"><span>Rencana Implementasi API SIREP</span><span>4. Pertanyaan untuk Tim PPC</span></div>
+  <div class="page-body">
+    <h3>4.5 <span class="badge p2">P2</span> Aturan <code>sea</code> vs <code>air</code></h3>
+    <p><strong>Pertanyaan:</strong> untuk satu baris listing, mana yang berlaku &mdash;
+    <code>standard_packing_sea</code> atau <code>standard_packing_air</code>? Apakah ditentukan oleh
+    <code>shipping_method</code>?</p>
+    <p><strong>Usulan kami</strong> (mohon dikonfirmasi):</p>
+    <pre>snp  = shipping_method == "sea" ? standard_packing_sea : standard_packing_air
+snpa = shipping_method == "sea" ? standard_packing_air : standard_packing_sea
+plt  = shipping_method == "sea" ? max_pallet_sea       : max_pallet_air</pre>
+    <p>Nilai <code>snp</code> menentukan jumlah box per kanban, jadi kesalahan aturan di sini langsung
+    mengubah jumlah kanban yang tercetak.</p>
+
+    <h3>4.6 <span class="badge p2">P2</span> Arti <code>mode</code></h3>
+    <p><strong>Pertanyaan:</strong> pada SIREP lama terdapat kolom <code>mode</code> bertipe angka
+    (contoh nilai <code>1</code>). Apakah <code>shipping_method</code> di API baru adalah pengganti kolom
+    tersebut? Bila ya, mohon berikan tabel konversinya (mis. <code>sea</code> &rarr; 1, <code>air</code> &rarr; 2).</p>
+
+    <h3>4.7 <span class="badge p2">P2</span> Paginasi &amp; jumlah total</h3>
+    <p><strong>Pertanyaan:</strong> berapa batas jumlah baris yang dikembalikan dalam satu respons?
+    Apakah tersedia paginasi?</p>
+    <p><strong>Yang dibutuhkan:</strong> amplop respons berisi jumlah total, mis.
+    <code>{ "meta": { "total": 1243 }, "data": [ ... ] }</code>. Tanpa itu kami tidak bisa memastikan data
+    yang diterima lengkap &mdash; dan data yang terpotong senyap adalah kegagalan yang paling sulit
+    dideteksi karena tidak menimbulkan error apa pun.</p>
+
+    <h3>4.8 <span class="badge p2">P2</span> Keamanan akses</h3>
+    <p><strong>Pertanyaan:</strong> apakah API akan tetap terbuka tanpa autentikasi?</p>
+    <p><strong>Usulan:</strong> token sederhana per aplikasi konsumen melalui header
+    <code>Authorization</code>, sehingga akses dapat dicabut atau dirotasi bila diperlukan. Bila HTTPS
+    belum memungkinkan, minimal batasi akses berdasarkan alamat IP server e-Kanban dan Filter-Kanban.</p>
+
+    <h3>4.9 <span class="badge p2">P2</span> Arti <code>is_printing</code> dan <code>is_printing_kanban</code></h3>
+    <p><strong>Pertanyaan:</strong> apakah kedua field ini diisi oleh SIREP sendiri, atau SIREP menunggu
+    aplikasi kanban memperbaruinya setelah kanban dicetak?</p>
+    <p>Bila yang kedua, dibutuhkan endpoint tulis (mis. <code>POST /api/shared/listing/{id}/printed</code>).
+    Ini justru peluang bagus &mdash; PPC akhirnya bisa melihat realisasi cetak di lantai produksi.</p>
+
+    <h3>4.10 <span class="badge p2">P2</span> Arti <code>is_overtime</code> dan <code>status_assy</code></h3>
+    <p><strong>Pertanyaan:</strong> apakah <code>is_overtime</code> berarti baris tersebut dikerjakan pada
+    jam lembur / shift tambahan? Bila ya, apakah kapasitas conveyor pada hari itu berbeda?</p>
+    <p>Perhitungan pembagian cutoff CO1&ndash;CO5 kami memakai kapasitas tetap per conveyor. Bila SIREP
+    memiliki informasi kapasitas atau hari kerja per tanggal, itu sangat berguna dan sebaiknya
+    disediakan sebagai endpoint terpisah.</p>
+
+    <h3>4.11 <span class="badge p3">P3</span> Keseragaman bentuk respons</h3>
+    <p>Endpoint <code>listing</code> mengembalikan array telanjang, <code>conveyor</code> memakai amplop
+    <code>data</code>. Mohon diseragamkan &mdash; kami mengusulkan keduanya memakai amplop
+    <code>{ "meta": {...}, "data": [...] }</code>.</p>
+
+    <h3>4.12 <span class="badge p3">P3</span> Daftar conveyor yang sudah pindah</h3>
+    <p>Mohon daftar conveyor yang datanya <strong>sudah</strong> dikelola SIREP baru, beserta tanggal
+    mulai berlakunya. Ini menentukan urutan peralihan di sisi kami (lihat &sect;7).</p>
+  </div>
+  <div class="page-foot"><span>4. Pertanyaan untuk Tim PPC</span><span>Hal. 6 / 12</span></div>
+</section>
+
+<!-- ═══════════ HAL 7 — ARSITEKTUR ═══════════ -->
+<section class="page">
+  <div class="page-head"><span>Rencana Implementasi API SIREP</span><span>5. Arsitektur Target</span></div>
+  <div class="page-body">
+    <h2>5. Arsitektur Target &mdash; Dua Sumber Berdampingan</h2>
+
+    <p>Karena sebagian conveyor masih dilayani SIREP lama, sumber data ditentukan
+    <strong>per conveyor</strong>, bukan per aplikasi. Keduanya bermuara ke tabel staging yang sama
+    sehingga seluruh logika penjadwalan di hilir tidak berubah sama sekali.</p>
+
+    <pre>                    ┌────────────────────────┐
+   SIREP lama ─────&gt;│ DbListingSource        │──┐
+   (DB langsung)    │ (koneksi mysql/listing)│  │
+                    └────────────────────────┘  │   ┌──────────────────┐
+                                                ├──&gt;│ Normalisasi ke   │──&gt; listing_stage
+                    ┌────────────────────────┐  │   │ bentuk seragam   │    (tidak berubah)
+   SIREP baru ─────&gt;│ ApiListingSource       │──┘   └──────────────────┘         │
+   (REST API)       │ (HTTP + adapter field) │                                   ▼
+                    └────────────────────────┘                            assy_schedule
+                              ▲                                                  │
+                              │                                                  ▼
+              master_conveyor.listing_source = 'db' | 'api'                    kanban
+                    (penentu per conveyor)</pre>
+
+    <h3>5.1 Prinsip</h3>
+    <table class="data">
+      <thead><tr><th style="width:44mm">Prinsip</th><th>Penjelasan</th></tr></thead>
+      <tbody>
+        <tr><td>Staging tidak diubah</td><td>Struktur <code>listing_stage</code> / <code>t_listing_stage</code> tetap. Logika generate, verifikasi, dan kanban tidak tersentuh &mdash; risiko regresi ditekan seminimal mungkin.</td></tr>
+        <tr><td>Sumber ditentukan data</td><td>Perpindahan satu conveyor cukup mengubah satu nilai kolom, tanpa deploy ulang aplikasi.</td></tr>
+        <tr><td>Normalisasi di satu tempat</td><td>Konversi <code>sea</code>/<code>air</code>, <code>shipping_method</code>, dan <code>TRIM</code> nama conveyor terjadi di satu kelas adapter &mdash; mudah diuji dan diperbaiki.</td></tr>
+        <tr><td>Kegagalan harus terlihat</td><td>Conveyor yang gagal ditarik dilaporkan ke layar, bukan hanya ke log. Ini memperbaiki kelemahan lama yang membuat rencana hilang diam-diam.</td></tr>
+        <tr><td>Bisa dikembalikan seketika</td><td>Ubah <code>listing_source</code> kembali ke <code>db</code> &rarr; conveyor itu kembali memakai jalur lama.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="box warn">
+      <span class="box-title">Catatan penting &mdash; nomor <code>id</code> dari dua sumber</span>
+      SIREP lama dan SIREP baru memiliki penomoran <code>id</code> yang terpisah (contoh: 884213 di sistem
+      lama, 250 di sistem baru). Selama masa dua sumber, <strong><code>id_listing</code> tidak lagi unik
+      secara global</strong>.
+      <br>Hasil pemeriksaan: hal ini <strong>aman</strong> karena seluruh kunci yang dipakai kedua aplikasi
+      selalu menyertakan conveyor dan tanggal &mdash; deduplikasi memakai
+      (tanggal, conveyor, assycode, seq), dan relasi jadwal memakai id lokal tabel staging, bukan
+      <code>id_listing</code>. Urutan FIFO juga hanya berlaku dalam satu grup (tanggal &times; conveyor).
+      <br>Meski begitu, kolom penanda sumber tetap ditambahkan ke staging untuk penelusuran.
+    </div>
+  </div>
+  <div class="page-foot"><span>5. Arsitektur Target</span><span>Hal. 7 / 12</span></div>
+</section>
+
+<!-- ═══════════ HAL 8 — EKANBAN ═══════════ -->
+<section class="page">
+  <div class="page-head"><span>Rencana Implementasi API SIREP</span><span>6. Perubahan jai_ekanban</span></div>
+  <div class="page-body">
+    <h2>6. Perubahan di jai_ekanban (Laravel)</h2>
+
+    <h3>6.1 Berkas baru</h3>
+    <table class="data">
+      <thead><tr><th style="width:66mm">Berkas</th><th>Peran</th></tr></thead>
+      <tbody>
+        <tr><td><code>app/Contracts/ListingSourceInterface.php</code></td><td>Kontrak: <code>fetch(dateFrom, dateTo, conveyorCodes): iterable</code></td></tr>
+        <tr><td><code>app/Services/Listing/DbListingSource.php</code></td><td>Jalur lama &mdash; memindahkan kueri yang kini ada di <code>ListingSyncService</code></td></tr>
+        <tr><td><code>app/Services/Listing/ApiListingSource.php</code></td><td>Jalur baru &mdash; HTTP client, retry, timeout</td></tr>
+        <tr><td><code>app/Services/Listing/SirepListingAdapter.php</code></td><td>Normalisasi field API &rarr; bentuk staging (konversi sea/air, mode, TRIM)</td></tr>
+        <tr><td><code>app/Services/Listing/CompositeListingSource.php</code></td><td>Membagi conveyor menurut <code>listing_source</code>, memanggil kedua sumber, menggabungkan hasil</td></tr>
+        <tr><td><code>config/sirep.php</code></td><td><code>base_url</code>, <code>timeout</code>, <code>retry</code>, <code>token</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>6.2 Migrasi database</h3>
+    <pre>// master_conveyor
+$table-&gt;enum('listing_source', ['db','api'])-&gt;default('db')-&gt;after('conveyor');
+$table-&gt;string('sirep_conveyor_code')-&gt;nullable()-&gt;after('listing_source');
+   // dipakai bila nama di SIREP baru berbeda dengan nama master; kosong = pakai `conveyor`
+
+// listing_stage
+$table-&gt;enum('source', ['db','api'])-&gt;default('db')-&gt;after('id_listing');   // penelusuran
+$table-&gt;timestamp('source_updated_at')-&gt;nullable();  // diisi bila API menyediakan updated_at</pre>
+
+    <h3>6.3 Berkas yang diubah</h3>
+    <table class="data">
+      <thead><tr><th style="width:60mm">Berkas</th><th>Perubahan</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>app/Services/ListingSyncService.php</code></td>
+          <td>Ambil data lewat <code>CompositeListingSource</code>, bukan <code>Listing::whereBetween(...)</code>. Tambah penanganan revisi: bila baris sudah ada <strong>dan</strong> <code>source_updated_at</code> berubah &rarr; <em>update</em>, bukan <em>skip</em>. Laporkan conveyor yang gagal ditarik ke hasil.</td>
+        </tr>
+        <tr>
+          <td><code>app/Services/AssySchedulerService.php</code></td>
+          <td>Pencocokan conveyor memakai <code>TRIM</code> di kedua sisi. Ganti <code>Log::warning</code> + <code>continue</code> menjadi pengumpulan daftar conveyor gagal yang dikembalikan ke pemanggil.</td>
+        </tr>
+        <tr>
+          <td><code>app/Models/MasterConveyor.php</code></td>
+          <td>Tambah <code>listing_source</code> dan <code>sirep_conveyor_code</code> ke <code>$fillable</code></td>
+        </tr>
+        <tr>
+          <td><code>MasterConveyorController</code> + view</td>
+          <td>Tambah pilihan sumber listing pada form master conveyor, agar peralihan dapat dilakukan operator tanpa akses database</td>
+        </tr>
+        <tr>
+          <td><code>ListingSyncController</code> + view</td>
+          <td>Tampilkan ringkasan per sumber: jumlah baris dari DB lama vs API, dan daftar conveyor yang gagal</td>
+        </tr>
+        <tr>
+          <td><code>app/Models/Listing.php</code></td>
+          <td>Tetap dipertahankan &mdash; dipakai <code>DbListingSource</code> selama masih ada conveyor berjalur lama</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>6.4 Perkiraan usaha</h3>
+    <table class="data">
+      <thead><tr><th style="width:60mm">Pekerjaan</th><th>Perkiraan</th></tr></thead>
+      <tbody>
+        <tr><td>Interface + dua sumber + adapter</td><td>1&ndash;2 hari</td></tr>
+        <tr><td>Migrasi &amp; penyesuaian master conveyor + UI</td><td>0,5 hari</td></tr>
+        <tr><td>Penanganan revisi di sinkronisasi</td><td>0,5 hari <em>(bergantung jawaban P1)</em></td></tr>
+        <tr><td>Pengujian &amp; verifikasi paralel</td><td>menyusul, lihat &sect;8</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-foot"><span>6. Perubahan jai_ekanban</span><span>Hal. 8 / 12</span></div>
+</section>
+
+<!-- ═══════════ HAL 9 — FILTER KANBAN ═══════════ -->
+<section class="page">
+  <div class="page-head"><span>Rencana Implementasi API SIREP</span><span>7. Perubahan jai_filter_kanban</span></div>
+  <div class="page-body">
+    <h2>7. Perubahan di jai_filter_kanban (CodeIgniter 3)</h2>
+
+    <p>Struktur CI3 tidak mengenal <em>service container</em>, jadi pendekatannya lebih sederhana:
+    satu library sumber data, dipanggil dari <code>stage()</code>.</p>
+
+    <h3>7.1 Berkas baru</h3>
+    <table class="data">
+      <thead><tr><th style="width:66mm">Berkas</th><th>Peran</th></tr></thead>
+      <tbody>
+        <tr><td><code>application/libraries/Sirep_api.php</code></td><td>HTTP client (cURL), timeout, retry, penanganan error</td></tr>
+        <tr><td><code>application/libraries/Listing_source.php</code></td><td>Membagi conveyor menurut sumber, menggabungkan hasil, menormalkan field</td></tr>
+        <tr><td><code>application/config/sirep.php</code></td><td><code>base_url</code>, <code>timeout</code>, <code>token</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>7.2 Perubahan database</h3>
+    <pre>ALTER TABLE m_conveyor
+  ADD COLUMN listing_source ENUM('db','api') NOT NULL DEFAULT 'db' AFTER var_conveyor,
+  ADD COLUMN sirep_conveyor_code VARCHAR(50) NULL AFTER listing_source;
+
+ALTER TABLE t_listing_stage
+  ADD COLUMN source ENUM('db','api') NOT NULL DEFAULT 'db',
+  ADD COLUMN source_updated_at DATETIME NULL;</pre>
+
+    <h3>7.3 Berkas yang diubah</h3>
+    <table class="data">
+      <thead><tr><th style="width:56mm">Berkas / method</th><th>Perubahan</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>Assy_schedule_model::stage()</code></td>
+          <td>Ganti kueri langsung ke <code>listing_ppc</code> dengan pemanggilan <code>Listing_source</code>. Pertahankan pola batch (5.000 / 1.000 baris) untuk jalur DB; jalur API mengikuti paginasi bila nanti tersedia.</td>
+        </tr>
+        <tr>
+          <td>Kunci deduplikasi</td>
+          <td><code>INSERT IGNORE</code> diganti <code>INSERT ... ON DUPLICATE KEY UPDATE</code> agar revisi dapat diterapkan &mdash; hanya bila field <code>updated_at</code> tersedia dari API (jawaban P1).</td>
+        </tr>
+        <tr>
+          <td><code>Assy_schedule_model::test_connection()</code></td>
+          <td>Tambahkan pemeriksaan ketersediaan API, bukan hanya koneksi database</td>
+        </tr>
+        <tr>
+          <td><code>reset_and_restage_assy()</code></td>
+          <td>Ikut memakai sumber gabungan &mdash; method ini memanggil ulang alur staging</td>
+        </tr>
+        <tr>
+          <td><code>C_loading_model</code></td>
+          <td>Tidak diubah pada tahap ini. Namun <strong>perlu diperiksa terpisah</strong>: pemetaan <code>m_assy.var_assy</code> saat ini dicocokkan dengan <code>t_assy_schedule.var_assy</code>, sedangkan isi <code>m_assy</code> berupa kode pendek (mis. <code>KMVD</code>) dan <code>var_assy</code> berisi nomor lengkap (mis. <code>KHFS-67030</code>). Ketidakcocokan ini menghasilkan nol kanban meski jadwal terverifikasi.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="box danger">
+      <span class="box-title">Prasyarat khusus filter-kanban</span>
+      Sebelum conveyor mana pun dipindahkan ke API, isi tabel <code>m_assy</code> harus diselaraskan lebih
+      dulu dengan nilai <code>assy_number</code> dari API SIREP. Bila tidak, hasil peralihan akan terlihat
+      &ldquo;berhasil&rdquo; di halaman jadwal tetapi daftar kanban kosong &mdash; gejala yang sudah pernah
+      terjadi dan sulit ditelusuri karena tidak memunculkan error.
+    </div>
+
+    <h3>7.4 Perkiraan usaha</h3>
+    <table class="data">
+      <thead><tr><th style="width:60mm">Pekerjaan</th><th>Perkiraan</th></tr></thead>
+      <tbody>
+        <tr><td>Library API + sumber gabungan</td><td>1&ndash;1,5 hari</td></tr>
+        <tr><td>Perubahan <code>stage()</code> &amp; kunci deduplikasi</td><td>0,5 hari</td></tr>
+        <tr><td>Penyelarasan <code>m_assy</code></td><td>perlu penelusuran data terpisah</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-foot"><span>7. Perubahan jai_filter_kanban</span><span>Hal. 9 / 12</span></div>
+</section>
+
+<!-- ═══════════ HAL 10 — TAHAPAN ═══════════ -->
+<section class="page">
+  <div class="page-head"><span>Rencana Implementasi API SIREP</span><span>8. Tahapan Penerapan</span></div>
+  <div class="page-body">
+    <h2>8. Tahapan Penerapan</h2>
+
+    <table class="data">
+      <thead><tr><th class="col-narrow">Tahap</th><th style="width:44mm">Kegiatan</th><th>Kriteria selesai</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="center"><strong>0</strong></td>
+          <td>Klarifikasi ke tim PPC</td>
+          <td>Butir P1 (&sect;4.1&ndash;4.4) terjawab. Daftar conveyor yang sudah pindah diterima. Uji panggil API dari server e-Kanban dan Filter-Kanban berhasil.</td>
+        </tr>
+        <tr>
+          <td class="center"><strong>1</strong></td>
+          <td>Penyelarasan master</td>
+          <td>Seluruh nama conveyor dari <code>/conveyor</code> ada di master kedua aplikasi (setelah <code>TRIM</code>). Seluruh <code>assy_number</code> dari contoh data ada di master assy. Selisih dicatat dan diperbaiki.</td>
+        </tr>
+        <tr>
+          <td class="center"><strong>2</strong></td>
+          <td>Bangun lapisan sumber data</td>
+          <td>Kode selesai. Dengan <code>listing_source = 'db'</code> untuk semua conveyor, perilaku <strong>identik</strong> dengan sekarang &mdash; tidak ada regresi.</td>
+        </tr>
+        <tr>
+          <td class="center"><strong>3</strong></td>
+          <td>Uji paralel satu conveyor</td>
+          <td>Pilih <strong>satu</strong> conveyor percontohan (usulan: <code>AT19</code>, sudah dipastikan ada di kedua sisi). Tarik data dari dua sumber untuk rentang yang sama, bandingkan baris demi baris. Selisih nol.</td>
+        </tr>
+        <tr>
+          <td class="center"><strong>4</strong></td>
+          <td>Peralihan conveyor percontohan</td>
+          <td>Ubah <code>listing_source</code> menjadi <code>api</code>. Pantau 5 hari kerja: jadwal terbentuk normal, kanban tercetak sesuai, tidak ada selisih qty.</td>
+        </tr>
+        <tr>
+          <td class="center"><strong>5</strong></td>
+          <td>Peralihan bertahap</td>
+          <td>Pindahkan sisa conveyor <strong>maksimal 2&ndash;3 per minggu</strong>, urut menurut daftar dari PPC. Setiap gelombang diverifikasi sebelum lanjut.</td>
+        </tr>
+        <tr>
+          <td class="center"><strong>6</strong></td>
+          <td>Penanganan revisi &amp; pembatalan</td>
+          <td>Setelah jawaban P1 tersedia dan API diperbarui: aktifkan sinkronisasi delta dan pembaruan baris. Diuji dengan mengubah qty dan membatalkan baris di SIREP.</td>
+        </tr>
+        <tr>
+          <td class="center"><strong>7</strong></td>
+          <td>Pembersihan</td>
+          <td>Setelah seluruh conveyor berjalur API dan stabil minimal satu bulan, koneksi database SIREP lama dinonaktifkan.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="box">
+      <span class="box-title">Urutan pemilihan conveyor</span>
+      Dahulukan conveyor dengan volume rendah dan variasi assy sedikit &mdash; dampak bila ada masalah lebih
+      kecil dan penelusurannya lebih mudah. Conveyor dengan jadwal 2 shift dan volume tinggi sebaiknya
+      dipindahkan pada gelombang terakhir.
+    </div>
+
+    <h3>8.1 Ketergantungan antar tahap</h3>
+    <pre>Tahap 0 (PPC menjawab)  ──┬──&gt; Tahap 1 (master)  ──&gt; Tahap 3 (uji paralel) ──&gt; Tahap 4 ──&gt; Tahap 5
+                          │
+                          └──&gt; Tahap 2 (kode)    ──────────────&gt; ▲
+
+Tahap 6 menunggu API diperbarui oleh PPC — dapat berjalan setelah Tahap 4.</pre>
+
+    <p>Tahap 1 dan 2 dapat dikerjakan bersamaan. Yang tidak boleh dilewati: <strong>Tahap 3 sebelum Tahap 4</strong>.</p>
+  </div>
+  <div class="page-foot"><span>8. Tahapan Penerapan</span><span>Hal. 10 / 12</span></div>
+</section>
+
+<!-- ═══════════ HAL 11 — VERIFIKASI ═══════════ -->
+<section class="page">
+  <div class="page-head"><span>Rencana Implementasi API SIREP</span><span>9. Verifikasi &amp; Pengembalian</span></div>
+  <div class="page-body">
+    <h2>9. Verifikasi &amp; Rencana Pengembalian</h2>
+
+    <h3>9.1 Uji paralel &mdash; yang dibandingkan</h3>
+    <p>Untuk satu conveyor dan satu rentang tanggal, tarik dari kedua sumber lalu bandingkan:</p>
+    <table class="data">
+      <thead><tr><th style="width:44mm">Yang dibandingkan</th><th>Kriteria lulus</th></tr></thead>
+      <tbody>
+        <tr><td>Jumlah baris</td><td>Sama persis</td></tr>
+        <tr><td>Himpunan (tanggal, assycode, seq)</td><td>Identik &mdash; tanpa selisih di kedua arah</td></tr>
+        <tr><td><code>qty</code> per baris</td><td>Identik</td></tr>
+        <tr><td><code>snp</code>, <code>snpa</code>, <code>plt</code></td><td>Identik &mdash; ini yang menguji aturan konversi sea/air</td></tr>
+        <tr><td><code>assy</code> (nomor lengkap)</td><td>Identik karakter per karakter</td></tr>
+        <tr><td>Hasil generate jadwal</td><td>Pembagian CO1&ndash;CO5 menghasilkan qty yang sama per cutoff</td></tr>
+        <tr><td>Jumlah kanban</td><td>Sama &mdash; pemeriksaan akhir yang paling menentukan</td></tr>
+      </tbody>
+    </table>
+
+    <h3>9.2 Yang harus dipantau setelah peralihan</h3>
+    <ul>
+      <li>Jumlah baris staging per conveyor per hari &mdash; penurunan mendadak berarti ada yang gagal ditarik.</li>
+      <li>Daftar conveyor yang gagal dicocokkan ke master (kini ditampilkan ke layar, tidak lagi hanya di log).</li>
+      <li>Selisih antara qty listing dan qty kanban.</li>
+      <li>Waktu respons API &mdash; sinkronisasi berjalan sebelum tiap generate, jadi langsung terasa operator.</li>
+    </ul>
+
+    <h3>9.3 Rencana pengembalian</h3>
+    <table class="data">
+      <thead><tr><th style="width:44mm">Situasi</th><th>Tindakan</th></tr></thead>
+      <tbody>
+        <tr><td>Satu conveyor bermasalah</td><td>Ubah <code>listing_source</code> conveyor itu kembali ke <code>db</code>. Conveyor lain tidak terpengaruh.</td></tr>
+        <tr><td>API mati saat jam produksi</td><td>Sinkronisasi gagal dengan pesan jelas; penjadwalan tetap dapat berjalan dari data staging yang sudah tersimpan.</td></tr>
+        <tr><td>Data sudah telanjur salah dan terjadwal</td><td>Kembalikan sumber ke <code>db</code>, hapus staging rentang tersebut (baris terkunci tetap terlindungi), lalu generate ulang.</td></tr>
+        <tr><td>Kanban sudah telanjur tercetak salah</td><td>Proses <em>unverify</em> di aplikasi kanban &mdash; saldo carry-over dikembalikan &mdash; lalu ulangi dari staging.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="box ok">
+      <span class="box-title">Mengapa pengembalian murah</span>
+      Tidak ada perubahan struktur pada tabel staging maupun jadwal, dan tidak ada migrasi data yang perlu
+      dibatalkan. Yang berubah hanya <em>dari mana</em> data diambil. Karena itu pengembalian cukup dengan
+      mengubah satu nilai kolom pada master conveyor.
+    </div>
+  </div>
+  <div class="page-foot"><span>9. Verifikasi &amp; Pengembalian</span><span>Hal. 11 / 12</span></div>
+</section>
+
+<!-- ═══════════ HAL 12 — RISIKO ═══════════ -->
+<section class="page">
+  <div class="page-head"><span>Rencana Implementasi API SIREP</span><span>10. Risiko &middot; 11. Tindak Lanjut</span></div>
+  <div class="page-body">
+    <h2>10. Daftar Risiko</h2>
+
+    <table class="data">
+      <thead><tr><th style="width:42mm">Risiko</th><th class="col-narrow">Dampak</th><th>Penanganan</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Revisi qty tidak terdeteksi</td><td class="center">Tinggi</td>
+          <td>Blokir peralihan penuh sampai P1 terjawab. Sementara itu, batasi peralihan pada conveyor yang rencananya jarang direvisi, dan sepakati agar revisi disampaikan manual ke operator kanban.</td>
+        </tr>
+        <tr>
+          <td>Pembatalan tidak terdeteksi</td><td class="center">Tinggi</td>
+          <td>Sama seperti di atas. Tambahan: sediakan tombol hapus staging manual per rentang bagi operator.</td>
+        </tr>
+        <tr>
+          <td><code>assy_number</code> tidak cocok master</td><td class="center">Tinggi</td>
+          <td>Diperiksa di Tahap 1 sebelum peralihan. Tambahkan peringatan di layar saat verifikasi bila ada assy tanpa pemetaan.</td>
+        </tr>
+        <tr>
+          <td>Nama conveyor tidak cocok / berspasi</td><td class="center">Tinggi</td>
+          <td><code>TRIM</code> di kedua sisi + kolom <code>sirep_conveyor_code</code> untuk kasus nama berbeda. Conveyor gagal dilaporkan ke layar.</td>
+        </tr>
+        <tr>
+          <td>Aturan sea/air salah</td><td class="center">Sedang</td>
+          <td>Terdeteksi di uji paralel &sect;9.1 &mdash; <code>snp</code> yang salah langsung mengubah jumlah kanban.</td>
+        </tr>
+        <tr>
+          <td>Respons terpotong tanpa error</td><td class="center">Sedang</td>
+          <td>Minta <code>meta.total</code> (P2). Sementara itu, bandingkan jumlah baris terhadap hari sebelumnya dan beri peringatan bila turun drastis.</td>
+        </tr>
+        <tr>
+          <td>API lambat / tidak tersedia</td><td class="center">Sedang</td>
+          <td>Timeout + retry bertingkat. Staging lokal membuat produksi tetap berjalan.</td>
+        </tr>
+        <tr>
+          <td>Akses tanpa autentikasi</td><td class="center">Sedang</td>
+          <td>Usulkan token (P2). Minimal batasi berdasarkan alamat IP.</td>
+        </tr>
+        <tr>
+          <td>Dua sistem berjalan berbarengan terlalu lama</td><td class="center">Rendah</td>
+          <td>Tetapkan target tanggal penyelesaian peralihan agar jalur lama tidak terpelihara tanpa batas.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>11. Tindak Lanjut Terdekat</h2>
+
+    <table class="data">
+      <thead><tr><th class="col-narrow">No</th><th style="width:64mm">Kegiatan</th><th>Pihak</th></tr></thead>
+      <tbody>
+        <tr><td class="center">1</td><td>Kirim daftar pertanyaan &sect;4 ke tim PPC</td><td>Tim e-Kanban</td></tr>
+        <tr><td class="center">2</td><td>Uji panggil kedua endpoint dari server e-Kanban dan Filter-Kanban (uji jaringan)</td><td>Tim e-Kanban</td></tr>
+        <tr><td class="center">3</td><td>Bandingkan daftar conveyor API dengan master kedua aplikasi</td><td>Tim e-Kanban</td></tr>
+        <tr><td class="center">4</td><td>Ambil contoh data satu conveyor satu bulan, bandingkan dengan SIREP lama</td><td>Tim e-Kanban</td></tr>
+        <tr><td class="center">5</td><td>Periksa keselarasan <code>m_assy</code> di filter-kanban</td><td>Tim Filter-Kanban</td></tr>
+        <tr><td class="center">6</td><td>Sepakati conveyor percontohan &amp; jadwal peralihan</td><td>Bersama PPC</td></tr>
+      </tbody>
+    </table>
+
+    <div class="box">
+      <span class="box-title">Akhir dokumen</span>
+      Rencana Implementasi API SIREP &mdash; versi 1.0 draft, 28 Juli 2026.
+      Dokumen pendamping: <code>docs/API_SIREP_PPC_V1.html</code> (spesifikasi API yang diusulkan) dan
+      <code>docs/ALUR_BISNIS_DAN_ATURAN_JADWAL_KANBAN.md</code> (aturan penjadwalan).
+    </div>
+  </div>
+  <div class="page-foot"><span>10. Risiko &middot; 11. Tindak Lanjut</span><span>Hal. 12 / 12</span></div>
+</section>
+
+</body>
+</html>

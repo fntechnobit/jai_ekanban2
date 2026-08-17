@@ -42,10 +42,24 @@ class ListingSyncController extends Controller
             $result = $this->listingSyncService->syncListingData($startDate, $endDate);
 
             if ($result['success']) {
-                $message = "Synchronization completed successfully! Synced: {$result['synced']}, Skipped: {$result['skipped']}";
-                
+                // Sinkronisasi bersifat rekonsiliasi: selain menambah, ia juga
+                // memperbarui baris yang direvisi dan menghapus yang dibatalkan
+                // di SIREP. Ketiganya perlu terlihat oleh operator.
+                $message = sprintf(
+                    'Sinkronisasi selesai (sumber: %s). Baru: %d, Diperbarui: %d, Dihapus: %d, Tidak berubah: %d',
+                    $result['source'] ?? '-',
+                    $result['inserted'] ?? 0,
+                    $result['updated'] ?? 0,
+                    $result['deleted'] ?? 0,
+                    $result['skipped'] ?? 0
+                );
+
+                if (!empty($result['warnings'])) {
+                    $message .= ' — ' . count($result['warnings']) . ' peringatan, mohon diperiksa';
+                }
+
                 if (!empty($result['errors'])) {
-                    $message .= " (with " . count($result['errors']) . " errors)";
+                    $message .= ' — ' . count($result['errors']) . ' conveyor gagal diambil';
                 }
 
                 return response()->json([

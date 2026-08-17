@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../jai_filter_kanban"
+		},
+		{
+			"path": "../jai_ekanban2"
 		}
 	],
 	"settings": {}

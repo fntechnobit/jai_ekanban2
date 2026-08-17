@@ -6,6 +6,9 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use App\Models\Menu;
 use App\Models\GroupMenuAccess;
+use App\Services\Listing\ApiListingSource;
+use App\Services\Listing\DbListingSource;
+use App\Services\Listing\ListingSourceInterface;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -14,7 +17,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Sumber data listing ditentukan konfigurasi, bukan kode.
+        // 'api' = REST API SIREP (mode utama jai_ekanban2)
+        // 'db'  = database SIREP lama (jalur cadangan, perilaku jai_ekanban)
+        $this->app->bind(ListingSourceInterface::class, function ($app) {
+            return config('sirep.listing_source') === 'db'
+                ? $app->make(DbListingSource::class)
+                : $app->make(ApiListingSource::class);
+        });
     }
 
     /**
