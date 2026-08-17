@@ -61,7 +61,11 @@
     width: 100%;
     height: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
+    /* auto layout: colgroup widths below act as a MINIMUM per column,
+       columns grow past that minimum when a value doesn't fit, instead of
+       wrapping to 2 lines and blowing out the row height past the fixed
+       80mm print height. */
+    table-layout: auto;
 }
 
 .ticket-joint-print th,
@@ -88,11 +92,13 @@
     background-color: transparent;
     font-weight: 500;
     font-size: 14px;
+    white-space: nowrap;
 }
 
 .ticket-joint-print .value-cell {
     font-weight: bold;
     font-size: 18px;
+    white-space: nowrap;
 }
 
 .ticket-joint-print .qrcode-cell {
@@ -215,7 +221,9 @@
     
     .ticket-joint-print table {
         page-break-inside: avoid;
-        width: 100%;
+        /* let the table shrink/grow to its auto-layout content width instead
+           of being forced to 100% of an already-truncated container */
+        width: auto;
     }
     
     .ticket-joint-print th,
@@ -258,10 +266,10 @@
     <div class="ticket-joint-print">
         <table>
             <colgroup>
-                <col style="width: 19%">
-                <col style="width: 38%">
-                <col style="width: 19%">
-                <col style="width: 24%">
+                <col style="width: 13mm">
+                <col style="width: 27mm">
+                <col style="width: 13mm">
+                <col style="width: 17mm">
             </colgroup>
             <thead>
                 <tr>
