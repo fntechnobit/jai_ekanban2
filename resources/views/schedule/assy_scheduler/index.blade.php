@@ -229,7 +229,7 @@
                 // Step 1 — loading
                 $('#step1-row').css('border-left-color', '#6c757d').css('opacity', '1');
                 $('#step1-icon').html('<span class="spinner-border spinner-border-sm text-secondary" role="status"></span>');
-                $('#step1-detail').text('Mengambil data terbaru dari database listing...');
+                $('#step1-detail').text('Mengambil data terbaru dari API SIREP...');
 
                 // Step 2 — waiting
                 $('#step2-row').css('border-left-color', '#6c757d').css('opacity', '0.45');
@@ -252,7 +252,7 @@
                     // Step 1 FAILED
                     setStepFail(1, syncDetail
                         ? buildSyncText(syncDetail)
-                        : 'Gagal terhubung ke database listing. Proses dihentikan.');
+                        : 'Gagal terhubung ke API SIREP. Proses dihentikan, tidak ada sumber cadangan yang dicoba.');
                     // Step 2 SKIPPED
                     setStepSkipped(2, 'Dilewati karena step 1 gagal.');
                 } else {

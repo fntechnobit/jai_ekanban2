@@ -35,7 +35,7 @@
                             <div class="f-s-13">
                                 <strong>Alur Generate:</strong>
                                 <ol class="mb-0 ps-3 mt-1">
-                                    <li>Clone data terbaru dari <em>database listing</em> ke <em>listing_stage</em></li>
+                                    <li>Ambil data terbaru dari <em>API SIREP</em> ke <em>listing_stage</em></li>
                                     <li>Generate assy schedule berdasarkan data listing dan kapasitas conveyor</li>
                                 </ol>
                             </div>
@@ -67,7 +67,7 @@
                             <div class="fw-semibold f-s-14">
                                 <i class="fa-solid fa-database me-1"></i> Step 1: Clone Data Listing
                             </div>
-                            <div class="text-muted f-s-13 mt-1" id="step1-detail">Mengambil data terbaru dari database listing...</div>
+                            <div class="text-muted f-s-13 mt-1" id="step1-detail">Mengambil data terbaru dari API SIREP...</div>
                         </div>
                     </div>
 

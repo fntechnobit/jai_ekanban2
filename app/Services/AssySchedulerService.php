@@ -35,6 +35,23 @@ class AssySchedulerService
         $this->listingAllocator = $listingAllocator;
         $this->scheduleCleanup = $scheduleCleanup;
     }
+
+    /**
+     * Sebutan sumber listing untuk pesan ke operator.
+     *
+     * Pesan galat harus menyebut sumber yang benar-benar dipakai: menyebut
+     * "database listing" saat sumbernya API membuat operator memeriksa sistem
+     * yang salah.
+     *
+     * @param  string|null  $source  Nilai dari hasil sinkronisasi; null = ambil dari config
+     */
+    private function sourceLabel(?string $source = null): string
+    {
+        $source ??= config('sirep.listing_source');
+
+        return $source === 'db' ? 'database listing lama (PPC)' : 'API SIREP';
+    }
+
     /**
      * Generate assy schedules for the specified date range with cutoff system
      *
@@ -48,7 +65,7 @@ class AssySchedulerService
         $startDate = Carbon::parse($startDate)->startOfDay();
         $endDate   = Carbon::parse($endDate)->endOfDay();
 
-        // ─── STEP 1: Clone listing data from mysql_listing → listing_stage ───
+        // ─── STEP 1: Ambil listing dari sumber aktif (API SIREP) → listing_stage ───
         try {
             DB::beginTransaction();
 
@@ -78,7 +95,9 @@ class AssySchedulerService
                 return [
                     'success'     => false,
                     'step_failed' => 'sync_listing',
-                    'message'     => 'Gagal mengambil data listing terbaru dari database listing: ' . ($syncResult['message'] ?? 'Koneksi database listing tidak tersedia.'),
+                    'message'     => 'Gagal mengambil data listing terbaru dari ' . $this->sourceLabel($syncResult['source'] ?? null) . ': '
+                        . rtrim((string) ($syncResult['message'] ?? 'Sumber listing tidak tersedia.'), ' .')
+                        . '. Proses generate dihentikan dan tidak ada sumber cadangan yang dicoba.',
                     'sync_detail' => null,
                     'generated'   => 0,
                 ];
@@ -92,7 +111,7 @@ class AssySchedulerService
             return [
                 'success'     => false,
                 'step_failed' => 'sync_listing',
-                'message'     => 'Tidak dapat terhubung ke database listing. Proses generate dihentikan. (' . $e->getMessage() . ')',
+                'message'     => 'Tidak dapat terhubung ke ' . $this->sourceLabel() . '. Proses generate dihentikan dan tidak ada sumber cadangan yang dicoba. (' . $e->getMessage() . ')',
                 'sync_detail' => null,
                 'generated'   => 0,
             ];

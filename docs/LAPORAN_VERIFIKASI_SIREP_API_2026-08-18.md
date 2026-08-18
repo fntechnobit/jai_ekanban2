@@ -21,6 +21,7 @@
 | Apakah generate jadwal assy berhasil? | **Ya**, 17 jadwal terbentuk dari data API |
 | Apakah sudah bisa dipakai untuk seluruh conveyor? | **Belum** — hanya 2 dari 14 conveyor. Lihat Temuan T-1 |
 | Apakah `DB_LISTING_*` masih dipakai? | **Tidak** — sudah dihapus dari `.env`, terverifikasi di kode |
+| Bila API SIREP mati, apakah proses berhenti tanpa mencari sumber lain? | **Ya**, terverifikasi lewat uji kegagalan. Data tidak berubah sedikit pun. Lihat 3.6 |
 
 Status: **mekanisme berfungsi, cakupan data terblokir oleh bug pemetaan nama conveyor.**
 
@@ -172,6 +173,61 @@ db     |    117 |      109     ← data lama, tidak diganggu
 Seluruh 17 jadwal hasil generate berada di conveyor **B3-ENG** — satu-satunya
 conveyor master yang punya data API pada rentang tersebut.
 
+### 3.6 Perilaku saat API SIREP mati (uji kegagalan)
+
+**Persyaratan yang diuji:** bila API SIREP tidak dapat dihubungi, proses harus
+berhenti dengan galat dan notifikasi, serta **tidak** mencari sumber data lain —
+termasuk database listing lama.
+
+Simulasi dilakukan dengan mengarahkan `sirep.api.base_url` ke host mati
+(`http://127.0.0.1:9/...`, port discard → *connection refused*) pada runtime,
+lalu me-*forget* instance container agar klien dibangun ulang.
+
+**Uji A — `syncListingData('2026-08-18','2026-08-22')`**
+
+```
+SEBELUM: total=42 {"api":10,"db":32}
+
+success : false
+source  : api                 ← tidak berpindah ke db
+message : Tidak dapat menghubungi API SIREP: cURL error 7: Failed to connect
+          to 127.0.0.1 port 9 ... /conveyor
+errors  : [ ... ]
+
+SESUDAH: total=42 {"api":10,"db":32}      ← data utuh, tidak ada yang terhapus
+```
+
+Penjaga `ping()` (`app/Services/ListingSyncService.php:69-80`) menyala sebelum
+pengambilan data apa pun, sehingga tidak ada penulisan parsial.
+
+**Uji B — `generateSchedules('2026-08-18','2026-08-22')`** — ini jalur yang lebih
+berisiko, karena `generateSchedules` menghapus `listing_stage` **lebih dulu**
+baru menyinkronkan.
+
+```
+SEBELUM: listing_stage=42  assy_schedule=134
+
+success     : false
+step_failed : sync_listing
+generated   : 0
+message     : Gagal mengambil data listing terbaru dari API SIREP: ...
+              Proses generate dihentikan dan tidak ada sumber cadangan yang dicoba.
+
+SESUDAH: listing_stage=42  assy_schedule=134   ← rollback utuh
+```
+
+`DB::rollBack()` terbukti mengembalikan penghapusan staging. Tidak ada jadwal
+yang hilang.
+
+**Kesimpulan:** ketiga persyaratan terpenuhi — berhenti dengan galat, notifikasi
+sampai ke operator (`ListingSyncController` mengembalikan HTTP 400 + pesan;
+frontend menampilkannya di `resources/views/system/listing_sync/index.blade.php:198-207`
+dan `resources/views/schedule/assy_scheduler/index.blade.php:250-256`), dan tidak
+ada percobaan ke sumber lain.
+
+**Regresi:** setelah perbaikan T-4 di bawah, sinkronisasi terhadap API asli diuji
+ulang dan tetap `success: true`, `source: api`, `errors: []`, 10 record.
+
 ---
 
 ## 4. Temuan
@@ -229,15 +285,38 @@ saja akan menghasilkan bug diam-diam:
    (`app/Models/MasterConveyor.php:18-28`). Saat ini tidak ada di sana, sehingga
    `create()` / `update()` akan membuangnya diam-diam.
 
-### T-2 (INFORMASI) — tidak ada fallback otomatis saat API mati
+### T-2 (DIKONFIRMASI SEBAGAI PERILAKU YANG DIINGINKAN) — tidak ada fallback otomatis
 
-Lihat bagian 2. Bila ini bukan perilaku yang diinginkan operasional, perlu
-keputusan terpisah. Bukan bug — sesuai kode saat ini.
+Bila API SIREP mati, proses berhenti dengan galat + notifikasi dan tidak menoleh
+ke sumber mana pun, termasuk database listing lama. Dikonfirmasi oleh pemilik
+sistem pada 2026-08-18 sebagai perilaku yang **memang dikehendaki**, dan sudah
+diverifikasi empiris pada 3.6. Bukan bug, dan tidak boleh "diperbaiki" menjadi
+fallback otomatis oleh pekerjaan berikutnya.
 
 ### T-3 (KOSMETIK) — string keterangan tergabung
 
 Lihat 3.3. `"samaambang over SIREP 96..."` — pemisah hilang saat merangkai pesan
-di `SirepSyncConveyorCommand.php`.
+di `SirepSyncConveyorCommand.php`. **Belum diperbaiki.**
+
+### T-4 (SUDAH DIPERBAIKI) — pesan galat menyebut sumber yang salah
+
+Saat generate gagal karena API mati, pesan ke operator berbunyi *"Gagal mengambil
+data listing terbaru dari **database listing**"*. Ini peninggalan implementasi
+berbasis DB dan menyesatkan: operator akan memeriksa sistem yang salah, padahal
+yang mati adalah API SIREP. Karena persyaratan T-2 justru menuntut notifikasi
+yang jelas, teks ini diperbaiki:
+
+- `app/Services/AssySchedulerService.php` — sebutan sumber kini diturunkan dari
+  sumber yang benar-benar dipakai lewat helper `sourceLabel()`, dan pesan
+  ditutup dengan penegasan *"tidak ada sumber cadangan yang dicoba"*.
+- `resources/views/schedule/assy_scheduler/generate_modal.blade.php` dan
+  `index.blade.php` — teks langkah "Clone data terbaru dari *database listing*"
+  menjadi "Ambil data terbaru dari *API SIREP*".
+- Komentar `// STEP 1: Clone listing data from mysql_listing` disesuaikan.
+
+Penyebutan "database listing" yang **tetap dipertahankan** karena memang akurat:
+`DbListingSource.php:31` (jalur DB sungguhan) dan `ListingSyncService.php:413`
+(statistik, sudah dijaga `if ($this->source->name() === 'db')`).
 
 ---
 
