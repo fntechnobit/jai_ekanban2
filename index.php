@@ -10,13 +10,16 @@
 $requestUri = $_SERVER['REQUEST_URI'];
 $scriptName = $_SERVER['SCRIPT_NAME'];
 
-// If accessing via /jai_ekanban2/ (without public), redirect internally
-if (str_contains($requestUri, '/jai_ekanban2/') && !str_contains($requestUri, '/jai_ekanban2/public/')) {
-    // Remove /jai_ekanban2/ prefix and route through Laravel
-    $_SERVER['SCRIPT_NAME'] = '/jai_ekanban2/public/index.php';
-    $pathInfo = str_replace('/jai_ekanban2/', '/', $requestUri);
+// Subdirectory this app is deployed under, e.g. "/ekanban2/"
+$baseDir = '/'.basename(__DIR__).'/';
+
+// If accessing via the subdirectory (without public), redirect internally
+if (str_contains($requestUri, $baseDir) && !str_contains($requestUri, $baseDir.'public/')) {
+    // Remove the subdirectory prefix and route through Laravel
+    $_SERVER['SCRIPT_NAME'] = $baseDir.'public/index.php';
+    $pathInfo = str_replace($baseDir, '/', $requestUri);
     $_SERVER['PATH_INFO'] = $pathInfo;
-    $_SERVER['REQUEST_URI'] = '/jai_ekanban2/public' . $pathInfo;
+    $_SERVER['REQUEST_URI'] = rtrim($baseDir, '/').'/public'.$pathInfo;
 }
 
 // Forward to the public folder
