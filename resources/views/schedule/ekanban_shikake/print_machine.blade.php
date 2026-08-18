@@ -51,6 +51,9 @@
                         <select class="btn btn-sm" id="printer-select" style="max-width: 200px;" disabled>
                             <option>- Choose Printer -</option>
                         </select>
+                        <button type="button" class="btn btn-success btn-sm d-none" id="btn-print-selected">
+                            <i class="fa-solid fa-print"></i> Print Selected (<span id="selected-count">0</span>)
+                        </button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -122,6 +125,7 @@
                         <table id="shikake-table" class="table table-bordered table-striped" style="width:100%">
                             <thead>
                                 <tr>
+                                    <th width="3%"><input type="checkbox" id="check-all"></th>
                                     <th width="5%">No</th>
                                     <th>Code</th>
                                     <th>CV</th>
@@ -278,7 +282,7 @@
                 scrollX: true,
                 scrollCollapse: true,
                 fixedColumns: {
-                    leftColumns: 3,  // Freeze: No, Process/Code, CV
+                    leftColumns: 4,  // Freeze: Checkbox, No, Process/Code, CV
                     rightColumns: 1   // Freeze: Actions
                 },
                 ajax: {
@@ -312,12 +316,23 @@
                             ? xhr.responseJSON.error
                             : 'Gagal memuat data (HTTP ' + xhr.status + '). Coba refresh.';
                         $('#shikake-table tbody').html(
-                            '<tr><td colspan="11" class="text-center text-danger">' +
+                            '<tr><td colspan="12" class="text-center text-danger">' +
                             '<i class="fa-solid fa-triangle-exclamation"></i> ' + msg + '</td></tr>'
                         );
                     }
                 },
                 columns: [
+                    {
+                        data: 'group_id',
+                        name: 'group_id',
+                        orderable: false,
+                        searchable: false,
+                        width: '3%',
+                        className: 'text-center',
+                        render: function(data) {
+                            return '<input type="checkbox" class="row-check" value="' + data + '">';
+                        }
+                    },
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '4%' },
                     { 
                         data: 'process', 
@@ -549,6 +564,41 @@
             $(document).on('click', '.btn-print', function() {
                 var groupId = $(this).data('group-id');
                 printShikake(groupId);
+            });
+
+            // Reset selection UI whenever the table redraws (page change, filter, reload)
+            table.on('draw', function() {
+                $('#check-all').prop('checked', false);
+                updateSelectedCount();
+            });
+
+            // Header "check all" toggles all row checkboxes on the current page
+            $(document).on('change', '#check-all', function() {
+                $('#shikake-table tbody .row-check').prop('checked', $(this).is(':checked'));
+                updateSelectedCount();
+            });
+
+            // Individual row checkbox
+            $(document).on('change', '.row-check', function() {
+                var total = $('#shikake-table tbody .row-check').length;
+                var checked = $('#shikake-table tbody .row-check:checked').length;
+                $('#check-all').prop('checked', total > 0 && total === checked);
+                updateSelectedCount();
+            });
+
+            function updateSelectedCount() {
+                var checked = $('#shikake-table tbody .row-check:checked').length;
+                $('#selected-count').text(checked);
+                $('#btn-print-selected').toggleClass('d-none', checked === 0);
+            }
+
+            // Bulk print of all checked rows
+            $('#btn-print-selected').click(function() {
+                var ids = $('#shikake-table tbody .row-check:checked').map(function() {
+                    return $(this).val();
+                }).get();
+                if (!ids.length) return;
+                printShikake(ids.join(','));
             });
         });
 
