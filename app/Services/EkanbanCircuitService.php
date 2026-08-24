@@ -227,6 +227,10 @@ class EkanbanCircuitService
                 'master_circuit.acc_2a',
                 'master_circuit.tube_2',
                 'master_circuit.mark_2',
+                // Must stay named "qty" (not aliased) and listed after assy_schedule.*
+                // above so it overrides assy_schedule.qty pulled in by the wildcard —
+                // the print ticket must show the per-kanban qty (master_circuit.qty),
+                // not the schedule's total qty.
                 'master_circuit.qty',
                 'master_circuit.address',
                 'master_circuit.ta',

@@ -180,7 +180,11 @@ class EkanbanShikakeService
                 'master_shikake.process',
                 'master_shikake.conveyor as shikake_conveyor',
                 'master_shikake.machine',
-                'master_shikake.qty as shikake_qty',
+                // Must be aliased to the same name "qty" (not shikake_qty) so it is
+                // returned last and overrides assy_schedule.qty pulled in by the
+                // assy_schedule.* wildcard above — the print ticket must show the
+                // per-kanban qty (master_shikake.qty), not the schedule's total qty.
+                'master_shikake.qty as qty',
                 'master_shikake.family',
                 'master_shikake.sequence',
                 'master_shikake.image_path',
