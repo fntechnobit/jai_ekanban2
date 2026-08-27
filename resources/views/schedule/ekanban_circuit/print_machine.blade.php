@@ -237,6 +237,7 @@
     <script>
         var qz = window.qz;
         var table;
+        var isAdmin = @json(auth()->user()->isAdmin());
         var autoRefreshInterval = null;
         var autoRefreshSeconds = 60;
         var autoRefreshCountdown = autoRefreshSeconds;
@@ -382,8 +383,9 @@
                         searchable: false,
                         width: '3%',
                         className: 'text-center',
-                        render: function(data) {
-                            return '<input type="checkbox" class="row-check" value="' + data + '">';
+                        render: function(data, type, row) {
+                            var locked = row.is_printed && !isAdmin;
+                            return '<input type="checkbox" class="row-check" value="' + data + '"' + (locked ? ' disabled title="Hanya admin yang dapat mencetak ulang"' : '') + '>';
                         }
                     },
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '4%' },
@@ -643,15 +645,15 @@
                 updateSelectedCount();
             });
 
-            // Header "check all" toggles all row checkboxes on the current page
+            // Header "check all" toggles all selectable row checkboxes on the current page
             $(document).on('change', '#check-all', function() {
-                $('#circuit-table tbody .row-check').prop('checked', $(this).is(':checked'));
+                $('#circuit-table tbody .row-check:not(:disabled)').prop('checked', $(this).is(':checked'));
                 updateSelectedCount();
             });
 
             // Individual row checkbox
             $(document).on('change', '.row-check', function() {
-                var total = $('#circuit-table tbody .row-check').length;
+                var total = $('#circuit-table tbody .row-check:not(:disabled)').length;
                 var checked = $('#circuit-table tbody .row-check:checked').length;
                 $('#check-all').prop('checked', total > 0 && total === checked);
                 updateSelectedCount();
@@ -699,6 +701,21 @@
             }
 
             try {
+                // Step 0: Authorization pre-check (must happen before any physical printing)
+                const authResponse = await fetch("{{ route('schedule.ekanban-circuit.print') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ ids: ids, check_only: true })
+                });
+                const authData = await authResponse.json();
+                if (!authData.ok) {
+                    Swal.fire('Error!', authData.message || 'Anda tidak diizinkan mencetak ulang kanban ini.', 'error');
+                    return;
+                }
+
                 // Step 1: Fetch HTML payload via GET (no side effects)
                 const previewResponse = await fetch("{{ route('schedule.ekanban-circuit.print-preview') }}?ids=" + encodeURIComponent(ids));
                 

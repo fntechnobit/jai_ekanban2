@@ -104,4 +104,12 @@ class User extends Authenticatable
 
         return $hasPermission;
     }
+
+    /**
+     * Determine whether the user belongs to an admin group (Super Admin / Admin).
+     */
+    public function isAdmin(): bool
+    {
+        return in_array(optional($this->group)->name, ['Super Admin', 'Admin'], true);
+    }
 }

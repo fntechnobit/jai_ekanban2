@@ -6,11 +6,13 @@
             style="padding: 0.55rem 1rem; font-size: 1rem;">
             <i class="fa-solid fa-eye"></i>
     </button>
-    <button type="button" class="btn btn-soft-success btn-print" data-group-id="{{ $groupId }}" 
+    @if(!$row->is_printed || auth()->user()->isAdmin())
+    <button type="button" class="btn btn-soft-success btn-print" data-group-id="{{ $groupId }}"
             title="Print all {{ $row->issue_count }} issue(s)"
             style="padding: 0.55rem 1rem; font-size: 1rem;">
         <i class="fa-solid fa-print"></i> Print
     </button>
+    @endif
 @else
     @php
         // Fallback for other routes - create composite ID

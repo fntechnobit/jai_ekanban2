@@ -109,6 +109,20 @@ class EkanbanShikakeController extends Controller
     {
         $ids = is_array($request->ids) ? $request->ids : explode(',', $request->ids);
 
+        // Only admins may reprint a kanban that has already been printed before
+        if (!Auth::user()->isAdmin() && $this->ekanbanShikakeService->anyAlreadyPrinted($ids)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Hanya admin yang dapat mencetak ulang kanban yang sudah pernah diprint.'
+            ], 403);
+        }
+
+        // If check_only flag is set, this is just an authorization pre-check
+        // (used by the client before running the physical QZ Tray print job)
+        if ($request->boolean('check_only')) {
+            return response()->json(['ok' => true]);
+        }
+
         // Mark shikakes as printed
         $this->ekanbanShikakeService->markAsPrinted($ids, Auth::id());
 

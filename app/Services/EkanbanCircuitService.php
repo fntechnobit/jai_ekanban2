@@ -319,6 +319,27 @@ class EkanbanCircuitService
     }
 
     /**
+     * Check whether any of the given groups has already been printed before
+     */
+    public function anyAlreadyPrinted(array $groupIds): bool
+    {
+        foreach ($groupIds as $groupId) {
+            $parts = explode('-', $groupId, 2);
+            if (count($parts) === 2) {
+                $exists = AssyScheduleCircuit::where('assy_schedule_id', $parts[0])
+                    ->where('master_circuit_id', $parts[1])
+                    ->where('is_printed', true)
+                    ->exists();
+                if ($exists) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Mark circuit group as printed - updates ALL rows in the group
      */
     public function markAsPrinted(array $groupIds, $userId)

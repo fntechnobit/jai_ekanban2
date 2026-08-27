@@ -10,9 +10,11 @@
             style="padding: 0.55rem 1rem; font-size: 1rem;">
         <i class="fa-solid fa-eye"></i>
     </button>
+    @if(!$row->is_printed || auth()->user()->isAdmin())
     <button type="button" class="btn btn-soft-success btn-print"
             data-group-id="{{ $actionId }}" title="Print"
             style="padding: 0.55rem 1rem; font-size: 1rem;">
         <i class="fa-solid fa-print"></i> Print
     </button>
+    @endif
 </div>
