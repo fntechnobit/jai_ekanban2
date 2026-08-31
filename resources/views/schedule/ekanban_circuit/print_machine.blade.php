@@ -825,6 +825,8 @@
                 await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
                 // Step 2: Print via QZ Tray
+                const ticketCount = stack.querySelectorAll('.ticket').length;
+                console.log('printCircuit: sending ' + ticketCount + ' ticket(s) to printer for ids=' + ids);
                 await printStackNow('#print_stack_ajax', selectedPrinter);
 
                 // Step 3: Mark as printed ONLY after successful QZ print
@@ -851,7 +853,7 @@
                     table.ajax.reload(null, false);
                 }
 
-                Swal.fire('Success!', 'Print completed successfully!', 'success');
+                Swal.fire('Success!', 'Print completed successfully! (' + ticketCount + ' tiket terkirim ke printer)', 'success');
 
             } catch (err) {
                 console.error('Print error:', err);
@@ -876,33 +878,38 @@
                 throw new Error('No tickets found');
             }
 
-            const jobs = [{ type: 'raw', format: 'command', flavor: 'hex', data: '1B40' }]; // ESC @ init
-            
+            const cfg = qz.configs.create(printer);
+
+            // Send each ticket as its own separate qz.print() job (rather than batching
+            // every ticket's raster + cut commands into one combined job) - some thermal
+            // printers only reliably process the first page of a large multi-cut job and
+            // silently drop the rest, which made bulk-print appear to only print 1 ticket.
             for (const t of tickets) {
                 const rawCvs = await renderTicketToCanvas(t);
                 const cvs = trimCanvasWhitespace(rawCvs);
                 const { slices, bpr } = canvasToEscposSlices(cvs);
-                
+
+                const jobs = [{ type: 'raw', format: 'command', flavor: 'hex', data: '1B40' }]; // ESC @ init
+
                 for (const hex of slices) {
                     jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: hex });
                 }
-                
+
                 // Blank after page
                 if (BLANK_AFTER_PAGE_DOTS > 0) {
                     jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: makeBlankRasterHex(bpr, BLANK_AFTER_PAGE_DOTS) });
                 }
-                
+
                 // Feed before cut
                 if (CUT_OFFSET_DOTS > 0) {
                     jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: feedDotsHex(CUT_OFFSET_DOTS) });
                 }
-                
+
                 // Cut
                 jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: '1D5600' });
-            }
 
-            const cfg = qz.configs.create(printer);
-            await qz.print(cfg, jobs);
+                await qz.print(cfg, jobs);
+            }
         }
 
         async function renderTicketToCanvas(ticket) {
