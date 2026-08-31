@@ -182,6 +182,9 @@
         var qz = window.qz;
         var table;
         var isAdmin = @json(auth()->user()->isAdmin());
+        // Bulk-print selection - kept independent of the DOM so it survives DataTables
+        // redraws (auto-refresh, filter changes, manual refresh all rebuild <tr> checkboxes)
+        var selectedIds = new Set();
         var autoRefreshInterval = null;
         var autoRefreshSeconds = 60;
         var autoRefreshCountdown = autoRefreshSeconds;
@@ -332,7 +335,12 @@
                         className: 'text-center',
                         render: function(data, type, row) {
                             var locked = row.is_printed && !isAdmin;
-                            return '<input type="checkbox" class="row-check" value="' + data + '"' + (locked ? ' disabled title="Hanya admin yang dapat mencetak ulang"' : '') + '>';
+                            if (locked) {
+                                // Row became locked (already printed) - drop any stale selection for it
+                                selectedIds.delete(data);
+                            }
+                            var checkedAttr = selectedIds.has(data) ? ' checked' : '';
+                            return '<input type="checkbox" class="row-check" value="' + data + '"' + checkedAttr + (locked ? ' disabled title="Hanya admin yang dapat mencetak ulang"' : '') + '>';
                         }
                     },
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '4%' },
@@ -456,6 +464,9 @@
             $('#btn-reset').click(function() {
                 // Clear saved filters from localStorage
                 clearFilters();
+                // Clear bulk-print selection
+                selectedIds.clear();
+                updateSelectedCount();
                 // Reset all filters
                 $('#filter_area').val('').trigger('change');
                 $('#filter_process').val('').trigger('change');
@@ -568,37 +579,57 @@
                 printShikake(groupId);
             });
 
-            // Reset selection UI whenever the table redraws (page change, filter, reload)
+            // Re-sync the "check all" checkbox whenever the table redraws (page change,
+            // filter, reload). Row checkboxes themselves already re-apply their checked
+            // state from `selectedIds` inside the column render() function, so the
+            // underlying selection survives the redraw - only the header toggle needs updating.
             table.on('draw', function() {
-                $('#check-all').prop('checked', false);
+                syncCheckAllState();
                 updateSelectedCount();
             });
 
             // Header "check all" toggles all selectable row checkboxes on the current page
             $(document).on('change', '#check-all', function() {
-                $('#shikake-table tbody .row-check:not(:disabled)').prop('checked', $(this).is(':checked'));
+                var isChecked = $(this).is(':checked');
+                $('#shikake-table tbody .row-check:not(:disabled)').each(function() {
+                    $(this).prop('checked', isChecked);
+                    var val = $(this).val();
+                    if (isChecked) {
+                        selectedIds.add(val);
+                    } else {
+                        selectedIds.delete(val);
+                    }
+                });
                 updateSelectedCount();
             });
 
             // Individual row checkbox
             $(document).on('change', '.row-check', function() {
-                var total = $('#shikake-table tbody .row-check:not(:disabled)').length;
-                var checked = $('#shikake-table tbody .row-check:checked').length;
-                $('#check-all').prop('checked', total > 0 && total === checked);
+                var val = $(this).val();
+                if ($(this).is(':checked')) {
+                    selectedIds.add(val);
+                } else {
+                    selectedIds.delete(val);
+                }
+                syncCheckAllState();
                 updateSelectedCount();
             });
 
-            function updateSelectedCount() {
+            function syncCheckAllState() {
+                var total = $('#shikake-table tbody .row-check:not(:disabled)').length;
                 var checked = $('#shikake-table tbody .row-check:checked').length;
-                $('#selected-count').text(checked);
-                $('#btn-print-selected').toggleClass('d-none', checked === 0);
+                $('#check-all').prop('checked', total > 0 && total === checked);
             }
 
-            // Bulk print of all checked rows
+            function updateSelectedCount() {
+                $('#selected-count').text(selectedIds.size);
+                $('#btn-print-selected').toggleClass('d-none', selectedIds.size === 0);
+            }
+
+            // Bulk print of all checked rows (reads from selectedIds, not the DOM, so a
+            // redraw between selecting rows and clicking this button can't drop any of them)
             $('#btn-print-selected').click(function() {
-                var ids = $('#shikake-table tbody .row-check:checked').map(function() {
-                    return $(this).val();
-                }).get();
+                var ids = Array.from(selectedIds);
                 if (!ids.length) return;
                 printShikake(ids.join(','));
             });
@@ -756,7 +787,8 @@
                     console.error('Failed to update print status:', markErr);
                 }
 
-                // Step 4: Reload table to show updated status
+                // Step 4: Clear the bulk-print selection and reload table to show updated status
+                selectedIds.clear();
                 if (typeof table !== 'undefined') {
                     table.ajax.reload(null, false);
                 }
