@@ -133,14 +133,16 @@
 }
 
 .ticket-bonder-print .barcode-cell img {
-    max-width: 420px;
+    width: auto;
+    max-width: calc(100% - 10px);
     height: 60px;
     display: block;
     margin: 0 auto;
 }
 
 .ticket-bonder-print .barcode-navigasi-cell img {
-    max-width: 200px;
+    width: auto;
+    max-width: calc(100% - 10px);
     height: 45px;
     display: block;
     margin: 0 auto;
@@ -278,11 +280,11 @@
             <colgroup>
                 <col style="width: 14mm">
                 <col style="width: 16mm">
-                <col style="width: 14mm">
-                <col style="width: 16mm">
+                <col style="width: 18mm">
                 <col style="width: 20mm">
-                <col style="width: 20mm">
-                <col style="width: 20mm">
+                <col style="width: 26mm">
+                <col style="width: 26mm">
+                <col style="width: 26mm">
             </colgroup>
             <thead>
                 <tr>
@@ -390,7 +392,7 @@
                     <td colspan="2" rowspan="2" class="barcode-navigasi-cell">
                         <div class="qr-label">BARCODE NAVIGASI</div>
                         @if(isset($processData->barcode_navigasi_path))
-                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi" style="max-width:200px;height:45px;display:block;margin:0 auto;">
+                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi" style="width:auto;max-width:calc(100% - 10px);height:45px;display:block;margin:0 auto;">
                         @else
                             <div class="barcode-placeholder">BARCODE</div>
                         @endif
