@@ -809,17 +809,16 @@
                 throw new Error('No tickets found');
             }
 
-            const cfg = qz.configs.create(printer);
+            // Send every ticket as ONE combined qz.print() job (not one job per ticket).
+            // QZ Tray's free/unsigned mode pops up a manual confirmation dialog for every
+            // new job - splitting into N jobs means N popups to click, and any missed
+            // popup silently drops that ticket. A single combined job only needs one
+            // approval, matching the already-reliable single-row multi-issue print path.
+            const jobs = [{ type: 'raw', format: 'command', flavor: 'hex', data: '1B40' }]; // ESC @ init
 
-            // Send each ticket as its own separate qz.print() job (rather than batching
-            // every ticket's raster + cut commands into one combined job) - some thermal
-            // printers only reliably process the first page of a large multi-cut job and
-            // silently drop the rest, which made bulk-print appear to only print 1 ticket.
             for (const t of tickets) {
                 const cvs = await renderTicketToCanvas(t);
                 const { slices, bpr } = canvasToEscposSlices(cvs);
-
-                const jobs = [{ type: 'raw', format: 'command', flavor: 'hex', data: '1B40' }]; // ESC @ init
 
                 for (const hex of slices) {
                     jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: hex });
@@ -837,9 +836,10 @@
 
                 // Cut
                 jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: '1D5600' });
-
-                await qz.print(cfg, jobs);
             }
+
+            const cfg = qz.configs.create(printer);
+            await qz.print(cfg, jobs);
         }
 
         async function renderTicketToCanvas(ticket) {

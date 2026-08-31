@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class EkanbanShikakeController extends Controller
@@ -64,13 +65,19 @@ class EkanbanShikakeController extends Controller
         // If ids parameter is provided, return preview HTML for AJAX request
         if ($request->has('ids')) {
             $ids = is_array($request->ids) ? $request->ids : explode(',', $request->ids);
-            
+
             $shikakes = $this->ekanbanShikakeService->getShikakesForPrint($ids);
+
+            Log::info('EkanbanShikake printPreview', [
+                'group_ids' => $ids,
+                'group_count' => count($ids),
+                'shikakes_fetched' => $shikakes->count(),
+            ]);
 
             // Support mode parameter: 'print' for thermal (120mm), 'preview' for screen (576px)
             $mode = $request->input('mode', 'preview');
             $html = $this->renderPrintTickets($shikakes, $mode);
-            
+
             return response($html);
         }
         

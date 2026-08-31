@@ -61,12 +61,18 @@ class EkanbanCircuitController extends Controller
         // If ids parameter is provided, return preview HTML for AJAX request
         if ($request->has('ids')) {
             $ids = is_array($request->ids) ? $request->ids : explode(',', $request->ids);
-            
+
             $circuits = $this->ekanbanCircuitService->getCircuitsForPrint($ids);
+
+            Log::info('EkanbanCircuit printPreview', [
+                'group_ids' => $ids,
+                'group_count' => count($ids),
+                'circuits_fetched' => $circuits->count(),
+            ]);
 
             // Generate barcodes and render per-type templates
             $html = $this->renderCircuitTickets($circuits);
-            
+
             return response($html);
         }
         
