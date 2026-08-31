@@ -117,12 +117,14 @@
 .ticket-shield-print .qr-img {
     width: 140px;
     height: 140px;
+    display: block;
+    margin: 0 auto;
 }
 
 .ticket-shield-print .qr-label {
-    font-size: 12px;
+    font-size: 9px;
     font-weight: bold;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .ticket-shield-print .qrcode-placeholder {
@@ -285,7 +287,7 @@
                         <div class="qrcode-placeholder">QR</div>
                     @endif
                     @if(!empty($processData->qrcode_drawing))
-                        <div style="font-size: 9px; margin-top: 1px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
+                        <div style="font-size: 7px; margin-top: 1px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
                     @endif
                 </td>
                 <td class="value-cell">{{ $shikake->qty ?? '' }}</td>
@@ -308,7 +310,7 @@
                         <div class="qrcode-placeholder">QR</div>
                     @endif
                     @if(!empty($shikake->barcode_kanban))
-                        <div style="font-size: 9px; margin-top: 1px; font-weight: bold;">{{ $shikake->barcode_kanban }}</div>
+                        <div style="font-size: 7px; margin-top: 1px; font-weight: bold;">{{ $shikake->barcode_kanban }}</div>
                     @endif
                 </td>
             </tr>

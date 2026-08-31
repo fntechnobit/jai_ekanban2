@@ -117,12 +117,14 @@
 .ticket-bonder-print .qr-img {
     width: 180px;
     height: 180px;
+    display: block;
+    margin: 0 auto;
 }
 
 .ticket-bonder-print .qr-label {
-    font-size: 12px;
+    font-size: 9px;
     font-weight: bold;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .ticket-bonder-print .barcode-cell {
@@ -131,15 +133,15 @@
 }
 
 .ticket-bonder-print .barcode-cell img {
-    max-width: 180px;
+    max-width: 420px;
     height: 60px;
     display: block;
     margin: 0 auto;
 }
 
 .ticket-bonder-print .barcode-navigasi-cell img {
-    max-width: 180px;
-    height: 60px;
+    max-width: 200px;
+    height: 45px;
     display: block;
     margin: 0 auto;
 }
@@ -316,7 +318,7 @@
                     <td colspan="3" rowspan="3" class="barcode-cell">
                         @if(isset($processData->barcode_process_path))
                             <img src="{{ $processData->barcode_process_path }}" alt="Barcode">
-                            <div style="font-size: 6px; text-align: center;">{{ $processData->barcode_process ?? '' }}</div>
+                            <div style="font-size: 6px; text-align: center; margin-top: 1px;">{{ $processData->barcode_process ?? '' }}</div>
                         @else
                             <div class="barcode-placeholder">BARCODE</div>
                         @endif
@@ -377,7 +379,7 @@
                     <td colspan="2" rowspan="4" class="qrcode-cell">
                         <div class="qr-label">QR DRAWING</div>
                         @if(!empty($processData->qrcode_drawing))
-                            <div style="font-size: 9px; margin-bottom: 2px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
+                            <div style="font-size: 7px; margin-bottom: 1px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
                         @endif
                         @if(isset($processData->qrcode_drawing_path))
                             <img src="{{ $processData->qrcode_drawing_path }}" alt="QR Drawing" style="width:130px;height:130px;display:block;margin:0 auto;">
@@ -388,7 +390,7 @@
                     <td colspan="2" rowspan="2" class="barcode-navigasi-cell">
                         <div class="qr-label">BARCODE NAVIGASI</div>
                         @if(isset($processData->barcode_navigasi_path))
-                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi" style="max-width:140px;height:45px;">
+                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi" style="max-width:200px;height:45px;display:block;margin:0 auto;">
                         @else
                             <div class="barcode-placeholder">BARCODE</div>
                         @endif
@@ -403,7 +405,7 @@
                             <div class="qrcode-placeholder" style="width:90px;height:90px;">QR</div>
                         @endif
                         @if(!empty($shikake->barcode_kanban))
-                            <div style="font-size: 8px; margin-top: 1px; font-weight: bold;">{{ $shikake->barcode_kanban }}</div>
+                            <div style="font-size: 7px; margin-top: 1px; font-weight: bold;">{{ $shikake->barcode_kanban }}</div>
                         @endif
                     </td>
                 </tr>

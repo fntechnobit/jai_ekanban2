@@ -117,12 +117,14 @@
 .ticket-dbl-crimp-print .qr-img {
     width: 130px;
     height: 130px;
+    display: block;
+    margin: 0 auto;
 }
 
 .ticket-dbl-crimp-print .qr-label {
-    font-size: 12px;
+    font-size: 9px;
     font-weight: bold;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .ticket-dbl-crimp-print .barcode-cell {
@@ -306,7 +308,7 @@
                             <div class="qrcode-placeholder">QR</div>
                         @endif
                         @if(!empty($processData->qrcode_drawing))
-                            <div style="font-size: 10px; margin-top: 1px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
+                            <div style="font-size: 8px; margin-top: 1px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
                         @endif
                     </td>
                 </tr>
@@ -333,7 +335,7 @@
                         <div class="qr-label">QRCODE KANBAN</div>
                         @if(isset($shikake->qr_code_path))
                             <img src="{{ $shikake->qr_code_path }}" alt="QR Code" class="qr-img">
-                            <div style="font-size: 10px; margin-top: 1px; font-weight: bold;">{{ $shikake->barcode_kanban ?? '' }}</div>
+                            <div style="font-size: 8px; margin-top: 1px; font-weight: bold;">{{ $shikake->barcode_kanban ?? '' }}</div>
                         @else
                             <div class="qrcode-placeholder">QR</div>
                         @endif
