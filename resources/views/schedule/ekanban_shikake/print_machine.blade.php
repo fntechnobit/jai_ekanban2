@@ -823,9 +823,13 @@
 
             const restore = makeVisibleForCapture(ticket, isLandscape);
             console.log('[EKANBAN-DEBUG] pre-capture ticket size: scrollWidth=' + ticket.scrollWidth + ' scrollHeight=' + ticket.scrollHeight + ' offsetWidth=' + ticket.offsetWidth + ' offsetHeight=' + ticket.offsetHeight);
-            // Capture at 2x resolution for sharper details (supersampling) - matches
-            // the circuit/cutting print pipeline, which does not exhibit truncation.
-            const CAPTURE_SCALE = 2;
+            // JANGAN naikkan ke 2. Dengan scale 1, canvas hasil rotate lebarnya
+            // persis BASE_DOTS (576) sehingga dstW === srcW dan canvas dikembalikan
+            // APA ADANYA - nol resampling, piksel 1:1 ke dot printer. Dengan scale 2
+            // canvas harus diperkecil 0.5x dan bar barcode selebar 2px ikut di-blur
+            // oleh interpolasi, lalu rusak saat di-threshold hitam-putih -> barcode
+            // navigasi gagal discan. (Regresi ini pernah terjadi di commit 9b472e0.)
+            const CAPTURE_SCALE = 1;
             const canvas = await html2canvas(ticket, { scale: CAPTURE_SCALE, backgroundColor: '#fff', useCORS: true });
             console.log('[EKANBAN-DEBUG] html2canvas captured canvas: width=' + canvas.width + ' height=' + canvas.height);
             restore();
@@ -868,9 +872,9 @@
                 out.width = dstW;
                 out.height = dstH;
                 const ctx = out.getContext('2d');
-                // Enable smoothing for high-quality downscale from 2x capture
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
+                // Smoothing HARUS off: interpolasi membuat bar barcode tipis jadi
+                // abu-abu kabur dan hancur saat di-threshold hitam-putih untuk thermal.
+                ctx.imageSmoothingEnabled = false;
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(0, 0, dstW, dstH);
                 ctx.drawImage(finalCanvas, 0, 0, dstW, dstH);
