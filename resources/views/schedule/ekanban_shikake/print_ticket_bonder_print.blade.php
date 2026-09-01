@@ -47,13 +47,18 @@
 }
 
 .ticket-bonder-print {
-    /* Lebar container HARUS cukup menampung lebar natural tabel. Kalau kurang,
-       tabel (table-layout:auto + white-space:nowrap) meluber keluar kotak dan
-       bagian yang meluber HILANG saat html2canvas capture - inilah penyebab
-       kolom kanan (QRCODE KANBAN dsb) tidak ikut tercetak. 909px = 150% dari
-       606px, sesuai permintaan pelebaran & cukup untuk 7 kolom BONDER. */
-    width: 1150px;
-    min-width: 1150px;
+    /* Lebar MENGIKUTI ISI (content-driven), bukan angka tetap.
+       Alasannya: lebar barcode navigasi bervariasi 270-402px mengikuti panjang
+       datanya. Dengan lebar cell tetap, jarak barcode ke border = (lebar cell -
+       lebar barcode)/2 sehingga barcode pendek otomatis punya sisa ruang besar -
+       mustahil menjaga jarak 5mm untuk semua data. Dengan max-content, cell
+       memeluk barcode-nya dan jarak ditentukan murni oleh padding = selalu 5mm.
+       Kertas roll memanjang bebas, jadi tiket boleh berbeda panjang.
+       CATATAN: JANGAN kembalikan ke lebar tetap yang lebih kecil dari isi tabel -
+       dulu itu membuat tabel meluber dan kolom kanan (QRCODE KANBAN) hilang saat
+       html2canvas capture. width:max-content aman karena selalu memuat isi. */
+    width: max-content;
+    min-width: 0;
     min-height: 100%;
     flex-shrink: 0;
     background: white;
@@ -64,7 +69,9 @@
 }
 
 .ticket-bonder-print table {
-    width: 100%;
+    /* auto (bukan 100%) supaya lebar tabel ditentukan isinya - ini yang membuat
+       cell barcode memeluk barcode-nya, bukan ikut diregangkan mengisi container */
+    width: auto;
     height: 100%;
     border-collapse: collapse;
     /* auto layout: colgroup widths below act as a MINIMUM per column,
@@ -142,11 +149,14 @@
     margin: 0 auto;
 }
 
-/* Quiet zone: barcode 1D butuh area putih kosong di kiri-kanan. Kalau bar
-   terlalu mepet garis border, scanner membaca border sebagai bar dan gagal
-   decode. Padding horizontal 22px (~2.75mm) menjamin jarak itu. */
+/* Padding horizontal 40px = TEPAT 5mm di kertas (203dpi, 8 dot/mm) dan inilah
+   yang menentukan jarak barcode ke border. Karena lebar tabel content-driven
+   (width:auto di atas), cell memeluk barcode sehingga jarak = padding persis,
+   konsisten 5mm untuk semua panjang data.
+   5mm juga masih di atas quiet zone minimum Code128 (10x X-dimension = 10 x 3px
+   = 30px = 3.75mm), jadi aman untuk scanner. JANGAN turunkan di bawah 30px. */
 .ticket-bonder-print .barcode-navigasi-cell {
-    padding: 4px 22px;
+    padding: 4px 40px;
     vertical-align: middle;
 }
 
@@ -297,13 +307,12 @@
             <colgroup>
                 <col style="width: 21mm">
                 <col style="width: 24mm">
-                {{-- kolom 3 & 4 menampung cell BARCODE NAVIGASI (colspan=2). Lebar cell
-                     460px ini sudah MINIMUM: pas untuk barcode terpanjang (402px
-                     @widthFactor 3) + quiet zone 29px (3.6mm) per sisi sesuai spec
-                     Code128 (10x X-dimension). Mengecilkan lagi berarti barcode
-                     terpanjang mulai diperkecil -> bar melebur -> gagal discan. --}}
-                <col style="width: 42mm">
-                <col style="width: 48mm">
+                {{-- kolom 3 & 4 menampung cell BARCODE NAVIGASI (colspan=2). Sengaja
+                     dibiarkan sempit (sekadar minimum untuk teks CCT/BONDER NO) supaya
+                     yang menentukan lebar kolom adalah barcode + padding-nya, bukan
+                     angka di sini. Itu yang menjaga jaraknya tetap 5mm. --}}
+                <col style="width: 21mm">
+                <col style="width: 24mm">
                 <col style="width: 30mm">
                 <col style="width: 30mm">
                 <col style="width: 30mm">
