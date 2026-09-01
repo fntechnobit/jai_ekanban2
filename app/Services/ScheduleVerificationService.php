@@ -954,6 +954,44 @@ class ScheduleVerificationService
     }
 
     /**
+     * Kurangi demand yang sudah dipegang shift LAIN pada tanggal+conveyor yang sama
+     * dari rem_qty listing.
+     *
+     * Unverify menghapus dan membangun ulang satu shift saja; baris pada shift lain tetap
+     * utuh. Tanpa pengurangan ini, pembangunan ulang akan mengalokasikan seluruh demand
+     * harian ke satu shift dan menghitung ganda qty yang masih dipegang shift lain.
+     *
+     * Schedule yang listing_id-nya milik tanggal lain (item hasil transfer) tidak akan
+     * ketemu di sini dan diabaikan — memang bukan bagian dari demand tanggal ini.
+     *
+     * @param \Illuminate\Support\Collection $listings Listing dengan rem_qty sudah diinisialisasi
+     */
+    private function deductOtherShiftsFromListings($listings, $conveyorId, $dateStr, $exceptShift): void
+    {
+        $consumed = AssySchedule::where('conveyor_id', $conveyorId)
+            ->whereDate('schedule', $dateStr)
+            ->where('shift', '!=', $exceptShift)
+            ->whereNotNull('listing_id')
+            ->groupBy('listing_id')
+            ->selectRaw('listing_id, SUM(qty) AS used')
+            ->pluck('used', 'listing_id');
+
+        if ($consumed->isEmpty()) {
+            return;
+        }
+
+        $byId = $listings->keyBy('id');
+
+        foreach ($consumed as $listingId => $used) {
+            $listing = $byId->get($listingId);
+            if (!$listing) {
+                continue;
+            }
+            $listing->rem_qty = max(0, (int) ($listing->rem_qty ?? 0) - (int) $used);
+        }
+    }
+
+    /**
      * Unverify schedule - unlock the schedule for specific conveyor, date, and shift.
      * Reverses balance, clears kanbans, then regenerates schedules from listing_stage
      * to restore the pre-verification state.
@@ -993,9 +1031,14 @@ class ScheduleVerificationService
             $regeneratedCount = 0;
 
             if ($conveyor) {
+                // JANGAN saring dengan listing_stage.shift di sini. Engine generate
+                // mengelompokkan listing per tanggal+conveyor saja lalu menyebarnya ke tiap
+                // shift berdasarkan kapasitas, jadi sebuah shift sering seluruhnya diisi
+                // luberan dari baris yang ditandai shift lain oleh SIREP. Menyaring per shift
+                // membuat shift tersebut tidak menemukan listing apa pun dan tersangkut di
+                // status "No Data" setelah unverify.
                 $listings = ListingStage::where('conveyor', $conveyor->conveyor)
                     ->whereDate('listing_date_time', $dateStr)
-                    ->where('shift', $shift)
                     ->whereNotNull('assycode')
                     ->where('assycode', '!=', '')
                     ->whereNotNull('assy')
@@ -1009,25 +1052,36 @@ class ScheduleVerificationService
                     // Initialize rem_qty tracking
                     $this->listingAllocator->initializeListings($listings);
 
-                    // Get shift lock status (this shift won't be locked since we just deleted)
-                    $shiftLockStatus = $this->lockChecker->getShiftLockStatus($date, $conveyor->id);
-                    // Force this shift as unlocked
-                    $shiftLockStatus[$shift] = false;
+                    // Jumlah shift yang berjalan ditentukan dari demand PENUH hari itu —
+                    // sama seperti engine generate. Memakai sisa setelah pengurangan akan
+                    // menyusutkan hari 2-shift jadi 1 shift dan shift target tak pernah dibangun.
+                    $fullDemand = (int) $listings->sum('qty');
+                    $maxShifts  = $this->capacityCalculator->resolveShiftCount($conveyor, $fullDemand);
+
+                    // Hanya shift ini yang dihapus; shift lain masih memegang bagiannya,
+                    // jadi demand itu tidak boleh dialokasikan untuk kedua kalinya.
+                    $this->deductOtherShiftsFromListings($listings, $conveyorId, $dateStr, $shift);
+                    $remainingQty = (int) $listings->sum('rem_qty');
+
+                    // Bangun ulang shift ini saja: shift lain diperlakukan terkunci.
+                    $shiftLockStatus = [];
+                    for ($s = 1; $s <= max(2, $maxShifts); $s++) {
+                        $shiftLockStatus[$s] = ((int) $s !== (int) $shift);
+                    }
 
                     // Calculate cutoff capacities
                     $shiftCapacities = $this->capacityCalculator->calculateShiftCapacities(
                         $conveyor,
-                        $shiftLockStatus
+                        $shiftLockStatus,
+                        $maxShifts
                     );
 
-                    if (isset($shiftCapacities[$shift])) {
-                        // Pre-map CO5 for THIS shift only. Unverify regenerates a single
-                        // shift, so treat it as single-shift overflow (CO5 capped at
-                        // floor(capacity/4)) — consistent with the generate engine.
-                        $totalQty = $listings->sum('rem_qty');
+                    if ($remainingQty > 0 && isset($shiftCapacities[$shift])) {
+                        // Pre-map CO5 untuk shift ini saja. Ia satu-satunya shift yang tidak
+                        // terkunci, jadi CO5-nya berperan catch-all — sisa demand tidak terbuang.
                         $targetCaps = [$shift => $shiftCapacities[$shift]];
                         $this->capacityCalculator->preMapCutoff5(
-                            $targetCaps, $conveyor->capacity, $totalQty, 1
+                            $targetCaps, $conveyor->capacity, $remainingQty, 1
                         );
 
                         // Allocate to shift (CO1-4 then CO5)
@@ -1050,7 +1104,15 @@ class ScheduleVerificationService
 
                     Log::info("unverifySchedule: Regenerated from listing_stage", [
                         'listings_found' => $listings->count(),
+                        'listing_demand' => $fullDemand,
+                        'max_shifts' => $maxShifts,
+                        'remaining_qty' => $remainingQty,
                         'schedules_created' => $regeneratedCount,
+                    ]);
+                } else {
+                    Log::warning("unverifySchedule: No listing_stage rows for this date/conveyor", [
+                        'conveyor' => $conveyor->conveyor,
+                        'date' => $dateStr,
                     ]);
                 }
             }
