@@ -210,11 +210,21 @@ class EkanbanShikakeController extends Controller
             }
 
             // Barcode for barcode_navigasi (top-right)
-            // widthFactor 3 & height 72 supaya resolusi asli PNG >= ukuran tampilnya
-            // di tiket print (265x72). Sebelumnya digenerate 2/50 lalu di-upscale
-            // saat render, membuat bar-nya blur & sulit dibaca scanner.
+            //
+            // PENTING - jangan naikkan widthFactor tanpa melebarkan cell-nya juga.
+            // barcode_navigasi berisi teks ber-tanda hubung (mis. "B-AK496"), jadi
+            // Code128 terkunci di mode B tanpa kompresi Code C -> barcode jauh lebih
+            // lebar daripada barcode_process yang murni alfanumerik pendek ("A0220").
+            // Dengan widthFactor 3 native-nya 336-402px, sementara cell hanya sanggup
+            // menampilkan ~210px, sehingga barcode DIPERKECIL ke ~62%. Bar 3px menyusut
+            // jadi ~1.9px lalu melebur saat di-threshold hitam-putih untuk printer
+            // thermal 203dpi -> inilah sebabnya barcode navigasi selalu gagal discan
+            // sementara barcode_process (yang justru sedikit membesar) selalu terbaca.
+            //
+            // widthFactor 2 -> native maksimum 268px (data terpanjang "B-AK172.A"),
+            // muat ditampilkan 1:1 di cell tanpa penyusutan sama sekali.
             if (!empty($processData->barcode_navigasi)) {
-                $processData->barcode_navigasi_path = BarcodeHelper::generateBarcodeCached($processData->barcode_navigasi, null, 3, 72, 'shikake');
+                $processData->barcode_navigasi_path = BarcodeHelper::generateBarcodeCached($processData->barcode_navigasi, null, 2, 72, 'shikake');
             }
 
             // Barcode for barcode_process (middle-right)

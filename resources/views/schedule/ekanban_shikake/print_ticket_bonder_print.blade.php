@@ -142,14 +142,22 @@
     margin: 0 auto;
 }
 
+/* Quiet zone: barcode 1D butuh area putih kosong di kiri-kanan. Kalau bar
+   terlalu mepet garis border, scanner membaca border sebagai bar dan gagal
+   decode. Padding horizontal 22px (~2.75mm) menjamin jarak itu. */
 .ticket-bonder-print .barcode-navigasi-cell {
-    padding: 2px;
+    padding: 4px 22px;
     vertical-align: middle;
 }
 
+/* max-width 280px > native terlebar (268px), jadi barcode SELALU tampil di
+   ukuran aslinya dan tidak pernah diperkecil. Menyusutkan barcode 1D membuat
+   bar-bar berdekatan melebur saat di-threshold hitam-putih untuk thermal
+   203dpi, dan itulah yang bikin scanner gagal baca. height 72px juga sama
+   persis dengan tinggi PNG hasil generate, supaya tidak ada penskalaan. */
 .ticket-bonder-print .barcode-navigasi-cell img {
     width: auto;
-    max-width: 265px;
+    max-width: 280px;
     height: 72px;
     display: block;
     margin: 0 auto;
@@ -287,9 +295,11 @@
             <colgroup>
                 <col style="width: 21mm">
                 <col style="width: 24mm">
-                {{-- kolom 3 & 4 dilebarkan: keduanya menampung cell BARCODE NAVIGASI (colspan=2) --}}
-                <col style="width: 28mm">
-                <col style="width: 32mm">
+                {{-- kolom 3 & 4 menampung cell BARCODE NAVIGASI (colspan=2). Lebarnya
+                     dihitung agar barcode native terlebar (268px) muat 1:1 tanpa
+                     diperkecil, plus quiet zone ~4mm di kiri-kanan. --}}
+                <col style="width: 36mm">
+                <col style="width: 42mm">
                 <col style="width: 30mm">
                 <col style="width: 30mm">
                 <col style="width: 30mm">
@@ -400,7 +410,7 @@
                     <td colspan="2" rowspan="2" class="barcode-navigasi-cell">
                         <div class="qr-label">BARCODE NAVIGASI</div>
                         @if(isset($processData->barcode_navigasi_path))
-                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi" style="width:auto;max-width:265px;height:72px;display:block;margin:0 auto;">
+                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi" style="width:auto;max-width:280px;height:72px;display:block;margin:0 auto;">
                         @else
                             <div class="barcode-placeholder">BARCODE</div>
                         @endif
