@@ -42,9 +42,6 @@
                             <i class="fa-solid fa-unlink"></i> Disconnect
                         </button>
                         <span id="qz-status" class="mr-2">QZ: Idle</span>
-                        <small id="auto-refresh-indicator" class="text-muted me-2">
-                            <i class="fa-solid fa-rotate text-muted"></i> Auto-refresh: off
-                        </small>
                         <button type="button" class="btn btn-info btn-sm" id="btn-refresh">
                             <i class="fa-solid fa-arrows-rotate"></i> Refresh
                         </button>
@@ -183,11 +180,8 @@
         var table;
         var isAdmin = @json(auth()->user()->isAdmin());
         // Bulk-print selection - kept independent of the DOM so it survives DataTables
-        // redraws (auto-refresh, filter changes, manual refresh all rebuild <tr> checkboxes)
+        // redraws (filter changes, manual refresh all rebuild <tr> checkboxes)
         var selectedIds = new Set();
-        var autoRefreshInterval = null;
-        var autoRefreshSeconds = 60;
-        var autoRefreshCountdown = autoRefreshSeconds;
 
         // localStorage key for persisting filters
         var FILTER_STORAGE_KEY = 'ekanban_shikake_print_machine_filters';
@@ -439,9 +433,6 @@
                 var machine = $('#filter_machine').val();
                 if (machine) {
                     table.ajax.reload();
-                    startAutoRefresh();
-                } else {
-                    stopAutoRefresh();
                 }
             });
 
@@ -451,14 +442,12 @@
                 var machine = $('#filter_machine').val();
                 if (machine) {
                     table.ajax.reload();
-                    startAutoRefresh();
                 }
             });
 
             // Auto-load data if a machine was restored from saved filters
             if (savedFilters && savedFilters.machine && $('#filter_machine').val()) {
                 table.ajax.reload();
-                startAutoRefresh();
             }
 
             $('#btn-reset').click(function() {
@@ -477,56 +466,13 @@
                 $('#filter_date').data('daterangepicker').setStartDate(moment());
                 // Clear table
                 table.clear().draw();
-                stopAutoRefresh();
             });
-
-            // Auto-refresh: reload table data every 60 seconds when machine is selected
-            function startAutoRefresh() {
-                stopAutoRefresh();
-                autoRefreshCountdown = autoRefreshSeconds;
-                updateRefreshIndicator();
-                autoRefreshInterval = setInterval(function() {
-                    autoRefreshCountdown--;
-                    updateRefreshIndicator();
-                    if (autoRefreshCountdown <= 0) {
-                        autoRefreshCountdown = autoRefreshSeconds;
-                        var machine = $('#filter_machine').val();
-                        if (machine) {
-                            table.ajax.reload(null, false);
-                        }
-                    }
-                }, 1000);
-            }
-
-            function stopAutoRefresh() {
-                if (autoRefreshInterval) {
-                    clearInterval(autoRefreshInterval);
-                    autoRefreshInterval = null;
-                }
-                autoRefreshCountdown = autoRefreshSeconds;
-                updateRefreshIndicator();
-            }
-
-            function updateRefreshIndicator() {
-                var $indicator = $('#auto-refresh-indicator');
-                if (autoRefreshInterval) {
-                    $indicator.html(
-                        '<i class="fa-solid fa-rotate text-success"></i> ' +
-                        'Auto-refresh: <span id="refresh-countdown">' + autoRefreshCountdown + '</span>s'
-                    );
-                } else {
-                    $indicator.html(
-                        '<i class="fa-solid fa-rotate text-muted"></i> Auto-refresh: off'
-                    );
-                }
-            }
 
             $('#btn-refresh').click(function() {
                 // Always reload table data
                 var machine = $('#filter_machine').val();
                 if (machine) {
                     table.ajax.reload(null, false);
-                    startAutoRefresh();
                 }
 
                 // Also refresh printer list if QZ is connected
