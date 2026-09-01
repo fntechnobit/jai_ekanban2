@@ -883,28 +883,9 @@
             }
 
             const restore = makeVisibleForCapture(ticket, isLandscape);
-
-            // Measure the ticket's actual rendered size before capture. Without
-            // explicit width/windowWidth, html2canvas falls back to an internal
-            // default viewport and silently clips any content past that edge -
-            // this bites tickets whose table grows wide (long barcodes/QR cells).
-            // Passing the real scrollWidth/scrollHeight makes capture width
-            // responsive to whatever the content actually needs, instead of
-            // being capped by an unrelated default.
-            const fullW = Math.ceil(ticket.scrollWidth);
-            const fullH = Math.ceil(ticket.scrollHeight);
-
             // Capture at 2x resolution for sharper details (supersampling)
             const CAPTURE_SCALE = 2;
-            const canvas = await html2canvas(ticket, {
-                scale: CAPTURE_SCALE,
-                backgroundColor: '#fff',
-                useCORS: true,
-                width: fullW,
-                height: fullH,
-                windowWidth: fullW,
-                windowHeight: fullH
-            });
+            const canvas = await html2canvas(ticket, { scale: CAPTURE_SCALE, backgroundColor: '#fff', useCORS: true });
             restore();
 
             // Restore all saved inline styles
