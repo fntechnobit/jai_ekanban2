@@ -609,6 +609,7 @@
         const CUT_OFFSET_DOTS = 184; // ~23mm feed to pass cutter blade position
 
         async function printShikake(ids) {
+            console.log('%c[EKANBAN-DEBUG] printShikake running - BUILD-MARKER-2026-09-01-B SLICE_ROWS=' + SLICE_ROWS + ' BASE_DOTS=' + BASE_DOTS, 'background:#222;color:#0f0;font-weight:bold;padding:2px 6px;');
             if (!QZPrint.isConnected) {
                 Swal.fire('Error!', 'QZ Tray is not connected. Please connect first.', 'error');
                 return;
@@ -762,9 +763,12 @@
             // approval, matching the already-reliable single-row multi-issue print path.
             const jobs = [{ type: 'raw', format: 'command', flavor: 'hex', data: '1B40' }]; // ESC @ init
 
+            let ticketIdx = 0;
             for (const t of tickets) {
+                ticketIdx++;
                 const cvs = await renderTicketToCanvas(t);
                 const { slices, bpr } = canvasToEscposSlices(cvs);
+                console.log('[EKANBAN-DEBUG] ticket #' + ticketIdx + ': canvas=' + cvs.width + 'x' + cvs.height + ' bpr=' + bpr + ' sliceCount=' + slices.length + ' totalHexChars=' + slices.reduce((a, s) => a + s.length, 0));
 
                 for (const hex of slices) {
                     jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: hex });
@@ -784,8 +788,10 @@
                 jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: '1D5600' });
             }
 
+            console.log('[EKANBAN-DEBUG] total jobs array length (raw commands) = ' + jobs.length + ' for ' + tickets.length + ' ticket(s)');
             const cfg = qz.configs.create(printer);
             await qz.print(cfg, jobs);
+            console.log('[EKANBAN-DEBUG] qz.print() resolved OK');
         }
 
         async function renderTicketToCanvas(ticket) {
@@ -813,7 +819,9 @@
             }
 
             const restore = makeVisibleForCapture(ticket, isLandscape);
+            console.log('[EKANBAN-DEBUG] pre-capture ticket size: scrollWidth=' + ticket.scrollWidth + ' scrollHeight=' + ticket.scrollHeight + ' offsetWidth=' + ticket.offsetWidth + ' offsetHeight=' + ticket.offsetHeight);
             const canvas = await html2canvas(ticket, { scale: 1, backgroundColor: '#fff', useCORS: true });
+            console.log('[EKANBAN-DEBUG] html2canvas captured canvas: width=' + canvas.width + ' height=' + canvas.height);
             restore();
 
             // Restore all saved inline styles
@@ -846,6 +854,8 @@
                 dstW -= (dstW % 8);
                 dstH = Math.floor(srcH * (dstW / srcW));
             }
+
+            console.log('[EKANBAN-DEBUG] rotate/scale result: srcW=' + srcW + ' srcH=' + srcH + ' -> dstW=' + dstW + ' dstH=' + dstH);
 
             if (dstW !== srcW || dstH !== srcH) {
                 const out = document.createElement('canvas');
