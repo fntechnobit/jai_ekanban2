@@ -2,7 +2,7 @@
 <style>
 /* BONDER Print Template - Landscape layout for 80mm thermal printer */
 /* Native 576px height = 80mm paper width at 203dpi (1:1 no scaling) */
-/* Ticket width: 130mm = 1070px at 203dpi */
+/* Ticket width: ~158mm (colgroup total), grows along the paper-feed axis as needed */
 * {
     margin: 0;
     padding: 0;
@@ -143,7 +143,7 @@
 .ticket-bonder-print .barcode-navigasi-cell img {
     width: auto;
     max-width: calc(100% - 10px);
-    height: 45px;
+    height: 52px;
     display: block;
     margin: 0 auto;
 }
@@ -278,10 +278,10 @@
     <div class="ticket-bonder-print">
         <table>
             <colgroup>
-                <col style="width: 14mm">
-                <col style="width: 16mm">
                 <col style="width: 18mm">
-                <col style="width: 20mm">
+                <col style="width: 22mm">
+                <col style="width: 18mm">
+                <col style="width: 22mm">
                 <col style="width: 26mm">
                 <col style="width: 26mm">
                 <col style="width: 26mm">
@@ -392,7 +392,7 @@
                     <td colspan="2" rowspan="2" class="barcode-navigasi-cell">
                         <div class="qr-label">BARCODE NAVIGASI</div>
                         @if(isset($processData->barcode_navigasi_path))
-                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi" style="width:auto;max-width:calc(100% - 10px);height:45px;display:block;margin:0 auto;">
+                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi" style="width:auto;max-width:calc(100% - 10px);height:52px;display:block;margin:0 auto;">
                         @else
                             <div class="barcode-placeholder">BARCODE</div>
                         @endif
