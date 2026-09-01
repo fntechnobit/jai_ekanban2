@@ -603,7 +603,7 @@
         const SCALE_W = (RASTER_SCALE_MODE & 0x01) ? 2 : 1;
         const SCALE_H = (RASTER_SCALE_MODE & 0x02) ? 2 : 1;
         const BASE_DOTS = Math.floor((TARGET_DOTS / SCALE_W) / 8) * 8;
-        const SLICE_ROWS = 256;
+        const SLICE_ROWS = 48;
         const THRESHOLD = 190;
         const BLANK_AFTER_PAGE_DOTS = 20;
         const CUT_OFFSET_DOTS = 184; // ~23mm feed to pass cutter blade position
