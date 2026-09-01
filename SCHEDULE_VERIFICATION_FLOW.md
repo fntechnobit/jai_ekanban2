@@ -176,31 +176,61 @@ DB::commit();
 
 ## 🔓 UNVERIFY PROCESS
 
-**File:** `app/Services/ScheduleVerificationService.php` (lines 608-642)
+**File:** `app/Services/ScheduleVerificationService.php` → `unverifySchedule()`
 
-**Process:**
-```php
-AssySchedule::where('conveyor_id', $conveyorId)
-    ->whereDate('schedule', $date)
-    ->where('shift', $shift)
-    ->where('is_lock', 1)
-    ->update([
-        'is_lock' => 0,
-        'verified_at' => null,
-        'verified_by' => null,
-        'updated_by' => Auth::id()
-    ]);
-```
+Unverify **tidak** sekadar membalik `is_lock`. Schedule dihapus lalu **dibangun ulang
+dari `listing_stage`** supaya kembali ke alokasi asli sebelum diverifikasi.
 
-**Efek:**
-- Schedule **unlocked** (bisa di-edit kembali)
-- Schedule **muncul** lagi di panel source
-- Status berubah jadi **"Pending"**
+**Urutan proses (dalam 1 transaction):**
 
-**⚠️ PENTING:** 
-- Kanban data (circuit & shikake) **TIDAK DIHAPUS**
-- Balance carry-over **TIDAK DI-RESET**
-- Jika verify ulang, kanban akan di-generate ulang dan overwrite
+| Step | Aksi |
+|------|------|
+| 0 | `restoreTransferredItemsToOrigin()` — kembalikan item transfer ke jadwal asal (jika asal masih unverified) |
+| 1 | `reverseBalanceForScheduleGroup()` — balikkan kontribusi balance via generation ledger |
+| 2 | `clearKanbanData()` — hapus kanban circuit & shikake milik grup ini |
+| 3 | DELETE `assy_schedule` untuk conveyor+date+**shift ini saja** |
+| 4 | Regenerate dari `listing_stage` (lihat di bawah) |
+
+### ⚠️ Step 4 — tiga aturan yang wajib dipatuhi
+
+#### 1. Listing di-query per `date` + `conveyor` SAJA — JANGAN difilter `shift`
+
+Engine generate ([`AssySchedulerService`](app/Services/AssySchedulerService.php)) mengelompokkan
+listing hanya per tanggal+conveyor, lalu menyebarnya ke tiap shift berdasarkan kapasitas.
+Kolom `listing_stage.shift` **tidak pernah dipakai sebagai filter**.
+
+> 🔴 **Khusus sumber API SIREP:** API tidak menyediakan `shift`, sehingga
+> [`SirepListingAdapter`](app/Services/Listing/SirepListingAdapter.php) menulis **`shift = 0`**
+> untuk semua baris. Filter `->where('shift', $shift)` karena itu **tidak akan pernah cocok**
+> — setiap unverify menghasilkan 0 record dan baris tersangkut di status **"No Data"**.
+
+Sebuah shift juga sering seluruhnya diisi **luberan (overflow)** dari baris listing yang ditandai
+shift lain, jadi filter shift salah bahkan untuk data bersumber DB lama.
+
+> 🐛 **Regresi yang pernah terjadi:** filter `->where('shift', $shift)` membuat unverify Shift 2
+> menghasilkan "No Data" dan qty-nya hilang. Kebalikannya, unverify Shift 1 mengambil seluruh
+> demand harian ke Shift 1 sementara Shift 2 tetap memegang miliknya → qty **terhitung dobel**.
+
+#### 2. Jumlah shift dihitung dari demand PENUH, bukan sisa
+
+`resolveShiftCount($conveyor, $fullDemand)` menentukan hari itu berjalan 1 atau 2 shift
+(aturan PPC: qty ≥ 2 × kapasitas → 2 shift). Nilainya **harus** memakai `SUM(qty)` penuh —
+kalau memakai sisa setelah pengurangan, hari 2-shift menyusut jadi 1 shift dan shift target
+tidak akan pernah dibangun.
+
+#### 3. Kurangi dulu demand yang dipegang shift lain
+
+Karena hanya shift target yang dihapus, qty yang masih dipegang shift lain dikurangi lewat
+`deductOtherShiftsFromListings()` (match `assy_schedule.listing_id` = `listing_stage.id`).
+Sisanya barulah dialokasikan ke shift target, dengan seluruh shift lain diperlakukan **locked**.
+
+**Invarian:** `SUM(assy_schedule.qty)` per tanggal+conveyor harus tetap sama dengan demand
+`listing_stage` — tidak boleh ada yang hilang maupun dobel.
+
+**Efek akhir:**
+- Schedule **unlocked** (`is_lock = 0`), status jadi **"Pending"**
+- Kanban circuit & shikake grup ini **DIHAPUS**, balance **DIKEMBALIKAN** via ledger
+- Verify ulang akan men-generate kanban dari awal
 
 ---
 
@@ -515,9 +545,12 @@ $nomor_urut_end = $nomor_urut_start + $jumlah_kanban - 1;
 4. Balance table di-**update** dengan sisa dan nomor urut terakhir
 
 ### ✅ **ON UNVERIFY:**
-1. Schedule di-**unlock** (`is_lock=0`, `verified_at=NULL`)
-2. Kanban data **TIDAK DIHAPUS** (tetap ada)
-3. Jika verify ulang, kanban akan **overwrite** data lama
+1. Item transfer di-**kembalikan** ke jadwal asal (jika asal masih unverified)
+2. Balance di-**reverse** via generation ledger, kanban grup ini di-**HAPUS**
+3. Schedule shift tersebut di-**DELETE**, lalu di-**regenerate** dari `listing_stage`
+4. Query listing **TANPA filter shift** (API SIREP menulis `shift = 0`), jumlah shift dari
+   demand penuh, dan demand milik shift lain dikurangi dulu — lihat
+   [UNVERIFY PROCESS](#-unverify-process); salah satu saja meleset → "No Data" atau qty dobel
 
 ### ⚠️ **IMPORTANT:**
 - Verified schedule **TIDAK MUNCUL** di source panel (filter: `whereNull('verified_at')`)
