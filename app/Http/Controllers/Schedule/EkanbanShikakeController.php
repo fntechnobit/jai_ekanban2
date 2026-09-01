@@ -210,8 +210,11 @@ class EkanbanShikakeController extends Controller
             }
 
             // Barcode for barcode_navigasi (top-right)
+            // widthFactor 3 & height 72 supaya resolusi asli PNG >= ukuran tampilnya
+            // di tiket print (265x72). Sebelumnya digenerate 2/50 lalu di-upscale
+            // saat render, membuat bar-nya blur & sulit dibaca scanner.
             if (!empty($processData->barcode_navigasi)) {
-                $processData->barcode_navigasi_path = BarcodeHelper::generateBarcodeCached($processData->barcode_navigasi, null, 2, 50, 'shikake');
+                $processData->barcode_navigasi_path = BarcodeHelper::generateBarcodeCached($processData->barcode_navigasi, null, 3, 72, 'shikake');
             }
 
             // Barcode for barcode_process (middle-right)
