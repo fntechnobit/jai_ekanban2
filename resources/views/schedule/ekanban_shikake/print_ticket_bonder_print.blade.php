@@ -274,13 +274,13 @@
     <div class="ticket-bonder-print">
         <table>
             <colgroup>
-                <col style="width: 14mm">
-                <col style="width: 16mm">
-                <col style="width: 14mm">
-                <col style="width: 16mm">
-                <col style="width: 20mm">
-                <col style="width: 20mm">
-                <col style="width: 20mm">
+                <col style="width: 21mm">
+                <col style="width: 24mm">
+                <col style="width: 21mm">
+                <col style="width: 24mm">
+                <col style="width: 30mm">
+                <col style="width: 30mm">
+                <col style="width: 30mm">
             </colgroup>
             <thead>
                 <tr>
