@@ -603,7 +603,7 @@
         const SCALE_W = (RASTER_SCALE_MODE & 0x01) ? 2 : 1;
         const SCALE_H = (RASTER_SCALE_MODE & 0x02) ? 2 : 1;
         const BASE_DOTS = Math.floor((TARGET_DOTS / SCALE_W) / 8) * 8;
-        const SLICE_ROWS = 48;
+        const SLICE_ROWS = 256;
         const THRESHOLD = 190;
         const BLANK_AFTER_PAGE_DOTS = 20;
         const CUT_OFFSET_DOTS = 184; // ~23mm feed to pass cutter blade position
@@ -766,7 +766,10 @@
             let ticketIdx = 0;
             for (const t of tickets) {
                 ticketIdx++;
-                const cvs = await renderTicketToCanvas(t);
+                const rawCvs = await renderTicketToCanvas(t);
+                console.log('[EKANBAN-DEBUG] ticket #' + ticketIdx + ' raw canvas before trim: ' + rawCvs.width + 'x' + rawCvs.height);
+                const cvs = trimCanvasWhitespace(rawCvs);
+                console.log('[EKANBAN-DEBUG] ticket #' + ticketIdx + ' trimmed canvas: ' + cvs.width + 'x' + cvs.height);
                 const { slices, bpr } = canvasToEscposSlices(cvs);
                 console.log('[EKANBAN-DEBUG] ticket #' + ticketIdx + ': canvas=' + cvs.width + 'x' + cvs.height + ' bpr=' + bpr + ' sliceCount=' + slices.length + ' totalHexChars=' + slices.reduce((a, s) => a + s.length, 0));
 
@@ -820,7 +823,10 @@
 
             const restore = makeVisibleForCapture(ticket, isLandscape);
             console.log('[EKANBAN-DEBUG] pre-capture ticket size: scrollWidth=' + ticket.scrollWidth + ' scrollHeight=' + ticket.scrollHeight + ' offsetWidth=' + ticket.offsetWidth + ' offsetHeight=' + ticket.offsetHeight);
-            const canvas = await html2canvas(ticket, { scale: 1, backgroundColor: '#fff', useCORS: true });
+            // Capture at 2x resolution for sharper details (supersampling) - matches
+            // the circuit/cutting print pipeline, which does not exhibit truncation.
+            const CAPTURE_SCALE = 2;
+            const canvas = await html2canvas(ticket, { scale: CAPTURE_SCALE, backgroundColor: '#fff', useCORS: true });
             console.log('[EKANBAN-DEBUG] html2canvas captured canvas: width=' + canvas.width + ' height=' + canvas.height);
             restore();
 
@@ -862,7 +868,9 @@
                 out.width = dstW;
                 out.height = dstH;
                 const ctx = out.getContext('2d');
-                ctx.imageSmoothingEnabled = false;
+                // Enable smoothing for high-quality downscale from 2x capture
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(0, 0, dstW, dstH);
                 ctx.drawImage(finalCanvas, 0, 0, dstW, dstH);
@@ -898,6 +906,9 @@
         function rotateCanvas90CW(canvas) {
             const w = canvas.width;
             const h = canvas.height;
+            if (w === 0 || h === 0) {
+                throw new Error('Cannot rotate empty canvas (' + w + 'x' + h + '). Element may not be rendered properly.');
+            }
             const rotated = document.createElement('canvas');
             rotated.width = h;
             rotated.height = w;
@@ -906,6 +917,61 @@
             ctx.rotate(Math.PI / 2);
             ctx.drawImage(canvas, 0, 0);
             return rotated;
+        }
+
+        // Trim all 4 sides of white/blank space from canvas
+        function trimCanvasWhitespace(canvas) {
+            const w = canvas.width;
+            const h = canvas.height;
+            if (w === 0 || h === 0) return canvas;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const img = ctx.getImageData(0, 0, w, h).data;
+
+            function isRowBlank(y) {
+                for (let x = 0; x < w; x++) {
+                    const idx = (y * w + x) * 4;
+                    if (img[idx] < 245 || img[idx+1] < 245 || img[idx+2] < 245) return false;
+                }
+                return true;
+            }
+            function isColBlank(x) {
+                for (let y = 0; y < h; y++) {
+                    const idx = (y * w + x) * 4;
+                    if (img[idx] < 245 || img[idx+1] < 245 || img[idx+2] < 245) return false;
+                }
+                return true;
+            }
+
+            let top = 0, bottom = h - 1, left = 0, right = w - 1;
+
+            while (top < h && isRowBlank(top)) top++;
+            while (bottom > top && isRowBlank(bottom)) bottom--;
+            while (left < w && isColBlank(left)) left++;
+            while (right > left && isColBlank(right)) right--;
+
+            // If all white, return as-is
+            if (top > bottom || left > right) return canvas;
+
+            // 2px padding to avoid border clipping
+            top    = Math.max(0,     top    - 2);
+            bottom = Math.min(h - 1, bottom + 2);
+            left   = Math.max(0,     left   - 2);
+            right  = Math.min(w - 1, right  + 2);
+
+            const cropW = right - left + 1;
+            const cropH = bottom - top + 1;
+
+            // Only crop if there's meaningful blank to remove (>4px)
+            if (cropH >= h - 4 && cropW >= w - 4) return canvas;
+
+            const cropped = document.createElement('canvas');
+            cropped.width = cropW;
+            cropped.height = cropH;
+            const cctx = cropped.getContext('2d');
+            cctx.fillStyle = '#fff';
+            cctx.fillRect(0, 0, cropW, cropH);
+            cctx.drawImage(canvas, left, top, cropW, cropH, 0, 0, cropW, cropH);
+            return cropped;
         }
 
         function canvasToEscposSlices(canvas) {
