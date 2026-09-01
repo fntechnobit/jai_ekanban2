@@ -47,8 +47,13 @@
 }
 
 .ticket-bonder-print {
-    width: 606px;
-    min-width: 606px;
+    /* Lebar container HARUS cukup menampung lebar natural tabel. Kalau kurang,
+       tabel (table-layout:auto + white-space:nowrap) meluber keluar kotak dan
+       bagian yang meluber HILANG saat html2canvas capture - inilah penyebab
+       kolom kanan (QRCODE KANBAN dsb) tidak ikut tercetak. 909px = 150% dari
+       606px, sesuai permintaan pelebaran & cukup untuk 7 kolom BONDER. */
+    width: 909px;
+    min-width: 909px;
     min-height: 100%;
     flex-shrink: 0;
     background: white;
