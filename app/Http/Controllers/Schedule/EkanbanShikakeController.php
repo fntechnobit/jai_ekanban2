@@ -221,10 +221,15 @@ class EkanbanShikakeController extends Controller
             // thermal 203dpi -> inilah sebabnya barcode navigasi selalu gagal discan
             // sementara barcode_process (yang justru sedikit membesar) selalu terbaca.
             //
-            // widthFactor 2 -> native maksimum 268px (data terpanjang "B-AK172.A"),
-            // muat ditampilkan 1:1 di cell tanpa penyusutan sama sekali.
+            // widthFactor 3 -> bar tipis jadi 3 dot (0.37mm), bukan 2 dot. Printer
+            // thermal punya dot bleed (titik yang dipanaskan melebar di kertas), dan
+            // dengan bar 2 dot + celah 2 dot pelebaran itu menutup celahnya sampai
+            // bar menyatu -> hasil print terlihat "terlalu bold" dan gagal discan.
+            // Native maksimum jadi 402px (data terpanjang "B-AK172.A"), dan cell
+            // BARCODE NAVIGASI sudah dilebarkan ke 90mm (konten 416px) agar tetap
+            // muat ditampilkan 1:1 tanpa penyusutan.
             if (!empty($processData->barcode_navigasi)) {
-                $processData->barcode_navigasi_path = BarcodeHelper::generateBarcodeCached($processData->barcode_navigasi, null, 2, 72, 'shikake');
+                $processData->barcode_navigasi_path = BarcodeHelper::generateBarcodeCached($processData->barcode_navigasi, null, 3, 72, 'shikake');
             }
 
             // Barcode for barcode_process (middle-right)

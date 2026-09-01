@@ -52,8 +52,8 @@
        bagian yang meluber HILANG saat html2canvas capture - inilah penyebab
        kolom kanan (QRCODE KANBAN dsb) tidak ikut tercetak. 909px = 150% dari
        606px, sesuai permintaan pelebaran & cukup untuk 7 kolom BONDER. */
-    width: 909px;
-    min-width: 909px;
+    width: 1150px;
+    min-width: 1150px;
     min-height: 100%;
     flex-shrink: 0;
     background: white;
@@ -150,14 +150,14 @@
     vertical-align: middle;
 }
 
-/* max-width 280px > native terlebar (268px), jadi barcode SELALU tampil di
-   ukuran aslinya dan tidak pernah diperkecil. Menyusutkan barcode 1D membuat
-   bar-bar berdekatan melebur saat di-threshold hitam-putih untuk thermal
-   203dpi, dan itulah yang bikin scanner gagal baca. height 72px juga sama
-   persis dengan tinggi PNG hasil generate, supaya tidak ada penskalaan. */
+/* max-width 420px > native terlebar (402px @widthFactor 3), jadi barcode SELALU
+   tampil di ukuran aslinya dan tidak pernah diperkecil. Menyusutkan barcode 1D
+   membuat bar berdekatan melebur saat di-threshold hitam-putih untuk thermal
+   203dpi. height 72px juga sama persis dengan tinggi PNG hasil generate, supaya
+   tidak ada penskalaan sama sekali (piksel 1:1 ke dot printer). */
 .ticket-bonder-print .barcode-navigasi-cell img {
     width: auto;
-    max-width: 280px;
+    max-width: 420px;
     height: 72px;
     display: block;
     margin: 0 auto;
@@ -296,10 +296,10 @@
                 <col style="width: 21mm">
                 <col style="width: 24mm">
                 {{-- kolom 3 & 4 menampung cell BARCODE NAVIGASI (colspan=2). Lebarnya
-                     dihitung agar barcode native terlebar (268px) muat 1:1 tanpa
-                     diperkecil, plus quiet zone ~4mm di kiri-kanan. --}}
-                <col style="width: 36mm">
+                     dihitung agar barcode native terlebar (402px @widthFactor 3) muat
+                     1:1 tanpa diperkecil, plus quiet zone ~3.6mm di kiri-kanan. --}}
                 <col style="width: 42mm">
+                <col style="width: 48mm">
                 <col style="width: 30mm">
                 <col style="width: 30mm">
                 <col style="width: 30mm">
@@ -410,7 +410,7 @@
                     <td colspan="2" rowspan="2" class="barcode-navigasi-cell">
                         <div class="qr-label">BARCODE NAVIGASI</div>
                         @if(isset($processData->barcode_navigasi_path))
-                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi" style="width:auto;max-width:280px;height:72px;display:block;margin:0 auto;">
+                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi" style="width:auto;max-width:420px;height:72px;display:block;margin:0 auto;">
                         @else
                             <div class="barcode-placeholder">BARCODE</div>
                         @endif

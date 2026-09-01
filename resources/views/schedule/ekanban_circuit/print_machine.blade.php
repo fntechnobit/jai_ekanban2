@@ -677,8 +677,26 @@
                 return;
             }
 
+            // Overlay loading yang memblokir interaksi selama proses print berjalan,
+            // supaya user tahu ada proses berlangsung dan tidak menekan tombol lain
+            // sebelum selesai. Semua jalur keluar di bawah (sukses maupun error)
+            // memanggil Swal.fire lagi, yang otomatis menggantikan modal ini.
+            Swal.fire({
+                title: 'Memproses Print...',
+                html: 'Menyiapkan data...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading()
+            });
+            const setPrintProgress = function (msg) {
+                const el = Swal.getHtmlContainer();
+                if (el) el.textContent = msg;
+            };
+
             try {
                 // Step 0: Authorization pre-check (must happen before any physical printing)
+                setPrintProgress('Memeriksa izin cetak...');
                 const authResponse = await fetch("{{ route('schedule.ekanban-circuit.print') }}", {
                     method: 'POST',
                     headers: {
@@ -694,6 +712,7 @@
                 }
 
                 // Step 1: Fetch HTML payload via GET (no side effects)
+                setPrintProgress('Mengambil data kanban...');
                 const previewResponse = await fetch("{{ route('schedule.ekanban-circuit.print-preview') }}?ids=" + encodeURIComponent(ids));
                 
                 if (!previewResponse.ok) {
@@ -773,9 +792,11 @@
                 // Step 2: Print via QZ Tray
                 const ticketCount = stack.querySelectorAll('.ticket').length;
                 console.log('printCircuit: sending ' + ticketCount + ' ticket(s) to printer for ids=' + ids);
+                setPrintProgress('Mengirim ' + ticketCount + ' tiket ke printer...');
                 await printStackNow('#print_stack_ajax', selectedPrinter);
 
                 // Step 3: Mark as printed ONLY after successful QZ print
+                setPrintProgress('Menyimpan status print...');
                 try {
                     const markResponse = await fetch("{{ route('schedule.ekanban-circuit.print') }}", {
                         method: 'POST',
