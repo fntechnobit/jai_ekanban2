@@ -22,13 +22,17 @@ class AssySchedulerService
     protected $listingAllocator;
     protected $scheduleCleanup;
 
+    protected $conveyorSync;
+
     public function __construct(
         ListingSyncService $listingSyncService,
         ShiftCapacityCalculator $capacityCalculator,
         ShiftLockChecker $lockChecker,
         ListingAllocator $listingAllocator,
-        ScheduleCleanupService $scheduleCleanup
+        ScheduleCleanupService $scheduleCleanup,
+        SirepConveyorSyncService $conveyorSync
     ) {
+        $this->conveyorSync = $conveyorSync;
         $this->listingSyncService = $listingSyncService;
         $this->capacityCalculator = $capacityCalculator;
         $this->lockChecker = $lockChecker;
@@ -64,6 +68,31 @@ class AssySchedulerService
     {
         $startDate = Carbon::parse($startDate)->startOfDay();
         $endDate   = Carbon::parse($endDate)->endOfDay();
+
+        // ─── STEP 0: Samakan daftar conveyor dengan SIREP lebih dulu ───────────
+        // Listing datang per nama conveyor, jadi master harus sudah mencerminkan
+        // keadaan SIREP sebelum listing diproses. Tanpa ini, conveyor yang baru
+        // dibuat PPC hari ini listingnya akan terbuang karena belum ada padanannya,
+        // dan conveyor yang sudah dihapus PPC masih ikut terjadwal.
+        $conveyorSync = $this->conveyorSync->sync(true);
+
+        if (!$conveyorSync['success']) {
+            return [
+                'success'     => false,
+                'step_failed' => 'sync_conveyor',
+                'message'     => 'Gagal menyamakan daftar conveyor dengan SIREP: '
+                    . $conveyorSync['message']
+                    . ' Proses generate dihentikan sebelum listing diambil.',
+                'sync_detail' => null,
+                'generated'   => 0,
+            ];
+        }
+
+        Log::info('Daftar conveyor disamakan dengan SIREP sebelum generate', [
+            'ditambah'      => $conveyorSync['ditambah'],
+            'diperbarui'    => $conveyorSync['diperbarui'],
+            'dinonaktifkan' => $conveyorSync['dinonaktifkan'],
+        ]);
 
         // ─── STEP 1: Ambil listing dari sumber aktif (API SIREP) → listing_stage ───
         try {
@@ -174,6 +203,7 @@ class AssySchedulerService
                     $query->select('conveyor')
                         ->from('master_conveyor')
                         ->where('id', $conveyorId)
+                        ->where('is_active', 1)
                         ->limit(1);
                 });
             }
@@ -198,30 +228,60 @@ class AssySchedulerService
 
             $generatedCount = 0;
             $schedulesToCreate = [];
+            $capacityErrors = [];
+            $conveyorErrors = [];
 
             foreach ($groupedListings as $groupKey => $groupListings) {
                 list($date, $conveyorName) = explode('_', $groupKey, 2);
                 
-                // Get conveyor from master_conveyor
-                $conveyor = MasterConveyor::where('conveyor', $conveyorName)->first();
-                
-                // If conveyor not found, skip this group
+                // Hanya conveyor yang masih terdaftar di SIREP yang dijadwalkan.
+                // Yang sudah dinonaktifkan sengaja dilewati: jadwal lamanya tetap ada,
+                // tetapi tidak boleh bertambah.
+                $conveyor = MasterConveyor::active()->where('conveyor', $conveyorName)->first();
+
                 if (!$conveyor) {
-                    Log::warning("Conveyor not found: {$conveyorName}");
+                    $nonaktif = MasterConveyor::where('conveyor', $conveyorName)->first();
+
+                    if ($nonaktif) {
+                        $conveyorErrors[$conveyorName] = $conveyorName;
+                        Log::warning('Conveyor dilewati: sudah tidak ada di SIREP (nonaktif)', [
+                            'conveyor' => $conveyorName,
+                        ]);
+                    } else {
+                        Log::warning("Conveyor not found: {$conveyorName}");
+                    }
+
                     continue;
                 }
 
-                $scheduleDate = Carbon::parse($date);
-                $shiftCapacity = $conveyor->capacity ?? 100;
+                $scheduleDate  = Carbon::parse($date);
+                $shiftCapacity = (int) ($conveyor->capacity ?? 0);
+
+                // Kapasitas kini milik SIREP sepenuhnya. Tanpa hasil sinkronisasi tidak ada
+                // dasar untuk membagi cutoff, dan menebak angka akan menghasilkan jadwal yang
+                // salah diam-diam — jauh lebih berbahaya daripada melewatinya dengan jelas.
+                if ($shiftCapacity <= 0) {
+                    $capacityErrors[$conveyorName] = $conveyorName;
+                    Log::warning('Conveyor dilewati: kapasitas SIREP belum tersinkron', [
+                        'conveyor'      => $conveyorName,
+                        'schedule_date' => $scheduleDate->format('Y-m-d'),
+                    ]);
+                    continue;
+                }
 
                 // Step 4: Initialize tracking field for listings (rem_qty)
                 $this->listingAllocator->initializeListings($groupListings);
 
-                // Jumlah shift ditentukan volume demand hari itu, bukan nilai statis master.
-                // Aturan PPC/SIREP: qty listing >= 2 × kapasitas satu shift -> 2 shift.
-                // shift_qty pada master tetap menjadi batas atas kemampuan fisik conveyor.
+                // Jumlah shift diturunkan per tanggal dari qty listing dan flag lembur SIREP.
+                // Tanpa lembur satu shift berhenti di kapasitas normal; dengan lembur ia
+                // menampung kapasitas + CO5 nominal sebelum shift berikutnya dibuka.
                 $totalQtyForShift = (int) $groupListings->sum('rem_qty');
-                $maxShifts = $this->capacityCalculator->resolveShiftCount($conveyor, $totalQtyForShift);
+                $sirepOvertime    = (bool) $groupListings->contains(fn ($l) => (bool) ($l->is_overtime ?? false));
+                $maxShifts        = $this->capacityCalculator->resolveShiftCount(
+                    $shiftCapacity,
+                    $totalQtyForShift,
+                    $sirepOvertime
+                );
 
                 // Step 5: Check shift lock status for this conveyor on this date
                 $shiftLockStatus = $this->lockChecker->getShiftLockStatus(
@@ -238,35 +298,30 @@ class AssySchedulerService
 
                 // Step 7: Calculate cutoff capacities for each shift
                 $shiftCapacities = $this->capacityCalculator->calculateShiftCapacities(
-                    $conveyor,
+                    $shiftCapacity,
                     $shiftLockStatus,
                     $maxShifts
                 );
 
-                // Step 8: Pre-map CO5 need per shift based on total qty vs shift capacities
-                // 2-shift: CO5 activates AFTER all CO1-4 (both shifts) are exhausted
-                // 1-shift: CO5 activates after CO1-4 of the single shift
-                $totalQty = $totalQtyForShift;
+                // Step 8: Jatah CO5 per shift. CO5 dibatasi 85% CO normal di shift awal;
+                // sisanya dibebankan ke CO5 shift terakhir. Berlaku sama baik SIREP
+                // menyatakan lembur maupun tidak (lembur implisit).
+                $totalQty  = $totalQtyForShift;
                 $co5Needed = $this->capacityCalculator->preMapCutoff5(
-                    $shiftCapacities, $shiftCapacity, $totalQty, $maxShifts
+                    $shiftCapacities, $shiftCapacity, $totalQty
                 );
 
-                // Bandingkan penanda is_overtime dari SIREP dengan hasil perhitungan sendiri.
-                // Menurut tim PPC, is_overtime = true berarti hari itu ada CO5 / kapasitas over.
-                // Selisih antara keduanya menandakan kapasitas master tidak sinkron dengan SIREP,
-                // dan itu perlu diketahui sebelum jadwal diverifikasi.
-                $sirepOvertime = (bool) $groupListings->contains(fn ($l) => (bool) ($l->is_overtime ?? false));
-                $ownOvertime   = in_array(true, $co5Needed, true);
-
-                if ($sirepOvertime !== $ownOvertime) {
-                    Log::warning('Penanda overtime SIREP tidak sesuai perhitungan lokal', [
-                        'conveyor'       => $conveyorName,
-                        'schedule_date'  => $scheduleDate->format('Y-m-d'),
-                        'total_qty'      => $totalQty,
-                        'capacity'       => $shiftCapacity,
-                        'shift_dipakai'  => $maxShifts,
-                        'sirep_overtime' => $sirepOvertime,
-                        'hitung_lokal'   => $ownOvertime,
+                // Sisa yang masih memakai CO5 padahal PPC tidak menyatakan lembur berarti
+                // demand hari itu melampaui max_shift — perlu diperiksa manual sebelum
+                // jadwal dikunci.
+                if (!$sirepOvertime && in_array(true, $co5Needed, true)) {
+                    Log::warning('CO5 dibuka sebagai lembur implisit — SIREP tidak menyatakan lembur', [
+                        'conveyor'      => $conveyorName,
+                        'schedule_date' => $scheduleDate->format('Y-m-d'),
+                        'total_qty'     => $totalQty,
+                        'capacity'      => $shiftCapacity,
+                        'shift_dipakai' => $maxShifts,
+                        'max_shift'     => (int) config('sirep.capacity.max_shift', 2),
                     ]);
                 }
 
@@ -363,12 +418,39 @@ class AssySchedulerService
 
             DB::commit();
 
+            $message = "Berhasil membuat {$generatedCount} schedule.";
+
+            if ($conveyorSync['ditambah'] || $conveyorSync['dinonaktifkan']) {
+                $message .= sprintf(
+                    ' Daftar conveyor disamakan dengan SIREP: %d baru, %d dinonaktifkan.',
+                    $conveyorSync['ditambah'],
+                    $conveyorSync['dinonaktifkan']
+                );
+            }
+
+            if (!empty($capacityErrors)) {
+                $message .= ' Dilewati karena kapasitas SIREP belum tersinkron: '
+                    . implode(', ', $capacityErrors) . '.';
+            }
+
+            if (!empty($conveyorErrors)) {
+                $message .= ' Dilewati karena sudah tidak terdaftar di SIREP: '
+                    . implode(', ', $conveyorErrors) . '.';
+            }
+
             return [
-                'success'     => true,
-                'step_failed' => null,
-                'message'     => "Berhasil membuat {$generatedCount} schedule.",
-                'generated'   => $generatedCount,
-                'sync_detail' => $syncDetail,
+                'success'          => true,
+                'step_failed'      => null,
+                'message'          => $message,
+                'generated'        => $generatedCount,
+                'sync_detail'      => $syncDetail,
+                'conveyor_sync'    => [
+                    'ditambah'      => $conveyorSync['ditambah'],
+                    'diperbarui'    => $conveyorSync['diperbarui'],
+                    'dinonaktifkan' => $conveyorSync['dinonaktifkan'],
+                ],
+                'capacity_missing' => array_values($capacityErrors),
+                'conveyor_inactive' => array_values($conveyorErrors),
             ];
         } catch (\Exception $e) {
             DB::rollBack();
@@ -527,10 +609,11 @@ class AssySchedulerService
                 ->orderBy('listing_id')
                 ->get();
 
-            // Group scheduled items by shift
+            // Group scheduled items by shift. Jumlah shift tidak lagi tersimpan di master —
+            // yang berlaku adalah shift yang benar-benar terbentuk pada tanggal itu.
             $shifts = [];
-            $maxShifts = $conveyor->shift_qty ?? 3;
-            $shiftCapacity = $conveyor->capacity ?? 100;
+            $maxShifts = max(1, (int) $scheduledItems->max('shift'));
+            $shiftCapacity = (int) ($conveyor->capacity ?? 0);
 
             // Initialize all shifts
             for ($i = 1; $i <= $maxShifts; $i++) {

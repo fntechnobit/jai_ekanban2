@@ -35,7 +35,6 @@ class DefectService
                 'master_circuit.type',
                 'master_circuit.carline',
                 'master_conveyor.conveyor as conveyor_name',
-                'master_conveyor.shift_qty',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
                 'master_circuit.shikake_code',
@@ -73,7 +72,9 @@ class DefectService
             })
             ->addColumn('action', function ($row) {
                 $balance = (int) $row->balance;
-                $shiftQty = (int) $row->shift_qty;
+                // Jumlah shift tidak lagi tersimpan per conveyor; dropdown entri manual
+                // memakai batas atas yang sama dengan engine penjadwalan.
+                $shiftQty = (int) config('sirep.capacity.max_shift', 2);
                 $btn = '<button type="button" class="btn btn-danger btn-sm btn-defect" '
                      . 'data-id="' . $row->id . '" '
                      . 'data-conveyor-id="' . $row->conveyor_id . '" '
@@ -101,22 +102,22 @@ class DefectService
             ->leftJoin('kanban_balance_shikake', function ($join) {
                 $join->on('kanban_balance_shikake.master_shikake_id', '=', 'master_shikake.id')
                      ->on('kanban_balance_shikake.conveyor_id', '=', 'master_shikake.conveyor_id');
-            })
-            ->whereNull('master_shikake.deleted_at')
+            });
+        MasterShikake::joinIdentifierTables($query);
+        $query->whereNull('master_shikake.deleted_at')
             ->whereNull('master_conveyor.deleted_at')
-            ->select([
+            ->select(array_merge([
                 'master_shikake.id',
                 'master_shikake.conveyor_id',
                 'master_shikake.process',
                 'master_shikake.carline',
                 'master_conveyor.conveyor as conveyor_name',
-                'master_conveyor.shift_qty',
                 'master_shikake.machine',
                 'master_shikake.qty',
                 'master_shikake.family',
                 'master_shikake.sequence',
                 DB::raw('COALESCE(kanban_balance_shikake.sisa, 0) as balance'),
-            ]);
+            ], MasterShikake::identifierSelectColumns()));
 
         if ($conveyorId) {
             $query->where('master_shikake.conveyor_id', $conveyorId);
@@ -141,6 +142,9 @@ class DefectService
                 $color = $colors[strtoupper($row->process)] ?? 'bg-dark';
                 return '<span class="badge ' . $color . '">' . e($row->process) . '</span>';
             })
+            ->addColumn('kode_shikake', function ($row) {
+                return MasterShikake::resolveIdentifier($row);
+            })
             ->addColumn('balance_display', function ($row) {
                 $balance = (int) $row->balance;
                 if ($balance > 0) {
@@ -150,7 +154,9 @@ class DefectService
             })
             ->addColumn('action', function ($row) {
                 $balance = (int) $row->balance;
-                $shiftQty = (int) $row->shift_qty;
+                // Jumlah shift tidak lagi tersimpan per conveyor; dropdown entri manual
+                // memakai batas atas yang sama dengan engine penjadwalan.
+                $shiftQty = (int) config('sirep.capacity.max_shift', 2);
                 $btn = '<button type="button" class="btn btn-danger btn-sm btn-defect" '
                      . 'data-id="' . $row->id . '" '
                      . 'data-conveyor-id="' . $row->conveyor_id . '" '

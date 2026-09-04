@@ -70,24 +70,51 @@ return [
     | Kapasitas & jumlah shift
     |--------------------------------------------------------------------------
     |
-    | Aturan dari tim PPC:
-    |   - normal_capacity dari API = kapasitas conveyor untuk SATU shift
-    |   - qty listing >= 2 × kapasitas  ->  conveyor berjalan 2 shift
-    |   - is_overtime = true            ->  hari itu ada CO5 / kapasitas over
+    | Aturan dari tim PPC (dikonfirmasi lewat 3 contoh kasus, cap 136):
+    |
+    |   normal_capacity dari API = kapasitas conveyor untuk SATU shift.
+    |   CO1-4 = floor(kapasitas/4), sisa pembagian masuk CO4.
+    |   CO5 nominal = round(7/8 × kapasitas/4)  — maksimum CO5 adalah 87,5% CO normal.
+    |
+    |   is_overtime menentukan KAPASITAS EFEKTIF satu shift, yaitu dasar penentuan
+    |   jumlah shift:
+    |     is_overtime = true   -> kapasitas efektif = kapasitas + CO5 nominal
+    |     is_overtime = false  -> kapasitas efektif = kapasitas
+    |
+    |   jumlah shift = ceil(qty listing / kapasitas efektif satu shift), dibatasi max_shift
+    |
+    |   Pengisian CO5 sendiri TIDAK bergantung is_overtime. Bila listing tidak muat di
+    |   CO1-4 seluruh shift yang berjalan, CO5 dibuka sebagai lembur implisit:
+    |     shift bukan terakhir : CO5 <= nominal (87,5% CO normal)
+    |     shift terakhir       : CO5 = seluruh sisa (catch-all)
+    |   Hari yang memakai CO5 tanpa penanda lembur ditandai "over tanpa OT" di layar
+    |   verifikasi agar diperiksa manual.
+    |
+    | Contoh acuan dari PPC (kapasitas 136 -> CO1-4 = 34, CO5 nominal = 30):
+    |   qty 160, overtime ya    -> 1 shift: CO1-4 34 · CO5 24  (catch-all, tak dibatasi nominal)
+    |   qty 160, overtime tidak -> 2 shift: S1 CO1-4 34 · S2 CO1 24
+    |   qty 310, overtime ya    -> 2 shift: S1 CO1-4 34 + CO5 30 · S2 CO1-4 34 + CO5 8
+    |   qty 310, overtime tidak -> 2 shift: sama seperti di atas (lembur implisit),
+    |                              ditandai "over tanpa OT" di layar verifikasi
     |
     */
     'capacity' => [
-        // true  = jumlah shift dihitung dari volume demand harian (aturan PPC)
-        // false = pakai nilai statis master_conveyor.shift_qty (perilaku jai_ekanban)
-        'dynamic_shift' => env('SIREP_DYNAMIC_SHIFT', true),
+        // Batas atas jumlah shift dalam satu hari. Menggantikan master_conveyor.shift_qty
+        // yang sudah dihapus: jumlah shift kini diturunkan per tanggal, bukan disimpan
+        // per conveyor, tetapi tetap perlu batas agar demand ekstrem tidak menghasilkan
+        // shift 3, 4, dst yang tidak ada di lapangan.
+        'max_shift' => (int) env('SIREP_MAX_SHIFT', 2),
 
-        // Pembulatan nominal CO5: 'round' (aturan internal saat ini) atau 'floor'.
+        // Batas CO5 sebagai rasio terhadap CO normal (kapasitas/4).
+        // Aturan PPC: 7/8 = 87,5%. Cocok dengan contoh acuan di atas —
+        // kapasitas 136 -> round(0.875 × 34) = round(29.75) = 30.
+        'co5_ratio' => (float) env('SIREP_CO5_RATIO', 7 / 8),
+
+        // Pembulatan nominal CO5: 'round' atau 'floor'.
         //
-        // Nilai overtime_capacity dari SIREP setara dengan kapasitas + floor(0.875 × kap/4):
-        //   140 -> 170 · 300 -> 365 · 120 -> 146
-        // Aturan internal memakai round, yang untuk kapasitas 100 menghasilkan 22
-        // (SIREP: 21). Selisihnya satu unit dan hanya berlaku pada kapasitas tertentu.
-        // Ubah ke 'floor' setelah tim PPC mengonfirmasi mana yang mengikat.
+        // CATATAN: `overtime_capacity` dari API SIREP TIDAK dipakai sebagai batas CO5.
+        // Untuk kapasitas 136 SIREP mengirim 160 (setara CO5 = 24), sedangkan aturan
+        // PPC memberi CO5 nominal 30. Field itu hanya informatif.
         'co5_rounding' => env('SIREP_CO5_ROUNDING', 'round'),
     ],
 

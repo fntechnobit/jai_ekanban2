@@ -2,139 +2,50 @@
 
 namespace App\Services\Schedule;
 
-use App\Models\MasterConveyor;
-
+/**
+ * Pembagian kapasitas conveyor menjadi shift dan cutoff.
+ *
+ * Seluruh angka berasal dari SIREP: `capacity` adalah `normal_capacity` hasil
+ * `sirep:sync-conveyor`, dan `isOvertime` adalah flag `is_overtime` pada baris
+ * listing. Master conveyor tidak lagi menyimpan kapasitas maupun jumlah shift.
+ *
+ * Aturan lengkapnya didokumentasikan di config/sirep.php bagian `capacity`.
+ */
 class ShiftCapacityCalculator
 {
     /**
-     * Calculate cutoff distribution for a single shift
-     * Divides shift capacity into 4 equal parts (cutoffs 1-4)
-     * Cutoff 4 gets any remainder from integer division
-     * 
-     * @param int $shiftCapacity Total capacity for the shift
-     * @return array ['c1' => int, 'c2' => int, 'c3' => int, 'c4' => int, 'total' => int]
+     * Bagi kapasitas satu shift menjadi CO1-CO4.
+     * Sisa pembagian bulat masuk ke CO4.
+     *
+     * @return array{c1:int,c2:int,c3:int,c4:int,total:int}
      */
     public function calculateCutoffDistribution(int $shiftCapacity): array
     {
         $c1 = (int) floor($shiftCapacity / 4);
-        $c2 = (int) floor($shiftCapacity / 4);
-        $c3 = (int) floor($shiftCapacity / 4);
-        $c4 = $shiftCapacity - ($c1 + $c2 + $c3); // Remainder goes to c4
-        
+        $c2 = $c1;
+        $c3 = $c1;
+        $c4 = $shiftCapacity - ($c1 + $c2 + $c3);
+
         return [
-            'c1' => $c1,
-            'c2' => $c2,
-            'c3' => $c3,
-            'c4' => $c4,
-            'total' => $shiftCapacity
+            'c1'    => $c1,
+            'c2'    => $c2,
+            'c3'    => $c3,
+            'c4'    => $c4,
+            'total' => $shiftCapacity,
         ];
     }
-    
-    /**
-     * Tentukan jumlah shift yang berjalan pada satu hari, berdasarkan volume demand.
-     *
-     * ── Aturan PPC/SIREP ────────────────────────────────────────────────────
-     *   normal_capacity = kapasitas conveyor untuk SATU shift.
-     *   Bila qty listing >= 2 × kapasitas, conveyor berjalan 2 shift.
-     *   Di bawah itu, cukup 1 shift.
-     *
-     * Nilai `shift_qty` pada master tetap berlaku sebagai batas atas: conveyor yang
-     * secara fisik hanya mampu 1 shift tidak akan pernah dijadwalkan 2 shift,
-     * berapa pun volumenya — kelebihannya diserap CO5 sebagai catch-all.
-     *
-     * @param  int  $totalQty  Total qty listing untuk (tanggal × conveyor) tersebut
-     */
-    public function resolveShiftCount(MasterConveyor $conveyor, int $totalQty): int
-    {
-        $maxAllowed = max(1, (int) ($conveyor->shift_qty ?? 1));
-
-        if (!config('sirep.capacity.dynamic_shift', true)) {
-            return $maxAllowed;
-        }
-
-        $shiftCapacity = (int) ($conveyor->capacity ?? 100);
-
-        if ($shiftCapacity <= 0) {
-            return $maxAllowed;
-        }
-
-        $needed = $totalQty >= (2 * $shiftCapacity) ? 2 : 1;
-
-        return min($needed, $maxAllowed);
-    }
 
     /**
-     * Calculate capacities for all shifts based on conveyor config and lock status
-     * If shift is locked (is_lock = 1), set all capacities to 0
+     * Nominal CO5 = rasio × kapasitas CO normal (kapasitas/4).
      *
-     * @param MasterConveyor $conveyor The conveyor configuration
-     * @param array $lockStatus Lock status for each shift [1 => bool, 2 => bool]
-     * @param int|null $maxShifts Jumlah shift yang berjalan. Bila null, dipakai
-     *                            nilai statis dari master (perilaku lama).
-     * @return array Shift capacities indexed by shift number
-     */
-    public function calculateShiftCapacities(MasterConveyor $conveyor, array $lockStatus, ?int $maxShifts = null): array
-    {
-        $maxShifts = $maxShifts ?? ($conveyor->shift_qty ?? 2);
-        $shiftCapacity = $conveyor->capacity ?? 100;
-        $capacities = [];
-        
-        for ($shift = 1; $shift <= $maxShifts; $shift++) {
-            // If shift is locked, set capacity to 0 (skip processing)
-            if ($lockStatus[$shift] ?? false) {
-                $capacities[$shift] = [
-                    'c1' => 0,
-                    'c2' => 0,
-                    'c3' => 0,
-                    'c4' => 0,
-                    'total' => 0,
-                    'locked' => true
-                ];
-            } else {
-                $capacities[$shift] = array_merge(
-                    $this->calculateCutoffDistribution($shiftCapacity),
-                    ['locked' => false]
-                );
-            }
-        }
-        
-        return $capacities;
-    }
-    
-    /**
-     * Get total capacity for a shift (sum of all cutoffs)
-     * 
-     * @param array $shiftCapacity Cutoff distribution for a shift
-     * @return int Total capacity
-     */
-    public function getTotalCapacity(array $shiftCapacity): int
-    {
-        return $shiftCapacity['total'] ?? 0;
-    }
-
-    /**
-     * Nominal CO5 capacity shown in the verification form.
-     * Formula: round(0.875 × capacity/4). E.g. capacity 100 → round(21.875) = 22.
-     * This is a DISPLAY/cap reference; the LAST shift's CO5 is a catch-all and may
-     * exceed it (shown as "over" in the form).
-     *
-     * CATATAN — selisih dengan SIREP:
-     * Nilai `overtime_capacity` dari API SIREP setara dengan
-     * kapasitas + FLOOR(0.875 × kapasitas/4), bukan round.
-     *   cap 140 -> SIREP 170  (140 + floor 30.625 = 30)
-     *   cap 300 -> SIREP 365  (300 + floor 65.625 = 65)
-     *   cap 120 -> SIREP 146  (120 + floor 26.25  = 26)
-     * Untuk kapasitas 100, aturan kami menghasilkan 22 sedangkan SIREP 21.
-     * Pembulatan dapat disamakan lewat config `sirep.capacity.co5_rounding`
-     * setelah tim PPC mengonfirmasi mana yang benar. Default tetap 'round'
-     * agar perilaku tidak berubah diam-diam.
-     *
-     * @param int $shiftCapacity Capacity per shift from conveyor
-     * @return int Nominal CO5 capacity
+     * Aturan PPC: kapasitas CO5 maksimum 7/8 (87,5%) dari CO normal.
+     * Ini batas CO5 untuk shift yang BUKAN shift terakhir; CO5 shift terakhir
+     * adalah catch-all dan boleh melampauinya.
      */
     public function calculateCutoff5Capacity(int $shiftCapacity): int
     {
-        $raw = 0.875 * ($shiftCapacity / 4);
+        $rasio = (float) config('sirep.capacity.co5_ratio', 7 / 8);
+        $raw   = $rasio * ($shiftCapacity / 4);
 
         return (int) (config('sirep.capacity.co5_rounding', 'round') === 'floor'
             ? floor($raw)
@@ -142,67 +53,137 @@ class ShiftCapacityCalculator
     }
 
     /**
-     * Ambang "over capacity" per shift, setara `overtime_capacity` dari SIREP.
-     * Dipakai untuk membandingkan penanda is_overtime dari SIREP dengan hasil
-     * perhitungan sendiri.
+     * Kapasitas efektif satu shift — inilah yang menentukan kapan shift berikutnya dibuka.
+     *
+     * CO5 hanya ikut dihitung bila PPC menyatakan hari itu lembur; tanpa lembur
+     * satu shift berhenti tepat di kapasitas normal dan kelebihannya pindah shift.
+     * Ini SEMATA menentukan jumlah shift — pengisian CO5 sendiri tidak lagi
+     * bergantung flag lembur, lihat preMapCutoff5().
      */
-    public function calculateOvertimeCapacity(int $shiftCapacity): int
+    public function effectiveShiftCapacity(int $shiftCapacity, bool $isOvertime): int
     {
-        return $shiftCapacity + $this->calculateCutoff5Capacity($shiftCapacity);
+        return $shiftCapacity + ($isOvertime ? $this->calculateCutoff5Capacity($shiftCapacity) : 0);
     }
 
     /**
-     * Pre-map CO5 budget per shift.
-     *
-     * Capacities: CO1-4 = floor(cap/4) each (CO4 gets remainder). CO5 nominal =
-     * round(0.875 × cap/4), same for every shift.
-     *
-     * Fill order & caps:
-     *   1-shift: CO1-4 (capped) → CO5 = ALL remaining (catch-all, may exceed nominal)
-     *   2-shift: S1 CO1-4 → S2 CO1-4 → S1.CO5 (capped at nominal) → S2.CO5 = ALL
-     *            remaining (catch-all). Earlier unlocked shift(s) get the capped CO5;
-     *            the LAST unlocked shift's CO5 absorbs everything left.
-     *
-     * Because the last shift's CO5 is a catch-all, 100% of the listing is always
-     * scheduled (nothing dropped).
-     *
-     * @param array &$shiftCapacities Shift capacities array (modified in place)
-     * @param int $shiftCapacity Raw capacity per shift from conveyor
-     * @param int $totalQty Total quantity to allocate across all shifts
-     * @param int $maxShifts Number of active shifts (kept for signature compat)
-     * @return array CO5 needed status per shift [1 => bool, 2 => bool]
+     * Ambang "over capacity" satu hari, dipakai layar verifikasi untuk menandai
+     * hari yang demand-nya melampaui seluruh shift yang berjalan.
      */
-    public function preMapCutoff5(array &$shiftCapacities, int $shiftCapacity, int $totalQty, int $maxShifts = 2): array
+    public function calculateOvertimeCapacity(int $shiftCapacity): int
+    {
+        return $this->effectiveShiftCapacity($shiftCapacity, true);
+    }
+
+    /**
+     * Jumlah shift yang berjalan pada satu (tanggal × conveyor).
+     *
+     *   jumlah shift = ceil(qty listing / kapasitas efektif satu shift)
+     *
+     * dibatasi `sirep.capacity.max_shift`. Bila demand melampaui batas itu,
+     * kelebihannya diserap CO5 shift terakhir sebagai catch-all sehingga 100%
+     * listing tetap terjadwal — tidak ada yang terbuang diam-diam.
+     *
+     * @param  int   $shiftCapacity  normal_capacity dari SIREP
+     * @param  int   $totalQty       Total qty listing untuk tanggal × conveyor tersebut
+     * @param  bool  $isOvertime     Flag is_overtime dari baris listing SIREP
+     */
+    public function resolveShiftCount(int $shiftCapacity, int $totalQty, bool $isOvertime): int
+    {
+        $maxShift = max(1, (int) config('sirep.capacity.max_shift', 2));
+
+        if ($shiftCapacity <= 0) {
+            return 1;
+        }
+
+        $perShift = $this->effectiveShiftCapacity($shiftCapacity, $isOvertime);
+        $needed   = (int) ceil($totalQty / max(1, $perShift));
+
+        return max(1, min($needed, $maxShift));
+    }
+
+    /**
+     * Susun kapasitas CO1-CO4 untuk setiap shift yang berjalan.
+     * Shift yang terkunci (sudah diverifikasi) dinolkan agar tidak ditimpa.
+     *
+     * @param  array  $lockStatus  [1 => bool, 2 => bool]
+     * @return array<int, array{c1:int,c2:int,c3:int,c4:int,total:int,locked:bool}>
+     */
+    public function calculateShiftCapacities(int $shiftCapacity, array $lockStatus, int $maxShifts): array
+    {
+        $capacities = [];
+
+        for ($shift = 1; $shift <= $maxShifts; $shift++) {
+            if ($lockStatus[$shift] ?? false) {
+                $capacities[$shift] = [
+                    'c1' => 0, 'c2' => 0, 'c3' => 0, 'c4' => 0,
+                    'total' => 0, 'locked' => true,
+                ];
+                continue;
+            }
+
+            $capacities[$shift] = $this->calculateCutoffDistribution($shiftCapacity) + ['locked' => false];
+        }
+
+        return $capacities;
+    }
+
+    public function getTotalCapacity(array $shiftCapacity): int
+    {
+        return $shiftCapacity['total'] ?? 0;
+    }
+
+    /**
+     * Tentukan jatah CO5 tiap shift, sesudah CO1-4 seluruh shift diperhitungkan.
+     *
+     * Pengisiannya sama baik PPC menyatakan lembur maupun tidak. Bila listing tidak
+     * muat di CO1-4 seluruh shift yang berjalan, CO5 dibuka sebagai LEMBUR IMPLISIT —
+     * membuang baris listing jauh lebih berbahaya daripada mencetak cutoff yang belum
+     * dinyatakan PPC. Hari seperti itu tetap ditandai "over tanpa OT" di layar
+     * verifikasi supaya diperiksa manual.
+     *
+     * Batasnya:
+     *   shift bukan terakhir : CO5 <= nominal (87,5% CO normal)
+     *   shift terakhir       : CO5 = seluruh sisa (catch-all, boleh melampaui nominal)
+     *
+     * @param  array  $shiftCapacities  Diubah di tempat; setiap shift mendapat kunci 'c5'
+     * @return array<int, bool>         Shift mana saja yang memakai CO5
+     */
+    public function preMapCutoff5(array &$shiftCapacities, int $shiftCapacity, int $totalQty): array
     {
         $co5Nominal = $this->calculateCutoff5Capacity($shiftCapacity);
-        $co5Needed = [];
+        $co5Needed  = [];
 
-        // Initialize c5 = 0 for all shifts
+        $totalCo14 = 0;
+        $unlocked  = [];
+
         foreach ($shiftCapacities as $shift => $caps) {
             $shiftCapacities[$shift]['c5'] = 0;
             $co5Needed[$shift] = false;
-        }
 
-        // Remaining qty after CO1-4 of all unlocked shifts
-        $totalCo14 = 0;
-        $unlocked  = [];
-        foreach ($shiftCapacities as $shift => $caps) {
-            if ($caps['locked'] ?? false) continue;
+            if ($caps['locked'] ?? false) {
+                continue;
+            }
+
             $totalCo14 += $caps['total'];
             $unlocked[] = $shift;
         }
 
         $rem = max(0, $totalQty - $totalCo14);
+
         if ($rem <= 0 || empty($unlocked)) {
             return $co5Needed;
         }
 
         $lastShift = end($unlocked);
 
-        // Earlier unlocked shifts: CO5 capped at nominal. Last unlocked shift: catch-all.
+        // Shift awal dibatasi nominal; sisanya dibebankan ke CO5 shift terakhir.
         foreach ($unlocked as $shift) {
-            if ($rem <= 0) break;
+            if ($rem <= 0) {
+                break;
+            }
+
             $alloc = ($shift === $lastShift) ? $rem : min($rem, $co5Nominal);
+
             if ($alloc > 0) {
                 $shiftCapacities[$shift]['c5'] = $alloc;
                 $shiftCapacities[$shift]['total'] += $alloc;

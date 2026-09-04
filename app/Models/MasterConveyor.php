@@ -15,17 +15,53 @@ class MasterConveyor extends Model
     /** Restricted directly by the master_area_id column. */
     protected $areaColumn = 'master_area_id';
 
+    /**
+     * `capacity`, `overtime_capacity` dan `capacity_synced_at` sengaja TIDAK ada di
+     * sini: ketiganya milik SIREP dan hanya boleh ditulis `sirep:sync-conveyor`,
+     * bukan lewat form master. `sirep_conveyor_code` tetap dapat diisi manual —
+     * itulah jembatan bagi conveyor yang namanya berbeda antara SIREP dan sini.
+     */
     protected $fillable = [
         'master_area_id',
-        'conveyor',
-        'shift_start',
-        'shift_qty',
-        'capacity',
+        'sirep_conveyor_code',
         'pallet_qty',
         'created_by',
         'updated_by',
         'deleted_by',
     ];
+
+    protected $casts = [
+        'capacity_synced_at' => 'datetime',
+        'deactivated_at'     => 'datetime',
+        'is_active'          => 'boolean',
+    ];
+
+    /**
+     * Conveyor yang masih ada di SIREP. Hanya conveyor inilah yang boleh
+     * dijadwalkan, diverifikasi, dan dicetak kanbannya.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    /** Siap dijadwalkan: masih di SIREP dan kapasitasnya sudah tersinkron. */
+    public function isSchedulable(): bool
+    {
+        return (bool) $this->is_active && $this->hasSyncedCapacity();
+    }
+
+    /** Kapasitas siap pakai hanya bila SIREP sudah pernah mengirimkannya. */
+    public function hasSyncedCapacity(): bool
+    {
+        return (int) ($this->capacity ?? 0) > 0;
+    }
+
+    /** Nama yang dipakai mencocokkan conveyor ini dengan `name` dari API SIREP. */
+    public function sirepName(): string
+    {
+        return trim((string) ($this->sirep_conveyor_code ?: $this->conveyor));
+    }
 
     public function area()
     {

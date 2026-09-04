@@ -15,7 +15,7 @@ class MasterConveyorService
         return MasterConveyor::with(['area', 'families'])->select('master_conveyor.*');
     }
 
-    public function getDatatable($areaId = null, $familyId = null)
+    public function getDatatable($areaId = null, $familyId = null, $status = null)
     {
         $query = MasterConveyor::with(['area', 'families'])
             ->select('master_conveyor.*');
@@ -23,6 +23,13 @@ class MasterConveyorService
         // Filter by area
         if ($areaId) {
             $query->where('master_area_id', $areaId);
+        }
+
+        // Filter by status aktif/nonaktif
+        if ($status === 'active') {
+            $query->where('is_active', true);
+        } elseif ($status === 'inactive') {
+            $query->where('is_active', false);
         }
 
         // Filter by family
@@ -40,8 +47,32 @@ class MasterConveyorService
             ->addColumn('family_names', function ($row) {
                 return $row->families->pluck('family')->implode(', ') ?: '-';
             })
-            ->addColumn('shift_label', function ($row) {
-                return $row->shift_qty . '/' . $row->shift_start;
+            ->addColumn('status_label', function ($row) {
+                // Status berasal dari SIREP: nonaktif = tidak muncul lagi di API.
+                if ($row->is_active) {
+                    return '<span class="badge bg-success">Aktif</span>';
+                }
+
+                $sejak = $row->deactivated_at ? ' sejak ' . $row->deactivated_at->format('d M Y') : '';
+
+                return '<span class="badge bg-secondary" title="Tidak ada lagi di SIREP' . e($sejak)
+                    . '. Tidak ikut dijadwalkan maupun diverifikasi.">Nonaktif</span>';
+            })
+            ->addColumn('capacity_label', function ($row) {
+                // Kapasitas milik SIREP: tampilkan apa adanya, termasuk saat belum pernah
+                // disinkron — kondisi itu yang membuat conveyor dilewati saat generate.
+                if (!$row->hasSyncedCapacity()) {
+                    return '<span class="badge bg-danger">belum sinkron</span>';
+                }
+
+                $over = $row->overtime_capacity ? ' <span class="text-muted">/ ' . (int) $row->overtime_capacity . ' OT</span>' : '';
+
+                return '<span class="fw-semibold">' . (int) $row->capacity . '</span>' . $over;
+            })
+            ->addColumn('synced_label', function ($row) {
+                return $row->capacity_synced_at
+                    ? $row->capacity_synced_at->format('d M Y H:i')
+                    : '<span class="text-muted">-</span>';
             })
             ->addColumn('action', function ($row) {
                 /** @var \App\Models\User|null $currentUser */
@@ -54,15 +85,10 @@ class MasterConveyorService
                     $hasActions = true;
                 }
 
-                if ($currentUser && $currentUser->hasMenuPermission('master_conveyor', 'can_delete')) {
-                    $actions .= '<button type="button" class="btn btn-soft-danger btn-sm btn-delete" data-id="' . $row->id . '" title="Delete"><i class="ti ti-trash"></i></button>';
-                    $hasActions = true;
-                }
-
                 $actions .= '</div>';
                 return $hasActions ? $actions : '-';
             })
-            ->rawColumns(['action'])
+            ->rawColumns(['status_label', 'capacity_label', 'synced_label', 'action'])
             ->make(true);
     }
 
@@ -71,8 +97,7 @@ class MasterConveyorService
         DB::beginTransaction();
         try {
             $data['created_by'] = Auth::id();
-            $data['shift_start'] = 1; // Always set to 1
-            
+
             $conveyor = MasterConveyor::create($data);
 
             // Attach families

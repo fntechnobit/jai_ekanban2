@@ -12,14 +12,30 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">Conveyor Data</h5>
             <div class="card-tools">
-                @if(auth()->user()->hasMenuPermission('master_conveyor', 'can_create'))
-                    <button type="button" class="btn btn-primary btn-sm" id="btn-add">
-                        <i class="fa-solid fa-plus me-1"></i> Add New Data
-                    </button>
-                @endif
+                <button type="button" class="btn btn-primary btn-sm" id="btn-sirep-sync">
+                    <i class="fa-solid fa-cloud-arrow-down me-1"></i> Sync Conveyor SIREP
+                </button>
             </div>
         </div>
         <div class="card-body">
+            <div class="cv-info mb-3">
+                Daftar conveyor berasal dari <strong>API SIREP</strong> dan tidak dapat ditambah atau dihapus
+                dari sini. Tekan <strong>Sync Conveyor SIREP</strong> untuk menariknya. Conveyor yang sudah
+                tidak dikirim SIREP otomatis berstatus <span class="badge bg-secondary">Nonaktif</span> dan
+                berhenti ikut dijadwalkan maupun diverifikasi &mdash; datanya tidak dihapus.
+                Yang masih bisa diubah di sini: Area, Family, Kode Conveyor SIREP, dan Pallet Qty.
+            </div>
+
+            <style>
+                /* Warna ditulis eksplisit agar tidak mewarisi alert tema yang kontrasnya rendah. */
+                .cv-info{
+                    background:#EEF4FA; border:1px solid #C9DAEA; border-left:4px solid #2C6FA8;
+                    color:#1F3247; border-radius:6px; padding:12px 16px; font-size:.86rem; line-height:1.6;
+                }
+                .cv-info strong{color:#12283D}
+                .cv-info .badge{vertical-align:baseline}
+            </style>
+
             <!-- Filters -->
             <div class="row mb-3">
                 <div class="col-md-4">
@@ -29,6 +45,14 @@
                         @foreach($areas as $area)
                             <option value="{{ $area->id }}">{{ $area->area }}</option>
                         @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filter_status" class="form-label">Status :</label>
+                    <select class="form-select" id="filter_status">
+                        <option value="">- Semua Status -</option>
+                        <option value="active">Aktif</option>
+                        <option value="inactive">Nonaktif</option>
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -49,9 +73,10 @@
                             <th width="5%">No</th>
                             <th>Area</th>
                             <th>Conveyor</th>
+                            <th>Status</th>
                             <th>Family</th>
-                            <th>Shift/Start</th>
-                            <th>Capacity</th>
+                            <th>Capacity/Shift (SIREP)</th>
+                            <th>Sinkron Terakhir</th>
                             <th>Pallet Qty</th>
                             <th width="10%">Action</th>
                         </tr>
@@ -65,6 +90,56 @@
 </div>
 
 @include('master_data.master_conveyor.form')
+
+<!-- Hasil sinkronisasi SIREP -->
+<div class="modal fade" id="sirepSyncModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-cloud-arrow-down me-2"></i> Sinkronisasi Conveyor dari SIREP
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info py-2 small mb-3" id="sirep-sync-message">
+                    Memuat pratinjau...
+                </div>
+
+                <div class="alert alert-warning py-2 small mb-3">
+                    Sinkronisasi <strong>menambah</strong> conveyor baru dari SIREP, <strong>memperbarui</strong>
+                    nama dan kapasitas yang sudah ada, dan <strong>menonaktifkan</strong> conveyor yang tidak
+                    dikirim lagi oleh SIREP. Tidak ada data yang dihapus. Jumlah shift tidak tersedia di API
+                    dan dihitung per tanggal saat generate. Jadwal yang sudah dibuat tidak ikut berubah.
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle" id="sirep-sync-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Conveyor (SIREP)</th>
+                                <th>Di master</th>
+                                <th class="text-end">Normal</th>
+                                <th class="text-end">Over (SIREP)</th>
+                                <th class="text-end">Kapasitas lama</th>
+                                <th>Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+                @if(auth()->user()->hasMenuPermission('master_conveyor', 'can_update'))
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-sirep-apply" disabled>
+                        <i class="fa-solid fa-check me-1"></i> Terapkan ke Master
+                    </button>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('script')
@@ -90,15 +165,17 @@
                     data: function(d) {
                         d.area_id = $('#filter_area').val();
                         d.family_id = $('#filter_family').val();
+                        d.status = $('#filter_status').val();
                     }
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                     { data: 'area_name', name: 'area.area' },
                     { data: 'conveyor', name: 'conveyor' },
+                    { data: 'status_label', name: 'is_active', className: 'text-center' },
                     { data: 'family_names', name: 'family_names', orderable: false },
-                    { data: 'shift_label', name: 'shift_qty' },
-                    { data: 'capacity', name: 'capacity' },
+                    { data: 'capacity_label', name: 'capacity' },
+                    { data: 'synced_label', name: 'capacity_synced_at' },
                     { data: 'pallet_qty', name: 'pallet_qty' },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
                 ],
@@ -106,7 +183,7 @@
             });
 
             // Filter change events
-            $('#filter_area, #filter_family').on('change', function() {
+            $('#filter_area, #filter_family, #filter_status').on('change', function() {
                 table.ajax.reload();
             });
 
@@ -124,28 +201,101 @@
                     placeholder: 'Select Family',
                     allowClear: true
                 });
+            }
 
-                $('#shift_qty').select2({
-                    theme: 'bootstrap-5',
-                    dropdownParent: $('#masterConveyorModal'),
-                    minimumResultsForSearch: Infinity
+            // ── Sinkronisasi kapasitas dari SIREP ─────────────────────────────
+            // Dua langkah: pratinjau dulu (tidak menulis apa pun), baru diterapkan.
+            var sirepPreviewUrl = "{{ route('master-data.master-conveyor.sirep-preview') }}";
+            var sirepApplyUrl   = "{{ route('master-data.master-conveyor.sirep-apply') }}";
+
+            function renderSirepRows(rows) {
+                var body = $('#sirep-sync-table tbody').empty();
+
+                if (!rows || !rows.length) {
+                    body.append('<tr><td colspan="7" class="text-center text-muted">Tidak ada data dari SIREP.</td></tr>');
+                    return;
+                }
+
+                var badge = {
+                    baru:     '<span class="badge bg-primary">baru</span>',
+                    berubah:  '<span class="badge bg-warning text-dark">berubah</span>',
+                    sama:     '<span class="badge bg-success">sama</span>',
+                    nonaktif: '<span class="badge bg-secondary">dinonaktifkan</span>'
+                };
+
+                rows.forEach(function (r) {
+                    body.append(
+                        '<tr>' +
+                        '<td>' + (r.sirep_name || '<span class="text-muted">&mdash;</span>') + '</td>' +
+                        '<td>' + (r.conveyor || '<span class="text-muted">belum ada</span>') + '</td>' +
+                        '<td class="text-end">' + (r.normal_capacity ?? '-') + '</td>' +
+                        '<td class="text-end">' + (r.overtime_capacity ?? '-') + '</td>' +
+                        '<td class="text-end">' + (r.capacity_lama ?? '<span class="text-muted">kosong</span>') + '</td>' +
+                        '<td>' + (badge[r.state] || '') + ' <small class="text-muted">' + (r.status || '') + '</small></td>' +
+                        '</tr>'
+                    );
                 });
             }
 
-            // Add Conveyor Button
-            $('#btn-add').click(function () {
-                $('#masterConveyorForm')[0].reset();
-                $('#conveyor_id').val('');
-                $('#masterConveyorModalLabel').text('Add Conveyor');
-                $('.error-text').text('');
-                
-                // Reset Select2
-                $('#master_area_id').val('').trigger('change');
-                $('#family_ids').val([]).trigger('change');
-                $('#shift_qty').val('2').trigger('change');
-                
-                initFormSelect2();
-                $('#masterConveyorModal').modal('show');
+            $('#btn-sirep-sync').on('click', function () {
+                var btn = $(this);
+                btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Menghubungi SIREP...');
+
+                $('#sirep-sync-message').removeClass('alert-danger').addClass('alert-info').text('Memuat pratinjau...');
+                $('#sirep-sync-table tbody').empty();
+                $('#btn-sirep-apply').prop('disabled', true);
+                $('#sirepSyncModal').modal('show');
+
+                $.get(sirepPreviewUrl)
+                    .done(function (res) {
+                        var data = res.data || {};
+                        $('#sirep-sync-message').text(res.message || data.message || 'Pratinjau siap.');
+                        renderSirepRows(data.rows);
+                        $('#btn-sirep-apply').prop('disabled', !(data.rows && data.rows.length));
+                    })
+                    .fail(function (xhr) {
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message)
+                            || 'Gagal menghubungi API SIREP.';
+                        $('#sirep-sync-message').removeClass('alert-info').addClass('alert-danger').text(msg);
+                    })
+                    .always(function () {
+                        btn.prop('disabled', false).html('<i class="fa-solid fa-cloud-arrow-down me-1"></i> Sync Conveyor SIREP');
+                    });
+            });
+
+            $('#btn-sirep-apply').on('click', function () {
+                var btn = $(this);
+
+                Swal.fire({
+                    title: 'Terapkan ke master?',
+                    text: 'Kapasitas conveyor akan ditimpa nilai dari SIREP. Jadwal yang sudah dibuat tidak berubah.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, terapkan',
+                    cancelButtonText: 'Batal'
+                }).then(function (hasil) {
+                    if (!hasil.isConfirmed) return;
+
+                    btn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-1"></i> Menerapkan...');
+
+                    $.post(sirepApplyUrl, { _token: '{{ csrf_token() }}' })
+                        .done(function (res) {
+                            var data = res.data || {};
+                            $('#sirep-sync-message').removeClass('alert-danger').addClass('alert-info')
+                                .text(res.message || data.message || 'Selesai.');
+                            renderSirepRows(data.rows);
+                            table.ajax.reload(null, false);
+                            Swal.fire('Berhasil!', res.message || 'Kapasitas diperbarui.', 'success');
+                        })
+                        .fail(function (xhr) {
+                            var msg = (xhr.responseJSON && xhr.responseJSON.message)
+                                || 'Gagal menerapkan sinkronisasi.';
+                            Swal.fire('Gagal!', msg, 'error');
+                        })
+                        .always(function () {
+                            btn.prop('disabled', false).html('<i class="fa-solid fa-check me-1"></i> Terapkan ke Master');
+                        });
+                });
             });
 
             // Edit Conveyor
@@ -159,13 +309,30 @@
 
                         $('#conveyor_id').val(conveyor.id);
                         $('#conveyor').val(conveyor.conveyor);
-                        $('#capacity').val(conveyor.capacity);
+                        $('#masterConveyorModalLabel').text('Edit Conveyor — ' + conveyor.conveyor);
+                        $('#sirep_conveyor_code').val(conveyor.sirep_conveyor_code || '');
                         $('#pallet_qty').val(conveyor.pallet_qty);
+                        $('#capacity_display').text(
+                            conveyor.capacity
+                                ? conveyor.capacity + (conveyor.overtime_capacity ? ' / ' + conveyor.overtime_capacity + ' OT' : '')
+                                : 'belum sinkron dari SIREP'
+                        );
+                        $('#capacity_synced_display').text(conveyor.capacity_synced_label || 'belum pernah');
+
+                        if (conveyor.is_active) {
+                            $('#status_display')
+                                .attr('class', 'cv-status cv-status-on')
+                                .text('Aktif — masih terdaftar di SIREP');
+                        } else {
+                            $('#status_display')
+                                .attr('class', 'cv-status cv-status-off')
+                                .text('Nonaktif' + (conveyor.deactivated_label ? ' sejak ' + conveyor.deactivated_label : '')
+                                      + ' — tidak ikut dijadwalkan');
+                        }
                         
                         initFormSelect2();
                         
                         $('#master_area_id').val(conveyor.master_area_id).trigger('change');
-                        $('#shift_qty').val(conveyor.shift_qty).trigger('change');
                         $('#family_ids').val(conveyor.family_ids).trigger('change');
 
                         $('#masterConveyorModalLabel').text('Edit Conveyor');
@@ -215,37 +382,7 @@
                 });
             });
 
-            // Delete Conveyor
-            $(document).on('click', '.btn-delete', function () {
-                var id = $(this).data('id');
 
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: "You won't be able to revert this!",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#3085d6',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Yes, delete it!'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            url: "{{ route('master-data.master-conveyor.index') }}/" + id,
-                            type: 'DELETE',
-                            data: {
-                                _token: '{{ csrf_token() }}'
-                            },
-                            success: function (response) {
-                                table.ajax.reload();
-                                Swal.fire('Deleted!', response.message, 'success');
-                            },
-                            error: function (xhr) {
-                                Swal.fire('Error!', xhr.responseJSON.message || 'Failed to delete conveyor', 'error');
-                            }
-                        });
-                    }
-                });
-            });
         });
     </script>
 @endsection

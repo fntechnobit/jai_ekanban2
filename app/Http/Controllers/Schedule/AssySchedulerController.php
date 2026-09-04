@@ -95,7 +95,7 @@ class AssySchedulerController extends Controller
                     data-conveyor-name="' . ($schedule->conveyor ? $schedule->conveyor->conveyor : '') . '" 
                     data-date="' . $schedule->schedule->format('Y-m-d') . '" 
                     data-capacity="' . ($schedule->conveyor ? $schedule->conveyor->capacity : 0) . '" 
-                    data-max-shifts="' . ($schedule->conveyor ? $schedule->conveyor->shift_qty : 0) . '">
+                    data-max-shifts="' . (int) config('sirep.capacity.max_shift', 2) . '">
                     <i class="ti ti-settings"></i> Manage
                 </button></div>';
                 

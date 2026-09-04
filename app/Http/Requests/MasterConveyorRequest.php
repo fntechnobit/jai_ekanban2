@@ -22,11 +22,12 @@ class MasterConveyorRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'master_area_id' => ['required', 'exists:master_area,id'],
-            'conveyor' => ['required', 'string', 'max:255'],
-            'shift_qty' => ['required', 'integer', 'min:1', 'max:3'],
-            'capacity' => ['required', 'integer', 'min:1'],
-            'pallet_qty' => ['required', 'integer', 'min:1'],
+            // Nama conveyor, kapasitas, dan status aktif seluruhnya milik SIREP —
+            // tidak ada satu pun yang boleh diubah dari sini. Yang tersisa hanyalah
+            // parameter lokal yang tidak dikirim API.
+            'master_area_id' => ['nullable', 'exists:master_area,id'],
+            'sirep_conveyor_code' => ['nullable', 'string', 'max:50'],
+            'pallet_qty' => ['nullable', 'integer', 'min:1'],
             'family_ids' => ['nullable', 'array'],
             'family_ids.*' => ['exists:master_family,id'],
         ];
@@ -39,9 +40,7 @@ class MasterConveyorRequest extends FormRequest
     {
         return [
             'master_area_id' => 'Area',
-            'conveyor' => 'Conveyor',
-            'shift_qty' => 'Shift',
-            'capacity' => 'Capacity/Shift',
+            'sirep_conveyor_code' => 'Kode Conveyor SIREP',
             'pallet_qty' => 'Pallet Qty',
             'family_ids' => 'Family',
         ];

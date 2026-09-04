@@ -26,8 +26,8 @@ use Carbon\Carbon;
  *   (tidak ada)           -> shift = 0
  *
  * Catatan tentang `shift`: API SIREP tidak menyediakannya, dan itu tidak menjadi
- * masalah — shift pada jadwal diturunkan dari master conveyor (shift_qty) saat
- * alokasi kapasitas, bukan dari baris listing. Kolom staging diisi 0.
+ * masalah — jumlah shift diturunkan per tanggal dari total qty listing dan flag
+ * `is_overtime`, bukan dari baris listing satuan. Kolom staging diisi 0.
  */
 class SirepListingAdapter
 {
