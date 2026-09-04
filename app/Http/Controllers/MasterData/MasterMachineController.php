@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\MasterMachineService;
 use App\Http\Requests\MasterMachineRequest;
 use App\Helpers\ResponseHelper;
+use App\Models\MasterArea;
 use App\Models\MasterConveyor;
 use Illuminate\Http\Request;
 
@@ -25,15 +26,17 @@ class MasterMachineController extends Controller
 
     public function index()
     {
+        $areas = MasterArea::orderBy('area')->get();
         $conveyors = MasterConveyor::with('area')->orderBy('conveyor')->get();
-        return view('master_data.master_machine.index', compact('conveyors'));
+        return view('master_data.master_machine.index', compact('areas', 'conveyors'));
     }
 
     public function datatable(Request $request)
     {
         if ($request->ajax()) {
+            $areaId = $request->get('area_id');
             $conveyorId = $request->get('conveyor_id');
-            return $this->masterMachineService->getDatatable($conveyorId);
+            return $this->masterMachineService->getDatatable($areaId, $conveyorId);
         }
     }
 

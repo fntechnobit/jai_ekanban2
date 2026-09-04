@@ -157,4 +157,49 @@ class MasterShikake extends Model
     {
         return $this->belongsTo(User::class, 'deleted_by');
     }
+
+    /**
+     * Resolve the type-specific "kode shikake" for a row that carries the
+     * child-table identifier columns (twist_cct_no, bonder_no, joint_bonder_no,
+     * shield_no, dbl_crimp_drawing_no) alongside `process`, e.g. via the
+     * left joins used by getIdentifierSelectColumns()/getIdentifierJoins().
+     */
+    public static function resolveIdentifier($row): string
+    {
+        return match ($row->process ?? null) {
+            'TWIST' => $row->twist_cct_no ?? '-',
+            'BONDER' => $row->bonder_no ?? '-',
+            'JOINT' => $row->joint_bonder_no ?? '-',
+            'SHIELD' => $row->shield_no ?? '-',
+            'DBL CRIMP' => $row->dbl_crimp_drawing_no ?? '-',
+            default => '-',
+        };
+    }
+
+    /**
+     * Left-join every child table needed to resolve the identifier via resolveIdentifier().
+     */
+    public static function joinIdentifierTables($query)
+    {
+        return $query
+            ->leftJoin('master_shikake_twist', 'master_shikake.id', '=', 'master_shikake_twist.master_shikake_id')
+            ->leftJoin('master_shikake_bonder', 'master_shikake.id', '=', 'master_shikake_bonder.master_shikake_id')
+            ->leftJoin('master_shikake_joint', 'master_shikake.id', '=', 'master_shikake_joint.master_shikake_id')
+            ->leftJoin('master_shikake_shield', 'master_shikake.id', '=', 'master_shikake_shield.master_shikake_id')
+            ->leftJoin('master_shikake_dbl_crimp', 'master_shikake.id', '=', 'master_shikake_dbl_crimp.master_shikake_id');
+    }
+
+    /**
+     * Select columns (aliased) needed by resolveIdentifier().
+     */
+    public static function identifierSelectColumns(): array
+    {
+        return [
+            'master_shikake_twist.cct_no as twist_cct_no',
+            'master_shikake_bonder.bonder_no',
+            'master_shikake_joint.bonder_no as joint_bonder_no',
+            'master_shikake_shield.shield_no',
+            'master_shikake_dbl_crimp.drawing_no as dbl_crimp_drawing_no',
+        ];
+    }
 }

@@ -25,13 +25,18 @@
                 <!-- Filters -->
                 <div class="row mb-3">
                     <div class="col-md-4">
-                        <label for="filter_conveyor" class="form-label">Conveyor :</label>
-                        <select class="form-select select2" id="filter_conveyor" style="width: 100%;">
-                            <option value="">- All Conveyor -</option>
-                            @foreach($conveyors as $conveyor)
-                                <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }} ({{ $conveyor->area->area ?? '-' }})</option>
+                        <label for="filter_area" class="form-label">Area :</label>
+                        <select class="form-select select2" id="filter_area" style="width: 100%;">
+                            <option value="">- All Area -</option>
+                            @foreach($areas as $area)
+                                <option value="{{ $area->id }}">{{ $area->area }}</option>
                             @endforeach
                         </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="filter_conveyor" class="form-label">Conveyor :</label>
+                        {{-- Opsi diisi lewat JS supaya mengikuti area yang dipilih --}}
+                        <select class="form-select select2" id="filter_conveyor" style="width: 100%;"></select>
                     </div>
                 </div>
 
@@ -40,6 +45,7 @@
                         <tr>
                             <th width="5%">No</th>
                             <th>Machine</th>
+                            <th>Area</th>
                             <th>Conveyor</th>
                             <th width="10%">Action</th>
                         </tr>
@@ -55,14 +61,61 @@
 @endsection
 
 @section('script')
+    @php
+        $conveyorOptions = $conveyors->map(fn ($conveyor) => [
+            'id' => $conveyor->id,
+            'conveyor' => $conveyor->conveyor,
+            'area_id' => $conveyor->master_area_id,
+            'area' => $conveyor->area->area ?? '-',
+        ])->values();
+    @endphp
     <script>
         $(function () {
+            // Sumber data conveyor untuk cascading area -> conveyor
+            var CONVEYORS = @json($conveyorOptions);
+
+            /**
+             * Isi ulang opsi conveyor sesuai area yang dipilih.
+             * opts.placeholder : teks opsi kosong (khusus dropdown filter)
+             * opts.showAll     : true = area kosong berarti semua conveyor, false = tidak ada opsi
+             * opts.selected    : nilai yang dipilih ulang setelah opsi dibangun
+             */
+            function fillConveyorOptions($select, areaId, opts) {
+                opts = opts || {};
+                $select.empty();
+
+                if (opts.placeholder) {
+                    $select.append(new Option(opts.placeholder, '', false, false));
+                }
+
+                if (areaId || opts.showAll) {
+                    CONVEYORS.forEach(function (conveyor) {
+                        if (areaId && String(conveyor.area_id) !== String(areaId)) {
+                            return;
+                        }
+                        var label = areaId ? conveyor.conveyor : conveyor.conveyor + ' (' + conveyor.area + ')';
+                        $select.append(new Option(label, conveyor.id, false, false));
+                    });
+                }
+
+                // change.select2 hanya menyegarkan tampilan select2, tidak memicu handler filter
+                $select.val(opts.selected || ($select.prop('multiple') ? [] : '')).trigger('change.select2');
+            }
+
             // Initialize Select2 for filters
+            $('#filter_area').select2({
+                theme: 'bootstrap-5',
+                allowClear: true,
+                placeholder: '- All Area -'
+            });
+
             $('#filter_conveyor').select2({
                 theme: 'bootstrap-5',
                 allowClear: true,
                 placeholder: '- All Conveyor -'
             });
+
+            fillConveyorOptions($('#filter_conveyor'), '', { placeholder: '- All Conveyor -', showAll: true });
 
             // DataTable
             var table = $('#master-machine-table').DataTable({
@@ -71,12 +124,14 @@
                 ajax: {
                     url: "{{ route('master-data.master-machine.datatable') }}",
                     data: function(d) {
+                        d.area_id = $('#filter_area').val();
                         d.conveyor_id = $('#filter_conveyor').val();
                     }
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                     { data: 'machine', name: 'machine' },
+                    { data: 'area_name', name: 'area_name', orderable: false, searchable: false },
                     { data: 'conveyor_names', name: 'conveyor_names', orderable: false },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
                 ],
@@ -84,12 +139,25 @@
             });
 
             // Filter change events
+            $('#filter_area').on('change', function() {
+                // Conveyor mengikuti area, pilihan conveyor sebelumnya direset
+                fillConveyorOptions($('#filter_conveyor'), $(this).val(), { placeholder: '- All Conveyor -', showAll: true });
+                table.ajax.reload();
+            });
+
             $('#filter_conveyor').on('change', function() {
                 table.ajax.reload();
             });
 
             // Initialize Select2 for form
             function initFormSelect2() {
+                $('#master_area_id').select2({
+                    theme: 'bootstrap-5',
+                    dropdownParent: $('#masterMachineModal'),
+                    placeholder: 'Select Area',
+                    allowClear: true
+                });
+
                 $('#conveyor_ids').select2({
                     theme: 'bootstrap-5',
                     dropdownParent: $('#masterMachineModal'),
@@ -98,6 +166,11 @@
                 });
             }
 
+            // Conveyor pada form dibatasi ke area yang dipilih
+            $('#master_area_id').on('change', function() {
+                fillConveyorOptions($('#conveyor_ids'), $(this).val());
+            });
+
             // Add Machine Button
             $('#btn-add').click(function () {
                 $('#masterMachineForm')[0].reset();
@@ -105,10 +178,12 @@
                 $('#masterMachineModalLabel').text('Add Machine');
                 $('.error-text').text('');
                 
-                // Reset Select2
-                $('#conveyor_ids').val([]).trigger('change');
-                
                 initFormSelect2();
+
+                // Reset Select2
+                $('#master_area_id').val('').trigger('change.select2');
+                fillConveyorOptions($('#conveyor_ids'), '');
+
                 $('#masterMachineModal').modal('show');
             });
 
@@ -123,10 +198,13 @@
 
                         $('#machine_id').val(machine.id);
                         $('#machine').val(machine.machine);
-                        
+
                         initFormSelect2();
-                        
-                        $('#conveyor_ids').val(machine.conveyor_ids).trigger('change');
+
+                        $('#master_area_id').val(machine.master_area_id || '').trigger('change.select2');
+                        fillConveyorOptions($('#conveyor_ids'), machine.master_area_id || '', {
+                            selected: machine.conveyor_ids
+                        });
 
                         $('#masterMachineModalLabel').text('Edit Machine');
                         $('.error-text').text('');
@@ -164,8 +242,8 @@
                         if (xhr.status === 422) {
                             var errors = xhr.responseJSON.errors;
                             $.each(errors, function (key, value) {
-                                // Handle array field errors
-                                var errorKey = key.replace('.', '_');
+                                // Handle array field errors (conveyor_ids.0 -> conveyor_ids)
+                                var errorKey = key.split('.')[0];
                                 $('.' + errorKey + '_error').text(value[0]);
                             });
                         } else {

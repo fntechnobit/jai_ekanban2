@@ -14,6 +14,7 @@ class MasterMachine extends Model
 
     protected $fillable = [
         'machine',
+        'master_area_id',
         'created_by',
         'updated_by',
         'deleted_by',
@@ -47,6 +48,14 @@ class MasterMachine extends Model
     public function deleter()
     {
         return $this->belongsTo(User::class, 'deleted_by');
+    }
+
+    /**
+     * Get the area this machine belongs to
+     */
+    public function area()
+    {
+        return $this->belongsTo(MasterArea::class, 'master_area_id');
     }
 
     /**

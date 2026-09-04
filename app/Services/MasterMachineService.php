@@ -12,13 +12,18 @@ class MasterMachineService
 {
     public function getAll()
     {
-        return MasterMachine::with('conveyors')->select('master_machine.*');
+        return MasterMachine::with(['area', 'conveyors'])->select('master_machine.*');
     }
 
-    public function getDatatable($conveyorId = null)
+    public function getDatatable($areaId = null, $conveyorId = null)
     {
-        $query = MasterMachine::with(['conveyors', 'conveyors.area'])
+        $query = MasterMachine::with(['area', 'conveyors', 'conveyors.area'])
             ->select('master_machine.*');
+
+        // Filter by area
+        if ($areaId) {
+            $query->where('master_machine.master_area_id', $areaId);
+        }
 
         // Filter by conveyor
         if ($conveyorId) {
@@ -29,6 +34,9 @@ class MasterMachineService
 
         return DataTables::of($query)
             ->addIndexColumn()
+            ->addColumn('area_name', function ($row) {
+                return $row->area->area ?? '-';
+            })
             ->addColumn('conveyor_names', function ($row) {
                 return $row->conveyors->pluck('conveyor')->implode(', ') ?: '-';
             })
@@ -74,7 +82,7 @@ class MasterMachineService
             }
 
             DB::commit();
-            return $machine->load('conveyors');
+            return $machine->load(['area', 'conveyors']);
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
@@ -103,7 +111,7 @@ class MasterMachineService
             }
 
             DB::commit();
-            return $machine->load('conveyors');
+            return $machine->load(['area', 'conveyors']);
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
@@ -120,6 +128,6 @@ class MasterMachineService
 
     public function findById($id)
     {
-        return MasterMachine::with('conveyors')->findOrFail($id);
+        return MasterMachine::with(['area', 'conveyors'])->findOrFail($id);
     }
 }

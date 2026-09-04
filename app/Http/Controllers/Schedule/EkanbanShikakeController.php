@@ -246,19 +246,19 @@ class EkanbanShikakeController extends Controller
     }
 
     /**
-     * Get machines by conveyor for dynamic filtering
+     * Get machines by area for dynamic filtering
      */
     public function getMachinesByConveyor(Request $request)
     {
-        $conveyorId = $request->conveyor_id;
-        
-        if (!$conveyorId) {
+        $areaId = $request->get('area_id');
+
+        if (!$areaId) {
             return response()->json([]);
         }
 
         $machines = DB::table('master_shikake')
             ->join('master_conveyor', 'master_shikake.conveyor_id', '=', 'master_conveyor.id')
-            ->where('master_conveyor.id', $conveyorId)
+            ->where('master_conveyor.master_area_id', $areaId)
             ->whereNotNull('master_shikake.machine')
             ->where('master_shikake.machine', '!=', '')
             ->select('master_shikake.machine')

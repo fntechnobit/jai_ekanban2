@@ -223,11 +223,19 @@ class EkanbanCircuitController extends Controller
     }
 
     /**
-     * Get all machines for dropdown (independent of conveyor)
+     * Get machines for dropdown, scoped to the selected area
      */
     public function getMachinesByConveyor(Request $request)
     {
-        $machines = MasterMachine::orderBy('machine')->get();
+        $areaId = $request->get('area_id');
+
+        if (!$areaId) {
+            return response()->json([]);
+        }
+
+        $machines = MasterMachine::where('master_area_id', $areaId)
+            ->orderBy('machine')
+            ->get();
 
         // Format for select dropdown
         $formattedMachines = $machines->map(function($machine) {

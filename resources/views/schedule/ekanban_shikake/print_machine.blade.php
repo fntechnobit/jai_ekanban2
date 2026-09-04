@@ -58,6 +58,14 @@
                     <form class="mb-3">
                         <div class="row g-2 mb-2">
                             <div class="col-md-3">
+                                <select class="form-select form-select-sm select2" id="filter_process">
+                                    <option value="">- All Process -</option>
+                                    @foreach($processTypes as $processType)
+                                        <option value="{{ $processType->value }}">{{ $processType->value }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3">
                                 <select class="form-select form-select-sm select2" id="filter_area">
                                     <option value="">- All Area -</option>
                                     @foreach($areas as $area)
@@ -67,18 +75,7 @@
                             </div>
                             <div class="col-md-3">
                                 <select class="form-select form-select-sm select2" id="filter_machine" required>
-                                    <option value="">- Choose Machine -</option>
-                                    @foreach($machines as $machine)
-                                        <option value="{{ $machine->machine }}">{{ $machine->machine }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <select class="form-select form-select-sm select2" id="filter_process">
-                                    <option value="">- All Process -</option>
-                                    @foreach($processTypes as $processType)
-                                        <option value="{{ $processType->value }}">{{ $processType->value }}</option>
-                                    @endforeach
+                                    <option value="">- Choose Area First -</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -256,20 +253,15 @@
                 }
             });
 
-            // Restore filters from localStorage (machine is server-rendered, restore directly)
+            // Restore non-machine filters from localStorage (machine restored after AJAX load)
             if (savedFilters) {
                 if (savedFilters.area) $('#filter_area').val(savedFilters.area);
                 if (savedFilters.process) $('#filter_process').val(savedFilters.process);
                 if (savedFilters.shift) $('#filter_shift').val(savedFilters.shift);
                 if (savedFilters.cutoff) $('#filter_cutoff').val(savedFilters.cutoff);
                 if (savedFilters.print_status) $('#filter_print_status').val(savedFilters.print_status);
-                // Only restore machine if the option still exists
-                if (savedFilters.machine &&
-                    $('#filter_machine option[value="' + savedFilters.machine + '"]').length) {
-                    $('#filter_machine').val(savedFilters.machine);
-                }
-                // Refresh select2 display for all restored values
-                $('#filter_area, #filter_machine, #filter_process, #filter_shift, #filter_cutoff, #filter_print_status').trigger('change.select2');
+                // Refresh select2 display for restored values
+                $('#filter_area, #filter_process, #filter_shift, #filter_cutoff, #filter_print_status').trigger('change.select2');
             }
 
             // DataTable - Don't load data initially
@@ -429,6 +421,15 @@
 
             // Auto-reload on all filter changes
             $('#filter_area, #filter_machine, #filter_process, #filter_shift, #filter_cutoff, #filter_print_status').on('change', function() {
+                // Area drives the machine list - reload its options and drop any stale selection
+                if (this.id === 'filter_area') {
+                    $('#filter_machine').val('').trigger('change.select2');
+                    loadMachinesForArea($(this).val());
+                    saveFilters();
+                    table.clear().draw();
+                    return;
+                }
+
                 saveFilters();
                 var machine = $('#filter_machine').val();
                 if (machine) {
@@ -445,10 +446,50 @@
                 }
             });
 
-            // Auto-load data if a machine was restored from saved filters
-            if (savedFilters && savedFilters.machine && $('#filter_machine').val()) {
-                table.ajax.reload();
+            // Load machine options for the selected area. Area is required - without
+            // one the machine dropdown stays empty so no data can be shown.
+            function loadMachinesForArea(areaId, opts) {
+                opts = opts || {};
+                var machineSelect = $('#filter_machine');
+
+                if (!areaId) {
+                    machineSelect.empty().append('<option value="">- Choose Area First -</option>');
+                    machineSelect.trigger('change.select2');
+                    return;
+                }
+
+                machineSelect.empty().append('<option value="">- Choose Machine -</option>');
+
+                $.ajax({
+                    url: "{{ route('schedule.ekanban-shikake.machines-by-conveyor') }}",
+                    type: 'GET',
+                    data: { area_id: areaId },
+                    success: function(machines) {
+                        $.each(machines, function(index, machine) {
+                            machineSelect.append('<option value="' + machine.machine + '">' + machine.name + '</option>');
+                        });
+
+                        // Restore previously selected machine and auto-load data
+                        if (opts.selected && machineSelect.find('option[value="' + opts.selected + '"]').length) {
+                            machineSelect.val(opts.selected).trigger('change.select2');
+                            if (opts.autoReload) {
+                                table.ajax.reload();
+                            }
+                        } else {
+                            machineSelect.trigger('change.select2');
+                        }
+                    },
+                    error: function() {
+                        console.error('Failed to load machines');
+                    }
+                });
             }
+
+            // Load machines for the restored (or empty) area when the page loads
+            loadMachinesForArea($('#filter_area').val(), {
+                selected: savedFilters && savedFilters.machine,
+                autoReload: true
+            });
 
             $('#btn-reset').click(function() {
                 // Clear saved filters from localStorage

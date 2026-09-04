@@ -107,11 +107,20 @@ class MasterCircuitService
 
             // Enforce uniqueness on (conveyor_id, cct_code, to_store). The same
             // cct_code may repeat within a conveyor only when to_store differs.
-            if ($conveyorId && $cctCode && $toStore !== null && $toStore !== '') {
+            // An empty to_store is itself a value to match on (not a wildcard
+            // that skips the check), otherwise the same cct_code with a blank
+            // to_store could be saved twice as separate rows.
+            if ($conveyorId && $cctCode) {
                 $existing = MasterCircuit::withTrashed()
                     ->where('conveyor_id', $conveyorId)
                     ->where('cct_code', $cctCode)
-                    ->where('to_store', $toStore)
+                    ->where(function ($q) use ($toStore) {
+                        if ($toStore !== null && $toStore !== '') {
+                            $q->where('to_store', $toStore);
+                        } else {
+                            $q->whereNull('to_store')->orWhere('to_store', '');
+                        }
+                    })
                     ->first();
 
                 if ($existing) {
@@ -151,11 +160,18 @@ class MasterCircuitService
             $toStore = array_key_exists('to_store', $data) ? $data['to_store'] : $circuit->to_store;
 
             // Block updates that would duplicate another circuit's
-            // (conveyor_id, cct_code, to_store) combination.
-            if ($conveyorId && $cctCode && $toStore !== null && $toStore !== '') {
+            // (conveyor_id, cct_code, to_store) combination. An empty to_store
+            // is itself a value to match on, same as in create().
+            if ($conveyorId && $cctCode) {
                 $duplicate = MasterCircuit::where('conveyor_id', $conveyorId)
                     ->where('cct_code', $cctCode)
-                    ->where('to_store', $toStore)
+                    ->where(function ($q) use ($toStore) {
+                        if ($toStore !== null && $toStore !== '') {
+                            $q->where('to_store', $toStore);
+                        } else {
+                            $q->whereNull('to_store')->orWhere('to_store', '');
+                        }
+                    })
                     ->where('id', '!=', $circuit->id)
                     ->first();
 

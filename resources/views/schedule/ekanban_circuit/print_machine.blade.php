@@ -58,6 +58,13 @@
                     <form class="mb-3">
                         <div class="row g-2 mb-2">
                             <div class="col-md-3">
+                                <select class="form-select form-select-sm select2" id="filter_type">
+                                    <option value="all">- All Type -</option>
+                                    <option value="CUTTING">CUTTING</option>
+                                    <option value="CUTTING_TWIST">CUTTING TWIST</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
                                 <select class="form-select form-select-sm select2" id="filter_area">
                                     <option value="">- All Area -</option>
                                     @foreach($areas as $area)
@@ -67,14 +74,7 @@
                             </div>
                             <div class="col-md-3">
                                 <select class="form-select form-select-sm select2" id="filter_machine" required>
-                                    <option value="">- Choose Machine -</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <select class="form-select form-select-sm select2" id="filter_type">
-                                    <option value="all">- All Type -</option>
-                                    <option value="CUTTING">CUTTING</option>
-                                    <option value="CUTTING_TWIST">CUTTING TWIST</option>
+                                    <option value="">- Choose Area First -</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -475,6 +475,15 @@
 
             // Auto-reload on all filter changes
             $('#filter_area, #filter_machine, #filter_type, #filter_shift, #filter_cutoff, #filter_print_status').on('change', function() {
+                // Area drives the machine list - reload its options and drop any stale selection
+                if (this.id === 'filter_area') {
+                    $('#filter_machine').val('').trigger('change.select2');
+                    loadMachinesForArea($(this).val());
+                    saveFilters();
+                    table.clear().draw();
+                    return;
+                }
+
                 saveFilters();
                 var machine = $('#filter_machine').val();
                 if (machine) {
@@ -509,24 +518,37 @@
                 table.clear().draw();
             });
 
-            // Load all machines on page load (independent of conveyor)
-            function loadAllMachines() {
+            // Load machine options for the selected area. Area is required - without
+            // one the machine dropdown stays empty so no data can be shown.
+            function loadMachinesForArea(areaId, opts) {
+                opts = opts || {};
                 var machineSelect = $('#filter_machine');
+
+                if (!areaId) {
+                    machineSelect.empty().append('<option value="">- Choose Area First -</option>');
+                    machineSelect.trigger('change.select2');
+                    return;
+                }
+
+                machineSelect.empty().append('<option value="">- Choose Machine -</option>');
 
                 $.ajax({
                     url: "{{ route('schedule.ekanban-circuit.machines-by-conveyor') }}",
                     type: 'GET',
+                    data: { area_id: areaId },
                     success: function(machines) {
-                        machineSelect.empty().append('<option value="">- Choose Machine -</option>');
                         $.each(machines, function(index, machine) {
                             machineSelect.append('<option value="' + machine.machine + '">' + machine.name + '</option>');
                         });
 
                         // Restore previously selected machine and auto-load data
-                        if (savedFilters && savedFilters.machine &&
-                            machineSelect.find('option[value="' + savedFilters.machine + '"]').length) {
-                            machineSelect.val(savedFilters.machine).trigger('change.select2');
-                            table.ajax.reload();
+                        if (opts.selected && machineSelect.find('option[value="' + opts.selected + '"]').length) {
+                            machineSelect.val(opts.selected).trigger('change.select2');
+                            if (opts.autoReload) {
+                                table.ajax.reload();
+                            }
+                        } else {
+                            machineSelect.trigger('change.select2');
                         }
                     },
                     error: function() {
@@ -535,8 +557,11 @@
                 });
             }
 
-            // Load machines when page loads
-            loadAllMachines();
+            // Load machines for the restored (or empty) area when the page loads
+            loadMachinesForArea($('#filter_area').val(), {
+                selected: savedFilters && savedFilters.machine,
+                autoReload: true
+            });
 
             $('#btn-refresh').click(function() {
                 // Always reload table data

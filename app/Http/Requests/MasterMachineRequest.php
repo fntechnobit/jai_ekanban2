@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class MasterMachineRequest extends FormRequest
 {
@@ -23,8 +24,15 @@ class MasterMachineRequest extends FormRequest
     {
         return [
             'machine' => ['required', 'string', 'max:255'],
+            'master_area_id' => ['required', 'exists:master_area,id'],
             'conveyor_ids' => ['nullable', 'array'],
-            'conveyor_ids.*' => ['exists:master_conveyor,id'],
+            // Conveyor hanya valid bila berada di bawah area yang dipilih.
+            'conveyor_ids.*' => [
+                Rule::exists('master_conveyor', 'id')->where(function ($query) {
+                    $query->whereNull('deleted_at')
+                        ->where('master_area_id', $this->input('master_area_id'));
+                }),
+            ],
         ];
     }
 
@@ -35,7 +43,9 @@ class MasterMachineRequest extends FormRequest
     {
         return [
             'machine' => 'Machine',
+            'master_area_id' => 'Area',
             'conveyor_ids' => 'Conveyor',
+            'conveyor_ids.*' => 'Conveyor',
         ];
     }
 }

@@ -46,6 +46,7 @@
                     <tr>
                         <th width="4%">No</th>
                         <th width="9%">Process</th>
+                        <th>Kode Shikake</th>
                         <th>Carline</th>
                         <th>Conveyor</th>
                         <th>Machine</th>
@@ -174,6 +175,7 @@ $(function () {
         columns: [
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center' },
             { data: 'process_badge', name: 'process', orderable: true, searchable: false, className: 'text-center' },
+            { data: 'kode_shikake', name: 'kode_shikake', orderable: false, searchable: false },
             { data: 'carline', name: 'carline' },
             { data: 'conveyor_name', name: 'master_conveyor.conveyor' },
             { data: 'machine', name: 'machine' },
@@ -185,7 +187,7 @@ $(function () {
         ],
         pageLength: 50,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        order: [[3, 'asc'], [4, 'asc']]
+        order: [[4, 'asc'], [5, 'asc']]
     });
 
     // Filter change handlers

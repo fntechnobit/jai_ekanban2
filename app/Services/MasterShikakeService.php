@@ -145,6 +145,39 @@ class MasterShikakeService
     {
         DB::beginTransaction();
         try {
+            $conveyorId = $data['conveyor_id'] ?? null;
+            $process = $data['process'] ?? null;
+            $machine = $data['machine'] ?? null;
+            $sequence = $data['sequence'] ?? null;
+
+            // Enforce uniqueness on (conveyor_id, process, machine, sequence) -
+            // the same identifier the Excel import matches on, so a manual add
+            // can't silently create a duplicate of what import would have merged.
+            if ($conveyorId && $process && $machine && $sequence !== null) {
+                $existing = MasterShikake::withTrashed()
+                    ->where('conveyor_id', $conveyorId)
+                    ->where('process', $process)
+                    ->where('machine', $machine)
+                    ->where('sequence', $sequence)
+                    ->first();
+
+                if ($existing) {
+                    // A soft-deleted match is restored and updated instead of
+                    // colliding with the existing record.
+                    if ($existing->trashed()) {
+                        $existing->restore();
+                        $data['updated_by'] = Auth::id();
+                        $existing->deleted_by = null;
+                        $existing->update($data);
+
+                        DB::commit();
+                        return $existing;
+                    }
+
+                    throw new \Exception("Shikake with Process '{$process}', Machine '{$machine}' and Sequence '{$sequence}' already exists on this conveyor.");
+                }
+            }
+
             $data['created_by'] = Auth::id();
             $shikake = MasterShikake::create($data);
 
@@ -160,6 +193,26 @@ class MasterShikakeService
     {
         DB::beginTransaction();
         try {
+            $conveyorId = $data['conveyor_id'] ?? $shikake->conveyor_id;
+            $process = $data['process'] ?? $shikake->process;
+            $machine = array_key_exists('machine', $data) ? $data['machine'] : $shikake->machine;
+            $sequence = array_key_exists('sequence', $data) ? $data['sequence'] : $shikake->sequence;
+
+            // Block updates that would duplicate another shikake's
+            // (conveyor_id, process, machine, sequence) combination.
+            if ($conveyorId && $process && $machine && $sequence !== null) {
+                $duplicate = MasterShikake::where('conveyor_id', $conveyorId)
+                    ->where('process', $process)
+                    ->where('machine', $machine)
+                    ->where('sequence', $sequence)
+                    ->where('id', '!=', $shikake->id)
+                    ->first();
+
+                if ($duplicate) {
+                    throw new \Exception("Shikake with Process '{$process}', Machine '{$machine}' and Sequence '{$sequence}' already exists on this conveyor.");
+                }
+            }
+
             $data['updated_by'] = Auth::id();
             $shikake->update($data);
 

@@ -19,12 +19,21 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="conveyor_ids" class="form-label">Conveyor</label>
-                        <select class="form-select form-select-sm" id="conveyor_ids" name="conveyor_ids[]" multiple style="width: 100%;">
-                            @foreach($conveyors as $conveyor)
-                                <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }} ({{ $conveyor->area->area ?? '-' }})</option>
+                        <label for="master_area_id" class="form-label">Area <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm" id="master_area_id" name="master_area_id" required style="width: 100%;">
+                            <option value="">Select Area</option>
+                            @foreach($areas as $area)
+                                <option value="{{ $area->id }}">{{ $area->area }}</option>
                             @endforeach
                         </select>
+                        <span class="text-danger error-text master_area_id_error"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="conveyor_ids" class="form-label">Conveyor</label>
+                        {{-- Opsi diisi lewat JS, dibatasi ke conveyor milik area yang dipilih --}}
+                        <select class="form-select form-select-sm" id="conveyor_ids" name="conveyor_ids[]" multiple style="width: 100%;"></select>
+                        <small class="text-muted">Pilih area terlebih dahulu, conveyor yang tampil hanya milik area tersebut.</small>
                         <span class="text-danger error-text conveyor_ids_error"></span>
                     </div>
                 </div>
