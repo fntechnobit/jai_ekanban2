@@ -7,6 +7,7 @@ use App\Http\Controllers\System\UserController;
 use App\Http\Controllers\System\UserGroupController;
 use App\Http\Controllers\System\MenuController;
 use App\Http\Controllers\System\ListingSyncController;
+use App\Http\Controllers\System\BalanceResetController;
 use App\Http\Controllers\System\DatabaseBackupController;
 use App\Http\Controllers\Schedule\AssySchedulerController;
 use App\Http\Controllers\Schedule\ScheduleVerificationController;
@@ -41,6 +42,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/cutting-datatable', [DashboardController::class, 'getCuttingDatatable'])->name('dashboard.cutting-datatable');
     Route::get('/dashboard/shikake-datatable', [DashboardController::class, 'getShikakeDatatable'])->name('dashboard.shikake-datatable');
     Route::get('/dashboard/sync-status', [DashboardController::class, 'syncStatus'])->name('dashboard.sync-status');
+
+    // Panduan alur SIREP -> jadwal -> kanban -> saldo. Halaman baca saja.
+    Route::view('/dokumentasi', 'documentation.index')
+        ->middleware('check.menu:documentation,can_read')
+        ->name('documentation');
     Route::post('/dashboard/generate', [DashboardController::class, 'generate'])->name('dashboard.generate');
 
     // System Module Routes
@@ -66,6 +72,12 @@ Route::middleware('auth')->group(function () {
         Route::post('listing-sync/sync', [ListingSyncController::class, 'sync'])->name('listing-sync.sync');
         Route::get('listing-sync/statistics', [ListingSyncController::class, 'statistics'])->name('listing-sync.statistics');
 
+        // Samakan Saldo Kanban dengan sistem pembanding
+        Route::get('balance-reset', [BalanceResetController::class, 'index'])->name('balance-reset.index');
+        Route::post('balance-reset/preview', [BalanceResetController::class, 'preview'])->name('balance-reset.preview');
+        Route::post('balance-reset/apply', [BalanceResetController::class, 'apply'])->name('balance-reset.apply');
+        Route::post('balance-reset/{id}/undo', [BalanceResetController::class, 'undo'])->name('balance-reset.undo');
+
         // Database Backup
         Route::get('database-backup', [DatabaseBackupController::class, 'index'])->name('database-backup.index');
         Route::get('database-backup/download', [DatabaseBackupController::class, 'download'])->name('database-backup.download');
@@ -88,6 +100,9 @@ Route::middleware('auth')->group(function () {
         // Master Conveyor Management
         Route::resource('master-conveyor', MasterConveyorController::class);
         Route::get('master-conveyor/datatable/data', [MasterConveyorController::class, 'datatable'])->name('master-conveyor.datatable');
+        // Jalur 3 segmen supaya tidak tertangkap route resource master-conveyor/{id}.
+        Route::get('master-conveyor/sirep/preview', [MasterConveyorController::class, 'syncPreview'])->name('master-conveyor.sirep-preview');
+        Route::post('master-conveyor/sirep/apply', [MasterConveyorController::class, 'syncApply'])->name('master-conveyor.sirep-apply');
         Route::get('master-conveyor/areas/data', [MasterConveyorController::class, 'getAreas'])->name('master-conveyor.areas');
         Route::get('master-conveyor/families/data', [MasterConveyorController::class, 'getFamilies'])->name('master-conveyor.families');
 
