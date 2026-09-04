@@ -51,9 +51,10 @@
                             <th width="10%">Conveyor</th>
                             <th width="12%">Dates</th>
                             <th width="8%">Shift</th>
-                            <th width="8%">Capacity</th>
+                            <th width="8%">Capacity<br><small class="fw-normal text-muted">SIREP</small></th>
+                            <th width="9%">SIREP<br><small class="fw-normal text-muted">lembur / tarik data</small></th>
                             <th width="8%">Listing</th>
-                            <th width="35%">Assy</th>
+                            <th width="28%">Assy</th>
                             <th width="8%">Status</th>
                             <th width="6%">#</th>
                         </tr>
@@ -87,6 +88,27 @@
                             <span class="badge bg-success p-2" id="modal-capacity"></span>
                             <span class="badge bg-secondary p-2" id="modal-assy-count"></span>
                             <span class="badge bg-dark p-2" id="modal-total-listing"></span>
+                            <span class="badge p-2" id="modal-overtime"></span>
+                            </div>
+
+                            <div class="alert alert-light border py-2 px-3 mt-2 mb-0" id="modal-sirep-panel">
+                                <div class="row g-3 small">
+                                    <div class="col-md-4">
+                                        <div class="text-muted" style="font-size:.72rem">KAPASITAS SIREP / SHIFT</div>
+                                        <div class="fw-semibold" id="sirep-capacity">-</div>
+                                        <div class="text-muted" style="font-size:.72rem" id="sirep-capacity-synced">-</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-muted" style="font-size:.72rem">PENANDA LEMBUR (is_overtime)</div>
+                                        <div class="fw-semibold" id="sirep-overtime">-</div>
+                                        <div class="text-muted" style="font-size:.72rem" id="sirep-overtime-note">-</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-muted" style="font-size:.72rem">LISTING DITARIK DARI SIREP</div>
+                                        <div class="fw-semibold" id="sirep-listing-synced">-</div>
+                                        <div class="text-muted" style="font-size:.72rem" id="sirep-listing-source">-</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

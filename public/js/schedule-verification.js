@@ -62,6 +62,7 @@ $(function () {
             { data: 'dates', name: 'schedule_date' },
             { data: 'shift_name', name: 'shift', className: 'text-center' },
             { data: 'capacity', name: 'capacity', className: 'text-center' },
+            { data: 'sirep_info', name: 'is_overtime', className: 'text-center', orderable: false },
             { data: 'listing', name: 'total_listing', className: 'text-center' },
             { data: 'assy', name: 'assy_list' },
             { data: 'status', name: 'is_lock', className: 'text-center' },
@@ -271,7 +272,64 @@ $(function () {
         $('#modal-conveyor').text('Conveyor ' + data.conveyor);
         $('#modal-date').text(moment(data.date).format('DD MMMM YYYY'));
         $('#modal-shift').text('Shift ' + data.shift);
-        $('#modal-capacity').text(data.capacity + ' Capacity / Shift');
+        $('#modal-capacity').text((data.capacity || 0) + ' Capacity / Shift');
+
+        // Panel asal-usul data SIREP: kapasitas dan listing ditarik pada waktu yang
+        // berbeda, jadi keduanya ditampilkan terpisah agar user tahu mana yang basi.
+        var sirep = data.sirep || {};
+
+        if (sirep.capacity) {
+            $('#sirep-capacity').html(
+                sirep.capacity + ' <span class="text-muted fw-normal">unit</span>' +
+                (sirep.overtime_capacity ? ' <span class="text-muted fw-normal">· OT SIREP ' + sirep.overtime_capacity + '</span>' : '') +
+                (sirep.co5_nominal ? ' <span class="text-muted fw-normal">· CO5 nominal ' + sirep.co5_nominal + '</span>' : '')
+            );
+        } else {
+            $('#sirep-capacity').html('<span class="text-danger">belum pernah disinkron</span>');
+        }
+
+        $('#sirep-capacity-synced').text(
+            sirep.capacity_synced_at
+                ? 'disinkron ' + sirep.capacity_synced_at
+                : (sirep.capacity ? 'nilai lama, waktu sinkron tidak tercatat' : 'conveyor ini dilewati saat generate')
+        );
+
+        if (sirep.is_overtime === true) {
+            $('#sirep-overtime').html('<span class="text-warning-emphasis">YA — lembur</span>');
+            $('#sirep-overtime-note').text('CO5 dibuka; kapasitas efektif 1 shift = ' +
+                ((sirep.capacity || 0) + (sirep.co5_nominal || 0)));
+            $('#modal-overtime').attr('class', 'badge bg-warning text-dark p-2').text('SIREP OT: ya');
+        } else if (sirep.is_overtime === false) {
+            $('#sirep-overtime').text('TIDAK');
+            $('#sirep-overtime-note').text('CO5 tertutup; kelebihan listing pindah ke shift berikutnya');
+            $('#modal-overtime').attr('class', 'badge bg-secondary p-2').text('SIREP OT: tidak');
+        } else {
+            $('#sirep-overtime').html('<span class="text-muted">tidak diketahui</span>');
+            $('#sirep-overtime-note').text('tidak ada baris listing SIREP untuk tanggal ini');
+            $('#modal-overtime').attr('class', 'badge bg-light text-dark p-2').text('SIREP OT: -');
+        }
+
+        // Pertentangan data: demand tidak muat di kapasitas normal, tapi PPC tidak
+        // menyatakan lembur. Ditampilkan menonjol karena butuh tindakan, bukan sekadar info.
+        if (sirep.over_without_overtime) {
+            $('#modal-sirep-panel').removeClass('alert-light').addClass('alert-danger');
+            $('#sirep-overtime').html('<span class="text-danger fw-bold">TIDAK — tapi demand melebihi kapasitas</span>');
+            $('#sirep-overtime-note').html(
+                'Demand ' + (data.listing_demand || 0) + ' > kapasitas normal ' + (sirep.nominal_total || 0) +
+                ' (' + (sirep.shift_berjalan || 1) + ' shift x ' + (sirep.capacity || 0) + '). ' +
+                'Kelebihan ' + (sirep.overflow || 0) + ' unit tetap dijadwalkan di CO5 shift terakhir. ' +
+                'Periksa kapasitas di SIREP atau konfirmasi lembur ke PPC.'
+            );
+        } else {
+            $('#modal-sirep-panel').removeClass('alert-danger').addClass('alert-light');
+        }
+
+        $('#sirep-listing-synced').text(sirep.listing_synced_at || 'belum tercatat');
+        $('#sirep-listing-source').text(
+            sirep.listing_rows
+                ? sirep.listing_rows + ' baris · sumber ' + String(sirep.listing_source || '-').toUpperCase()
+                : 'tidak ada baris listing'
+        );
         $('#modal-assy-count').text(data.assy_count + ' Assy');
         if (data.is_over_capacity) {
             // Demand exceeds nominal capacity; surplus still scheduled in the last shift's CO5

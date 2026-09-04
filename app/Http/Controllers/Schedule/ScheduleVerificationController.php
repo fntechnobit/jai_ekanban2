@@ -8,6 +8,7 @@ use App\Models\AssyScheduleCircuit;
 use App\Models\AssyScheduleShikake;
 use App\Models\KanbanBalanceCircuit;
 use App\Models\KanbanBalanceShikake;
+use App\Models\KanbanGenerationLog;
 use App\Models\MasterConveyor;
 use App\Services\ScheduleVerificationService;
 use Illuminate\Http\Request;
@@ -59,12 +60,62 @@ class ScheduleVerificationController extends Controller
                 return 'Shift ' . $schedule->shift;
             })
             ->addColumn('capacity', function ($schedule) {
-                return $schedule->capacity ?? 0;
+                // Kapasitas milik SIREP. Tampilkan kapan terakhir ditarik, dan tandai
+                // dengan jelas bila belum pernah tersinkron — jadwal conveyor seperti itu
+                // dilewati saat generate.
+                if (empty($schedule->capacity)) {
+                    return '<span class="badge bg-danger" title="Kapasitas belum pernah ditarik dari SIREP. '
+                        . 'Conveyor ini dilewati saat generate.">belum sinkron</span>';
+                }
+
+                $judul = 'Kapasitas SIREP ' . number_format($schedule->capacity) . '/shift';
+                if (!empty($schedule->overtime_capacity)) {
+                    $judul .= ' · overtime SIREP ' . number_format($schedule->overtime_capacity);
+                }
+                $judul .= $schedule->capacity_synced_at
+                    ? ' · disinkron ' . $schedule->capacity_synced_at
+                    : ' · waktu sinkron tidak tercatat';
+
+                $waktu = $schedule->capacity_synced_at
+                    ? '<br><small class="text-muted" style="font-size:.72rem">' . e($schedule->capacity_synced_at) . '</small>'
+                    : '';
+
+                return '<span title="' . e($judul) . '">' . number_format($schedule->capacity) . '</span>' . $waktu;
+            })
+            ->addColumn('sirep_info', function ($schedule) {
+                // Penanda lembur SIREP + kapan listing hari itu ditarik dari API.
+                if ($schedule->is_overtime === null) {
+                    $badge = '<span class="badge bg-light text-dark" title="Tidak ada baris listing SIREP untuk tanggal ini">tanpa listing</span>';
+                } elseif ($schedule->is_overtime) {
+                    $badge = '<span class="badge bg-warning text-dark" title="SIREP menyatakan hari ini lembur — CO5 dibuka">OT: ya</span>';
+                } else {
+                    $badge = '<span class="badge bg-secondary" title="SIREP tidak menyatakan lembur — CO5 tertutup">OT: tidak</span>';
+                }
+
+                $sumber = $schedule->listing_source
+                    ? ' <small class="text-muted" style="font-size:.7rem">' . e(strtoupper($schedule->listing_source)) . '</small>'
+                    : '';
+
+                $waktu = $schedule->listing_synced_at
+                    ? '<br><small class="text-muted" style="font-size:.72rem" title="Waktu listing ini ditarik dari API SIREP">'
+                        . e($schedule->listing_synced_at) . '</small>'
+                    : '';
+
+                return $badge . $sumber . $waktu;
             })
             ->addColumn('listing', function ($schedule) {
                 if (!$schedule->has_assy && empty($schedule->total_listing)) return '0 (0)';
                 $txt = number_format($schedule->total_listing) . ' (' . ($schedule->assy_count ?? 0) . ')';
-                if (!empty($schedule->is_over_capacity)) {
+                if (!empty($schedule->over_without_overtime)) {
+                    // Demand tidak muat di kapasitas normal, tapi PPC tidak menyatakan lembur.
+                    // Ini pertentangan data SIREP, bukan sekadar hari sibuk.
+                    $title = 'Demand ' . number_format($schedule->listing_demand ?? 0)
+                        . ' melebihi kapasitas normal ' . number_format($schedule->nominal_total ?? 0)
+                        . ' (' . ($schedule->shift ?? 1) . ' shift x kapasitas), padahal SIREP tidak menyatakan lembur. '
+                        . 'Kelebihan tetap dijadwalkan di CO5 shift terakhir. '
+                        . 'Periksa kapasitas conveyor di SIREP atau konfirmasi lembur ke PPC.';
+                    $txt .= ' <span class="badge bg-danger" title="' . e($title) . '">! over tanpa OT</span>';
+                } elseif (!empty($schedule->is_over_capacity)) {
                     $title = 'Terjadwal ' . number_format($schedule->scheduled_qty ?? 0)
                         . ' dari ' . number_format($schedule->total_listing) . ' (melebihi kapasitas)';
                     $txt .= ' <span class="badge bg-warning text-dark" title="' . e($title) . '">! over</span>';
@@ -111,7 +162,7 @@ class ScheduleVerificationController extends Controller
                     </button>
                 </div>';
             })
-            ->rawColumns(['listing', 'status', 'action'])
+            ->rawColumns(['capacity', 'sirep_info', 'listing', 'status', 'action'])
             ->make(true);
     }
 
@@ -277,7 +328,8 @@ class ScheduleVerificationController extends Controller
      *  - 'full' (default): also clears all generated kanbans and unverifies all
      *    schedules to ensure full consistency. Verified schedules must be
      *    re-verified afterwards.
-     *  - 'balance_only': ONLY zeroes sisa & last_nomor_urut. Generated kanbans
+     *  - 'balance_only': hanya menolkan sisa dan menghapus ledger generate.
+     *    `last_nomor_urut` dipertahankan agar barcode tidak bertabrakan. Kanban
      *    and verification status are left untouched.
      *    WARNING: if generated kanbans still exist, the next generation will
      *    restart nomor_urut from 0 and may collide with existing barcodes.
@@ -303,8 +355,16 @@ class ScheduleVerificationController extends Controller
                 $shikakeCount = KanbanBalanceShikake::where('conveyor_id', $conveyorId)->count();
 
                 // 1. Reset balance to zero
-                KanbanBalanceCircuit::where('conveyor_id', $conveyorId)->update(['sisa' => 0, 'last_nomor_urut' => 0]);
-                KanbanBalanceShikake::where('conveyor_id', $conveyorId)->update(['sisa' => 0, 'last_nomor_urut' => 0]);
+                // `last_nomor_urut` SENGAJA tidak dinolkan: ia adalah 4 angka terakhir
+                // barcode kanban. Menurunkannya membuat barcode baru bertabrakan dengan
+                // kanban yang sudah tercetak dan beredar di lapangan.
+                KanbanBalanceCircuit::where('conveyor_id', $conveyorId)->update(['sisa' => 0]);
+                KanbanBalanceShikake::where('conveyor_id', $conveyorId)->update(['sisa' => 0]);
+
+                // Ledger generate harus ikut dibersihkan. Bila tidak, saldo 0 akan selamanya
+                // bertentangan dengan riwayat delta-nya, dan pembalikan (unverify) berikutnya
+                // akan mengurangi saldo yang sudah tidak ada — inilah sumber saldo melorot.
+                $hapusLedger = KanbanGenerationLog::where('conveyor_id', $conveyorId)->delete();
 
                 $deletedCircuitKanbans = 0;
                 $deletedShikakeKanbans = 0;
@@ -343,12 +403,13 @@ class ScheduleVerificationController extends Controller
                     'deleted_circuit_kanbans' => $deletedCircuitKanbans,
                     'deleted_shikake_kanbans' => $deletedShikakeKanbans,
                     'unverified_schedules' => $unverifiedCount,
+                    'ledger_dihapus' => $hapusLedger,
                 ]);
 
                 $message = $balanceOnly
                     ? "Reset SALDO SAJA berhasil untuk conveyor {$conveyorName}. "
                         . "{$circuitCount} balance circuit dan {$shikakeCount} balance shikake di-reset ke 0. "
-                        . "Kanban & status verifikasi tidak diubah."
+                        . "Kanban & status verifikasi tidak diubah. Nomor urut barcode dipertahankan."
                     : "Reset berhasil untuk conveyor {$conveyorName}. "
                         . "{$circuitCount} balance circuit dan {$shikakeCount} balance shikake di-reset ke 0. "
                         . "{$deletedCircuitKanbans} kanban circuit dan {$deletedShikakeKanbans} kanban shikake dihapus. "
@@ -364,8 +425,11 @@ class ScheduleVerificationController extends Controller
                 $shikakeCount = KanbanBalanceShikake::count();
 
                 // 1. Reset all balances to zero
-                KanbanBalanceCircuit::query()->update(['sisa' => 0, 'last_nomor_urut' => 0]);
-                KanbanBalanceShikake::query()->update(['sisa' => 0, 'last_nomor_urut' => 0]);
+                // Lihat catatan pada cabang per-conveyor: nomor urut tidak dinolkan.
+                KanbanBalanceCircuit::query()->update(['sisa' => 0]);
+                KanbanBalanceShikake::query()->update(['sisa' => 0]);
+
+                $hapusLedger = KanbanGenerationLog::query()->delete();
 
                 $deletedCircuitKanbans = 0;
                 $deletedShikakeKanbans = 0;
@@ -396,12 +460,13 @@ class ScheduleVerificationController extends Controller
                     'deleted_circuit_kanbans' => $deletedCircuitKanbans,
                     'deleted_shikake_kanbans' => $deletedShikakeKanbans,
                     'unverified_schedules' => $unverifiedCount,
+                    'ledger_dihapus' => $hapusLedger,
                 ]);
 
                 $message = $balanceOnly
                     ? "Reset SALDO SAJA berhasil. "
                         . "{$circuitCount} balance circuit dan {$shikakeCount} balance shikake di-reset ke 0. "
-                        . "Kanban & status verifikasi tidak diubah."
+                        . "Kanban & status verifikasi tidak diubah. Nomor urut barcode dipertahankan."
                     : "Reset berhasil. "
                         . "{$circuitCount} balance circuit dan {$shikakeCount} balance shikake di-reset ke 0. "
                         . "{$deletedCircuitKanbans} kanban circuit dan {$deletedShikakeKanbans} kanban shikake dihapus. "
