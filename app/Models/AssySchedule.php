@@ -29,6 +29,11 @@ class AssySchedule extends Model
         'is_lock',
         'verified_at',
         'verified_by',
+        'verified_capacity',
+        'verified_is_overtime',
+        'verified_listing_synced_at',
+        'verified_listing_source',
+        'verified_listing_demand',
         'created_by',
         'updated_by',
     ];
@@ -52,6 +57,10 @@ class AssySchedule extends Model
         'is_lock' => 'boolean',
         'verified_at' => 'datetime',
         'verified_by' => 'integer',
+        'verified_capacity' => 'integer',
+        'verified_is_overtime' => 'boolean',
+        'verified_listing_synced_at' => 'datetime',
+        'verified_listing_demand' => 'integer',
         'created_by' => 'integer',
         'updated_by' => 'integer',
     ];

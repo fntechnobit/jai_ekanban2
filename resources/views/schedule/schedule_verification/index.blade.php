@@ -7,14 +7,18 @@
 @endsection
 
 @section('css')
-<link rel="stylesheet" href="{{ url('css/schedule-verification.css') }}">
+<link rel="stylesheet" href="{{ url('css/schedule-verification.css') }}?v={{ time() }}">
 @endsection
 
 @section('content')
 <div class="container-fluid">
+
+    {{-- Dynamic banner: auto-sync / manual generate result --}}
+    <div id="assy-generate-banner" style="display:none;"></div>
+
     <div class="card">
         <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 class="card-title mb-0"><i class="fa-solid fa-list me-2"></i> Schedule List</h5>
                 <div class="d-flex align-items-center gap-2">
                     <!-- Filters -->
@@ -27,14 +31,19 @@
                         @endforeach
                     </select>
                     <select class="form-select form-select-sm select2" id="filter_status" style="width: 160px;">
-                        <option value="">- All Status -</option>
-                        <option value="verified">Verified</option>
+                        <option value="with_data" selected>All w/ Data</option>
                         <option value="pending">Pending</option>
-                        <option value="no_data">No Data</option>
+                        <option value="verified">Verified</option>
+                        <option value="no_data">All w/ No Data</option>
                     </select>
                     <button type="button" class="btn btn-secondary btn-sm" id="btn-reset" title="Reset Filter">
                         <i class="fa-solid fa-arrows-rotate"></i>
                     </button>
+                    @if(auth()->user()->hasMenuPermission('schedule_verification', 'can_create'))
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-generate">
+                            <i class="fa-solid fa-gear"></i> Generate
+                        </button>
+                    @endif
                     <button type="button" class="btn btn-danger btn-sm" id="btn-reset-balance" title="Reset All Kanban Balance">
                         <i class="fa-solid fa-triangle-exclamation"></i> Reset Balance
                     </button>
@@ -47,16 +56,17 @@
                 <table id="schedule-verification-table" class="table table-bordered table-striped table-sm">
                     <thead>
                         <tr>
-                            <th width="5%">Num.</th>
+                            <th width="3%">Num.</th>
                             <th width="10%">Conveyor</th>
-                            <th width="12%">Dates</th>
-                            <th width="8%">Shift</th>
-                            <th width="8%">Capacity<br><small class="fw-normal text-muted">SIREP</small></th>
-                            <th width="9%">SIREP<br><small class="fw-normal text-muted">lembur / tarik data</small></th>
-                            <th width="8%">Listing</th>
-                            <th width="28%">Assy</th>
-                            <th width="8%">Status</th>
-                            <th width="6%">#</th>
+                            <th width="8%">Dates</th>
+                            <th width="5%">Shift</th>
+                            <th width="5%">Cap</th>
+                            <th width="5%">OT</th>
+                            <th width="9%">API Time</th>
+                            <th width="7%">Listing</th>
+                            <th width="36%">Assy</th>
+                            <th width="6%">Status</th>
+                            <th width="6%" class="text-end">#</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -91,22 +101,49 @@
                             <span class="badge p-2" id="modal-overtime"></span>
                             </div>
 
-                            <div class="alert alert-light border py-2 px-3 mt-2 mb-0" id="modal-sirep-panel">
-                                <div class="row g-3 small">
-                                    <div class="col-md-4">
-                                        <div class="text-muted" style="font-size:.72rem">KAPASITAS SIREP / SHIFT</div>
-                                        <div class="fw-semibold" id="sirep-capacity">-</div>
-                                        <div class="text-muted" style="font-size:.72rem" id="sirep-capacity-synced">-</div>
+                            <div class="sirep-panel" id="modal-sirep-panel" data-state="loading">
+                                <div class="sirep-panel-head">
+                                    <span class="sirep-head-icon" id="sirep-head-icon"><i class="fa-solid fa-satellite-dish"></i></span>
+                                    <div class="sirep-head-text">
+                                        <div class="sirep-head-title" id="sirep-head-title">Memuat status SIREP&hellip;</div>
+                                        <div class="sirep-head-desc-row">
+                                            <div class="sirep-head-desc" id="sirep-head-desc">-</div>
+                                            <div class="sirep-bar-caption" id="sirep-bar-caption">-</div>
+                                        </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="text-muted" style="font-size:.72rem">PENANDA LEMBUR (is_overtime)</div>
-                                        <div class="fw-semibold" id="sirep-overtime">-</div>
-                                        <div class="text-muted" style="font-size:.72rem" id="sirep-overtime-note">-</div>
+                                </div>
+
+                                <div class="sirep-panel-bar" id="sirep-bar-wrap">
+                                    <div class="sirep-bar-track">
+                                        <div class="sirep-bar-fill" id="sirep-bar-fill"></div>
+                                        <div class="sirep-bar-over" id="sirep-bar-over"></div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="text-muted" style="font-size:.72rem">LISTING DITARIK DARI SIREP</div>
-                                        <div class="fw-semibold" id="sirep-listing-synced">-</div>
-                                        <div class="text-muted" style="font-size:.72rem" id="sirep-listing-source">-</div>
+                                </div>
+
+                                <div class="sirep-panel-stats">
+                                    <div class="sirep-stat">
+                                        <i class="fa-solid fa-gauge-high sirep-stat-icon"></i>
+                                        <div>
+                                            <div class="sirep-label">Kapasitas / Shift</div>
+                                            <div class="sirep-value" id="sirep-capacity">-</div>
+                                            <div class="sirep-note" id="sirep-capacity-synced">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="sirep-stat">
+                                        <i class="fa-solid fa-business-time sirep-stat-icon"></i>
+                                        <div>
+                                            <div class="sirep-label">Status Overtime</div>
+                                            <div class="sirep-value" id="sirep-overtime">-</div>
+                                            <div class="sirep-note" id="sirep-overtime-note">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="sirep-stat">
+                                        <i class="fa-solid fa-cloud-arrow-down sirep-stat-icon"></i>
+                                        <div>
+                                            <div class="sirep-label">Update Data Listing</div>
+                                            <div class="sirep-value" id="sirep-listing-synced">-</div>
+                                            <div class="sirep-note" id="sirep-listing-source">-</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -230,6 +267,7 @@
     </div>
 </div>
 
+@include('schedule.assy_scheduler.generate_modal')
 @endsection
 
 @section('script')
@@ -296,6 +334,26 @@
                         $btn.prop('disabled', false).html('<i class="fa-solid fa-trash"></i> Reset Semua Balance');
                     }
                 });
+            });
+        });
+
+        // Generate modal (manual) — shared with Assy Scheduler page
+        $(function() {
+            initAssyGenerateModal({
+                generateUrl: "{{ route('schedule.assy-scheduler.generate') }}",
+                syncStatusUrl: "{{ route('dashboard.sync-status') }}",
+                csrfToken: '{{ csrf_token() }}',
+                defaultDays: 10,
+                onSuccess: function () { scheduleVerificationTable.ajax.reload(); }
+            });
+
+            // Sync status badges + silent auto sync/generate on page load
+            initAssyAutoSync({
+                syncStatusUrl: "{{ route('dashboard.sync-status') }}",
+                generateUrl: "{{ route('schedule.assy-scheduler.generate') }}",
+                csrfToken: '{{ csrf_token() }}',
+                autoDays: 3,
+                onSuccess: function () { scheduleVerificationTable.ajax.reload(); }
             });
         });
     </script>

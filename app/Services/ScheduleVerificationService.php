@@ -67,7 +67,7 @@ class ScheduleVerificationService
 
         // --- Step 3: Get actual assy_schedule aggregated data for the range ---
         $assyQuery = DB::table('assy_schedule')
-            ->selectRaw('DATE(schedule) AS schedule_date, conveyor_id, shift, GROUP_CONCAT(DISTINCT assy ORDER BY assy SEPARATOR ", ") AS assy_list, SUM(qty) AS total_listing, COUNT(DISTINCT assy) AS assy_count, MAX(is_lock) AS is_lock, MIN(id) AS first_id')
+            ->selectRaw('DATE(schedule) AS schedule_date, conveyor_id, shift, GROUP_CONCAT(DISTINCT assy ORDER BY assy SEPARATOR ", ") AS assy_list, SUM(qty) AS total_listing, COUNT(DISTINCT assy) AS assy_count, MAX(is_lock) AS is_lock, MIN(id) AS first_id, MAX(verified_capacity) AS verified_capacity, MAX(verified_is_overtime) AS verified_is_overtime, MAX(verified_listing_synced_at) AS verified_listing_synced_at, MAX(verified_listing_source) AS verified_listing_source')
             ->whereRaw('DATE(schedule) BETWEEN ? AND ?', [$start->format('Y-m-d'), $end->format('Y-m-d')])
             ->groupByRaw('DATE(schedule), conveyor_id, shift');
 
@@ -190,6 +190,9 @@ class ScheduleVerificationService
                     if ($status === 'verified'  && !($hasAssy && $isLock == 1)) continue;
                     if ($status === 'pending'   && !($hasAssy && $isLock == 0)) continue;
                     if ($status === 'no_data'   && $hasAssy) continue;
+                    // Default view: every status that actually has schedule data
+                    // (verified + pending), excluding the "No Data" gap rows.
+                    if ($status === 'with_data' && !$hasAssy) continue;
 
                     $scheduledShift = $assy ? (int) $assy->total_listing : 0;
                     // Defensive: if demand somehow exceeds scheduled, surface it on the last shift
@@ -197,25 +200,38 @@ class ScheduleVerificationService
                     $displayListing = $scheduledShift + $extra;
                     $isOverCapRow   = ($s === $lastShift && $overCapDay);
 
+                    // Baris yang sudah verified membekukan Cap/OT/API Time pada nilai SIREP
+                    // saat verifikasi (lihat verifySchedule()), bukan nilai SIREP terkini —
+                    // jadi resync SIREP setelahnya tidak membuat jadwal final tampak berubah.
+                    // Baris lock lama (sebelum snapshot ini ada) tetap fallback ke nilai terkini.
+                    $hasSnapshot = $assy && $isLock == 1 && $assy->verified_capacity !== null;
+
+                    $rowCapacity   = $hasSnapshot ? (int) $assy->verified_capacity : $conv->capacity;
+                    $rowIsOvertime = $hasSnapshot
+                        ? (bool) $assy->verified_is_overtime
+                        : ($sirepInfo ? (bool) $sirepInfo->is_overtime : null);
+                    $rowSyncedAt   = $hasSnapshot ? $assy->verified_listing_synced_at : ($sirepInfo->synced_at ?? null);
+                    $rowSource     = $hasSnapshot ? $assy->verified_listing_source : ($sirepInfo->source ?? null);
+
                     $rows[] = (object) [
                         'schedule_date'    => $dateStr,
                         'conveyor_id'      => $conv->conveyor_id,
                         'conveyor_name'    => $conv->conveyor_name,
-                        'capacity'         => $conv->capacity,
+                        'capacity'         => $rowCapacity,
                         'shift'            => $s,
                         'total_listing'    => $displayListing,
                         'scheduled_qty'    => $scheduledShift,
                         'is_over_capacity' => $isOverCapRow ? 1 : 0,
                         // Asal-usul angka SIREP, ditampilkan agar user tahu kapan
                         // kapasitas dan listing ini terakhir ditarik dari API.
-                        'is_overtime'        => $sirepInfo ? (bool) $sirepInfo->is_overtime : null,
+                        'is_overtime'        => $rowIsOvertime,
                         'over_without_overtime' => ($s === $lastShift && $overNoOtDay) ? 1 : 0,
                         'nominal_total'      => $nominalTotal,
                         'listing_demand'     => $demand,
-                        'listing_synced_at'  => $sirepInfo && $sirepInfo->synced_at
-                            ? Carbon::parse($sirepInfo->synced_at)->format('d M Y H:i')
+                        'listing_synced_at'  => $rowSyncedAt
+                            ? Carbon::parse($rowSyncedAt)->format('d M y H:i:s')
                             : null,
-                        'listing_source'     => $sirepInfo->source ?? null,
+                        'listing_source'     => $rowSource,
                         'capacity_synced_at' => $conv->capacity_synced_at
                             ? Carbon::parse($conv->capacity_synced_at)->format('d M Y H:i')
                             : null,
@@ -268,6 +284,9 @@ class ScheduleVerificationService
             'listing_synced_at'   => $adaListing && $listing->synced_at
                 ? Carbon::parse($listing->synced_at)->format('d M Y H:i')
                 : null,
+            // Nilai mentah (bukan string terformat) — dipakai untuk snapshot
+            // verifikasi, supaya bisa diformat ulang konsisten dengan tampilan list.
+            'listing_synced_at_raw' => $adaListing ? $listing->synced_at : null,
             'listing_source'      => $adaListing ? $listing->source : null,
             'listing_rows'        => $adaListing ? (int) $listing->baris : 0,
         ];
@@ -327,8 +346,18 @@ class ScheduleVerificationService
             ->orderBy('listing_id', 'asc')
             ->get();
 
+        // Jadwal yang sudah verified membekukan kapasitas/OT/listing pada nilai SIREP
+        // saat diverifikasi (lihat verifySchedule()). Form Detail HARUS memakai
+        // snapshot itu, bukan nilai SIREP terkini — supaya histori tetap terbaca dan
+        // bisa ditelusuri meski SIREP di-resync setelahnya. Baris lock lama (sebelum
+        // snapshot ini ada) fallback ke nilai terkini seperti sebelumnya.
+        $firstSchedule = $schedules->first();
+        $hasSnapshot   = $firstSchedule && $firstSchedule->is_lock == 1 && $firstSchedule->verified_capacity !== null;
+
         // Calculate capacities
-        $capacity             = (int) ($conveyor->capacity ?? 0);
+        $capacity = $hasSnapshot
+            ? (int) $firstSchedule->verified_capacity
+            : (int) ($conveyor->capacity ?? 0);
         $normalCutOffCapacity = round($capacity / 4, 2);
         // CO5 nominal capacity = round(0.875 × capacity/4), same on every shift's CO5.
         // The LAST shift's CO5 is a catch-all and may exceed this nominal (Used > Cap → "over").
@@ -346,18 +375,40 @@ class ScheduleVerificationService
         $lastShift       = (int) ($shiftsOnDate->last() ?? $shift);
         $cutOff5Capacity = (float) $this->capacityCalculator->calculateCutoff5Capacity($capacity);
 
-        // SIREP demand & scheduled total (equal now, since CO5 catch-all schedules 100%).
-        $listingDemand = (int) ListingStage::where('conveyor', $conveyor->conveyor)
-            ->whereDate('listing_date_time', $date)
-            ->where('qty', '>', 0)
-            ->sum('qty');
         $scheduledAll = (int) AssySchedule::where('conveyor_id', $conveyorId)
             ->whereDate('schedule', $date)
             ->sum('qty');
-        // Asal-usul angka yang dipakai layar ini, supaya user tahu data SIREP mana
-        // yang sedang dilihat dan sesegar apa.
-        $sirepMeta   = $this->sirepMeta($conveyor, $date);
-        $dayOvertime = (bool) ($sirepMeta['is_overtime'] ?? false);
+
+        if ($hasSnapshot) {
+            // Dibekukan: seluruh angka SIREP (demand, OT, waktu/sumber tarik listing)
+            // diambil dari snapshot verifikasi, bukan query live ke listing_stage.
+            $listingDemand = (int) ($firstSchedule->verified_listing_demand ?? $scheduledAll);
+            $dayOvertime   = (bool) $firstSchedule->verified_is_overtime;
+            $sirepMeta = [
+                'capacity'            => $capacity ?: null,
+                'overtime_capacity'   => $conveyor->overtime_capacity ? (int) $conveyor->overtime_capacity : null,
+                'co5_nominal'         => $capacity > 0 ? $this->capacityCalculator->calculateCutoff5Capacity($capacity) : null,
+                'capacity_synced_at'  => $conveyor->capacity_synced_at?->format('d M Y H:i'),
+                'capacity_is_synced'  => $conveyor->hasSyncedCapacity() && $conveyor->capacity_synced_at !== null,
+                'sirep_code'          => $conveyor->sirepName(),
+                'is_overtime'         => $dayOvertime,
+                'listing_synced_at'   => $firstSchedule->verified_listing_synced_at
+                    ? $firstSchedule->verified_listing_synced_at->format('d M Y H:i')
+                    : null,
+                'listing_source'      => $firstSchedule->verified_listing_source,
+                'listing_rows'        => $firstSchedule->verified_listing_source ? 1 : 0,
+            ];
+        } else {
+            // SIREP demand & scheduled total (equal now, since CO5 catch-all schedules 100%).
+            $listingDemand = (int) ListingStage::where('conveyor', $conveyor->conveyor)
+                ->whereDate('listing_date_time', $date)
+                ->where('qty', '>', 0)
+                ->sum('qty');
+            // Asal-usul angka yang dipakai layar ini, supaya user tahu data SIREP mana
+            // yang sedang dilihat dan sesegar apa.
+            $sirepMeta   = $this->sirepMeta($conveyor, $date);
+            $dayOvertime = (bool) ($sirepMeta['is_overtime'] ?? false);
+        }
 
         // Ambang nominal ikut penanda lembur: tanpa lembur CO5 tidak tersedia,
         // jadi kapasitas nominal hari itu hanya shift × kapasitas.
@@ -900,7 +951,22 @@ class ScheduleVerificationService
                 }
             }
 
-            // Step 2: Lock all schedules for this conveyor, date, and shift
+            // Step 2: Lock all schedules for this conveyor, date, and shift.
+            // Snapshot the SIREP capacity/OT/listing-sync values *as they stand right
+            // now* onto every row, so the list screen can keep showing what this
+            // schedule was actually verified against even after a later SIREP resync
+            // changes the live values.
+            $conveyorForSnapshot = MasterConveyor::find($conveyorId);
+            $sirepSnapshot = $conveyorForSnapshot
+                ? $this->sirepMeta($conveyorForSnapshot, $date)
+                : [];
+            $listingDemandSnapshot = $conveyorForSnapshot
+                ? (int) ListingStage::where('conveyor', $conveyorForSnapshot->conveyor)
+                    ->whereDate('listing_date_time', $date)
+                    ->where('qty', '>', 0)
+                    ->sum('qty')
+                : null;
+
             $affected = AssySchedule::where('conveyor_id', $conveyorId)
                 ->whereDate('schedule', $date)
                 ->where('shift', $shift)
@@ -908,6 +974,11 @@ class ScheduleVerificationService
                     'is_lock' => 1,
                     'verified_at' => now(),
                     'verified_by' => Auth::id(),
+                    'verified_capacity' => $sirepSnapshot['capacity'] ?? null,
+                    'verified_is_overtime' => $sirepSnapshot['is_overtime'] ?? null,
+                    'verified_listing_synced_at' => $sirepSnapshot['listing_synced_at_raw'] ?? null,
+                    'verified_listing_source' => $sirepSnapshot['listing_source'] ?? null,
+                    'verified_listing_demand' => $listingDemandSnapshot,
                     'updated_by' => Auth::id(),
                     'updated_at' => now()
                 ]);

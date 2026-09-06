@@ -24,19 +24,10 @@
     <div class="row mb-3">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
-                <div class="card-header d-flex align-items-center justify-content-between py-2">
+                <div class="card-header py-2">
                     <h5 class="card-title mb-0">
                         <i class="fa-solid fa-calendar-plus text-primary me-2"></i> Generate Jadwal Assy
                     </h5>
-                    {{-- Status Badges --}}
-                    <div class="d-flex align-items-center gap-2 flex-wrap" id="sync-status-badges">
-                        <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" id="badge-last-sync" title="Terakhir sinkronisasi data dari PPC">
-                            <i class="fa-solid fa-rotate me-1"></i> Sinkron: <span id="last-sync-time">memuat...</span>
-                        </span>
-                        <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" id="badge-last-generate" title="Terakhir generate jadwal assy">
-                            <i class="fa-solid fa-calendar-check me-1"></i> Generate: <span id="last-generate-time">memuat...</span>
-                        </span>
-                    </div>
                 </div>
                 <div class="card-body py-2">
                     <form id="form-generate-jadwal" class="row g-2 align-items-end">
@@ -164,42 +155,11 @@ $(function () {
     $('#gen-start-date').val(formatDate(today));
     $('#gen-end-date').val(formatDate(endDateDef));
 
-    // Load sync status badges on page load
-    loadSyncStatus();
+    // Navbar status badges are already populated globally (layouts/script.blade.php);
+    // just re-check them after this page's own auto-generate below.
 
     // Auto-generate on page load
     autoGenerateAssySchedule();
-
-    // ========== SYNC STATUS BADGES ==========
-    function loadSyncStatus() {
-        $.ajax({
-            url: '{{ route("dashboard.sync-status") }}',
-            type: 'GET',
-            dataType: 'json',
-            success: function (data) {
-                updateSyncBadges(data.last_sync, data.last_generate);
-            }
-        });
-    }
-
-    function updateSyncBadges(lastSync, lastGenerate) {
-        var syncBadge     = $('#badge-last-sync');
-        var generateBadge = $('#badge-last-generate');
-
-        if (lastSync) {
-            $('#last-sync-time').text(lastSync);
-            syncBadge.removeClass('bg-secondary-subtle text-secondary').addClass('bg-info-subtle text-info');
-        } else {
-            $('#last-sync-time').text('Belum pernah');
-        }
-
-        if (lastGenerate) {
-            $('#last-generate-time').text(lastGenerate);
-            generateBadge.removeClass('bg-secondary-subtle text-secondary').addClass('bg-success-subtle text-success');
-        } else {
-            $('#last-generate-time').text('Belum pernah');
-        }
-    }
 
     // ========== MANUAL GENERATE FORM ==========
     $('#form-generate-jadwal').on('submit', function (e) {
@@ -228,7 +188,7 @@ $(function () {
                 setGenerateLoading(false);
                 var generated = response.data ? (response.data.generated || 0) : 0;
                 showGenerateBanner(response.success, generated, response.step_failed === 'sync_listing');
-                if (response.success) loadSyncStatus();
+                if (response.success) refreshSyncStatusBadges('{{ route("dashboard.sync-status") }}');
             },
             error: function () {
                 setGenerateLoading(false);
@@ -383,7 +343,7 @@ $(function () {
                 var generated = response.data ? (response.data.generated || 0) : 0;
                 if (response.success) {
                     showGenerateBanner(true, generated);
-                    loadSyncStatus();
+                    refreshSyncStatusBadges('{{ route("dashboard.sync-status") }}');
                 } else {
                     var isSyncFail = (response.step_failed === 'sync_listing' || response.step_failed === 'unknown');
                     showGenerateBanner(false, 0, isSyncFail);

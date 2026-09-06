@@ -34,6 +34,9 @@
 <!-- jQuery UI (for sortable/draggable) -->
 <script src="{{ asset('assets/vendor/jqueryui/jquery-ui.min.js') }}"></script>
 
+<!-- Shared SIREP sync/generate helpers (navbar status badges + generate modal) -->
+<script src="{{ asset('js/assy-generate-shared.js') }}?v={{ time() }}"></script>
+
 <!-- LocalStorage helper functions -->
 <script>
 const themeName = "La-Theme";
@@ -86,6 +89,12 @@ $(document).ready(function() {
             theme: 'bootstrap-5',
             width: '100%'
         });
+    }
+
+    // Populate the navbar's SIREP sync/generate status badges on every page —
+    // read-only status check (no sync/generate triggered here).
+    if (typeof refreshSyncStatusBadges === 'function') {
+        refreshSyncStatusBadges('{{ route("dashboard.sync-status") }}');
     }
 });
 </script>

@@ -54,15 +54,14 @@ class ScheduleVerificationController extends Controller
                 return $schedule->conveyor_name ?? '-';
             })
             ->addColumn('dates', function ($schedule) {
-                return Carbon::parse($schedule->schedule_date)->format('Y-m-d');
+                return Carbon::parse($schedule->schedule_date)->format('d M Y');
             })
             ->addColumn('shift_name', function ($schedule) {
                 return 'Shift ' . $schedule->shift;
             })
             ->addColumn('capacity', function ($schedule) {
-                // Kapasitas milik SIREP. Tampilkan kapan terakhir ditarik, dan tandai
-                // dengan jelas bila belum pernah tersinkron — jadwal conveyor seperti itu
-                // dilewati saat generate.
+                // Kapasitas milik SIREP. Tandai dengan jelas bila belum pernah
+                // tersinkron — jadwal conveyor seperti itu dilewati saat generate.
                 if (empty($schedule->capacity)) {
                     return '<span class="badge bg-danger" title="Kapasitas belum pernah ditarik dari SIREP. '
                         . 'Conveyor ini dilewati saat generate.">belum sinkron</span>';
@@ -76,32 +75,31 @@ class ScheduleVerificationController extends Controller
                     ? ' · disinkron ' . $schedule->capacity_synced_at
                     : ' · waktu sinkron tidak tercatat';
 
-                $waktu = $schedule->capacity_synced_at
-                    ? '<br><small class="text-muted" style="font-size:.72rem">' . e($schedule->capacity_synced_at) . '</small>'
-                    : '';
-
-                return '<span title="' . e($judul) . '">' . number_format($schedule->capacity) . '</span>' . $waktu;
+                return '<span class="fw-semibold text-warning-emphasis" title="' . e($judul) . '">'
+                    . number_format($schedule->capacity) . '</span>';
             })
-            ->addColumn('sirep_info', function ($schedule) {
-                // Penanda lembur SIREP + kapan listing hari itu ditarik dari API.
+            ->addColumn('over_time', function ($schedule) {
+                // Penanda lembur SIREP untuk tanggal ini.
                 if ($schedule->is_overtime === null) {
-                    $badge = '<span class="badge bg-light text-dark" title="Tidak ada baris listing SIREP untuk tanggal ini">tanpa listing</span>';
-                } elseif ($schedule->is_overtime) {
-                    $badge = '<span class="badge bg-warning text-dark" title="SIREP menyatakan hari ini lembur — CO5 dibuka">OT: ya</span>';
-                } else {
-                    $badge = '<span class="badge bg-secondary" title="SIREP tidak menyatakan lembur — CO5 tertutup">OT: tidak</span>';
+                    return '<span class="badge bg-light text-dark" title="Tidak ada baris listing SIREP untuk tanggal ini">tanpa listing</span>';
+                }
+
+                return $schedule->is_overtime
+                    ? '<span class="badge bg-warning text-dark" title="SIREP menyatakan hari ini overtime — CO5 dibuka">Yes</span>'
+                    : '<span class="badge bg-success" title="SIREP tidak menyatakan overtime — CO5 tertutup">No</span>';
+            })
+            ->addColumn('api_time', function ($schedule) {
+                // Kapan listing hari ini terakhir ditarik dari API SIREP.
+                if (!$schedule->listing_synced_at) {
+                    return '<span class="text-muted">-</span>';
                 }
 
                 $sumber = $schedule->listing_source
-                    ? ' <small class="text-muted" style="font-size:.7rem">' . e(strtoupper($schedule->listing_source)) . '</small>'
+                    ? ' · sumber ' . strtoupper($schedule->listing_source)
                     : '';
 
-                $waktu = $schedule->listing_synced_at
-                    ? '<br><small class="text-muted" style="font-size:.72rem" title="Waktu listing ini ditarik dari API SIREP">'
-                        . e($schedule->listing_synced_at) . '</small>'
-                    : '';
-
-                return $badge . $sumber . $waktu;
+                return '<span class="text-nowrap" title="Waktu listing ini ditarik dari API SIREP' . e($sumber) . '">'
+                    . e($schedule->listing_synced_at) . '</span>';
             })
             ->addColumn('listing', function ($schedule) {
                 if (!$schedule->has_assy && empty($schedule->total_listing)) return '0 (0)';
@@ -113,8 +111,8 @@ class ScheduleVerificationController extends Controller
                         . ' melebihi kapasitas normal ' . number_format($schedule->nominal_total ?? 0)
                         . ' (' . ($schedule->shift ?? 1) . ' shift x kapasitas), padahal SIREP tidak menyatakan lembur. '
                         . 'Kelebihan tetap dijadwalkan di CO5 shift terakhir. '
-                        . 'Periksa kapasitas conveyor di SIREP atau konfirmasi lembur ke PPC.';
-                    $txt .= ' <span class="badge bg-danger" title="' . e($title) . '">! over tanpa OT</span>';
+                        . 'Periksa kapasitas conveyor di SIREP atau konfirmasi overtime ke PPC.';
+                    $txt .= ' <i class="fa-solid fa-triangle-exclamation text-danger" title="' . e($title) . '"></i>';
                 } elseif (!empty($schedule->is_over_capacity)) {
                     $title = 'Terjadwal ' . number_format($schedule->scheduled_qty ?? 0)
                         . ' dari ' . number_format($schedule->total_listing) . ' (melebihi kapasitas)';
@@ -135,26 +133,30 @@ class ScheduleVerificationController extends Controller
                 return '<span class="badge bg-danger">Pending</span>';
             })
             ->addColumn('action', function ($schedule) {
-                if ($schedule->has_assy && $schedule->is_lock == 1) {
+                if (!$schedule->has_assy) {
+                    // No Data — nothing exists yet to verify, detail, or unverify.
+                    return '-';
+                }
+                if ($schedule->is_lock == 1) {
                     // Verified — show Detail + Unverify
                     return '<div class="btn-group" role="group">
-                        <button type="button" class="btn btn-soft-info btn-sm btn-detail" 
-                            data-conveyor-id="' . $schedule->conveyor_id . '" 
-                            data-date="' . $schedule->schedule_date . '" 
+                        <button type="button" class="btn btn-info btn-sm text-white btn-detail"
+                            data-conveyor-id="' . $schedule->conveyor_id . '"
+                            data-date="' . $schedule->schedule_date . '"
                             data-shift="' . $schedule->shift . '">
                             <i class="ti ti-eye"></i> Detail
                         </button>
-                        <button type="button" class="btn btn-soft-warning btn-sm btn-unverify" 
-                            data-conveyor-id="' . $schedule->conveyor_id . '" 
-                            data-date="' . $schedule->schedule_date . '" 
+                        <button type="button" class="btn btn-warning btn-sm btn-unverify"
+                            data-conveyor-id="' . $schedule->conveyor_id . '"
+                            data-date="' . $schedule->schedule_date . '"
                             data-shift="' . $schedule->shift . '">
                             <i class="ti ti-lock-open"></i> Unverify
                         </button>
                     </div>';
                 }
-                // Pending OR No Data — show Verify button (allows opening modal to drag-in from other dates)
+                // Pending — show Verify button (allows opening modal to drag-in from other dates)
                 return '<div class="btn-group" role="group">
-                    <button type="button" class="btn btn-soft-success btn-sm btn-verify" 
+                    <button type="button" class="btn btn-success btn-sm text-white btn-verify"
                         data-conveyor-id="' . $schedule->conveyor_id . '" 
                         data-date="' . $schedule->schedule_date . '" 
                         data-shift="' . $schedule->shift . '">
@@ -162,7 +164,7 @@ class ScheduleVerificationController extends Controller
                     </button>
                 </div>';
             })
-            ->rawColumns(['capacity', 'sirep_info', 'listing', 'status', 'action'])
+            ->rawColumns(['capacity', 'over_time', 'api_time', 'listing', 'status', 'action'])
             ->make(true);
     }
 
