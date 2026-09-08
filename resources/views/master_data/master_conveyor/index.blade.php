@@ -23,7 +23,7 @@
                 dari sini. Tekan <strong>Sync Conveyor SIREP</strong> untuk menariknya. Conveyor yang sudah
                 tidak dikirim SIREP otomatis berstatus <span class="badge bg-secondary">Nonaktif</span> dan
                 berhenti ikut dijadwalkan maupun diverifikasi &mdash; datanya tidak dihapus.
-                Yang masih bisa diubah di sini: Area, Family, Kode Conveyor SIREP, dan Pallet Qty.
+                Yang masih bisa diubah di sini: Area, Family, Kode Conveyor SIREP, <strong>Jumlah Shift</strong>, dan Pallet Qty.
             </div>
 
             <style>
@@ -74,6 +74,7 @@
                             <th>Area</th>
                             <th>Conveyor</th>
                             <th>Status</th>
+                            <th>Shift</th>
                             <th>Family</th>
                             <th>Capacity/Shift (SIREP)</th>
                             <th>Sinkron Terakhir</th>
@@ -173,6 +174,7 @@
                     { data: 'area_name', name: 'area.area' },
                     { data: 'conveyor', name: 'conveyor' },
                     { data: 'status_label', name: 'is_active', className: 'text-center' },
+                    { data: 'shift_label', name: 'shift_qty', className: 'text-center' },
                     { data: 'family_names', name: 'family_names', orderable: false },
                     { data: 'capacity_label', name: 'capacity' },
                     { data: 'synced_label', name: 'capacity_synced_at' },
@@ -311,6 +313,7 @@
                         $('#conveyor').val(conveyor.conveyor);
                         $('#masterConveyorModalLabel').text('Edit Conveyor — ' + conveyor.conveyor);
                         $('#sirep_conveyor_code').val(conveyor.sirep_conveyor_code || '');
+                        $('#shift_qty').val(conveyor.shift_qty || 1);
                         $('#pallet_qty').val(conveyor.pallet_qty);
                         $('#capacity_display').text(
                             conveyor.capacity

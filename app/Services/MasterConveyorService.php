@@ -58,6 +58,11 @@ class MasterConveyorService
                 return '<span class="badge bg-secondary" title="Tidak ada lagi di SIREP' . e($sejak)
                     . '. Tidak ikut dijadwalkan maupun diverifikasi.">Nonaktif</span>';
             })
+            ->addColumn('shift_label', function ($row) {
+                $n = max(1, (int) $row->shift_qty);
+
+                return '<span class="badge bg-light text-dark border">' . $n . ' Shift</span>';
+            })
             ->addColumn('capacity_label', function ($row) {
                 // Kapasitas milik SIREP: tampilkan apa adanya, termasuk saat belum pernah
                 // disinkron — kondisi itu yang membuat conveyor dilewati saat generate.
@@ -88,7 +93,7 @@ class MasterConveyorService
                 $actions .= '</div>';
                 return $hasActions ? $actions : '-';
             })
-            ->rawColumns(['status_label', 'capacity_label', 'synced_label', 'action'])
+            ->rawColumns(['status_label', 'shift_label', 'capacity_label', 'synced_label', 'action'])
             ->make(true);
     }
 

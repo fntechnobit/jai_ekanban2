@@ -54,7 +54,19 @@
                                 <span class="text-danger error-text sirep_conveyor_code_error"></span>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="shift_qty">Jumlah Shift <span class="text-danger">*</span></label>
+                                <select class="form-select form-select-sm" id="shift_qty" name="shift_qty" required>
+                                    @for ($i = 1; $i <= \App\Services\Schedule\ShiftCapacityCalculator::MAX_SHIFT; $i++)
+                                        <option value="{{ $i }}">{{ $i }} Shift</option>
+                                    @endfor
+                                </select>
+                                <small class="text-muted">Kemampuan fisik line. Tidak dikirim SIREP.</small>
+                                <span class="text-danger error-text shift_qty_error"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="mb-3">
                                 <label for="pallet_qty">Pallet Qty.</label>
                                 <input type="number" class="form-control form-control-sm" id="pallet_qty" name="pallet_qty" min="1">
@@ -80,9 +92,9 @@
                             </div>
                         </div>
                         <p class="cv-panel-note">
-                            Kapasitas dan jumlah shift tidak diisi di sini. Kapasitas ditarik dari API SIREP
-                            lewat tombol <strong>Sync Conveyor SIREP</strong>, dan jumlah shift dihitung per
-                            tanggal dari qty listing serta penanda lembur SIREP.
+                            Kapasitas ditarik dari API SIREP lewat tombol <strong>Sync Conveyor SIREP</strong>
+                            dan tidak dapat diubah di sini. Jumlah shift diisi manual di atas &mdash; alokasi
+                            selalu mulai dari shift 1, dan shift 2 hanya dipakai bila conveyor ini dua shift.
                         </p>
                     </div>
 

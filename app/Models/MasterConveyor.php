@@ -24,6 +24,9 @@ class MasterConveyor extends Model
     protected $fillable = [
         'master_area_id',
         'sirep_conveyor_code',
+        // Jumlah shift adalah kemampuan fisik line — SIREP tidak mengirimkannya,
+        // jadi ia tetap diisi manual di sini.
+        'shift_qty',
         'pallet_qty',
         'created_by',
         'updated_by',

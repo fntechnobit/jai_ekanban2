@@ -35,6 +35,7 @@ class DefectService
                 'master_circuit.type',
                 'master_circuit.carline',
                 'master_conveyor.conveyor as conveyor_name',
+                'master_conveyor.shift_qty',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
                 'master_circuit.shikake_code',
@@ -72,9 +73,7 @@ class DefectService
             })
             ->addColumn('action', function ($row) {
                 $balance = (int) $row->balance;
-                // Jumlah shift tidak lagi tersimpan per conveyor; dropdown entri manual
-                // memakai batas atas yang sama dengan engine penjadwalan.
-                $shiftQty = (int) config('sirep.capacity.max_shift', 2);
+                $shiftQty = max(1, (int) $row->shift_qty);
                 $btn = '<button type="button" class="btn btn-danger btn-sm btn-defect" '
                      . 'data-id="' . $row->id . '" '
                      . 'data-conveyor-id="' . $row->conveyor_id . '" '
@@ -112,6 +111,7 @@ class DefectService
                 'master_shikake.process',
                 'master_shikake.carline',
                 'master_conveyor.conveyor as conveyor_name',
+                'master_conveyor.shift_qty',
                 'master_shikake.machine',
                 'master_shikake.qty',
                 'master_shikake.family',
@@ -154,9 +154,7 @@ class DefectService
             })
             ->addColumn('action', function ($row) {
                 $balance = (int) $row->balance;
-                // Jumlah shift tidak lagi tersimpan per conveyor; dropdown entri manual
-                // memakai batas atas yang sama dengan engine penjadwalan.
-                $shiftQty = (int) config('sirep.capacity.max_shift', 2);
+                $shiftQty = max(1, (int) $row->shift_qty);
                 $btn = '<button type="button" class="btn btn-danger btn-sm btn-defect" '
                      . 'data-id="' . $row->id . '" '
                      . 'data-conveyor-id="' . $row->conveyor_id . '" '

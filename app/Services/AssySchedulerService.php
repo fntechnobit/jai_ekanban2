@@ -272,16 +272,11 @@ class AssySchedulerService
                 // Step 4: Initialize tracking field for listings (rem_qty)
                 $this->listingAllocator->initializeListings($groupListings);
 
-                // Jumlah shift diturunkan per tanggal dari qty listing dan flag lembur SIREP.
-                // Tanpa lembur satu shift berhenti di kapasitas normal; dengan lembur ia
-                // menampung kapasitas + CO5 nominal sebelum shift berikutnya dibuka.
+                // Jumlah shift DIBACA dari master, bukan dihitung dari volume listing.
+                // Penanda lembur SIREP hanya menentukan boleh/tidaknya CO5 dibuka.
                 $totalQtyForShift = (int) $groupListings->sum('rem_qty');
                 $sirepOvertime    = (bool) $groupListings->contains(fn ($l) => (bool) ($l->is_overtime ?? false));
-                $maxShifts        = $this->capacityCalculator->resolveShiftCount(
-                    $shiftCapacity,
-                    $totalQtyForShift,
-                    $sirepOvertime
-                );
+                $maxShifts        = $this->capacityCalculator->resolveShiftCount($conveyor->shift_qty);
 
                 // Step 5: Check shift lock status for this conveyor on this date
                 $shiftLockStatus = $this->lockChecker->getShiftLockStatus(
@@ -303,19 +298,18 @@ class AssySchedulerService
                     $maxShifts
                 );
 
-                // Step 8: Jatah CO5 per shift. CO5 dibatasi 85% CO normal di shift awal;
-                // sisanya dibebankan ke CO5 shift terakhir. Berlaku sama baik SIREP
-                // menyatakan lembur maupun tidak (lembur implisit).
+                // Step 8: Jatah CO5 per shift. Hanya terbuka bila SIREP menyatakan lembur;
+                // shift awal dibatasi 7/8 CO normal, shift terakhir menampung sisanya.
                 $totalQty  = $totalQtyForShift;
                 $co5Needed = $this->capacityCalculator->preMapCutoff5(
-                    $shiftCapacities, $shiftCapacity, $totalQty
+                    $shiftCapacities, $shiftCapacity, $totalQty, $sirepOvertime
                 );
 
                 // Sisa yang masih memakai CO5 padahal PPC tidak menyatakan lembur berarti
                 // demand hari itu melampaui max_shift — perlu diperiksa manual sebelum
                 // jadwal dikunci.
                 if (!$sirepOvertime && in_array(true, $co5Needed, true)) {
-                    Log::warning('CO5 dibuka sebagai lembur implisit — SIREP tidak menyatakan lembur', [
+                    Log::warning('CO5 terpakai tanpa penanda lembur — listing melebihi seluruh shift', [
                         'conveyor'      => $conveyorName,
                         'schedule_date' => $scheduleDate->format('Y-m-d'),
                         'total_qty'     => $totalQty,
@@ -609,10 +603,9 @@ class AssySchedulerService
                 ->orderBy('listing_id')
                 ->get();
 
-            // Group scheduled items by shift. Jumlah shift tidak lagi tersimpan di master —
-            // yang berlaku adalah shift yang benar-benar terbentuk pada tanggal itu.
+            // Group scheduled items by shift. Jumlah shift dibaca dari master.
             $shifts = [];
-            $maxShifts = max(1, (int) $scheduledItems->max('shift'));
+            $maxShifts = $this->capacityCalculator->resolveShiftCount($conveyor->shift_qty);
             $shiftCapacity = (int) ($conveyor->capacity ?? 0);
 
             // Initialize all shifts

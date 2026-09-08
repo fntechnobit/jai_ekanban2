@@ -73,36 +73,38 @@ return [
     | Aturan dari tim PPC (dikonfirmasi lewat 3 contoh kasus, cap 136):
     |
     |   normal_capacity dari API = kapasitas conveyor untuk SATU shift.
-    |   CO1-4 = floor(kapasitas/4), sisa pembagian masuk CO4.
+    |   CO1 = kapasitas - 3 x floor(kapasitas/4)  (menampung terbesar)
+    |   CO2-CO4 = floor(kapasitas/4)
     |   CO5 nominal = round(7/8 × kapasitas/4)  — maksimum CO5 adalah 87,5% CO normal.
     |
-    |   is_overtime menentukan KAPASITAS EFEKTIF satu shift, yaitu dasar penentuan
-    |   jumlah shift:
-    |     is_overtime = true   -> kapasitas efektif = kapasitas + CO5 nominal
-    |     is_overtime = false  -> kapasitas efektif = kapasitas
+    |   JUMLAH SHIFT adalah data master (master_conveyor.shift_qty), BUKAN hasil
+    |   hitungan. Alokasi selalu mulai dari shift 1; shift 2 hanya dipakai bila
+    |   conveyor itu memang dua shift.
     |
-    |   jumlah shift = ceil(qty listing / kapasitas efektif satu shift), dibatasi max_shift
+    |   is_overtime menentukan boleh atau tidaknya CO5 dibuka:
+    |     is_overtime = true   -> CO5 tersedia
+    |     is_overtime = false  -> CO5 tertutup, kelebihan mengalir ke CO1 shift berikutnya
     |
-    |   Pengisian CO5 sendiri TIDAK bergantung is_overtime. Bila listing tidak muat di
-    |   CO1-4 seluruh shift yang berjalan, CO5 dibuka sebagai lembur implisit:
-    |     shift bukan terakhir : CO5 <= nominal (87,5% CO normal)
-    |     shift terakhir       : CO5 = seluruh sisa (catch-all)
-    |   Hari yang memakai CO5 tanpa penanda lembur ditandai "over tanpa OT" di layar
-    |   verifikasi agar diperiksa manual.
+    |   Urutan pengisian
+    |     1 shift : S1.CO1 -> S1.CO2 -> S1.CO3 -> S1.CO4 -> S1.CO5
+    |     2 shift : S1.CO1..CO4 -> S2.CO1..CO4 -> S1.CO5 (<= 7/8) -> S2.CO5 (sisa semua)
+    |
+    |   Bila listing tetap tidak muat walau seluruh shift penuh dan hari itu tidak
+    |   lembur, CO5 shift terakhir tetap menampung sisanya supaya tidak ada listing
+    |   yang hilang; layar verifikasi menandainya "over tanpa OT".
     |
     | Contoh acuan dari PPC (kapasitas 136 -> CO1-4 = 34, CO5 nominal = 30):
-    |   qty 160, overtime ya    -> 1 shift: CO1-4 34 · CO5 24  (catch-all, tak dibatasi nominal)
-    |   qty 160, overtime tidak -> 2 shift: S1 CO1-4 34 · S2 CO1 24
-    |   qty 310, overtime ya    -> 2 shift: S1 CO1-4 34 + CO5 30 · S2 CO1-4 34 + CO5 8
-    |   qty 310, overtime tidak -> 2 shift: sama seperti di atas (lembur implisit),
-    |                              ditandai "over tanpa OT" di layar verifikasi
+    |   shift_qty 1, qty 160, overtime ya    -> S1 CO1-4 34 · CO5 24
+    |   shift_qty 2, qty 160, overtime tidak -> S1 CO1-4 34 · S2 CO1 24
+    |   shift_qty 2, qty 310, overtime ya    -> S1 CO1-4 34 + CO5 30 · S2 CO1-4 34 + CO5 8
     |
     */
     'capacity' => [
-        // Batas atas jumlah shift dalam satu hari. Menggantikan master_conveyor.shift_qty
-        // yang sudah dihapus: jumlah shift kini diturunkan per tanggal, bukan disimpan
-        // per conveyor, tetapi tetap perlu batas agar demand ekstrem tidak menghasilkan
-        // shift 3, 4, dst yang tidak ada di lapangan.
+        // Batas atas nilai master_conveyor.shift_qty — bukan penentu jumlah shift,
+        // karena jumlah shift ditetapkan per conveyor di master.
+        //
+        // Tidak ada shift 3 di lapangan, jadi 2 juga dijepit sebagai batas keras di
+        // ShiftCapacityCalculator::MAX_SHIFT. Nilai di sini hanya boleh menurunkannya.
         'max_shift' => (int) env('SIREP_MAX_SHIFT', 2),
 
         // Batas CO5 sebagai rasio terhadap CO normal (kapasitas/4).
