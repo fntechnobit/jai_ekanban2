@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\MasterMachineService;
 use App\Http\Requests\MasterMachineRequest;
 use App\Helpers\ResponseHelper;
+use App\Enums\MachineType;
 use App\Models\MasterArea;
 use App\Models\MasterConveyor;
 use Illuminate\Http\Request;
@@ -28,7 +29,8 @@ class MasterMachineController extends Controller
     {
         $areas = MasterArea::orderBy('area')->get();
         $conveyors = MasterConveyor::with('area')->orderBy('conveyor')->get();
-        return view('master_data.master_machine.index', compact('areas', 'conveyors'));
+        $machineTypes = MachineType::cases();
+        return view('master_data.master_machine.index', compact('areas', 'conveyors', 'machineTypes'));
     }
 
     public function datatable(Request $request)

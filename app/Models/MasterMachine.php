@@ -14,6 +14,7 @@ class MasterMachine extends Model
 
     protected $fillable = [
         'machine',
+        'type',
         'master_area_id',
         'created_by',
         'updated_by',

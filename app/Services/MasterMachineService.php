@@ -34,6 +34,21 @@ class MasterMachineService
 
         return DataTables::of($query)
             ->addIndexColumn()
+            ->addColumn('type_badge', function ($row) {
+                if (!$row->type) {
+                    return '-';
+                }
+                $badgeClass = match ($row->type) {
+                    'BONDER' => 'bg-success',
+                    'JOINT' => 'bg-info',
+                    'SHIELD' => 'bg-warning',
+                    'DBL CRIMP' => 'bg-secondary',
+                    'CUTTING' => 'bg-primary',
+                    'TWIST' => 'bg-dark',
+                    default => 'bg-dark',
+                };
+                return '<span class="badge ' . $badgeClass . '">' . htmlspecialchars($row->type, ENT_QUOTES) . '</span>';
+            })
             ->addColumn('area_name', function ($row) {
                 return $row->area->area ?? '-';
             })
@@ -59,7 +74,7 @@ class MasterMachineService
                 $actions .= '</div>';
                 return $hasActions ? $actions : '-';
             })
-            ->rawColumns(['action'])
+            ->rawColumns(['action', 'type_badge'])
             ->make(true);
     }
 

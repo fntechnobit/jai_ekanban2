@@ -19,6 +19,17 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="type" class="form-label">Type <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm" id="type" name="type" required style="width: 100%;">
+                            <option value="">Select Type</option>
+                            @foreach($machineTypes as $machineType)
+                                <option value="{{ $machineType->value }}">{{ $machineType->value }}</option>
+                            @endforeach
+                        </select>
+                        <span class="text-danger error-text type_error"></span>
+                    </div>
+
+                    <div class="mb-3">
                         <label for="master_area_id" class="form-label">Area <span class="text-danger">*</span></label>
                         <select class="form-select form-select-sm" id="master_area_id" name="master_area_id" required style="width: 100%;">
                             <option value="">Select Area</option>

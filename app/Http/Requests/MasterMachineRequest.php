@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\MachineType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -24,6 +25,7 @@ class MasterMachineRequest extends FormRequest
     {
         return [
             'machine' => ['required', 'string', 'max:255'],
+            'type' => ['required', Rule::in(MachineType::toArray())],
             'master_area_id' => ['required', 'exists:master_area,id'],
             'conveyor_ids' => ['nullable', 'array'],
             // Conveyor hanya valid bila berada di bawah area yang dipilih.
@@ -43,6 +45,7 @@ class MasterMachineRequest extends FormRequest
     {
         return [
             'machine' => 'Machine',
+            'type' => 'Type',
             'master_area_id' => 'Area',
             'conveyor_ids' => 'Conveyor',
             'conveyor_ids.*' => 'Conveyor',

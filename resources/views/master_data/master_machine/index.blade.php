@@ -45,6 +45,7 @@
                         <tr>
                             <th width="5%">No</th>
                             <th>Machine</th>
+                            <th>Type</th>
                             <th>Area</th>
                             <th>Conveyor</th>
                             <th width="10%">Action</th>
@@ -131,6 +132,7 @@
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                     { data: 'machine', name: 'machine' },
+                    { data: 'type_badge', name: 'type', orderable: false },
                     { data: 'area_name', name: 'area_name', orderable: false, searchable: false },
                     { data: 'conveyor_names', name: 'conveyor_names', orderable: false },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
@@ -151,6 +153,13 @@
 
             // Initialize Select2 for form
             function initFormSelect2() {
+                $('#type').select2({
+                    theme: 'bootstrap-5',
+                    dropdownParent: $('#masterMachineModal'),
+                    placeholder: 'Select Type',
+                    allowClear: true
+                });
+
                 $('#master_area_id').select2({
                     theme: 'bootstrap-5',
                     dropdownParent: $('#masterMachineModal'),
@@ -181,6 +190,7 @@
                 initFormSelect2();
 
                 // Reset Select2
+                $('#type').val('').trigger('change.select2');
                 $('#master_area_id').val('').trigger('change.select2');
                 fillConveyorOptions($('#conveyor_ids'), '');
 
@@ -201,6 +211,7 @@
 
                         initFormSelect2();
 
+                        $('#type').val(machine.type || '').trigger('change.select2');
                         $('#master_area_id').val(machine.master_area_id || '').trigger('change.select2');
                         fillConveyorOptions($('#conveyor_ids'), machine.master_area_id || '', {
                             selected: machine.conveyor_ids
