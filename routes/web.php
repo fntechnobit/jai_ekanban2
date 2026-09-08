@@ -134,6 +134,7 @@ Route::middleware('auth')->group(function () {
         Route::get('assy-scheduler', [AssySchedulerController::class, 'index'])->name('assy-scheduler.index');
         Route::get('assy-scheduler/datatable', [AssySchedulerController::class, 'datatable'])->name('assy-scheduler.datatable');
         Route::get('assy-scheduler/list', [AssySchedulerController::class, 'getAssyScheduleList'])->name('assy-scheduler.assy-schedule-list');
+        Route::get('assy-scheduler/summary', [AssySchedulerController::class, 'summary'])->name('assy-scheduler.summary');
         Route::post('assy-scheduler/generate', [AssySchedulerController::class, 'generate'])->name('assy-scheduler.generate');
         Route::post('assy-scheduler/{id}/verify', [AssySchedulerController::class, 'verify'])->name('assy-scheduler.verify');
         Route::delete('assy-scheduler', [AssySchedulerController::class, 'destroy'])->name('assy-scheduler.destroy');

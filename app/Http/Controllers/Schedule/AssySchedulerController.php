@@ -106,47 +106,203 @@ class AssySchedulerController extends Controller
     }
 
     /**
-     * Get assy schedule list - shows all individual schedule records
+     * Daftar jadwal assy, satu baris per (assy x cutoff).
+     *
+     * Selain kolom jadwal, setiap baris membawa konteks SIREP yang dipakai saat
+     * jadwal itu dibentuk: kapasitas per shift, jumlah shift, penanda lembur, dan
+     * kapan listing ditarik dari API. Tanpa itu operator tidak punya cara menilai
+     * apakah pembagian cutoff yang terlihat masih sesuai keadaan SIREP terkini.
+     *
+     * Baris yang SUDAH terkunci memakai snapshot yang tersimpan saat verifikasi,
+     * bukan nilai SIREP terkini — sama seperti layar verifikasi. Nilai terkini
+     * dipakai hanya untuk baris yang belum terkunci dan untuk baris lama yang
+     * tidak punya snapshot.
      */
     public function getAssyScheduleList(Request $request)
     {
-        $query = AssySchedule::with('conveyor')
-            ->orderBy('schedule', 'asc')
-            ->orderBy('shift', 'asc')
-            ->orderBy('cutoff', 'asc');
+        $query = AssySchedule::query()
+            ->select('assy_schedule.*')
+            ->with('conveyor')
+            ->join('master_conveyor AS mc', 'mc.id', '=', 'assy_schedule.conveyor_id')
+            ->addSelect([
+                'mc.capacity AS cv_capacity',
+                'mc.shift_qty AS cv_shift_qty',
+                'mc.capacity_synced_at AS cv_capacity_synced_at',
+                'mc.is_active AS cv_is_active',
+            ])
+            ->orderBy('assy_schedule.schedule', 'asc')
+            ->orderBy('mc.conveyor', 'asc')
+            ->orderBy('assy_schedule.shift', 'asc')
+            ->orderBy('assy_schedule.cutoff', 'asc')
+            ->orderBy('assy_schedule.listing_id', 'asc');
 
-        // Apply filters
         if ($request->start_date) {
-            $query->whereDate('schedule', '>=', $request->start_date);
+            $query->whereDate('assy_schedule.schedule', '>=', $request->start_date);
         }
         if ($request->end_date) {
-            $query->whereDate('schedule', '<=', $request->end_date);
+            $query->whereDate('assy_schedule.schedule', '<=', $request->end_date);
         }
         if ($request->conveyor_id) {
-            $query->where('conveyor_id', $request->conveyor_id);
+            $query->where('assy_schedule.conveyor_id', $request->conveyor_id);
+        }
+        if ($request->status === 'verified') {
+            $query->where('assy_schedule.is_lock', 1);
+        } elseif ($request->status === 'pending') {
+            $query->where('assy_schedule.is_lock', 0);
         }
 
-        return DataTables::of($query->get())
+        // Penanda lembur & waktu tarik listing per (conveyor x tanggal). Diambil
+        // sekali di luar loop supaya tidak ada kueri per baris.
+        $sirep = $this->sirepContext($request);
+
+        return DataTables::of($query)
             ->addIndexColumn()
-            ->addColumn('conveyor_name', function ($schedule) {
-                return $schedule->conveyor ? $schedule->conveyor->conveyor : '-';
+            ->addColumn('conveyor_name', function ($s) {
+                $nonaktif = $s->cv_is_active ? '' :
+                    ' <span class="badge bg-secondary" title="Conveyor sudah tidak ada di SIREP">nonaktif</span>';
+
+                return e($s->conveyor->conveyor ?? '-') . $nonaktif;
             })
-            ->editColumn('schedule', function ($schedule) {
-                return $schedule->schedule->format('Y-m-d');
+            ->editColumn('schedule', fn ($s) => $s->schedule->format('d M Y'))
+            ->addColumn('shift_label', function ($s) {
+                $dari = max(1, (int) $s->cv_shift_qty);
+
+                return '<span class="fw-semibold">' . (int) $s->shift . '</span>'
+                    . '<small class="text-muted">/' . $dari . '</small>';
             })
-            ->editColumn('shift', function ($schedule) {
-                return $schedule->shift;
+            ->addColumn('cutoff_label', function ($s) {
+                $co = (int) ($s->cutoff ?? 0);
+
+                if ($co === 0) {
+                    return '<span class="text-muted">-</span>';
+                }
+
+                // CO5 adalah cutoff lembur — dibedakan supaya langsung terlihat.
+                $kelas = $co === 5 ? 'bg-warning text-dark' : 'bg-light text-dark border';
+
+                return '<span class="badge ' . $kelas . '">CO' . $co . '</span>';
             })
-            ->editColumn('cutoff', function ($schedule) {
-                return $schedule->cutoff ?? '-';
+            ->editColumn('qty', fn ($s) => '<span class="fw-semibold">' . number_format((int) $s->qty) . '</span>')
+            ->addColumn('capacity_label', function ($s) {
+                $terkunci = (int) $s->is_lock === 1 && $s->verified_capacity !== null;
+                $cap      = $terkunci ? (int) $s->verified_capacity : (int) ($s->cv_capacity ?? 0);
+
+                if ($cap <= 0) {
+                    return '<span class="badge bg-danger" title="Kapasitas belum pernah ditarik dari SIREP">belum sinkron</span>';
+                }
+
+                $waktu = $terkunci
+                    ? 'nilai saat diverifikasi'
+                    : ($s->cv_capacity_synced_at
+                        ? 'disinkron ' . Carbon::parse($s->cv_capacity_synced_at)->format('d M Y H:i')
+                        : 'waktu sinkron tidak tercatat');
+
+                return '<span title="' . e($waktu) . '">' . number_format($cap) . '</span>';
             })
-            ->editColumn('assy', function ($schedule) {
-                return $schedule->assy;
+            ->addColumn('ot_label', function ($s) use ($sirep) {
+                $terkunci = (int) $s->is_lock === 1 && $s->verified_capacity !== null;
+                $kunci    = $s->conveyor_id . '|' . $s->schedule->format('Y-m-d');
+                $info     = $sirep[$kunci] ?? null;
+
+                if ($terkunci) {
+                    $ot = (bool) $s->verified_is_overtime;
+                } elseif ($info) {
+                    $ot = (bool) $info->is_overtime;
+                } else {
+                    return '<span class="badge bg-light text-dark border" title="Tidak ada baris listing SIREP untuk tanggal ini">-</span>';
+                }
+
+                return $ot
+                    ? '<span class="badge bg-warning text-dark" title="SIREP menyatakan hari ini lembur — CO5 dibuka">ya</span>'
+                    : '<span class="badge bg-secondary" title="SIREP tidak menyatakan lembur — CO5 tertutup">tidak</span>';
             })
-            ->editColumn('qty', function ($schedule) {
-                return $schedule->qty;
+            ->addColumn('api_label', function ($s) use ($sirep) {
+                $terkunci = (int) $s->is_lock === 1 && $s->verified_listing_synced_at !== null;
+
+                if ($terkunci) {
+                    return '<small>' . Carbon::parse($s->verified_listing_synced_at)->format('d M H:i')
+                        . '</small><br><small class="text-muted">saat verifikasi</small>';
+                }
+
+                $info = $sirep[$s->conveyor_id . '|' . $s->schedule->format('Y-m-d')] ?? null;
+
+                if (!$info || !$info->synced_at) {
+                    return '<span class="text-muted">-</span>';
+                }
+
+                return '<small>' . Carbon::parse($info->synced_at)->format('d M H:i') . '</small>'
+                    . '<br><small class="text-muted">' . e(strtoupper($info->source ?? '-')) . '</small>';
             })
+            ->addColumn('status_label', function ($s) {
+                return (int) $s->is_lock === 1
+                    ? '<span class="badge bg-success">Verified</span>'
+                    : '<span class="badge bg-danger">Pending</span>';
+            })
+            ->rawColumns(['conveyor_name', 'shift_label', 'cutoff_label', 'qty', 'capacity_label', 'ot_label', 'api_label', 'status_label'])
             ->make(true);
+    }
+
+    /**
+     * Penanda lembur dan waktu tarik listing per (conveyor x tanggal).
+     *
+     * is_overtime seragam dalam satu conveyor x tanggal, jadi MAX() sudah mewakili.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    private function sirepContext(Request $request)
+    {
+        $q = \Illuminate\Support\Facades\DB::table('listing_stage AS ls')
+            ->join('master_conveyor AS mc', 'mc.conveyor', '=', 'ls.conveyor')
+            ->whereNull('mc.deleted_at')
+            ->selectRaw('mc.id AS conveyor_id, DATE(ls.listing_date_time) AS d,
+                         MAX(ls.is_overtime) AS is_overtime, MAX(ls.synced_at) AS synced_at,
+                         MIN(ls.source) AS source')
+            ->groupByRaw('mc.id, DATE(ls.listing_date_time)');
+
+        if ($request->start_date) {
+            $q->whereDate('ls.listing_date_time', '>=', $request->start_date);
+        }
+        if ($request->end_date) {
+            $q->whereDate('ls.listing_date_time', '<=', $request->end_date);
+        }
+        if ($request->conveyor_id) {
+            $q->where('mc.id', $request->conveyor_id);
+        }
+
+        return $q->get()->keyBy(fn ($r) => $r->conveyor_id . '|' . $r->d);
+    }
+
+    /**
+     * Ringkasan satu rentang: dipakai strip di atas tabel supaya operator melihat
+     * gambaran hari itu tanpa harus menelusuri seluruh baris.
+     */
+    public function summary(Request $request)
+    {
+        $q = AssySchedule::query()
+            ->join('master_conveyor AS mc', 'mc.id', '=', 'assy_schedule.conveyor_id');
+
+        if ($request->start_date) {
+            $q->whereDate('assy_schedule.schedule', '>=', $request->start_date);
+        }
+        if ($request->end_date) {
+            $q->whereDate('assy_schedule.schedule', '<=', $request->end_date);
+        }
+        if ($request->conveyor_id) {
+            $q->where('assy_schedule.conveyor_id', $request->conveyor_id);
+        }
+
+        $baris = (clone $q)->selectRaw('
+            COUNT(*) AS baris,
+            COALESCE(SUM(assy_schedule.qty), 0) AS total_qty,
+            COUNT(DISTINCT assy_schedule.assy) AS jumlah_assy,
+            COUNT(DISTINCT assy_schedule.conveyor_id) AS jumlah_conveyor,
+            COUNT(DISTINCT DATE(assy_schedule.schedule)) AS jumlah_hari,
+            SUM(CASE WHEN assy_schedule.is_lock = 1 THEN 1 ELSE 0 END) AS terverifikasi,
+            SUM(CASE WHEN assy_schedule.cutoff = 5 THEN assy_schedule.qty ELSE 0 END) AS qty_co5,
+            SUM(CASE WHEN mc.capacity IS NULL OR mc.capacity <= 0 THEN 1 ELSE 0 END) AS tanpa_kapasitas
+        ')->first();
+
+        return response()->json(['success' => true, 'data' => $baris]);
     }
 
     /**
