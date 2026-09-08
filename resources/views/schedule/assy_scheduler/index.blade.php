@@ -89,17 +89,17 @@
                     <table id="assy-schedule-table" class="table table-bordered table-striped table-sm">
                         <thead>
                             <tr>
-                                <th width="4%">No.</th>
+                                <th width="3%">Num.</th>
                                 <th width="12%">Conveyor</th>
-                                <th width="9%">Tanggal</th>
+                                <th width="9%">Dates</th>
                                 <th width="6%" class="text-center">Shift</th>
-                                <th width="7%" class="text-center">Cut Off</th>
-                                <th width="20%">Assy</th>
-                                <th width="7%" class="text-end">Qty</th>
-                                <th width="9%" class="text-end">Cap/Shift<br><small class="fw-normal text-muted">SIREP</small></th>
-                                <th width="6%" class="text-center">OT</th>
-                                <th width="10%" class="text-center">Tarik API</th>
-                                <th width="8%" class="text-center">Status</th>
+                                <th width="6%" class="text-center">Cut Off</th>
+                                <th width="5%" class="text-center">Cap</th>
+                                <th width="5%" class="text-center">OT</th>
+                                <th width="11%" class="text-center">API Time</th>
+                                <th width="25%">Assy</th>
+                                <th width="6%" class="text-center">Qty</th>
+                                <th width="7%" class="text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -180,15 +180,15 @@
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                     { data: 'conveyor_name', name: 'mc.conveyor', orderable: false },
-                    { data: 'schedule', name: 'assy_schedule.schedule', orderable: false },
-                    { data: 'shift_label', name: 'assy_schedule.shift', className: 'text-center', orderable: false },
+                    { data: 'dates', name: 'assy_schedule.schedule', orderable: false },
+                    { data: 'shift_name', name: 'assy_schedule.shift', className: 'text-center', orderable: false },
                     { data: 'cutoff_label', name: 'assy_schedule.cutoff', className: 'text-center', orderable: false },
+                    { data: 'capacity', name: 'mc.capacity', className: 'text-center', orderable: false, searchable: false },
+                    { data: 'over_time', name: 'is_overtime', className: 'text-center', orderable: false, searchable: false },
+                    { data: 'api_time', name: 'listing_synced_at', className: 'text-center', orderable: false, searchable: false },
                     { data: 'assy', name: 'assy_schedule.assy', orderable: false },
-                    { data: 'qty', name: 'assy_schedule.qty', className: 'text-end', orderable: false },
-                    { data: 'capacity_label', name: 'mc.capacity', className: 'text-end', orderable: false, searchable: false },
-                    { data: 'ot_label', name: 'ot', className: 'text-center', orderable: false, searchable: false },
-                    { data: 'api_label', name: 'api', className: 'text-center', orderable: false, searchable: false },
-                    { data: 'status_label', name: 'assy_schedule.is_lock', className: 'text-center', orderable: false, searchable: false }
+                    { data: 'qty', name: 'assy_schedule.qty', className: 'text-center', orderable: false },
+                    { data: 'status', name: 'assy_schedule.is_lock', className: 'text-center', orderable: false, searchable: false }
                 ],
                 ordering: false,
                 pageLength: 100,
@@ -257,8 +257,8 @@
 
 /* Tabel jadwal: angka rata kanan dan sejajar, teks tidak melompat. */
 #assy-schedule-table td, #assy-schedule-table th{ vertical-align:middle }
-#assy-schedule-table td:nth-child(7),
-#assy-schedule-table td:nth-child(8){ font-variant-numeric:tabular-nums }
+#assy-schedule-table td:nth-child(6),
+#assy-schedule-table td:nth-child(10){ font-variant-numeric:tabular-nums }
 #assy-schedule-table small{ line-height:1.15 }
 </style>
 @endpush

@@ -126,6 +126,7 @@ class AssySchedulerController extends Controller
             ->join('master_conveyor AS mc', 'mc.id', '=', 'assy_schedule.conveyor_id')
             ->addSelect([
                 'mc.capacity AS cv_capacity',
+                'mc.overtime_capacity AS cv_overtime_capacity',
                 'mc.shift_qty AS cv_shift_qty',
                 'mc.capacity_synced_at AS cv_capacity_synced_at',
                 'mc.is_active AS cv_is_active',
@@ -163,13 +164,8 @@ class AssySchedulerController extends Controller
 
                 return e($s->conveyor->conveyor ?? '-') . $nonaktif;
             })
-            ->editColumn('schedule', fn ($s) => $s->schedule->format('d M Y'))
-            ->addColumn('shift_label', function ($s) {
-                $dari = max(1, (int) $s->cv_shift_qty);
-
-                return '<span class="fw-semibold">' . (int) $s->shift . '</span>'
-                    . '<small class="text-muted">/' . $dari . '</small>';
-            })
+            ->addColumn('dates', fn ($s) => $s->schedule->format('d M Y'))
+            ->addColumn('shift_name', fn ($s) => 'Shift ' . (int) $s->shift)
             ->addColumn('cutoff_label', function ($s) {
                 $co = (int) ($s->cutoff ?? 0);
 
@@ -182,46 +178,58 @@ class AssySchedulerController extends Controller
 
                 return '<span class="badge ' . $kelas . '">CO' . $co . '</span>';
             })
-            ->editColumn('qty', fn ($s) => '<span class="fw-semibold">' . number_format((int) $s->qty) . '</span>')
-            ->addColumn('capacity_label', function ($s) {
+            ->editColumn('qty', fn ($s) => number_format((int) $s->qty))
+            ->addColumn('capacity', function ($s) {
                 $terkunci = (int) $s->is_lock === 1 && $s->verified_capacity !== null;
                 $cap      = $terkunci ? (int) $s->verified_capacity : (int) ($s->cv_capacity ?? 0);
 
-                if ($cap <= 0) {
-                    return '<span class="badge bg-danger" title="Kapasitas belum pernah ditarik dari SIREP">belum sinkron</span>';
+                if (empty($cap)) {
+                    return '<span class="badge bg-danger" title="Kapasitas belum pernah ditarik dari SIREP. '
+                        . 'Conveyor ini dilewati saat generate.">belum sinkron</span>';
                 }
 
-                $waktu = $terkunci
-                    ? 'nilai saat diverifikasi'
-                    : ($s->cv_capacity_synced_at
-                        ? 'disinkron ' . Carbon::parse($s->cv_capacity_synced_at)->format('d M Y H:i')
-                        : 'waktu sinkron tidak tercatat');
+                $judul = 'Kapasitas SIREP ' . number_format($cap) . '/shift';
 
-                return '<span title="' . e($waktu) . '">' . number_format($cap) . '</span>';
+                if (!$terkunci && !empty($s->cv_overtime_capacity)) {
+                    $judul .= ' · overtime SIREP ' . number_format($s->cv_overtime_capacity);
+                }
+
+                $judul .= $terkunci
+                    ? ' · nilai yang berlaku saat jadwal ini diverifikasi'
+                    : ($s->cv_capacity_synced_at
+                        ? ' · disinkron ' . Carbon::parse($s->cv_capacity_synced_at)->format('d M Y H:i')
+                        : ' · waktu sinkron tidak tercatat');
+
+                return '<span class="fw-semibold text-warning-emphasis" title="' . e($judul) . '">'
+                    . number_format($cap) . '</span>';
             })
-            ->addColumn('ot_label', function ($s) use ($sirep) {
+            ->addColumn('over_time', function ($s) use ($sirep) {
                 $terkunci = (int) $s->is_lock === 1 && $s->verified_capacity !== null;
-                $kunci    = $s->conveyor_id . '|' . $s->schedule->format('Y-m-d');
-                $info     = $sirep[$kunci] ?? null;
+                $info     = $sirep[$s->conveyor_id . '|' . $s->schedule->format('Y-m-d')] ?? null;
 
                 if ($terkunci) {
                     $ot = (bool) $s->verified_is_overtime;
                 } elseif ($info) {
                     $ot = (bool) $info->is_overtime;
                 } else {
-                    return '<span class="badge bg-light text-dark border" title="Tidak ada baris listing SIREP untuk tanggal ini">-</span>';
+                    return '<span class="badge bg-light text-dark" title="Tidak ada baris listing SIREP untuk tanggal ini">tanpa listing</span>';
                 }
 
                 return $ot
-                    ? '<span class="badge bg-warning text-dark" title="SIREP menyatakan hari ini lembur — CO5 dibuka">ya</span>'
-                    : '<span class="badge bg-secondary" title="SIREP tidak menyatakan lembur — CO5 tertutup">tidak</span>';
+                    ? '<span class="badge bg-warning text-dark" title="SIREP menyatakan hari ini overtime — CO5 dibuka">Yes</span>'
+                    : '<span class="badge bg-success" title="SIREP tidak menyatakan overtime — CO5 tertutup">No</span>';
             })
-            ->addColumn('api_label', function ($s) use ($sirep) {
+            ->addColumn('api_time', function ($s) use ($sirep) {
                 $terkunci = (int) $s->is_lock === 1 && $s->verified_listing_synced_at !== null;
 
                 if ($terkunci) {
-                    return '<small>' . Carbon::parse($s->verified_listing_synced_at)->format('d M H:i')
-                        . '</small><br><small class="text-muted">saat verifikasi</small>';
+                    $sumber = $s->verified_listing_source
+                        ? ' · sumber ' . strtoupper($s->verified_listing_source)
+                        : '';
+
+                    return '<span class="text-nowrap" title="Waktu listing ditarik dari API SIREP, tercatat saat verifikasi'
+                        . e($sumber) . '">'
+                        . Carbon::parse($s->verified_listing_synced_at)->format('d M y H:i:s') . '</span>';
                 }
 
                 $info = $sirep[$s->conveyor_id . '|' . $s->schedule->format('Y-m-d')] ?? null;
@@ -230,15 +238,17 @@ class AssySchedulerController extends Controller
                     return '<span class="text-muted">-</span>';
                 }
 
-                return '<small>' . Carbon::parse($info->synced_at)->format('d M H:i') . '</small>'
-                    . '<br><small class="text-muted">' . e(strtoupper($info->source ?? '-')) . '</small>';
+                $sumber = $info->source ? ' · sumber ' . strtoupper($info->source) : '';
+
+                return '<span class="text-nowrap" title="Waktu listing ini ditarik dari API SIREP' . e($sumber) . '">'
+                    . Carbon::parse($info->synced_at)->format('d M y H:i:s') . '</span>';
             })
-            ->addColumn('status_label', function ($s) {
+            ->addColumn('status', function ($s) {
                 return (int) $s->is_lock === 1
                     ? '<span class="badge bg-success">Verified</span>'
                     : '<span class="badge bg-danger">Pending</span>';
             })
-            ->rawColumns(['conveyor_name', 'shift_label', 'cutoff_label', 'qty', 'capacity_label', 'ot_label', 'api_label', 'status_label'])
+            ->rawColumns(['conveyor_name', 'cutoff_label', 'capacity', 'over_time', 'api_time', 'status'])
             ->make(true);
     }
 
