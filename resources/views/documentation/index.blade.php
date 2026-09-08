@@ -40,6 +40,7 @@
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#doc-kanban" type="button"><span class="doc-step">04</span> Kanban</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#doc-saldo" type="button"><span class="doc-step">05</span> Saldo</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#doc-periksa" type="button"><i class="fa-solid fa-circle-question me-1"></i> Pemeriksaan &amp; Istilah</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#doc-perubahan" type="button"><i class="fa-solid fa-clock-rotate-left me-1"></i> Perubahan Terbaru</button></li>
             </ul>
         </div>
 
@@ -83,7 +84,7 @@
                         </g>
                         <g class="doc-svg-sub">
                             <text x="16" y="94">Conveyor aktif,</text><text x="16" y="108">lalu listing</text>
-                            <text x="204" y="94">Kapan dikerjakan</text><text x="204" y="108">dalam sehari</text>
+                            <text x="204" y="94">Shift dari master,</text><text x="204" y="108">cutoff dari kapasitas</text>
                             <text x="392" y="94">Orang memeriksa</text><text x="392" y="108">dan mengunci</text>
                             <text x="580" y="94">Berapa lembar</text><text x="580" y="108">kartu terbit</text>
                             <text x="768" y="94">Sisa dibawa</text><text x="768" y="108">ke besok</text>
@@ -174,57 +175,119 @@
                 </div>
             </div>
 
-            {{-- ══════════════ 02 CUTOFF ══════════════ --}}
+            {{-- 02 CUTOFF --}}
             <div class="tab-pane fade" id="doc-cutoff">
                 <h6 class="doc-print-title"><span class="doc-step">02</span> Shift &amp; Cutoff</h6>
 
-                <p style="max-width:72ch">Satu hari kerja dibagi menjadi shift, dan setiap shift dibagi lagi menjadi lima cutoff &mdash;
-                potongan waktu penyerahan. Pembagiannya memakai <strong>kapasitas conveyor</strong>, yaitu berapa unit yang sanggup
-                diselesaikan satu shift. Angka ini datang dari SIREP, bukan diketik manual.</p>
+                <p style="max-width:72ch">Satu hari kerja dibagi menjadi shift, dan setiap shift dibagi lagi menjadi lima
+                cutoff &mdash; potongan waktu penyerahan. Dua angka menentukan pembagiannya, dan keduanya berasal dari
+                tempat yang berbeda.</p>
 
                 <div class="row g-3 mb-4">
-                    <div class="col-md-6 col-xl-3"><div class="doc-rule"><span class="doc-rule-n">1</span><div><strong>CO1&ndash;CO4</strong> masing-masing dapat seperempat kapasitas. Sisa pembagian yang tidak bulat masuk ke CO4.</div></div></div>
-                    <div class="col-md-6 col-xl-3"><div class="doc-rule"><span class="doc-rule-n">2</span><div><strong>CO5</strong> adalah cutoff lembur. Jatahnya paling banyak <strong>7/8</strong> dari satu cutoff normal.</div></div></div>
-                    <div class="col-md-6 col-xl-3"><div class="doc-rule"><span class="doc-rule-n">3</span><div>Kalau semua cutoff penuh dan listing masih bersisa, <strong>shift berikutnya dibuka</strong>.</div></div></div>
-                    <div class="col-md-6 col-xl-3"><div class="doc-rule"><span class="doc-rule-n">4</span><div>CO5 di shift <strong>terakhir</strong> menampung seluruh sisa. Karena itu tidak pernah ada listing yang hilang.</div></div></div>
-                </div>
-
-                <div class="doc-panel">
-                    <div class="doc-panel-title">Contoh: kapasitas 136 &mdash; CO1&ndash;CO4 = 34, jatah CO5 = 30</div>
-
-                    <div class="doc-bars">
-                        <div class="doc-barrow">
-                            <div class="doc-barlab">Listing 160<br><span class="badge bg-warning text-dark">lembur ya</span></div>
-                            <div class="doc-bar">
-                                <div class="doc-seg" style="flex:34">34</div><div class="doc-seg" style="flex:34">34</div>
-                                <div class="doc-seg" style="flex:34">34</div><div class="doc-seg" style="flex:34">34</div>
-                                <div class="doc-seg doc-seg-ot" style="flex:24">CO5 24</div>
-                            </div>
+                    <div class="col-md-6">
+                        <div class="doc-panel h-100">
+                            <div class="doc-panel-title">Kapasitas per shift &mdash; dari SIREP</div>
+                            <p class="small mb-0 text-muted">Berapa unit yang sanggup diselesaikan satu shift. Ditarik
+                            otomatis dari API dan tidak dapat diubah di aplikasi ini.</p>
                         </div>
-                        <div class="doc-barrow">
-                            <div class="doc-barlab">Listing 160<br><span class="badge bg-secondary">lembur tidak</span></div>
-                            <div class="doc-bar">
-                                <div class="doc-seg" style="flex:34">34</div><div class="doc-seg" style="flex:34">34</div>
-                                <div class="doc-seg" style="flex:34">34</div><div class="doc-seg" style="flex:34">34</div>
-                                <div class="doc-seg doc-seg-off" style="flex:24">shift 2 &rarr; 24</div>
-                            </div>
-                        </div>
-                        <div class="doc-barrow">
-                            <div class="doc-barlab">Listing 310<br><span class="badge bg-warning text-dark">lembur ya</span></div>
-                            <div class="doc-bar">
-                                <div class="doc-seg" style="flex:136">shift 1 &middot; CO1&ndash;CO4 = 136</div>
-                                <div class="doc-seg doc-seg-ot" style="flex:30">30</div>
-                                <div class="doc-seg" style="flex:136">shift 2 &middot; CO1&ndash;CO4 = 136</div>
-                                <div class="doc-seg doc-seg-ot" style="flex:8">8</div>
-                            </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="doc-panel h-100">
+                            <div class="doc-panel-title">Jumlah shift &mdash; dari Master Conveyor</div>
+                            <p class="small mb-0 text-muted">Satu atau dua shift. Ini kemampuan fisik line; SIREP tidak
+                            mengirimkannya, jadi diisi manual di menu Conveyor Data. <strong>Tidak dihitung dari banyaknya
+                            listing</strong> &mdash; conveyor satu shift tetap satu shift walau listingnya menumpuk.</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="alert alert-primary py-2 px-3 mt-3 mb-0">
-                    <div class="fw-semibold mb-1"><i class="fa-solid fa-lightbulb me-1"></i> Perhatikan dua baris pertama</div>
-                    <div class="small mb-0">Angka listingnya sama persis &mdash; yang berbeda hanya penanda lembur. Tanpa lembur, CO5 tidak
-                    dibuka; kelebihan 24 unit pindah ke shift 2 dan mulai lagi dari CO1. Satu penanda dari SIREP mengubah seluruh bentuk jadwal.</div>
+                <div class="doc-panel">
+                    <div class="doc-panel-title">Aturannya, dalam empat kalimat</div>
+                    <div class="row g-3">
+                        <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">1</span><div><strong>CO1</strong> menampung paling besar &mdash; ia mendapat sisa pembagian. CO2&ndash;CO4 masing-masing seperempat kapasitas.</div></div></div>
+                        <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">2</span><div><strong>CO5</strong> hanya terbuka bila SIREP menyatakan hari itu lembur. Jatahnya paling banyak <strong>7/8</strong> cutoff normal.</div></div></div>
+                        <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">3</span><div>Pengisian <strong>selalu mulai dari shift 1</strong>. Shift 2 dipakai hanya bila conveyor itu memang dua shift.</div></div></div>
+                        <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">4</span><div>CO5 shift <strong>terakhir</strong> menampung seluruh sisa. Karena itu tidak pernah ada listing yang hilang.</div></div></div>
+                    </div>
+                </div>
+
+                <h6 class="mt-4 mb-2">Urutan pengisian</h6>
+                <div class="doc-panel">
+                    <div class="doc-calc"><b>1 shift</b>
+   S1.CO1 &rarr; S1.CO2 &rarr; S1.CO3 &rarr; S1.CO4 &rarr; S1.CO5
+
+<b>2 shift</b>
+   S1.CO1 &rarr; S1.CO2 &rarr; S1.CO3 &rarr; S1.CO4
+        &rarr; S2.CO1 &rarr; S2.CO2 &rarr; S2.CO3 &rarr; S2.CO4
+        &rarr; S1.CO5   (dibatasi 7/8 cutoff normal)
+        &rarr; S2.CO5   (sisa semuanya)</div>
+                    <p class="small text-muted mb-0 mt-2">Perhatikan CO5 diisi paling akhir &mdash; sesudah CO1&ndash;CO4
+                    <em>kedua</em> shift penuh. Cutoff lembur memang jatah terakhir, bukan lanjutan langsung dari CO4.</p>
+                </div>
+
+                <h6 class="mt-4 mb-2">Contoh: kapasitas 136</h6>
+                <p class="text-muted small" style="max-width:72ch">136 habis dibagi 4, jadi CO1&ndash;CO4 masing-masing 34.
+                Jatah CO5 = 7/8 &times; 34 = <strong>30</strong>.</p>
+
+                <div class="doc-bars">
+                    <div class="doc-barrow">
+                        <div class="doc-barlab">Listing 160<br><span class="badge bg-light text-dark border">1 shift</span> <span class="badge bg-warning text-dark">lembur ya</span></div>
+                        <div class="doc-bar">
+                            <div class="doc-seg" style="flex:34">34</div><div class="doc-seg" style="flex:34">34</div>
+                            <div class="doc-seg" style="flex:34">34</div><div class="doc-seg" style="flex:34">34</div>
+                            <div class="doc-seg doc-seg-ot" style="flex:24">CO5 24</div>
+                        </div>
+                    </div>
+                    <div class="doc-barrow">
+                        <div class="doc-barlab">Listing 160<br><span class="badge bg-light text-dark border">2 shift</span> <span class="badge bg-secondary">lembur tidak</span></div>
+                        <div class="doc-bar">
+                            <div class="doc-seg" style="flex:34">34</div><div class="doc-seg" style="flex:34">34</div>
+                            <div class="doc-seg" style="flex:34">34</div><div class="doc-seg" style="flex:34">34</div>
+                            <div class="doc-seg doc-seg-off" style="flex:24">S2.CO1 &rarr; 24</div>
+                        </div>
+                    </div>
+                    <div class="doc-barrow">
+                        <div class="doc-barlab">Listing 310<br><span class="badge bg-light text-dark border">2 shift</span> <span class="badge bg-warning text-dark">lembur ya</span></div>
+                        <div class="doc-bar">
+                            <div class="doc-seg" style="flex:136">shift 1 &middot; CO1&ndash;CO4 = 136</div>
+                            <div class="doc-seg doc-seg-ot" style="flex:30">30</div>
+                            <div class="doc-seg" style="flex:136">shift 2 &middot; CO1&ndash;CO4 = 136</div>
+                            <div class="doc-seg doc-seg-ot" style="flex:8">8</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-1">
+                    <div class="col-lg-6">
+                        <div class="alert alert-primary py-2 px-3 h-100 mb-0">
+                            <div class="fw-semibold mb-1"><i class="fa-solid fa-lightbulb me-1"></i> Bandingkan dua baris pertama</div>
+                            <div class="small mb-0">Angka listingnya sama persis. Yang berbeda hanya penanda lembur &mdash;
+                            dan karena tanpa lembur CO5 tertutup, kelebihan 24 unit pindah ke <strong>CO1 shift 2</strong>,
+                            bukan ke CO5 shift 1.</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="alert alert-warning py-2 px-3 h-100 mb-0">
+                            <div class="fw-semibold mb-1"><i class="fa-solid fa-triangle-exclamation me-1"></i> Kalau conveyor hanya satu shift</div>
+                            <div class="small mb-0">Kelebihan tidak punya tempat pindah. Seluruhnya masuk CO5 shift 1 dan
+                            hari itu ditandai over &mdash; tanda bahwa <strong>jumlah shift di master perlu diperiksa</strong>.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="doc-panel mt-3">
+                    <div class="doc-panel-title">Conveyor yang kapasitasnya tidak habis dibagi empat</div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light"><tr><th>Conveyor</th><th class="text-end">Kapasitas</th><th class="text-center">CO1</th><th class="text-center">CO2</th><th class="text-center">CO3</th><th class="text-center">CO4</th><th class="text-end">CO5 (7/8)</th></tr></thead>
+                            <tbody>
+                                <tr><td>B3-EGI</td><td class="text-end">135</td><td class="text-center"><strong>36</strong></td><td class="text-center">33</td><td class="text-center">33</td><td class="text-center">33</td><td class="text-end">30</td></tr>
+                                <tr><td>B3-ENG</td><td class="text-end">78</td><td class="text-center"><strong>21</strong></td><td class="text-center">19</td><td class="text-center">19</td><td class="text-center">19</td><td class="text-end">17</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="small text-muted mb-0 mt-2">Sisa pembagian selalu jatuh ke CO1, sehingga cutoff pertama yang
+                    menampung paling banyak.</p>
                 </div>
             </div>
 
@@ -261,6 +324,16 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <div class="doc-panel">
+                    <div class="doc-panel-title">Baris yang sudah terkunci menyimpan angkanya sendiri</div>
+                    <p class="small mb-2">Saat jadwal diverifikasi, nilai SIREP yang berlaku <em>saat itu</em> ikut disimpan:
+                    kapasitas, penanda lembur, dan waktu penarikan listing.</p>
+                    <p class="small mb-0 text-muted">Tanpa ini, baris lama akan menampilkan kapasitas SIREP <strong>terkini</strong>
+                    setiap kali sinkronisasi dijalankan &mdash; seolah jadwal yang sudah final melanggar aturan kapasitas,
+                    padahal ia dibangun dari angka pada waktu yang berbeda. Baris yang dikunci sebelum fitur ini ada tidak
+                    punya simpanan tersebut dan tetap menampilkan nilai terkini.</p>
                 </div>
 
                 <div class="alert alert-warning py-2 px-3 mb-0">
@@ -410,11 +483,68 @@
                     <div class="col-md-6"><dl class="doc-gitem"><dt>Listing</dt><dd>Daftar permintaan dari PPC lewat SIREP: assy apa, berapa, tanggal berapa.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>Cutoff (CO)</dt><dd>Potongan waktu penyerahan dalam satu shift. CO1&ndash;CO4 normal, CO5 lembur.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>Kapasitas</dt><dd>Jumlah unit yang sanggup diselesaikan satu conveyor dalam satu shift. Datang dari SIREP.</dd></dl></div>
+                    <div class="col-md-6"><dl class="doc-gitem"><dt>Jumlah shift</dt><dd>Satu atau dua. Data master yang diisi manual, bukan hasil hitungan. Alokasi selalu mulai dari shift 1.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>is_overtime</dt><dd>Penanda lembur per hari per conveyor, ditetapkan PPC. Menentukan CO5 dibuka atau tidak.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>Isi per kartu</dt><dd>Jumlah unit dalam satu lembar kanban. Tetap per komponen, tidak pernah setengah.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>Saldo (sisa)</dt><dd>Kelebihan dari kartu terakhir yang terbawa ke hari berikutnya.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>Verifikasi</dt><dd>Persetujuan manusia atas jadwal. Sesudahnya jadwal terkunci dan kanban dicetak.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>Nomor urut</dt><dd>Empat angka terakhir barcode. Terus naik, tidak boleh diulang.</dd></dl></div>
+                </div>
+            </div>
+
+
+            {{-- PERUBAHAN TERBARU --}}
+            <div class="tab-pane fade" id="doc-perubahan">
+                <h6 class="doc-print-title">Perubahan Terbaru</h6>
+
+                <p class="text-muted" style="max-width:70ch">Yang berubah belakangan dan berpengaruh langsung ke cara kerja
+                sehari-hari. Diurutkan dari yang paling terasa di lapangan.</p>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Jumlah shift kembali ditentukan di master</div>
+                    <p class="small mb-2">Sebelumnya jumlah shift dihitung sendiri dari banyaknya listing. Sekarang ia
+                    <strong>diisi manual</strong> di menu Conveyor Data, satu atau dua shift, dan tidak berubah sendiri.</p>
+                    <p class="small mb-0 text-muted">Akibatnya: conveyor yang listingnya menumpuk tidak lagi otomatis
+                    menjadi dua shift. Kalau jadwal terasa terlalu padat di shift 1, yang perlu diperiksa adalah setelan
+                    jumlah shift di master &mdash; bukan kapasitasnya.</p>
+                </div>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Sisa pembagian pindah ke CO1</div>
+                    <p class="small mb-2">Dulu cutoff yang menampung paling besar adalah CO4; sekarang <strong>CO1</strong>.
+                    Hanya berpengaruh pada conveyor yang kapasitasnya tidak habis dibagi empat.</p>
+                    <div class="doc-calc">B3-EGI  cap 135    dulu 33/33/33/<b>36</b>    kini <b>36</b>/33/33/33
+B3-ENG  cap  78    dulu 19/19/19/<b>21</b>    kini <b>21</b>/19/19/19</div>
+                    <p class="small mb-0 text-muted">Jadwal yang sudah terlanjur dibuat tidak ikut berubah &mdash; pola baru
+                    berlaku untuk generate berikutnya.</p>
+                </div>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Daftar conveyor mengikuti SIREP</div>
+                    <p class="small mb-0">Conveyor tidak lagi bisa ditambah atau dihapus manual. Yang baru di SIREP masuk
+                    otomatis, yang sudah tidak dikirim berstatus <span class="badge bg-secondary">Nonaktif</span> dan berhenti
+                    dijadwalkan &mdash; datanya tidak dihapus. Kapasitas juga ditarik dari SIREP; yang tersisa untuk diisi
+                    orang hanya Area, Family, Kode Conveyor SIREP, Jumlah Shift, dan Pallet Qty.</p>
+                </div>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Riwayat cetak kanban</div>
+                    <p class="small mb-0">Dua menu baru di bawah eKanban Print: <strong>History Print Cutting</strong> dan
+                    <strong>History Print Shikake</strong>, untuk menelusuri kanban yang pernah dicetak.</p>
+                </div>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Tipe mesin pada Master Machine</div>
+                    <p class="small mb-0">Setiap mesin kini punya tipe &mdash; BONDER, DBL CRIMP, JOINT, SHIELD, CUTTING,
+                    atau TWIST. Terisi otomatis dari pemakaian yang tercatat; mesin yang tidak punya padanan dibiarkan kosong
+                    untuk diisi manual.</p>
+                </div>
+
+                <div class="alert alert-primary py-2 px-3 mb-0">
+                    <div class="fw-semibold mb-1"><i class="fa-solid fa-shield-halved me-1"></i> Saldo kanban lebih terjaga</div>
+                    <div class="small mb-0">Reset saldo tidak lagi menghapus jejak asal-usulnya dan tidak pernah menurunkan
+                    nomor urut barcode. Tersedia juga pemeriksaan yang menghitung ulang saldo dari catatan mutasi dan
+                    menunjukkan persis di titik mana saldo terputus.</div>
                 </div>
             </div>
 
