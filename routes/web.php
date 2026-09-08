@@ -158,12 +158,16 @@ Route::middleware('auth')->group(function () {
         Route::get('ekanban-circuit/print-preview', [EkanbanCircuitController::class, 'printPreview'])->name('ekanban-circuit.print-preview');
         Route::post('ekanban-circuit/print', [EkanbanCircuitController::class, 'print'])->name('ekanban-circuit.print');
         Route::get('ekanban-circuit/machines-by-conveyor', [EkanbanCircuitController::class, 'getMachinesByConveyor'])->name('ekanban-circuit.machines-by-conveyor');
+        Route::get('ekanban-circuit/history', [EkanbanCircuitController::class, 'history'])->name('ekanban-circuit.history');
+        Route::get('ekanban-circuit/history/export', [EkanbanCircuitController::class, 'historyExport'])->name('ekanban-circuit.history.export');
         
         // eKanban Shikake
         Route::get('ekanban-shikake/print-machine', [EkanbanShikakeController::class, 'printMachine'])->name('ekanban-shikake.print-machine');
         Route::get('ekanban-shikake/print-preview', [EkanbanShikakeController::class, 'printPreview'])->name('ekanban-shikake.print-preview');
         Route::post('ekanban-shikake/print', [EkanbanShikakeController::class, 'print'])->name('ekanban-shikake.print');
         Route::get('ekanban-shikake/machines-by-conveyor', [EkanbanShikakeController::class, 'getMachinesByConveyor'])->name('ekanban-shikake.machines-by-conveyor');
+        Route::get('ekanban-shikake/history', [EkanbanShikakeController::class, 'history'])->name('ekanban-shikake.history');
+        Route::get('ekanban-shikake/history/export', [EkanbanShikakeController::class, 'historyExport'])->name('ekanban-shikake.history.export');
     });
 
     // Defect Module Routes

@@ -10,6 +10,7 @@ use App\Models\AssySchedule;
 use App\Enums\ProcessType;
 use App\Services\EkanbanShikakeService;
 use App\Helpers\BarcodeHelper;
+use App\Helpers\ExcelExportHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -122,6 +123,16 @@ class EkanbanShikakeController extends Controller
                 'ok' => false,
                 'message' => 'Hanya admin yang dapat mencetak ulang kanban yang sudah pernah diprint.'
             ], 403);
+        }
+
+        // Progressive print rule - a cut off stays locked until every earlier
+        // cut off on the same machine/shift/date has been fully printed.
+        $cutoffViolation = $this->ekanbanShikakeService->getCutoffOrderViolation($ids);
+        if ($cutoffViolation) {
+            return response()->json([
+                'ok' => false,
+                'message' => $cutoffViolation
+            ], 422);
         }
 
         // If check_only flag is set, this is just an authorization pre-check
@@ -250,21 +261,13 @@ class EkanbanShikakeController extends Controller
      */
     public function getMachinesByConveyor(Request $request)
     {
-        $areaId = $request->get('area_id');
-
-        if (!$areaId) {
-            return response()->json([]);
-        }
-
-        $machines = DB::table('master_shikake')
-            ->join('master_conveyor', 'master_shikake.conveyor_id', '=', 'master_conveyor.id')
-            ->where('master_conveyor.master_area_id', $areaId)
-            ->whereNotNull('master_shikake.machine')
-            ->where('master_shikake.machine', '!=', '')
-            ->select('master_shikake.machine')
-            ->distinct()
-            ->orderBy('master_shikake.machine')
-            ->pluck('machine');
+        // Area alone is not enough - the machine list is scoped by the selected
+        // process as well, so only machines that actually run that process in
+        // the area are offered.
+        $machines = $this->ekanbanShikakeService->getMachineOptions(
+            $request->get('area_id'),
+            $request->get('process')
+        );
 
         // Format for select dropdown
         $formattedMachines = $machines->map(function($machine) {
@@ -275,5 +278,77 @@ class EkanbanShikakeController extends Controller
         });
 
         return response()->json($formattedMachines);
+    }
+
+    /**
+     * Print history page - list of kanban that has already been printed,
+     * with the print date and machine on top of the print list columns.
+     */
+    public function history(Request $request)
+    {
+        if ($request->ajax()) {
+            try {
+                return response()->json($this->ekanbanShikakeService->getPrintHistoryForTable($request));
+            } catch (\Exception $e) {
+                Log::error('EkanbanShikake history DataTable error: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                    'filters' => $request->only(['machine', 'date_start', 'date_end', 'shift', 'cutoff', 'process', 'area_id']),
+                ]);
+                return response()->json([
+                    'draw' => intval($request->input('draw', 1)),
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => [],
+                    'error' => 'Gagal memuat data. Silakan coba lagi atau hubungi administrator.',
+                ]);
+            }
+        }
+
+        $areas = MasterArea::orderBy('area')->get();
+        $processTypes = ProcessType::cases();
+
+        return view('schedule.ekanban_shikake.history', compact('areas', 'processTypes'));
+    }
+
+    /**
+     * Export the print history (same filters as the screen) to Excel
+     */
+    public function historyExport(Request $request)
+    {
+        $rows = $this->ekanbanShikakeService->getPrintHistoryRows($request);
+
+        $headers = [
+            'No', 'Process', 'Code', 'Conveyor', 'Family', 'Qty', 'Issue', 'Seq',
+            'Kanban', 'Machine', 'Tgl Schedule', 'Shift', 'Cut Off', 'Tgl Print',
+            'Diprint Oleh', 'Jml Print',
+        ];
+
+        $data = $rows->map(function ($row) {
+            return [
+                $row['DT_RowIndex'],
+                $row['process'],
+                $row['identifier'],
+                $row['conveyor'],
+                $row['family'],
+                $row['qty'],
+                $row['issue_count'],
+                $row['sequence'],
+                $row['barcodes'],
+                $row['machine'],
+                $row['date'],
+                $row['shift'],
+                $row['cutoff'],
+                $row['printed_at'],
+                $row['printed_by'],
+                $row['print_count'],
+            ];
+        })->all();
+
+        return ExcelExportHelper::download(
+            'History Print Shikake',
+            $headers,
+            $data,
+            'history_print_shikake_' . now()->format('Ymd_His') . '.xlsx'
+        );
     }
 }

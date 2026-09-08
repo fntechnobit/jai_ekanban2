@@ -58,8 +58,8 @@
                     <form class="mb-3">
                         <div class="row g-2 mb-2">
                             <div class="col-md-3">
-                                <select class="form-select form-select-sm select2" id="filter_process">
-                                    <option value="">- All Process -</option>
+                                <select class="form-select form-select-sm select2" id="filter_process" required>
+                                    <option value="">- Choose Process -</option>
                                     @foreach($processTypes as $processType)
                                         <option value="{{ $processType->value }}">{{ $processType->value }}</option>
                                     @endforeach
@@ -75,7 +75,7 @@
                             </div>
                             <div class="col-md-3">
                                 <select class="form-select form-select-sm select2" id="filter_machine" required>
-                                    <option value="">- Choose Area First -</option>
+                                    <option value="">- Choose Area & Process First -</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -91,8 +91,8 @@
                                 <input type="text" class="form-control form-control-sm" id="filter_date" readonly placeholder="Select date">
                             </div>
                             <div class="col-md-3">
-                                <select class="form-select form-select-sm select2" id="filter_shift">
-                                    <option value="">- All Shift -</option>
+                                <select class="form-select form-select-sm select2" id="filter_shift" required>
+                                    <option value="">- Choose Shift -</option>
                                     <option value="1">Shift 1</option>
                                     <option value="2">Shift 2</option>
                                 </select>
@@ -114,6 +114,14 @@
                             </div>
                         </div>
                     </form>
+
+                    <div class="alert alert-light border small py-2 mb-3">
+                        <i class="fa-solid fa-circle-info text-primary me-1"></i>
+                        <strong>Process</strong>, <strong>Area</strong>, <strong>Machine</strong>, dan <strong>Shift</strong> wajib dipilih.
+                        Pilihan Process &amp; Area menentukan daftar Machine.
+                        Print dibuka bertahap per Cut Off: tombol Print pada Cut Off berikutnya baru muncul
+                        setelah seluruh kanban Cut Off sebelumnya selesai diprint.
+                    </div>
 
                     <div class="table-responsive">
                         <table id="shikake-table" class="table table-bordered table-striped" style="width:100%">
@@ -320,13 +328,20 @@
                         width: '3%',
                         className: 'text-center',
                         render: function(data, type, row) {
-                            var locked = row.is_printed && !isAdmin;
+                            // Locked either because it was already printed (non admin)
+                            // or because its cut off still waits on an earlier one
+                            var printedLock = row.is_printed && !isAdmin;
+                            var cutoffLock = row.can_print === false;
+                            var locked = printedLock || cutoffLock;
                             if (locked) {
-                                // Row became locked (already printed) - drop any stale selection for it
+                                // Row became locked - drop any stale selection for it
                                 selectedIds.delete(data);
                             }
+                            var title = cutoffLock
+                                ? 'Cut Off ' + row.cutoff + ' terkunci - selesaikan print Cut Off ' + row.max_printable_cutoff + ' terlebih dahulu'
+                                : 'Hanya admin yang dapat mencetak ulang';
                             var checkedAttr = selectedIds.has(data) ? ' checked' : '';
-                            return '<input type="checkbox" class="row-check" value="' + data + '"' + checkedAttr + (locked ? ' disabled title="Hanya admin yang dapat mencetak ulang"' : '') + '>';
+                            return '<input type="checkbox" class="row-check" value="' + data + '"' + checkedAttr + (locked ? ' disabled title="' + title + '"' : '') + '>';
                         }
                     },
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '4%' },
@@ -419,41 +434,51 @@
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
             });
 
-            // Auto-reload on all filter changes
-            $('#filter_area, #filter_machine, #filter_process, #filter_shift, #filter_cutoff, #filter_print_status').on('change', function() {
-                // Area drives the machine list - reload its options and drop any stale selection
-                if (this.id === 'filter_area') {
-                    $('#filter_machine').val('').trigger('change.select2');
-                    loadMachinesForArea($(this).val());
-                    saveFilters();
+            // Machine, process, and shift are mandatory - the table stays empty
+            // until all three are chosen
+            function hasRequiredFilters() {
+                return !!$('#filter_machine').val()
+                    && !!$('#filter_process').val()
+                    && !!$('#filter_shift').val();
+            }
+
+            function reloadTable(resetPaging) {
+                if (!hasRequiredFilters()) {
                     table.clear().draw();
                     return;
                 }
+                table.ajax.reload(null, resetPaging !== false);
+            }
 
+            // Area + process together drive the machine list - either change reloads
+            // the options and drops any stale machine selection
+            $('#filter_area, #filter_process').on('change', function() {
+                $('#filter_machine').val('').trigger('change.select2');
+                loadMachinesForArea($('#filter_area').val(), $('#filter_process').val());
                 saveFilters();
-                var machine = $('#filter_machine').val();
-                if (machine) {
-                    table.ajax.reload();
-                }
+                table.clear().draw();
+            });
+
+            // Auto-reload on the remaining filter changes
+            $('#filter_machine, #filter_shift, #filter_cutoff, #filter_print_status').on('change', function() {
+                saveFilters();
+                reloadTable();
             });
 
             // Auto-reload when date changes
             $('#filter_date').on('apply.daterangepicker', function() {
                 saveFilters();
-                var machine = $('#filter_machine').val();
-                if (machine) {
-                    table.ajax.reload();
-                }
+                reloadTable();
             });
 
-            // Load machine options for the selected area. Area is required - without
-            // one the machine dropdown stays empty so no data can be shown.
-            function loadMachinesForArea(areaId, opts) {
+            // Load machine options for the selected area + process. Both are required -
+            // without them the machine dropdown stays empty so no data can be shown.
+            function loadMachinesForArea(areaId, process, opts) {
                 opts = opts || {};
                 var machineSelect = $('#filter_machine');
 
-                if (!areaId) {
-                    machineSelect.empty().append('<option value="">- Choose Area First -</option>');
+                if (!areaId || !process) {
+                    machineSelect.empty().append('<option value="">- Choose Area & Process First -</option>');
                     machineSelect.trigger('change.select2');
                     return;
                 }
@@ -463,7 +488,7 @@
                 $.ajax({
                     url: "{{ route('schedule.ekanban-shikake.machines-by-conveyor') }}",
                     type: 'GET',
-                    data: { area_id: areaId },
+                    data: { area_id: areaId, process: process },
                     success: function(machines) {
                         $.each(machines, function(index, machine) {
                             machineSelect.append('<option value="' + machine.machine + '">' + machine.name + '</option>');
@@ -473,7 +498,7 @@
                         if (opts.selected && machineSelect.find('option[value="' + opts.selected + '"]').length) {
                             machineSelect.val(opts.selected).trigger('change.select2');
                             if (opts.autoReload) {
-                                table.ajax.reload();
+                                reloadTable();
                             }
                         } else {
                             machineSelect.trigger('change.select2');
@@ -485,8 +510,8 @@
                 });
             }
 
-            // Load machines for the restored (or empty) area when the page loads
-            loadMachinesForArea($('#filter_area').val(), {
+            // Load machines for the restored (or empty) area + process when the page loads
+            loadMachinesForArea($('#filter_area').val(), $('#filter_process').val(), {
                 selected: savedFilters && savedFilters.machine,
                 autoReload: true
             });
@@ -511,10 +536,7 @@
 
             $('#btn-refresh').click(function() {
                 // Always reload table data
-                var machine = $('#filter_machine').val();
-                if (machine) {
-                    table.ajax.reload(null, false);
-                }
+                reloadTable(false);
 
                 // Also refresh printer list if QZ is connected
                 if (qz.websocket.isActive()) {

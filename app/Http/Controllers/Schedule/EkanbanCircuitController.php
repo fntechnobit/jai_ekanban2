@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Schedule;
 
 use App\Http\Controllers\Controller;
 use App\Helpers\BarcodeHelper;
+use App\Helpers\ExcelExportHelper;
 use App\Models\MasterArea;
 use App\Models\MasterConveyor;
 use App\Models\MasterMachine;
@@ -118,6 +119,16 @@ class EkanbanCircuitController extends Controller
             ], 403);
         }
 
+        // Progressive print rule - a cut off stays locked until every earlier
+        // cut off on the same machine/shift/date has been fully printed.
+        $cutoffViolation = $this->ekanbanCircuitService->getCutoffOrderViolation($ids);
+        if ($cutoffViolation) {
+            return response()->json([
+                'ok' => false,
+                'message' => $cutoffViolation
+            ], 422);
+        }
+
         // If check_only flag is set, this is just an authorization pre-check
         // (used by the client before running the physical QZ Tray print job)
         if ($request->boolean('check_only')) {
@@ -227,24 +238,96 @@ class EkanbanCircuitController extends Controller
      */
     public function getMachinesByConveyor(Request $request)
     {
-        $areaId = $request->get('area_id');
-
-        if (!$areaId) {
-            return response()->json([]);
-        }
-
-        $machines = MasterMachine::where('master_area_id', $areaId)
-            ->orderBy('machine')
-            ->get();
+        // Area alone is not enough - the machine list is scoped by the selected
+        // type as well, so only machines that actually have circuits of that
+        // type in the area are offered.
+        $machines = $this->ekanbanCircuitService->getMachineOptions(
+            $request->get('area_id'),
+            $request->get('type')
+        );
 
         // Format for select dropdown
         $formattedMachines = $machines->map(function($machine) {
             return [
-                'machine' => $machine->machine,
-                'name' => $machine->machine
+                'machine' => $machine,
+                'name' => $machine
             ];
         });
 
         return response()->json($formattedMachines);
+    }
+
+    /**
+     * Print history page - list of kanban that has already been printed,
+     * with the print date and machine on top of the print list columns.
+     */
+    public function history(Request $request)
+    {
+        if ($request->ajax()) {
+            try {
+                return response()->json($this->ekanbanCircuitService->getPrintHistoryForTable($request));
+            } catch (\Exception $e) {
+                Log::error('EkanbanCircuit history DataTable error: ' . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString(),
+                    'filters' => $request->only(['machine', 'date_start', 'date_end', 'shift', 'cutoff', 'type', 'area_id']),
+                ]);
+                return response()->json([
+                    'draw' => intval($request->input('draw', 1)),
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => [],
+                    'error' => 'Gagal memuat data. Silakan coba lagi atau hubungi administrator.',
+                ]);
+            }
+        }
+
+        $areas = MasterArea::orderBy('area')->get();
+
+        return view('schedule.ekanban_circuit.history', compact('areas'));
+    }
+
+    /**
+     * Export the print history (same filters as the screen) to Excel
+     */
+    public function historyExport(Request $request)
+    {
+        $rows = $this->ekanbanCircuitService->getPrintHistoryRows($request);
+
+        $headers = [
+            'No', 'Type', 'CCT No', 'CCT Code', 'Shikake Code', 'Conveyor', 'Store',
+            'Family', 'Qty', 'Issue', 'Seq', 'Kanban', 'Machine', 'Tgl Schedule',
+            'Shift', 'Cut Off', 'Tgl Print', 'Diprint Oleh', 'Jml Print',
+        ];
+
+        $data = $rows->map(function ($row) {
+            return [
+                $row['DT_RowIndex'],
+                $row['type'],
+                $row['cct_no'],
+                $row['cct_code'],
+                $row['shikake_code'],
+                $row['conveyor'],
+                $row['to_store'],
+                $row['family'],
+                $row['qty'],
+                $row['issue_count'],
+                $row['sequence'],
+                $row['barcodes'],
+                $row['machine'],
+                $row['date'],
+                $row['shift'],
+                $row['cutoff'],
+                $row['printed_at'],
+                $row['printed_by'],
+                $row['print_count'],
+            ];
+        })->all();
+
+        return ExcelExportHelper::download(
+            'History Print Cutting',
+            $headers,
+            $data,
+            'history_print_cutting_' . now()->format('Ymd_His') . '.xlsx'
+        );
     }
 }

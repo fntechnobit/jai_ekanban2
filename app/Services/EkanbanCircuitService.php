@@ -14,8 +14,10 @@ class EkanbanCircuitService
      */
     public function getCircuitDataForTable(Request $request)
     {
-        // Require machine filter only
-        if (!$request->filled('machine')) {
+        // Machine, type, and shift are mandatory. Type drives the machine list and
+        // shift scopes the progressive (cut off by cut off) print rule, so without
+        // all three the list stays empty instead of showing a mixed-scope result.
+        if (!$this->hasRequiredFilters($request)) {
             return [
                 'draw' => intval($request->input('draw', 1)),
                 'recordsTotal' => 0,
@@ -112,11 +114,16 @@ class EkanbanCircuitService
             $data = $query->skip($start)->take($length)->get();
         }
 
+        // Highest cut off whose kanban may be printed right now - a cut off only
+        // unlocks once every earlier cut off in the same scope is fully printed.
+        $maxPrintableCutoff = $this->getMaxPrintableCutoff($request);
+
         $result = [];
         foreach ($data as $index => $row) {
             // New Group ID format: assyScheduleId-masterCircuitId
             $groupId = $row->assy_schedule_id . '-' . $row->master_circuit_id;
-            
+            $canPrint = (int) $row->cutoff <= $maxPrintableCutoff;
+
             $result[] = [
                 'DT_RowIndex' => $start + $index + 1,
                 'assy_schedule_id' => $row->assy_schedule_id,
@@ -140,9 +147,13 @@ class EkanbanCircuitService
                 'is_printed' => $row->is_printed,
                 'last_printed_at' => $row->last_printed_at,
                 'print_count' => $row->print_count ?? 0,
+                'can_print' => $canPrint,
+                'max_printable_cutoff' => $maxPrintableCutoff,
                 'actions' => view('schedule.ekanban_circuit.actions', [
                     'row' => $row,
-                    'groupId' => $groupId
+                    'groupId' => $groupId,
+                    'canPrint' => $canPrint,
+                    'maxPrintableCutoff' => $maxPrintableCutoff,
                 ])->render()
             ];
         }
@@ -368,31 +379,11 @@ class EkanbanCircuitService
      */
     private function applyFilters($query, Request $request)
     {
-        // Machine is required
-        $query->where('master_circuit.machine', $request->machine);
-
-        // Type filter (CUTTING / CUTTING_TWIST)
-        if ($request->filled('type') && $request->type !== 'all') {
-            $query->where('master_circuit.type', $request->type);
-        }
+        $this->applyScopeFilters($query, $request);
 
         // Cut off filter
         if ($request->filled('cutoff')) {
             $query->where('assy_schedule_circuit.cutoff', $request->cutoff);
-        }
-
-        // Area filter (through conveyor's master_area_id)
-        if ($request->filled('area_id')) {
-            $query->where('master_conveyor.master_area_id', $request->area_id);
-        }
-
-        // Single date filter
-        if ($request->filled('date')) {
-            $query->whereDate('assy_schedule.schedule', $request->date);
-        }
-
-        if ($request->filled('shift')) {
-            $query->where('assy_schedule.shift', $request->shift);
         }
 
         // Print status filter - use HAVING with MIN for group-level check
@@ -412,5 +403,350 @@ class EkanbanCircuitService
                     break;
             }
         }
+    }
+
+    /**
+     * Highest cut off number used by the schedule.
+     */
+    public const MAX_CUTOFF = 5;
+
+    /**
+     * The print list needs machine, type, and shift before it shows anything.
+     * Type drives the machine dropdown and shift scopes the progressive print
+     * rule, so a partial filter set would produce a misleading list.
+     */
+    public function hasRequiredFilters(Request $request): bool
+    {
+        return $request->filled('machine')
+            && $request->filled('shift')
+            && $request->filled('type')
+            && $request->type !== 'all';
+    }
+
+    /**
+     * Filters that define the working scope of the print list (machine, type,
+     * area, date, shift). Cut off and print status are deliberately excluded so
+     * the same scope can be reused to evaluate the progressive print rule.
+     */
+    private function applyScopeFilters($query, Request $request)
+    {
+        // Machine is required
+        $query->where('master_circuit.machine', $request->machine);
+
+        // Type filter (CUTTING / CUTTING_TWIST)
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->where('master_circuit.type', $request->type);
+        }
+
+        // Area filter (through conveyor's master_area_id)
+        if ($request->filled('area_id')) {
+            $query->where('master_conveyor.master_area_id', $request->area_id);
+        }
+
+        // Single date filter
+        if ($request->filled('date')) {
+            $query->whereDate('assy_schedule.schedule', $request->date);
+        }
+
+        if ($request->filled('shift')) {
+            $query->where('assy_schedule.shift', $request->shift);
+        }
+    }
+
+    /**
+     * Progressive print rule: a cut off can only be printed once every earlier
+     * cut off in the same scope (machine + type + area + date + shift) has been
+     * fully printed. The lowest cut off that still has an unprinted kanban is
+     * therefore the highest one currently printable; when nothing is pending all
+     * cut offs are unlocked (admin reprint).
+     */
+    public function getMaxPrintableCutoff(Request $request): int
+    {
+        $query = DB::table('assy_schedule_circuit')
+            ->join('assy_schedule', 'assy_schedule_circuit.assy_schedule_id', '=', 'assy_schedule.id')
+            ->join('master_conveyor', 'assy_schedule.conveyor_id', '=', 'master_conveyor.id')
+            ->join('master_circuit', 'assy_schedule_circuit.master_circuit_id', '=', 'master_circuit.id')
+            ->where('assy_schedule.is_lock', '!=', 0)
+            ->where('assy_schedule_circuit.is_printed', 0);
+
+        $this->applyScopeFilters($query, $request);
+
+        $firstPending = $query->min('assy_schedule_circuit.cutoff');
+
+        return $firstPending === null ? self::MAX_CUTOFF : (int) $firstPending;
+    }
+
+    /**
+     * Server-side guard for the progressive print rule - returns an error
+     * message when any of the groups belongs to a cut off that is still locked
+     * by an earlier, unfinished cut off. Returns null when printing is allowed.
+     */
+    public function getCutoffOrderViolation(array $groupIds): ?string
+    {
+        foreach ($groupIds as $groupId) {
+            $parts = explode('-', $groupId, 2);
+            if (count($parts) !== 2) {
+                continue;
+            }
+
+            $group = DB::table('assy_schedule_circuit')
+                ->join('assy_schedule', 'assy_schedule_circuit.assy_schedule_id', '=', 'assy_schedule.id')
+                ->join('master_circuit', 'assy_schedule_circuit.master_circuit_id', '=', 'master_circuit.id')
+                ->where('assy_schedule_circuit.assy_schedule_id', $parts[0])
+                ->where('assy_schedule_circuit.master_circuit_id', $parts[1])
+                ->select([
+                    'assy_schedule.schedule',
+                    'assy_schedule.shift',
+                    'master_circuit.machine',
+                    'master_circuit.type',
+                    DB::raw('MAX(assy_schedule_circuit.cutoff) as cutoff'),
+                ])
+                ->groupBy('assy_schedule.schedule', 'assy_schedule.shift', 'master_circuit.machine', 'master_circuit.type')
+                ->first();
+
+            if (!$group || $group->cutoff === null) {
+                continue;
+            }
+
+            $pendingCutoff = DB::table('assy_schedule_circuit')
+                ->join('assy_schedule', 'assy_schedule_circuit.assy_schedule_id', '=', 'assy_schedule.id')
+                ->join('master_circuit', 'assy_schedule_circuit.master_circuit_id', '=', 'master_circuit.id')
+                ->where('assy_schedule.is_lock', '!=', 0)
+                ->whereDate('assy_schedule.schedule', $group->schedule)
+                ->where('assy_schedule.shift', $group->shift)
+                ->where('master_circuit.machine', $group->machine)
+                ->where('master_circuit.type', $group->type)
+                ->where('assy_schedule_circuit.is_printed', 0)
+                ->where('assy_schedule_circuit.cutoff', '<', $group->cutoff)
+                ->min('assy_schedule_circuit.cutoff');
+
+            if ($pendingCutoff !== null) {
+                return 'Kanban Cut Off ' . $group->cutoff . ' belum bisa diprint. '
+                    . 'Selesaikan print Cut Off ' . $pendingCutoff . ' terlebih dahulu.';
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Machines available for the filter dropdown, scoped by area and type.
+     * Read from master_circuit (not master_machine) so the list only offers
+     * machines that actually have circuits of the selected type in that area.
+     */
+    public function getMachineOptions($areaId, $type = null)
+    {
+        if (!$areaId) {
+            return collect([]);
+        }
+
+        $query = DB::table('master_circuit')
+            ->join('master_conveyor', 'master_circuit.conveyor_id', '=', 'master_conveyor.id')
+            ->whereNull('master_circuit.deleted_at')
+            ->where('master_conveyor.master_area_id', $areaId)
+            ->whereNotNull('master_circuit.machine')
+            ->where('master_circuit.machine', '!=', '');
+
+        if ($type && $type !== 'all') {
+            $query->where('master_circuit.type', $type);
+        }
+
+        return $query->select('master_circuit.machine')
+            ->distinct()
+            ->orderBy('master_circuit.machine')
+            ->pluck('machine');
+    }
+
+    /**
+     * Base query for the print history - same grouping as the print list but
+     * restricted to kanban that has actually been printed, plus the print
+     * metadata (when, by whom, how many times).
+     */
+    private function getPrintHistoryQuery()
+    {
+        return DB::table('assy_schedule_circuit')
+            ->join('assy_schedule', 'assy_schedule_circuit.assy_schedule_id', '=', 'assy_schedule.id')
+            ->join('master_conveyor', 'assy_schedule.conveyor_id', '=', 'master_conveyor.id')
+            ->join('master_circuit', 'assy_schedule_circuit.master_circuit_id', '=', 'master_circuit.id')
+            ->leftJoin('users', 'assy_schedule_circuit.last_printed_by', '=', 'users.id')
+            ->where('assy_schedule.is_lock', '!=', 0)
+            ->where('assy_schedule_circuit.is_printed', 1)
+            ->select([
+                'assy_schedule_circuit.assy_schedule_id',
+                'assy_schedule_circuit.master_circuit_id',
+                'master_circuit.type',
+                'master_circuit.shikake_code',
+                'master_circuit.cct_no',
+                'master_circuit.cct_code',
+                'master_circuit.to_store',
+                'master_circuit.machine',
+                'master_circuit.family',
+                'master_circuit.qty',
+                'master_conveyor.conveyor',
+                'master_circuit.sequence',
+                'assy_schedule.assy',
+                'assy_schedule.schedule as date',
+                'assy_schedule.shift',
+                DB::raw('MAX(assy_schedule_circuit.cutoff) as cutoff'),
+                DB::raw('GROUP_CONCAT(assy_schedule_circuit.barcode_kanban ORDER BY assy_schedule_circuit.issue SEPARATOR ", ") as barcodes'),
+                DB::raw('COUNT(*) as issue_count'),
+                DB::raw('MAX(assy_schedule_circuit.last_printed_at) as last_printed_at'),
+                DB::raw('MAX(assy_schedule_circuit.print_count) as print_count'),
+                DB::raw('MAX(users.name) as printed_by'),
+            ])
+            ->groupBy([
+                'assy_schedule_circuit.assy_schedule_id',
+                'assy_schedule_circuit.master_circuit_id',
+                'master_circuit.type',
+                'master_circuit.shikake_code',
+                'master_circuit.cct_no',
+                'master_circuit.cct_code',
+                'master_circuit.to_store',
+                'master_circuit.machine',
+                'master_circuit.family',
+                'master_circuit.qty',
+                'master_conveyor.conveyor',
+                'master_circuit.sequence',
+                'assy_schedule.assy',
+                'assy_schedule.schedule',
+                'assy_schedule.shift',
+            ]);
+    }
+
+    /**
+     * History filters - every filter is optional here (machine included). The
+     * date range always reads the actual print date, which is what the history
+     * screen is about.
+     */
+    private function applyHistoryFilters($query, Request $request)
+    {
+        if ($request->filled('machine') && $request->machine !== 'all') {
+            $query->where('master_circuit.machine', $request->machine);
+        }
+
+        if ($request->filled('type') && $request->type !== 'all') {
+            $query->where('master_circuit.type', $request->type);
+        }
+
+        if ($request->filled('area_id')) {
+            $query->where('master_conveyor.master_area_id', $request->area_id);
+        }
+
+        if ($request->filled('shift')) {
+            $query->where('assy_schedule.shift', $request->shift);
+        }
+
+        if ($request->filled('cutoff')) {
+            $query->where('assy_schedule_circuit.cutoff', $request->cutoff);
+        }
+
+        $dateStart = $request->input('date_start');
+        $dateEnd = $request->input('date_end', $dateStart);
+
+        if ($dateStart) {
+            $query->whereBetween('assy_schedule_circuit.last_printed_at', [
+                Carbon::parse($dateStart)->startOfDay(),
+                Carbon::parse($dateEnd)->endOfDay(),
+            ]);
+        }
+    }
+
+    /**
+     * Print history for DataTable
+     */
+    public function getPrintHistoryForTable(Request $request)
+    {
+        $query = $this->getPrintHistoryQuery();
+        $this->applyHistoryFilters($query, $request);
+
+        $countQuery = clone $query;
+        $totalRecords = DB::table(DB::raw("({$countQuery->toSql()}) as sub"))
+            ->mergeBindings($countQuery)
+            ->count();
+
+        if ($request->filled('search.value')) {
+            $escapedSearch = '%' . addcslashes($request->input('search.value'), '%_') . '%';
+            $query->havingRaw("(
+                cct_no LIKE ?
+                OR cct_code LIKE ?
+                OR to_store LIKE ?
+                OR machine LIKE ?
+                OR family LIKE ?
+                OR barcodes LIKE ?
+                OR shikake_code LIKE ?
+                OR printed_by LIKE ?
+            )", array_fill(0, 8, $escapedSearch));
+        }
+
+        $filteredQuery = clone $query;
+        $filteredRecords = DB::table(DB::raw("({$filteredQuery->toSql()}) as sub"))
+            ->mergeBindings($filteredQuery)
+            ->count();
+
+        $query->orderBy(DB::raw('MAX(assy_schedule_circuit.last_printed_at)'), 'desc')
+            ->orderBy('assy_schedule.shift', 'asc')
+            ->orderBy(DB::raw('MAX(assy_schedule_circuit.cutoff)'), 'asc');
+
+        $start = (int) $request->input('start', 0);
+        $length = (int) $request->input('length', 10);
+        $data = $length == -1 ? $query->get() : $query->skip($start)->take($length)->get();
+
+        $result = [];
+        foreach ($data as $index => $row) {
+            $result[] = $this->formatHistoryRow($row, $start + $index + 1);
+        }
+
+        return [
+            'draw' => intval($request->input('draw')),
+            'recordsTotal' => $totalRecords,
+            'recordsFiltered' => $filteredRecords,
+            'data' => $result,
+        ];
+    }
+
+    /**
+     * Full (unpaginated) history rows - used by the Excel export
+     */
+    public function getPrintHistoryRows(Request $request)
+    {
+        $query = $this->getPrintHistoryQuery();
+        $this->applyHistoryFilters($query, $request);
+
+        $rows = $query->orderBy(DB::raw('MAX(assy_schedule_circuit.last_printed_at)'), 'desc')->get();
+
+        return $rows->values()->map(function ($row, $index) {
+            return $this->formatHistoryRow($row, $index + 1);
+        });
+    }
+
+    /**
+     * Shape one history row for both the DataTable and the Excel export
+     */
+    private function formatHistoryRow($row, int $rowIndex): array
+    {
+        return [
+            'DT_RowIndex' => $rowIndex,
+            'group_id' => $row->assy_schedule_id . '-' . $row->master_circuit_id,
+            'type' => $row->type ?? 'CUTTING',
+            'cct_no' => $row->cct_no,
+            'cct_code' => $row->cct_code,
+            'shikake_code' => $row->shikake_code ?? '-',
+            'conveyor' => $row->conveyor,
+            'to_store' => $row->to_store ?? '-',
+            'family' => $row->family,
+            'qty' => $row->qty,
+            'issue_count' => $row->issue_count,
+            'sequence' => $row->sequence ?? '-',
+            'barcodes' => $row->barcodes ?? '-',
+            'machine' => $row->machine,
+            'date' => $row->date ? Carbon::parse($row->date)->format('d-m-Y') : '-',
+            'shift' => $row->shift,
+            'cutoff' => $row->cutoff,
+            'printed_at' => $row->last_printed_at
+                ? Carbon::parse($row->last_printed_at)->format('d-m-Y H:i')
+                : '-',
+            'printed_by' => $row->printed_by ?? '-',
+            'print_count' => $row->print_count ?? 0,
+        ];
     }
 }

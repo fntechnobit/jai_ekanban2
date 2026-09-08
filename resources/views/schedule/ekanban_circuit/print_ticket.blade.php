@@ -94,6 +94,10 @@
     padding: 2px;
 }
     .circuit-punch-strip {
+        /* Jarak 5mm antara tabel kanban dan lingkaran blok hitam.
+           box-sizing: border-box membuat lebar strip tetap 30mm,
+           lingkaran hanya bergeser 5mm ke kanan. */
+        padding-left: 5mm;
         width: 30mm;
         min-width: 30mm;
         flex-shrink: 0;
@@ -246,6 +250,7 @@
     }
 
     .circuit-punch-strip {
+        padding-left: 5mm;
         display: flex;
         width: 30mm;
         min-width: 30mm;
