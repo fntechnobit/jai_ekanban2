@@ -58,10 +58,24 @@ class MasterConveyorService
                 return '<span class="badge bg-secondary" title="Tidak ada lagi di SIREP' . e($sejak)
                     . '. Tidak ikut dijadwalkan maupun diverifikasi.">Nonaktif</span>';
             })
-            ->addColumn('shift_label', function ($row) {
-                $n = max(1, (int) $row->shift_qty);
+            ->addColumn('ot_label', function ($row) {
+                // Ambang pemecahan shift. Bila SIREP belum mengirimnya, dipakai
+                // normal_capacity — conveyor tetap terjadwal tetapi tanpa jatah lembur.
+                if (!$row->overtime_capacity) {
+                    if (!$row->capacity) {
+                        return '<span class="badge bg-danger" title="Kapasitas SIREP belum ada — conveyor ini dilewati saat generate">belum ada</span>';
+                    }
 
-                return '<span class="badge bg-light text-dark border">' . $n . ' Shift</span>';
+                    return '<span class="text-muted">' . number_format((int) $row->capacity) . '</span>'
+                        . '<br><small class="text-warning-emphasis" '
+                        . 'title="SIREP belum mengirim overtime_capacity. Sementara dipakai kapasitas normal, '
+                        . 'artinya conveyor ini dianggap tanpa jatah lembur.">pakai kapasitas normal</small>';
+                }
+
+                $selisih = (int) $row->overtime_capacity - (int) ($row->capacity ?? 0);
+
+                return '<span class="fw-semibold">' . number_format((int) $row->overtime_capacity) . '</span>'
+                    . '<br><small class="text-muted">CO5 = ' . number_format(max(0, $selisih)) . '</small>';
             })
             ->addColumn('capacity_label', function ($row) {
                 // Kapasitas milik SIREP: tampilkan apa adanya, termasuk saat belum pernah
@@ -93,7 +107,7 @@ class MasterConveyorService
                 $actions .= '</div>';
                 return $hasActions ? $actions : '-';
             })
-            ->rawColumns(['status_label', 'shift_label', 'capacity_label', 'synced_label', 'action'])
+            ->rawColumns(['status_label', 'ot_label', 'capacity_label', 'synced_label', 'action'])
             ->make(true);
     }
 

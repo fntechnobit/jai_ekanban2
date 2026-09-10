@@ -56,18 +56,6 @@
                         </div>
                         <div class="col-md-3">
                             <div class="mb-3">
-                                <label for="shift_qty">Jumlah Shift <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="shift_qty" name="shift_qty" required>
-                                    @for ($i = 1; $i <= \App\Services\Schedule\ShiftCapacityCalculator::MAX_SHIFT; $i++)
-                                        <option value="{{ $i }}">{{ $i }} Shift</option>
-                                    @endfor
-                                </select>
-                                <small class="text-muted">Kemampuan fisik line. Tidak dikirim SIREP.</small>
-                                <span class="text-danger error-text shift_qty_error"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
                                 <label for="pallet_qty">Pallet Qty.</label>
                                 <input type="number" class="form-control form-control-sm" id="pallet_qty" name="pallet_qty" min="1">
                                 <span class="text-danger error-text pallet_qty_error"></span>

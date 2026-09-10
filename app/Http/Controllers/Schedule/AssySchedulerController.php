@@ -95,7 +95,7 @@ class AssySchedulerController extends Controller
                     data-conveyor-name="' . ($schedule->conveyor ? $schedule->conveyor->conveyor : '') . '" 
                     data-date="' . $schedule->schedule->format('Y-m-d') . '" 
                     data-capacity="' . ($schedule->conveyor ? $schedule->conveyor->capacity : 0) . '" 
-                    data-max-shifts="' . ($schedule->conveyor ? (int) $schedule->conveyor->shift_qty : 1) . '">
+                    data-max-shifts="' . \App\Services\Schedule\ShiftCapacityCalculator::MAX_SHIFT . '">
                     <i class="ti ti-settings"></i> Manage
                 </button></div>';
                 
@@ -127,7 +127,7 @@ class AssySchedulerController extends Controller
             ->addSelect([
                 'mc.capacity AS cv_capacity',
                 'mc.overtime_capacity AS cv_overtime_capacity',
-                'mc.shift_qty AS cv_shift_qty',
+                'mc.overtime_capacity AS cv_overtime_capacity',
                 'mc.capacity_synced_at AS cv_capacity_synced_at',
                 'mc.is_active AS cv_is_active',
             ])
@@ -309,7 +309,10 @@ class AssySchedulerController extends Controller
             COUNT(DISTINCT DATE(assy_schedule.schedule)) AS jumlah_hari,
             SUM(CASE WHEN assy_schedule.is_lock = 1 THEN 1 ELSE 0 END) AS terverifikasi,
             SUM(CASE WHEN assy_schedule.cutoff = 5 THEN assy_schedule.qty ELSE 0 END) AS qty_co5,
-            SUM(CASE WHEN mc.capacity IS NULL OR mc.capacity <= 0 THEN 1 ELSE 0 END) AS tanpa_kapasitas
+            SUM(CASE WHEN mc.capacity IS NULL OR mc.capacity <= 0 THEN 1 ELSE 0 END) AS tanpa_kapasitas,
+            SUM(CASE WHEN mc.capacity > 0
+                      AND (mc.overtime_capacity IS NULL OR mc.overtime_capacity <= 0)
+                     THEN 1 ELSE 0 END) AS tanpa_ambang_ot
         ')->first();
 
         return response()->json(['success' => true, 'data' => $baris]);

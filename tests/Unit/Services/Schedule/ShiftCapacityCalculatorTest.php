@@ -5,196 +5,212 @@ namespace Tests\Unit\Services\Schedule;
 use App\Services\Schedule\ShiftCapacityCalculator;
 use Tests\TestCase;
 
+/**
+ * Aturan kapasitas versi API SIREP.
+ *
+ * Angka acuan sepanjang berkas ini memakai B3-EGI: normal 136, overtime 160,
+ * sehingga CO1-CO4 = 34 dan CO5 satu shift = 24.
+ */
 class ShiftCapacityCalculatorTest extends TestCase
 {
-    private ShiftCapacityCalculator $calculator;
+    private ShiftCapacityCalculator $calc;
+
+    private const NORMAL   = 136;
+    private const OVERTIME = 160;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->calculator = new ShiftCapacityCalculator();
+        $this->calc = new ShiftCapacityCalculator();
     }
 
     /**
-     * Isi kapasitas ke daftar slot berurutan, meniru cara ListingAllocator bekerja.
-     * Dipakai untuk menguji URUTAN pengisian, bukan sekadar besaran jatahnya.
+     * Jalankan satu hari penuh: tentukan shift, susun CO1-4, lalu jatah CO5.
      *
-     * @param  array<int, array{0:int,1:int,2:int}>  $slots  [shift, cutoff, jatah]
-     * @return array<string, int>                            "shift.cutoff" => terisi
+     * @return array{shift:int, caps:array<int, array<string,int>>}
      */
-    private function isi(array $slots, int $qty): array
+    private function jalankan(int $qty, int $normal = self::NORMAL, ?int $overtime = self::OVERTIME, array $lock = []): array
     {
-        $hasil = [];
+        $shift = $this->calc->resolveShiftCount($overtime, $qty);
+        $caps  = $this->calc->calculateShiftCapacities($normal, $lock, $shift);
+        $this->calc->preMapCutoff5($caps, $normal, $qty);
 
-        foreach ($slots as [$shift, $cutoff, $jatah]) {
-            $ambil = max(0, min($qty, $jatah));
-
-            if ($ambil > 0) {
-                $hasil["{$shift}.{$cutoff}"] = $ambil;
-                $qty -= $ambil;
-            }
-        }
-
-        return $hasil;
+        return ['shift' => $shift, 'caps' => $caps];
     }
 
-    /** Urutan pengisian resmi: CO1-4 semua shift dulu, baru CO5 shift demi shift. */
-    private function urutanSlot(array $caps): array
+    /** Jumlah seluruh cutoff pada seluruh shift — harus selalu sama dengan qty. */
+    private function totalTeralokasi(array $caps): int
     {
-        $slots = [];
-
-        foreach ($caps as $shift => $c) {
-            foreach ([1, 2, 3, 4] as $co) {
-                $slots[] = [$shift, $co, $c["c{$co}"]];
-            }
-        }
-
-        foreach ($caps as $shift => $c) {
-            $slots[] = [$shift, 5, $c['c5'] ?? 0];
-        }
-
-        return $slots;
+        return array_sum(array_map(
+            fn ($c) => $c['c1'] + $c['c2'] + $c['c3'] + $c['c4'] + $c['c5'],
+            $caps
+        ));
     }
 
-    /** Jalankan satu skenario penuh dan kembalikan isi tiap cutoff. */
-    private function jadwalkan(int $cap, int $qty, bool $lembur, int $shiftQtyMaster): array
-    {
-        $shifts = $this->calculator->resolveShiftCount($shiftQtyMaster);
-        $caps   = $this->calculator->calculateShiftCapacities($cap, [], $shifts);
-        $this->calculator->preMapCutoff5($caps, $cap, $qty, $lembur);
+    // ───────────────────────── pembagian cutoff ─────────────────────────
 
-        return [$shifts, $this->isi($this->urutanSlot($caps), $qty), $caps];
-    }
-
-    // ───────────── Pembagian CO1-CO4: sisa ke CO1 ─────────────
-
-    public function test_sisa_pembagian_masuk_ke_co1()
+    public function test_sisa_pembagian_masuk_ke_co1(): void
     {
         // 135 / 4 = 33 sisa 3 -> CO1 menampung 36
-        $d = $this->calculator->calculateCutoffDistribution(135);
-        $this->assertSame([36, 33, 33, 33], [$d['c1'], $d['c2'], $d['c3'], $d['c4']]);
-        $this->assertSame(135, array_sum([$d['c1'], $d['c2'], $d['c3'], $d['c4']]));
-
-        // 78 / 4 = 19 sisa 3 -> CO1 menampung 21
-        $d = $this->calculator->calculateCutoffDistribution(78);
-        $this->assertSame([21, 19, 19, 19], [$d['c1'], $d['c2'], $d['c3'], $d['c4']]);
-    }
-
-    public function test_kapasitas_habis_dibagi_empat_terbagi_rata()
-    {
-        $d = $this->calculator->calculateCutoffDistribution(136);
-        $this->assertSame([34, 34, 34, 34], [$d['c1'], $d['c2'], $d['c3'], $d['c4']]);
-    }
-
-    // ───────────── CO5 nominal ─────────────
-
-    public function test_co5_nominal_adalah_7_per_8_co_normal()
-    {
-        // 7/8 × (136/4) = 29.75 -> round = 30
-        $this->assertSame(30, $this->calculator->calculateCutoff5Capacity(136));
-        // 7/8 × (100/4) = 21.875 -> round = 22
-        $this->assertSame(22, $this->calculator->calculateCutoff5Capacity(100));
-    }
-
-    // ───────────── Jumlah shift dibaca dari master ─────────────
-
-    public function test_jumlah_shift_dibaca_dari_master()
-    {
-        $this->assertSame(1, $this->calculator->resolveShiftCount(1));
-        $this->assertSame(2, $this->calculator->resolveShiftCount(2));
-    }
-
-    public function test_jumlah_shift_dijepit_satu_sampai_dua()
-    {
-        $this->assertSame(1, $this->calculator->resolveShiftCount(0));
-        $this->assertSame(1, $this->calculator->resolveShiftCount(null));
-        $this->assertSame(2, $this->calculator->resolveShiftCount(3), 'Tidak ada shift 3');
-        $this->assertSame(2, ShiftCapacityCalculator::MAX_SHIFT);
-    }
-
-    public function test_config_tidak_bisa_menaikkan_batas_di_atas_dua()
-    {
-        config(['sirep.capacity.max_shift' => 5]);
-
-        $this->assertSame(2, $this->calculator->resolveShiftCount(5));
-    }
-
-    // ───────────── Tiga skenario acuan PPC (kapasitas 136) ─────────────
-
-    /** shift_qty 1, qty 160, lembur YA -> CO1-4 = 34, CO5 = 24. */
-    public function test_ppc_1_satu_shift_dengan_lembur()
-    {
-        [$shifts, $isi] = $this->jadwalkan(136, 160, true, 1);
-
-        $this->assertSame(1, $shifts);
-        $this->assertSame(['1.1' => 34, '1.2' => 34, '1.3' => 34, '1.4' => 34, '1.5' => 24], $isi);
-    }
-
-    /** shift_qty 2, qty 160, lembur TIDAK -> CO5 tertutup, sisa 24 ke CO1 shift 2. */
-    public function test_ppc_2_dua_shift_tanpa_lembur_mengalir_ke_shift_berikutnya()
-    {
-        [$shifts, $isi, $caps] = $this->jadwalkan(136, 160, false, 2);
-
-        $this->assertSame(2, $shifts);
-        $this->assertSame(['1.1' => 34, '1.2' => 34, '1.3' => 34, '1.4' => 34, '2.1' => 24], $isi);
-        $this->assertSame(0, $caps[1]['c5'], 'Tanpa lembur CO5 tidak boleh terbuka');
-        $this->assertSame(0, $caps[2]['c5'], 'Tanpa lembur CO5 tidak boleh terbuka');
-    }
-
-    /** shift_qty 2, qty 310, lembur YA -> S1.CO5 = 30 (dibatasi), S2.CO5 = 8 (sisa). */
-    public function test_ppc_3_dua_shift_dengan_lembur()
-    {
-        [$shifts, $isi, $caps] = $this->jadwalkan(136, 310, true, 2);
-
-        $this->assertSame(2, $shifts);
-        $this->assertSame(30, $caps[1]['c5'], 'CO5 shift 1 dibatasi nominal 7/8');
-        $this->assertSame(8, $caps[2]['c5'], 'Sisanya dibebankan ke CO5 shift 2');
-        $this->assertSame(310, array_sum($isi), 'Seluruh listing terjadwal');
         $this->assertSame(
-            ['1.1', '1.2', '1.3', '1.4', '2.1', '2.2', '2.3', '2.4', '1.5', '2.5'],
-            array_keys($isi),
-            'Urutan: CO1-4 kedua shift dulu, baru CO5 shift 1, lalu CO5 shift 2'
+            ['c1' => 36, 'c2' => 33, 'c3' => 33, 'c4' => 33, 'total' => 135],
+            $this->calc->calculateCutoffDistribution(135)
         );
     }
 
-    // ───────────── Perilaku lain ─────────────
-
-    public function test_satu_shift_tidak_pernah_menghasilkan_shift_dua()
+    public function test_kapasitas_habis_dibagi_empat_terbagi_rata(): void
     {
-        [$shifts, $isi, $caps] = $this->jadwalkan(136, 500, true, 1);
+        $d = $this->calc->calculateCutoffDistribution(136);
 
-        $this->assertSame(1, $shifts);
-        $this->assertArrayNotHasKey(2, $caps);
-        $this->assertSame(364, $caps[1]['c5'], 'CO5 shift terakhir menampung seluruh sisa');
-        $this->assertSame(500, array_sum($isi));
+        $this->assertSame([34, 34, 34, 34], [$d['c1'], $d['c2'], $d['c3'], $d['c4']]);
     }
 
-    public function test_tanpa_lembur_tetapi_seluruh_shift_penuh_ditampung_co5_terakhir()
-    {
-        // 2 x 136 = 272; sisa 28 tidak punya tempat lain selain CO5 shift terakhir.
-        [$shifts, $isi, $caps] = $this->jadwalkan(136, 300, false, 2);
+    // ───────────────────────── jumlah shift ─────────────────────────
 
-        $this->assertSame(2, $shifts);
-        $this->assertSame(0, $caps[1]['c5']);
-        $this->assertSame(28, $caps[2]['c5']);
-        $this->assertSame(300, array_sum($isi), 'Tidak ada listing yang hilang');
+    public function test_qty_sampai_ambang_tetap_satu_shift(): void
+    {
+        $this->assertSame(1, $this->calc->resolveShiftCount(self::OVERTIME, 159));
+        $this->assertSame(1, $this->calc->resolveShiftCount(self::OVERTIME, 160), 'Tepat di ambang belum pecah');
     }
 
-    public function test_muat_pas_tidak_membuka_co5()
+    public function test_qty_melebihi_ambang_jadi_dua_shift(): void
     {
-        [, , $caps] = $this->jadwalkan(136, 272, true, 2);
-
-        $this->assertSame(0, $caps[1]['c5']);
-        $this->assertSame(0, $caps[2]['c5']);
+        $this->assertSame(2, $this->calc->resolveShiftCount(self::OVERTIME, 161));
+        $this->assertSame(2, $this->calc->resolveShiftCount(self::OVERTIME, 1000), 'Tidak pernah lebih dari dua');
     }
 
-    public function test_shift_terkunci_dinolkan_dan_co5_jatuh_ke_shift_tersisa()
+    public function test_tanpa_ambang_tidak_pecah_shift(): void
     {
-        $caps = $this->calculator->calculateShiftCapacities(100, [2 => true], 2);
-        $this->calculator->preMapCutoff5($caps, 100, 140, true);
+        // Pemanggil wajib melewati conveyor seperti ini; nilainya hanya pengaman.
+        $this->assertSame(1, $this->calc->resolveShiftCount(null, 9999));
+        $this->assertSame(1, $this->calc->resolveShiftCount(0, 9999));
+    }
 
-        $this->assertTrue($caps[2]['locked']);
-        $this->assertSame(0, $caps[2]['total']);
-        $this->assertSame(40, $caps[1]['c5']);
+    // ───────────────────────── kapasitas CO5 ─────────────────────────
+
+    public function test_co5_satu_shift_mengikuti_data_sirep(): void
+    {
+        $this->assertSame(24, $this->calc->cutoff5ForSingleShift(136, 160));
+        $this->assertSame(18, $this->calc->cutoff5ForSingleShift(78, 96), 'B3-ENG');
+    }
+
+    public function test_co5_shift_pertama_dua_shift_memakai_tujuh_perdelapan(): void
+    {
+        // 7/8 x (136/4) = 29,75 -> 30
+        $this->assertSame(30, $this->calc->calculateCutoff5Capacity(136));
+    }
+
+    public function test_nominal_co5_berbeda_antara_satu_dan_dua_shift(): void
+    {
+        $this->assertSame(24, $this->calc->cutoff5Nominal(136, 160, 1));
+        $this->assertSame(30, $this->calc->cutoff5Nominal(136, 160, 2));
+    }
+
+    public function test_kapasitas_nominal_hari(): void
+    {
+        $this->assertSame(160, $this->calc->nominalDayCapacity(136, 160, 1), 'Satu shift = overtime_capacity');
+        $this->assertSame(302, $this->calc->nominalDayCapacity(136, 160, 2), '2 x 136 + 30');
+    }
+
+    // ─────────────── skenario acuan PPC ───────────────
+
+    /** qty 160 tepat di ambang -> 1 shift, CO1-4 = 34, CO5 = 24. */
+    public function test_acuan_ppc_satu_shift(): void
+    {
+        $h = $this->jalankan(160);
+
+        $this->assertSame(1, $h['shift']);
+        $this->assertSame([34, 34, 34, 34], array_map(
+            fn ($k) => $h['caps'][1][$k],
+            ['c1', 'c2', 'c3', 'c4']
+        ));
+        $this->assertSame(24, $h['caps'][1]['c5']);
+        $this->assertSame(160, $this->totalTeralokasi($h['caps']));
+    }
+
+    /** qty 310 -> 2 shift, S1.CO5 dibatasi 30, S2.CO5 menampung sisa 8. */
+    public function test_acuan_ppc_dua_shift(): void
+    {
+        $h = $this->jalankan(310);
+
+        $this->assertSame(2, $h['shift']);
+        $this->assertSame(30, $h['caps'][1]['c5'], 'Shift pertama dibatasi 7/8');
+        $this->assertSame(8, $h['caps'][2]['c5'], 'Shift terakhir menampung sisa');
+        $this->assertSame(310, $this->totalTeralokasi($h['caps']));
+    }
+
+    // ───────────────────────── perilaku lain ─────────────────────────
+
+    public function test_qty_muat_di_kapasitas_normal_tidak_membuka_co5(): void
+    {
+        $h = $this->jalankan(136);
+
+        $this->assertSame(1, $h['shift']);
+        $this->assertSame(0, $h['caps'][1]['c5']);
+    }
+
+    public function test_seluruh_listing_selalu_terjadwal_walau_melampaui_dua_shift(): void
+    {
+        // 2 x 136 + 30 = 302 nominal; 500 jauh di atas itu.
+        $h = $this->jalankan(500);
+
+        $this->assertSame(2, $h['shift']);
+        $this->assertSame(30, $h['caps'][1]['c5']);
+        $this->assertSame(500 - 272 - 30, $h['caps'][2]['c5'], 'Shift terakhir penampung');
+        $this->assertSame(500, $this->totalTeralokasi($h['caps']), 'Tidak ada listing yang hilang');
+    }
+
+    public function test_shift_terkunci_tidak_ikut_dialokasi(): void
+    {
+        $h = $this->jalankan(310, lock: [2 => true]);
+
+        $this->assertSame(0, $h['caps'][2]['total'], 'Shift terkunci tetap nol');
+        $this->assertTrue($h['caps'][2]['locked']);
+        // Shift 1 jadi satu-satunya yang tidak terkunci, sehingga CO5-nya penampung.
+        $this->assertSame(310 - 136, $h['caps'][1]['c5']);
+    }
+
+    // ───────────────────────── ambang cadangan ─────────────────────────
+
+    public function test_ambang_memakai_overtime_capacity_bila_ada(): void
+    {
+        $this->assertSame(160, $this->calc->effectiveOvertimeCapacity(136, 160));
+        $this->assertFalse($this->calc->overtimeCapacityIsFallback(160));
+    }
+
+    public function test_ambang_jatuh_ke_normal_capacity_bila_belum_ada(): void
+    {
+        $this->assertSame(136, $this->calc->effectiveOvertimeCapacity(136, null));
+        $this->assertSame(136, $this->calc->effectiveOvertimeCapacity(136, 0));
+        $this->assertTrue($this->calc->overtimeCapacityIsFallback(null));
+    }
+
+    /**
+     * Conveyor tanpa jatah lembur: hari yang melampaui kapasitas normal pecah jadi
+     * dua shift, bukan menumpuk di CO5 satu shift.
+     *
+     * Kasus nyata B1-J42U: kapasitas 160, listing 720. Dipaksa satu shift, CO5-nya
+     * menampung 560 unit — 14x cutoff normal.
+     */
+    public function test_tanpa_jatah_lembur_beban_pecah_ke_dua_shift(): void
+    {
+        $ambang = $this->calc->effectiveOvertimeCapacity(160, null);
+        $h = $this->jalankan(720, normal: 160, overtime: $ambang);
+
+        $this->assertSame(2, $h['shift']);
+        // CO1-4 dua shift = 320, sisa 400. CO5 shift 1 dibatasi 7/8 x 40 = 35,
+        // sisanya 365 jatuh ke CO5 shift terakhir sebagai penampung.
+        $this->assertSame(35, $h['caps'][1]['c5'], 'Shift pertama tetap dibatasi 7/8');
+        $this->assertSame(365, $h['caps'][2]['c5'], 'Hari 720 unit memang melampaui rencana');
+        $this->assertSame(720, $this->totalTeralokasi($h['caps']), 'Tidak ada listing yang hilang');
+    }
+
+    public function test_tanpa_jatah_lembur_hari_yang_muat_tetap_satu_shift(): void
+    {
+        $ambang = $this->calc->effectiveOvertimeCapacity(140, null);
+        $h = $this->jalankan(126, normal: 140, overtime: $ambang);
+
+        $this->assertSame(1, $h['shift'], 'C4: listing tidak pernah melampaui kapasitas');
+        $this->assertSame(0, $h['caps'][1]['c5']);
     }
 }

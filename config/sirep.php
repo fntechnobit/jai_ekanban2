@@ -24,6 +24,11 @@ return [
     'api' => [
         'base_url'    => env('SIREP_API_BASE_URL', 'http://10.62.230.51/sirep-backend/public/api/shared'),
         'timeout'     => (int) env('SIREP_API_TIMEOUT', 30),
+
+        // Batas fase koneksi saja. Tanpa ini, host SIREP yang mati membuat setiap
+        // permintaan menunggu sampai `timeout` penuh lalu diulang `retry` kali —
+        // satu generate bisa habis puluhan detik hanya untuk gagal.
+        'connect_timeout' => (int) env('SIREP_API_CONNECT_TIMEOUT', 5),
         'retry'       => (int) env('SIREP_API_RETRY', 3),
         'retry_delay' => (int) env('SIREP_API_RETRY_DELAY', 1000), // milidetik
         'token'       => env('SIREP_API_TOKEN'),                   // kosong = API tanpa autentikasi
@@ -70,53 +75,58 @@ return [
     | Kapasitas & jumlah shift
     |--------------------------------------------------------------------------
     |
-    | Aturan dari tim PPC (dikonfirmasi lewat 3 contoh kasus, cap 136):
+    | Seluruh angka berasal dari API SIREP. Master conveyor tidak menyimpan
+    | kapasitas maupun jumlah shift.
     |
-    |   normal_capacity dari API = kapasitas conveyor untuk SATU shift.
-    |   CO1 = kapasitas - 3 x floor(kapasitas/4)  (menampung terbesar)
-    |   CO2-CO4 = floor(kapasitas/4)
-    |   CO5 nominal = round(7/8 × kapasitas/4)  — maksimum CO5 adalah 87,5% CO normal.
+    |   normal_capacity    kapasitas satu shift tanpa lembur
+    |   overtime_capacity  kapasitas satu shift dengan lembur, sekaligus AMBANG
+    |                      pemecahan shift
     |
-    |   JUMLAH SHIFT adalah data master (master_conveyor.shift_qty), BUKAN hasil
-    |   hitungan. Alokasi selalu mulai dari shift 1; shift 2 hanya dipakai bila
-    |   conveyor itu memang dua shift.
+    | Pembagian cutoff
+    |   CO1     = normal_capacity - 3 x floor(normal_capacity/4)   (menampung terbesar)
+    |   CO2-CO4 = floor(normal_capacity/4)
     |
-    |   is_overtime menentukan boleh atau tidaknya CO5 dibuka:
-    |     is_overtime = true   -> CO5 tersedia
-    |     is_overtime = false  -> CO5 tertutup, kelebihan mengalir ke CO1 shift berikutnya
+    | Jumlah shift
+    |   qty listing harian > overtime_capacity  ->  2 shift
+    |   selain itu                              ->  1 shift
     |
-    |   Urutan pengisian
-    |     1 shift : S1.CO1 -> S1.CO2 -> S1.CO3 -> S1.CO4 -> S1.CO5
-    |     2 shift : S1.CO1..CO4 -> S2.CO1..CO4 -> S1.CO5 (<= 7/8) -> S2.CO5 (sisa semua)
+    | Kapasitas CO5
+    |   1 shift : overtime_capacity - normal_capacity  (dari data SIREP)
+    |   2 shift : shift pertama dibatasi 7/8 CO normal,
+    |             shift terakhir menampung seluruh sisa
     |
-    |   Bila listing tetap tidak muat walau seluruh shift penuh dan hari itu tidak
-    |   lembur, CO5 shift terakhir tetap menampung sisanya supaya tidak ada listing
-    |   yang hilang; layar verifikasi menandainya "over tanpa OT".
+    | Satu shift menampung tepat overtime_capacity, sehingga ambang pemecahan shift
+    | dan kapasitas yang tersedia benar-benar berimpit — tidak ada qty yang jatuh di
+    | celah antara keduanya.
     |
-    | Contoh acuan dari PPC (kapasitas 136 -> CO1-4 = 34, CO5 nominal = 30):
-    |   shift_qty 1, qty 160, overtime ya    -> S1 CO1-4 34 · CO5 24
-    |   shift_qty 2, qty 160, overtime tidak -> S1 CO1-4 34 · S2 CO1 24
-    |   shift_qty 2, qty 310, overtime ya    -> S1 CO1-4 34 + CO5 30 · S2 CO1-4 34 + CO5 8
+    | Urutan pengisian
+    |   1 shift : S1.CO1 -> S1.CO2 -> S1.CO3 -> S1.CO4 -> S1.CO5
+    |   2 shift : S1.CO1..CO4 -> S2.CO1..CO4 -> S1.CO5 (<= 7/8) -> S2.CO5 (sisa semua)
+    |
+    | PENANDA is_overtime TIDAK DIPAKAI untuk keputusan apa pun.
+    |   Ia ditetapkan PPC mendekati hari produksi. Pada data 10 Sep 2026: baris yang
+    |   ditarik pada hari-H bernilai 1 sebanyak 33,5%, sedangkan yang ditarik 4-8 hari
+    |   di muka hanya 4,5%-13,8%. Contoh paling tajam C1: 28/28 pada tarikan hari-H
+    |   versus 0/17 pada tarikan maju. Jadi nilai 0 pada tanggal ke depan berarti
+    |   "belum ditetapkan", bukan "tidak lembur" — memakainya membuat hasil generate
+    |   berubah tergantung kapan dijalankan. Nilainya tetap disimpan dan ditampilkan
+    |   sebagai keterangan.
+    |
+    | Conveyor tanpa normal_capacity ATAU tanpa overtime_capacity DILEWATI saat
+    | generate, dengan pesan jelas, sampai PPC melengkapinya di SIREP.
+    |
+    | Contoh acuan dari PPC (normal 136, overtime 160 -> CO1-CO4 = 34):
+    |   qty 160  ->  1 shift: CO1-4 34 · CO5 = 160-136 = 24
+    |   qty 310  ->  2 shift: S1 CO1-4 34 + CO5 30 · S2 CO1-4 34 + CO5 8
     |
     */
     'capacity' => [
-        // Batas atas nilai master_conveyor.shift_qty — bukan penentu jumlah shift,
-        // karena jumlah shift ditetapkan per conveyor di master.
-        //
-        // Tidak ada shift 3 di lapangan, jadi 2 juga dijepit sebagai batas keras di
-        // ShiftCapacityCalculator::MAX_SHIFT. Nilai di sini hanya boleh menurunkannya.
-        'max_shift' => (int) env('SIREP_MAX_SHIFT', 2),
-
-        // Batas CO5 sebagai rasio terhadap CO normal (kapasitas/4).
-        // Aturan PPC: 7/8 = 87,5%. Cocok dengan contoh acuan di atas —
-        // kapasitas 136 -> round(0.875 × 34) = round(29.75) = 30.
+        // Batas CO5 shift pertama pada hari DUA shift, sebagai rasio terhadap
+        // CO normal. Aturan PPC: 7/8 = 87,5%. Untuk hari SATU shift batas ini tidak
+        // dipakai — yang berlaku adalah overtime_capacity dari SIREP.
         'co5_ratio' => (float) env('SIREP_CO5_RATIO', 7 / 8),
 
-        // Pembulatan nominal CO5: 'round' atau 'floor'.
-        //
-        // CATATAN: `overtime_capacity` dari API SIREP TIDAK dipakai sebagai batas CO5.
-        // Untuk kapasitas 136 SIREP mengirim 160 (setara CO5 = 24), sedangkan aturan
-        // PPC memberi CO5 nominal 30. Field itu hanya informatif.
+        // Pembulatan nominal CO5 dua shift: 'round' atau 'floor'.
         'co5_rounding' => env('SIREP_CO5_ROUNDING', 'round'),
     ],
 

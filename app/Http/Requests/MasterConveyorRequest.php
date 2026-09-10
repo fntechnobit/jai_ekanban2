@@ -27,7 +27,6 @@ class MasterConveyorRequest extends FormRequest
             // parameter lokal yang tidak dikirim API, termasuk jumlah shift.
             'master_area_id' => ['nullable', 'exists:master_area,id'],
             'sirep_conveyor_code' => ['nullable', 'string', 'max:50'],
-            'shift_qty' => ['required', 'integer', 'min:1', 'max:' . \App\Services\Schedule\ShiftCapacityCalculator::MAX_SHIFT],
             'pallet_qty' => ['nullable', 'integer', 'min:1'],
             'family_ids' => ['nullable', 'array'],
             'family_ids.*' => ['exists:master_family,id'],
@@ -42,7 +41,6 @@ class MasterConveyorRequest extends FormRequest
         return [
             'master_area_id' => 'Area',
             'sirep_conveyor_code' => 'Kode Conveyor SIREP',
-            'shift_qty' => 'Jumlah Shift',
             'pallet_qty' => 'Pallet Qty',
             'family_ids' => 'Family',
         ];

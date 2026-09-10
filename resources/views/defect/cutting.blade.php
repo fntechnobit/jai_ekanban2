@@ -189,7 +189,7 @@
                         <select class="form-select select2" id="import_sto_conveyor_id" style="width: 100%;" required>
                             <option value="">- Choose Conveyor -</option>
                             @foreach($conveyors as $conveyor)
-                                <option value="{{ $conveyor->id }}" data-shift-qty="{{ $conveyor->shift_qty }}">{{ $conveyor->conveyor }}</option>
+                                <option value="{{ $conveyor->id }}" data-shift-qty="{{ \App\Services\Schedule\ShiftCapacityCalculator::MAX_SHIFT }}">{{ $conveyor->conveyor }}</option>
                             @endforeach
                         </select>
                         <small class="form-text text-danger" id="import_sto_conveyor_id_error"></small>
@@ -652,7 +652,7 @@ $(function () {
             updatePreviewButtonState();
         });
 
-        // Build shift options from the selected conveyor's shift_qty
+        // Build shift options from the fixed shift limit (shift is no longer per conveyor)
         function buildShiftOptions() {
             var shiftQty = parseInt($('#import_sto_conveyor_id').find(':selected').data('shift-qty')) || 1;
             var shiftSelect = $('#import_sto_shift');

@@ -51,7 +51,7 @@ class ScheduleVerificationService
             // Conveyor yang sudah tidak ada di SIREP tidak lagi muncul untuk diverifikasi.
             ->where('mc.is_active', 1)
             ->whereRaw('DATE(a.schedule) BETWEEN ? AND ?', [$start->format('Y-m-d'), $end->format('Y-m-d')])
-            ->select('mc.id AS conveyor_id', 'mc.conveyor AS conveyor_name', 'mc.capacity', 'mc.shift_qty',
+            ->select('mc.id AS conveyor_id', 'mc.conveyor AS conveyor_name', 'mc.capacity', 'mc.overtime_capacity',
                 'mc.overtime_capacity', 'mc.capacity_synced_at')
             ->distinct();
 
@@ -76,9 +76,18 @@ class ScheduleVerificationService
         }
 
         // Index actual data by "date|conveyor_id|shift" for O(1) lookup.
+        // $shiftMap mencatat shift mana saja yang benar-benar terbentuk pada tiap
+        // tanggal x conveyor — inilah sumber jumlah shift sejak ia tidak lagi disimpan.
         $assyData = [];
+        $shiftMap = [];
         foreach ($assyQuery->get() as $row) {
             $assyData[$row->schedule_date . '|' . $row->conveyor_id . '|' . $row->shift] = $row;
+            $shiftMap[$row->schedule_date . '|' . $row->conveyor_id][] = (int) $row->shift;
+        }
+        foreach ($shiftMap as $k => $daftar) {
+            $daftar = array_values(array_unique($daftar));
+            sort($daftar);
+            $shiftMap[$k] = $daftar;
         }
 
         // --- Step 3b: Get raw SIREP listing demand per date×conveyor from listing_stage ---
@@ -129,13 +138,19 @@ class ScheduleVerificationService
             $dateStr = $current->format('Y-m-d');
 
             foreach ($activeConveyors as $conv) {
-                // Shift berasal dari master (shift_qty), bukan dari jadwal yang terbentuk.
-                // Shift yang direncanakan tetapi hari itu kosong sengaja tetap muncul
-                // sebagai "No Data" — operator perlu melihat bahwa shift itu ada dalam
-                // rencana namun belum terisi.
-                $shiftQty   = $this->capacityCalculator->resolveShiftCount($conv->shift_qty);
-                $shiftsHere = range(1, $shiftQty);
-                $lastShift  = $shiftQty;
+                // Jumlah shift tidak lagi tersimpan di master — ia turunan dari qty
+                // listing terhadap overtime_capacity, jadi baru diketahui setelah jadwal
+                // dibentuk. Yang ditampilkan adalah shift yang benar-benar ada.
+                $shiftsHere = $shiftMap[$dateStr . '|' . $conv->conveyor_id] ?? [];
+
+                // Tanggal tanpa jadwal sama sekali tetap muncul satu baris agar celah
+                // penjadwalan tetap terlihat, bukan hilang diam-diam dari layar.
+                if (empty($shiftsHere)) {
+                    $shiftsHere = [1];
+                }
+
+                $shiftQty  = count($shiftsHere);
+                $lastShift = max($shiftsHere);
 
                 // Total qty actually scheduled (capped) for this date×conveyor across all shifts
                 $scheduledAll = 0;
@@ -151,7 +166,12 @@ class ScheduleVerificationService
                 $dayOvertime = $sirepInfo ? (bool) $sirepInfo->is_overtime : false;
 
                 $capacity   = (int) $conv->capacity;
-                $co5Nominal = $this->capacityCalculator->calculateCutoff5Capacity($capacity);
+                $ambangEfektif = $this->capacityCalculator->effectiveOvertimeCapacity(
+                    $capacity, $conv->overtime_capacity
+                );
+                $co5Nominal = $this->capacityCalculator->cutoff5Nominal(
+                    $capacity, $ambangEfektif, $shiftQty
+                );
                 // Ambang nominal harus ikut penanda lembur SIREP. Tanpa lembur CO5 tidak
                 // tersedia, jadi kapasitas nominal hari itu hanya shift × kapasitas —
                 // memakai ambang bershift-CO5 akan menyembunyikan hari yang sebenarnya over.
@@ -258,7 +278,7 @@ class ScheduleVerificationService
         return [
             'capacity'            => $capacity ?: null,
             'overtime_capacity'   => $conveyor->overtime_capacity ? (int) $conveyor->overtime_capacity : null,
-            'co5_nominal'         => $capacity > 0 ? $this->capacityCalculator->calculateCutoff5Capacity($capacity) : null,
+            'co5_nominal'         => $capacity > 0 ? (int) $cutOff5Capacity : null,
             'capacity_synced_at'  => $conveyor->capacity_synced_at?->format('d M Y H:i'),
             'capacity_is_synced'  => $conveyor->hasSyncedCapacity() && $conveyor->capacity_synced_at !== null,
             'sirep_code'          => $conveyor->sirepName(),
@@ -344,9 +364,22 @@ class ScheduleVerificationService
         // CO5 nominal = 7/8 CO normal, sama pada setiap shift. CO5 shift TERAKHIR
         // adalah penampung dan boleh melampauinya (Used > Cap -> "over").
         // Jumlah shift dibaca dari master, bukan dari jadwal yang terbentuk.
-        $shiftQty  = $this->capacityCalculator->resolveShiftCount($conveyor->shift_qty);
-        $lastShift = $shiftQty;
-        $cutOff5Capacity = (float) $this->capacityCalculator->calculateCutoff5Capacity($capacity);
+        $shiftsOnDate = AssySchedule::where('conveyor_id', $conveyorId)
+            ->whereDate('schedule', $date)
+            ->distinct()
+            ->pluck('shift')
+            ->map(fn ($x) => (int) $x)
+            ->sort()
+            ->values();
+
+        $shiftQty  = max(1, $shiftsOnDate->count());
+        $lastShift = (int) ($shiftsOnDate->last() ?? $shift);
+        $ambangEfektif   = $this->capacityCalculator->effectiveOvertimeCapacity(
+            $capacity, $conveyor->overtime_capacity
+        );
+        $cutOff5Capacity = (float) $this->capacityCalculator->cutoff5Nominal(
+            $capacity, $ambangEfektif, $shiftQty
+        );
 
         $scheduledAll = (int) AssySchedule::where('conveyor_id', $conveyorId)
             ->whereDate('schedule', $date)
@@ -360,7 +393,7 @@ class ScheduleVerificationService
             $sirepMeta = [
                 'capacity'            => $capacity ?: null,
                 'overtime_capacity'   => $conveyor->overtime_capacity ? (int) $conveyor->overtime_capacity : null,
-                'co5_nominal'         => $capacity > 0 ? $this->capacityCalculator->calculateCutoff5Capacity($capacity) : null,
+                'co5_nominal'         => $capacity > 0 ? (int) $cutOff5Capacity : null,
                 'capacity_synced_at'  => $conveyor->capacity_synced_at?->format('d M Y H:i'),
                 'capacity_is_synced'  => $conveyor->hasSyncedCapacity() && $conveyor->capacity_synced_at !== null,
                 'sirep_code'          => $conveyor->sirepName(),
@@ -1230,8 +1263,13 @@ class ScheduleVerificationService
                     // Jumlah shift yang berjalan ditentukan dari demand PENUH hari itu —
                     // sama seperti engine generate. Memakai sisa setelah pengurangan akan
                     // menyusutkan hari 2-shift jadi 1 shift dan shift target tak pernah dibangun.
-                    $sirepOvertime = (bool) $listings->contains(fn ($l) => (bool) ($l->is_overtime ?? false));
-                    $maxShifts     = $this->capacityCalculator->resolveShiftCount($conveyor->shift_qty);
+                    $maxShifts     = $this->capacityCalculator->resolveShiftCount(
+                        $this->capacityCalculator->effectiveOvertimeCapacity(
+                            (int) $conveyor->capacity,
+                            $conveyor->overtime_capacity
+                        ),
+                        (int) $listings->sum('qty')
+                    );
 
                     // Hanya shift ini yang dihapus; shift lain masih memegang bagiannya,
                     // jadi demand itu tidak boleh dialokasikan untuk kedua kalinya.
@@ -1256,7 +1294,7 @@ class ScheduleVerificationService
                         // terkunci, jadi CO5-nya berperan catch-all — sisa demand tidak terbuang.
                         $targetCaps = [$shift => $shiftCapacities[$shift]];
                         $this->capacityCalculator->preMapCutoff5(
-                            $targetCaps, (int) $conveyor->capacity, $remainingQty, $sirepOvertime
+                            $targetCaps, (int) $conveyor->capacity, $remainingQty
                         );
 
                         // Allocate to shift (CO1-4 then CO5)
