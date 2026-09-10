@@ -17,7 +17,7 @@
     </button>
     @if(!$canPrint)
     <button type="button" class="btn btn-soft-secondary" disabled
-            title="Cut Off {{ $row->cutoff }} terkunci - selesaikan print Cut Off {{ $maxPrintableCutoff }} terlebih dahulu"
+            title="Cut Off {{ $row->cutoff }} terkunci - selesaikan print Cut Off 1 dan Cut Off 2 terlebih dahulu"
             style="padding: 0.55rem 1rem; font-size: 1rem;">
         <i class="fa-solid fa-lock"></i>
     </button>

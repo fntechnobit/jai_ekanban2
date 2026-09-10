@@ -428,6 +428,13 @@ class EkanbanShikakeService
     public const MAX_CUTOFF = 5;
 
     /**
+     * Cut off terakhir yang selalu boleh diprint. CO1 dan CO2 adalah gerbangnya:
+     * selama masih ada kanban CO1/CO2 yang belum diprint, CO3 ke atas terkunci.
+     * Begitu keduanya selesai, CO3, CO4, dan CO5 terbuka sekaligus.
+     */
+    public const GATE_CUTOFF = 2;
+
+    /**
      * The print list needs machine, process, and shift before it shows anything.
      * Process drives the machine dropdown and shift scopes the progressive print
      * rule, so a partial filter set would produce a misleading list.
@@ -470,11 +477,10 @@ class EkanbanShikakeService
     }
 
     /**
-     * Progressive print rule: a cut off can only be printed once every earlier
-     * cut off in the same scope (machine + process + area + date + shift) has
-     * been fully printed. The lowest cut off that still has an unprinted kanban
-     * is therefore the highest one currently printable; when nothing is pending
-     * all cut offs are unlocked (admin reprint).
+     * Progressive print rule: CO1 and CO2 are always printable. CO3 and above
+     * only unlock once every CO1/CO2 kanban in the same scope
+     * (machine + process + area + date + shift) has been printed - and then
+     * they unlock together, not one cut off at a time.
      */
     public function getMaxPrintableCutoff(Request $request): int
     {
@@ -484,13 +490,13 @@ class EkanbanShikakeService
             ->join('master_shikake', 'assy_schedule_shikake.master_shikake_id', '=', 'master_shikake.id')
             ->where('assy_schedule.is_lock', '!=', 0)
             ->whereNull('master_shikake.deleted_at')
-            ->where('assy_schedule_shikake.is_printed', 0);
+            ->where('assy_schedule_shikake.is_printed', 0)
+            ->where('assy_schedule_shikake.cutoff', '<=', self::GATE_CUTOFF);
 
         $this->applyScopeFilters($query, $request);
 
-        $firstPending = $query->min('assy_schedule_shikake.cutoff');
-
-        return $firstPending === null ? self::MAX_CUTOFF : (int) $firstPending;
+        // Satu saja kanban CO1/CO2 yang belum diprint sudah menahan CO3 ke atas.
+        return $query->exists() ? self::GATE_CUTOFF : self::MAX_CUTOFF;
     }
 
     /**
@@ -525,6 +531,11 @@ class EkanbanShikakeService
                 continue;
             }
 
+            // CO1 dan CO2 tidak pernah terkunci.
+            if ((int) $group->cutoff <= self::GATE_CUTOFF) {
+                continue;
+            }
+
             $pendingCutoff = DB::table('assy_schedule_shikake')
                 ->join('assy_schedule', 'assy_schedule_shikake.assy_schedule_id', '=', 'assy_schedule.id')
                 ->join('master_shikake', 'assy_schedule_shikake.master_shikake_id', '=', 'master_shikake.id')
@@ -535,12 +546,12 @@ class EkanbanShikakeService
                 ->where('master_shikake.machine', $group->machine)
                 ->where('master_shikake.process', $group->process)
                 ->where('assy_schedule_shikake.is_printed', 0)
-                ->where('assy_schedule_shikake.cutoff', '<', $group->cutoff)
+                ->where('assy_schedule_shikake.cutoff', '<=', self::GATE_CUTOFF)
                 ->min('assy_schedule_shikake.cutoff');
 
             if ($pendingCutoff !== null) {
                 return 'Kanban Cut Off ' . $group->cutoff . ' belum bisa diprint. '
-                    . 'Selesaikan print Cut Off ' . $pendingCutoff . ' terlebih dahulu.';
+                    . 'Selesaikan print Cut Off 1 dan Cut Off 2 terlebih dahulu.';
             }
         }
 

@@ -92,8 +92,7 @@
                             </div>
                             <div class="col-md-3">
                                 <select class="form-select form-select-sm select2" id="filter_shift" required>
-                                    <option value="">- Choose Shift -</option>
-                                    <option value="1">Shift 1</option>
+                                    <option value="1" selected>Shift 1</option>
                                     <option value="2">Shift 2</option>
                                 </select>
                             </div>
@@ -117,10 +116,10 @@
 
                     <div class="alert alert-light border small py-2 mb-3">
                         <i class="fa-solid fa-circle-info text-primary me-1"></i>
-                        <strong>Process</strong>, <strong>Area</strong>, <strong>Machine</strong>, dan <strong>Shift</strong> wajib dipilih.
+                        <strong>Process</strong>, <strong>Area</strong>, dan <strong>Machine</strong> wajib dipilih.
                         Pilihan Process &amp; Area menentukan daftar Machine.
-                        Print dibuka bertahap per Cut Off: tombol Print pada Cut Off berikutnya baru muncul
-                        setelah seluruh kanban Cut Off sebelumnya selesai diprint.
+                        Cut Off 1 dan Cut Off 2 selalu bisa diprint; tombol Print pada
+                        <strong>Cut Off 3, 4, dan 5</strong> baru muncul setelah seluruh kanban Cut Off 1 &amp; 2 selesai diprint.
                     </div>
 
                     <div class="table-responsive">
@@ -434,19 +433,42 @@
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
             });
 
-            // Machine, process, and shift are mandatory - the table stays empty
-            // until all three are chosen
-            function hasRequiredFilters() {
-                return !!$('#filter_machine').val()
-                    && !!$('#filter_process').val()
-                    && !!$('#filter_shift').val();
+            // Process, Area, and Machine are mandatory (Shift defaults to 1).
+            // While one is missing the list is empty on purpose, so name it
+            // instead of leaving the bare "No data available" message - an empty
+            // list otherwise reads as "there is no kanban" rather than "pick a filter".
+            function missingFilters() {
+                var missing = [];
+                if (!$('#filter_process').val()) missing.push('Process');
+                if (!$('#filter_area').val()) missing.push('Area');
+                if (!$('#filter_machine').val()) missing.push('Machine');
+                if (!$('#filter_shift').val()) missing.push('Shift');
+                return missing;
+            }
+
+            function setTableMessage(html) {
+                // DataTables renders sEmptyTable / sZeroRecords for an empty draw,
+                // so swapping them beats writing into <tbody> - a server-side draw
+                // would overwrite our own markup as soon as it responds.
+                var settings = table.settings()[0];
+                settings.oLanguage.sEmptyTable = html;
+                settings.oLanguage.sZeroRecords = html;
             }
 
             function reloadTable(resetPaging) {
-                if (!hasRequiredFilters()) {
+                var missing = missingFilters();
+
+                if (missing.length) {
+                    setTableMessage(
+                        '<i class="fa-solid fa-filter me-1"></i> Pilih <strong>' +
+                        missing.join('</strong>, <strong>') +
+                        '</strong> terlebih dahulu untuk menampilkan data.'
+                    );
                     table.clear().draw();
                     return;
                 }
+
+                setTableMessage('Tidak ada kanban untuk filter ini.');
                 table.ajax.reload(null, resetPaging !== false);
             }
 
@@ -456,7 +478,7 @@
                 $('#filter_machine').val('').trigger('change.select2');
                 loadMachinesForArea($('#filter_area').val(), $('#filter_process').val());
                 saveFilters();
-                table.clear().draw();
+                reloadTable();
             });
 
             // Auto-reload on the remaining filter changes
@@ -480,6 +502,7 @@
                 if (!areaId || !process) {
                     machineSelect.empty().append('<option value="">- Choose Area & Process First -</option>');
                     machineSelect.trigger('change.select2');
+                    reloadTable();
                     return;
                 }
 
@@ -525,13 +548,13 @@
                 // Reset all filters
                 $('#filter_area').val('').trigger('change');
                 $('#filter_process').val('').trigger('change');
-                $('#filter_shift').val('').trigger('change');
+                $('#filter_shift').val('1').trigger('change');
                 $('#filter_cutoff').val('').trigger('change');
                 $('#filter_print_status').val('not_printed').trigger('change');
                 $('#filter_machine').val('').trigger('change');
                 $('#filter_date').data('daterangepicker').setStartDate(moment());
-                // Clear table
-                table.clear().draw();
+                // Clear table (and say which filter is missing)
+                reloadTable();
             });
 
             $('#btn-refresh').click(function() {
