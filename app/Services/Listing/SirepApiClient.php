@@ -21,6 +21,7 @@ class SirepApiClient
 {
     private string $baseUrl;
     private int $timeout;
+    private int $connectTimeout;
     private int $retry;
     private int $retryDelay;
     private ?string $token;
@@ -32,6 +33,7 @@ class SirepApiClient
 
         $this->baseUrl     = rtrim($config['base_url'], '/');
         $this->timeout     = $config['timeout'];
+        $this->connectTimeout = max(1, (int) ($config['connect_timeout'] ?? 5));
         $this->retry       = max(1, $config['retry']);
         $this->retryDelay  = $config['retry_delay'];
         $this->token       = $config['token'] ?: null;
@@ -86,6 +88,7 @@ class SirepApiClient
                 foreach ($batch as $i => $req) {
                     $request = $pool->as((string) $i)
                         ->timeout($this->timeout)
+                        ->connectTimeout($this->connectTimeout)
                         ->retry($this->retry, $this->retryDelay, throw: false)
                         ->acceptJson();
 
@@ -158,6 +161,7 @@ class SirepApiClient
     {
         try {
             $response = Http::timeout(min(10, $this->timeout))
+                ->connectTimeout($this->connectTimeout)
                 ->acceptJson()
                 ->get($this->baseUrl . '/conveyor');
 
@@ -177,6 +181,7 @@ class SirepApiClient
     private function request(): \Illuminate\Http\Client\PendingRequest
     {
         $request = Http::timeout($this->timeout)
+            ->connectTimeout($this->connectTimeout)
             ->retry($this->retry, $this->retryDelay, throw: false)
             ->acceptJson();
 

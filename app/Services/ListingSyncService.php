@@ -114,11 +114,21 @@ class ListingSyncService
                 $existing = $this->existingInScope($from, $to, $fetched->scopeConveyors);
 
                 // ── Tambah & perbarui ────────────────────────────────────────
+                // Baris baru dikumpulkan lebih dulu lalu ditulis massal. Generate
+                // selalu mengosongkan staging pada rentangnya sebelum sinkron, jadi
+                // hampir semua baris masuk lewat jalur "baru" ini - satu INSERT per
+                // baris berarti ribuan perjalanan ke database untuk satu generate.
+                $newRows = [];
+
                 foreach ($incoming as $key => $attributes) {
                     $stage = $existing[$key] ?? null;
 
                     if ($stage === null) {
-                        ListingStage::create($attributes + ['synced_at' => now()]);
+                        $newRows[] = $attributes + [
+                            'synced_at'  => now(),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
                         $inserted++;
                         continue;
                     }
@@ -130,6 +140,10 @@ class ListingSyncService
 
                     $stage->fill($attributes + ['synced_at' => now()])->save();
                     $updated++;
+                }
+
+                foreach (array_chunk($newRows, 500) as $chunk) {
+                    ListingStage::insert($chunk);
                 }
 
                 // ── Hapus baris yang sudah tidak ada di sumber ───────────────

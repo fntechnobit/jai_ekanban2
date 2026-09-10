@@ -109,6 +109,10 @@ class ApiListingSource implements ListingSourceInterface
     private function activeConveyorCodes(): array
     {
         return MasterConveyor::query()
+            // Satu permintaan HTTP dikirim per conveyor, jadi conveyor yang sudah
+            // dinonaktifkan di SIREP hanya menambah waktu tanpa hasil - listingnya
+            // memang tidak akan dijadwalkan.
+            ->where('is_active', true)
             ->pluck('conveyor')
             ->map(fn ($name) => trim((string) $name))
             ->filter()
