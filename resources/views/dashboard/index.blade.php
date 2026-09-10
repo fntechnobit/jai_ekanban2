@@ -187,6 +187,10 @@ $(function () {
             success: function (response) {
                 setGenerateLoading(false);
                 var generated = response.data ? (response.data.generated || 0) : 0;
+                if (response.skipped) {
+                    showSkippedBanner(response.message);
+                    return;
+                }
                 showGenerateBanner(response.success, generated, response.step_failed === 'sync_listing');
                 if (response.success) refreshSyncStatusBadges('{{ route("dashboard.sync-status") }}');
             },
@@ -337,11 +341,14 @@ $(function () {
                 _token: '{{ csrf_token() }}',
                 start_date: startDate,
                 end_date: endDate,
-                conveyor_id: null
+                conveyor_id: null,
+                auto: 1 // dijalankan otomatis saat halaman dibuka - boleh dilewati server
             },
             success: function(response) {
                 var generated = response.data ? (response.data.generated || 0) : 0;
-                if (response.success) {
+                if (response.skipped) {
+                    showSkippedBanner(response.message);
+                } else if (response.success) {
                     showGenerateBanner(true, generated);
                     refreshSyncStatusBadges('{{ route("dashboard.sync-status") }}');
                 } else {
@@ -353,6 +360,15 @@ $(function () {
                 showGenerateBanner(false, 0, true);
             }
         });
+    }
+
+    // Proses sengaja tidak dijalankan (sedang berjalan / hasil masih segar).
+    // Bukan keberhasilan dan bukan kegagalan, jadi warnanya netral.
+    function showSkippedBanner(message) {
+        renderBanner(
+            message || 'Sinkronisasi otomatis dilewati.',
+            '#cff4fc', '#055160', 'fa-circle-info'
+        );
     }
 
     function showGenerateBanner(success, generated, isSyncFail) {
@@ -374,6 +390,12 @@ $(function () {
             textColor = '#58151c';
             iconClass = 'fa-circle-xmark';
         }
+
+        renderBanner(msg, bgColor, textColor, iconClass);
+    }
+
+    function renderBanner(msg, bgColor, textColor, iconClass) {
+        var banner = $('#assy-generate-banner');
 
         var html =
             '<i class="fa-solid ' + iconClass + ' me-2"></i>' +

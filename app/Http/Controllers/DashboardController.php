@@ -9,6 +9,7 @@ use App\Services\AssySchedulerService;
 use App\Services\DashboardService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
@@ -56,6 +57,41 @@ class DashboardController extends Controller
             'conveyor_id' => 'nullable|exists:master_conveyor,id',
         ]);
 
+        // Kunci per rentang: satu generate untuk rentang yang sama pada satu waktu.
+        // Sebelumnya setiap pembukaan dashboard memicu proses penuh, sehingga
+        // beberapa proses berat berjalan bersamaan di atas tabel yang sama dan
+        // saling memperlambat sampai timeout.
+        $scope = sprintf(
+            'dashboard-generate:%s:%s:%s',
+            $request->input('start_date'),
+            $request->input('end_date'),
+            $request->input('conveyor_id') ?: 'all'
+        );
+
+        // Pemanggilan otomatis saat dashboard dibuka boleh dilewati bila rentang
+        // yang sama baru saja selesai. Penekanan tombol manual selalu dijalankan.
+        $throttle = (int) config('sirep.generate.auto_throttle_seconds', 300);
+
+        if ($request->boolean('auto') && $throttle > 0) {
+            $recent = Cache::get($scope . ':done');
+
+            if ($recent) {
+                return $this->skippedResponse(
+                    'Jadwal untuk rentang ini baru saja disinkronkan pukul ' . $recent['at']
+                    . ' (' . $recent['generated'] . ' schedule). Sinkronisasi otomatis dilewati.',
+                    $recent['generated']
+                );
+            }
+        }
+
+        $lock = Cache::lock($scope . ':lock', (int) config('sirep.generate.lock_seconds', 600));
+
+        if (!$lock->get()) {
+            return $this->skippedResponse(
+                'Sinkron & generate untuk rentang ini sedang berjalan. Tunggu sampai proses tersebut selesai.'
+            );
+        }
+
         try {
             $result = $this->assySchedulerService->generateSchedules(
                 $request->input('start_date'),
@@ -64,8 +100,16 @@ class DashboardController extends Controller
             );
 
             if ($result['success']) {
+                if ($throttle > 0) {
+                    Cache::put($scope . ':done', [
+                        'at'        => now()->format('H:i:s'),
+                        'generated' => $result['generated'],
+                    ], $throttle);
+                }
+
                 return response()->json([
                     'success'     => true,
+                    'skipped'     => false,
                     'message'     => $result['message'],
                     'step_failed' => null,
                     'data'        => [
@@ -93,7 +137,25 @@ class DashboardController extends Controller
                 'message'     => 'Terjadi kesalahan: ' . $e->getMessage(),
                 'data'        => ['generated' => 0, 'sync_detail' => null],
             ], 500);
+        } finally {
+            $lock->release();
         }
+    }
+
+    /**
+     * Balasan untuk permintaan yang sengaja tidak dijalankan (sedang berjalan
+     * atau hasilnya masih segar). Dikirim sebagai 200 supaya layar tidak
+     * menampilkannya sebagai kegagalan mengambil data dari PPC.
+     */
+    private function skippedResponse(string $message, int $generated = 0)
+    {
+        return response()->json([
+            'success'     => true,
+            'skipped'     => true,
+            'step_failed' => null,
+            'message'     => $message,
+            'data'        => ['generated' => $generated, 'sync_detail' => null],
+        ]);
     }
 
     /**
