@@ -277,11 +277,16 @@
                     <div class="col-lg-6">
                         <div class="alert alert-warning py-2 px-3 h-100 mb-0">
                             <div class="fw-semibold mb-1"><i class="fa-solid fa-circle-half-stroke me-1"></i> Belum ada angka lembur? dianggap tanpa lembur</div>
-                            <div class="small mb-0">Conveyor yang <code>overtime_capacity</code>-nya belum dikirim SIREP tetap
+                            <div class="small mb-2">Conveyor yang <code>overtime_capacity</code>-nya belum dikirim SIREP tetap
                             dijadwalkan, tetapi ambangnya memakai <code>normal_capacity</code> &mdash; artinya line itu dianggap
                             belum punya jatah lembur. Hari yang melampaui kapasitas normal pecah menjadi dua shift, bukan
                             menumpuk di CO5. Yang <strong>tidak punya <code>normal_capacity</code></strong> sama sekali
                             tetap dilewati.</div>
+                            <div class="small mb-0">Catatan: ketiadaan angka lembur hanya menghapus CO5 pada hari
+                            <strong>satu</strong> shift &mdash; di sana CO5 memang didefinisikan sebagai selisih lembur dan
+                            normal, jadi hasilnya nol. Pada hari <strong>dua</strong> shift, CO5 tetap mendapat jatah 7/8
+                            cutoff normal, sebab aturan itu dinyatakan PPC terhadap kapasitas normal dan tidak menyebut
+                            angka lembur sama sekali.</div>
                         </div>
                     </div>
                 </div>
@@ -347,13 +352,30 @@
 
                 <div class="doc-panel mb-3">
                     <div class="doc-panel-title">Bagaimana tanda &ldquo;over&rdquo; dihitung</div>
-                    <div class="doc-calc">ambang nominal = jumlah shift &times; ( kapasitas + CO5 nominal bila OT dinyatakan )
+                    <div class="doc-calc">ambang nominal = jumlah shift &times; ( kapasitas + CO5 nominal shift itu )
 
 over  bila  listing hari itu &gt; ambang nominal</div>
-                    <p class="small mb-0 mt-2 text-muted">Tanpa penanda lembur, CO5 dianggap tidak tersedia sehingga
-                    ambangnya hanya shift &times; kapasitas. Ini disengaja: memakai ambang ber-CO5 pada hari yang lemburnya
-                    belum dinyatakan akan <em>menyembunyikan</em> hari yang sebenarnya over. Tandanya muncul pada baris
-                    shift terakhir, karena di situlah kelebihannya benar-benar ditampung.</p>
+                    <p class="small mb-2 mt-2">Setiap shift yang berjalan dihitung punya jatah CO5 yang sama. Besar
+                    jatahnya mengikuti jumlah shift hari itu: hari satu shift memakai
+                    <code>overtime &minus; normal</code>, hari dua shift memakai 7/8 cutoff normal &mdash; angka yang sama
+                    dengan yang dipakai membagi jadwal, jadi ambang dan alokasi tidak mungkin berbeda pendapat.</p>
+                    <p class="small mb-2 text-muted">Akibatnya tandanya menyala <strong>tepat</strong> ketika CO5 shift
+                    terakhir melewati jatah nominalnya &mdash; yaitu saat cutoff penampung benar-benar dipakai di luar
+                    rencana. Selama setiap CO5 masih di dalam jatahnya, hari itu tidak ditandai meskipun CO5-nya terpakai
+                    penuh.</p>
+                    <p class="small mb-0 text-muted">Dua hal yang mengubah ambang: <strong>penanda lembur</strong> &mdash;
+                    bila PPC belum menyatakan lembur, CO5 dianggap tidak tersedia sehingga ambangnya hanya
+                    shift &times; kapasitas, disengaja agar hari yang sebenarnya over tidak tersembunyi; dan tandanya selalu
+                    muncul pada baris <strong>shift terakhir</strong>, karena di situlah kelebihannya ditampung.</p>
+                </div>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Contoh ambang &mdash; B3-EGI, normal 135, lembur 160</div>
+                    <div class="doc-calc">1 shift   nominal = 1 &times; (135 + 25)  = <b>160</b>
+2 shift   nominal = 2 &times; (135 + 30)  = <b>330</b>
+
+listing 330  &rarr;  S1 CO5 30, S2 CO5 30   pas di jatah   &rarr; tidak ditandai
+listing 331  &rarr;  S1 CO5 30, S2 CO5 31   lewat jatah    &rarr; <b>over</b></div>
                 </div>
 
                 <div class="doc-panel">
@@ -653,6 +675,17 @@ B3-ENG  cap  78    dulu 19/19/19/<b>21</b>    kini <b>21</b>/19/19/19</div>
                     otomatis, yang sudah tidak dikirim berstatus <span class="badge bg-secondary">Nonaktif</span> dan berhenti
                     dijadwalkan &mdash; datanya tidak dihapus. Kapasitas juga ditarik dari SIREP; yang tersisa untuk diisi
                     orang hanya Area, Family, Kode Conveyor SIREP, dan Pallet Qty.</p>
+                </div>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Ambang &ldquo;over&rdquo; kini satu rumus</div>
+                    <p class="small mb-2">Ambang nominal sempat dihitung dua kali dengan cara berbeda: layar verifikasi
+                    memberi jatah CO5 kepada setiap shift, sementara pemeriksaan internal hanya menghitungnya satu kali
+                    pada hari dua shift.</p>
+                    <p class="small mb-0 text-muted">Yang dipertahankan adalah cara layar verifikasi, karena hanya cara itu
+                    yang menyalakan tanda tepat ketika CO5 shift terakhir melewati jatahnya. Cara satunya menandai hari yang
+                    setiap CO5-nya masih di dalam jatah &mdash; peringatan palsu yang membuat tanda ini lama-lama diabaikan.
+                    Tampilan di layar tidak berubah; yang berubah adalah pemeriksaan internal ikut memakai ambang yang sama.</p>
                 </div>
 
                 <div class="doc-panel mb-3">

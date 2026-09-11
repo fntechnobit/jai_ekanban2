@@ -169,13 +169,13 @@ class ScheduleVerificationService
                 $ambangEfektif = $this->capacityCalculator->effectiveOvertimeCapacity(
                     $capacity, $conv->overtime_capacity
                 );
-                $co5Nominal = $this->capacityCalculator->cutoff5Nominal(
-                    $capacity, $ambangEfektif, $shiftQty
+                // Satu rumus untuk seluruh aplikasi — lihat nominalDayCapacity().
+                // Penanda lembur ikut menentukan: tanpa lembur CO5 dianggap tidak
+                // tersedia, sebab ambang ber-CO5 akan menyembunyikan hari yang
+                // sebenarnya over.
+                $nominalTotal = $this->capacityCalculator->nominalDayCapacity(
+                    $capacity, $ambangEfektif, $shiftQty, $dayOvertime
                 );
-                // Ambang nominal harus ikut penanda lembur SIREP. Tanpa lembur CO5 tidak
-                // tersedia, jadi kapasitas nominal hari itu hanya shift × kapasitas —
-                // memakai ambang bershift-CO5 akan menyembunyikan hari yang sebenarnya over.
-                $nominalTotal = $shiftQty * ($capacity + ($dayOvertime ? $co5Nominal : 0));
                 $overCapDay   = ($capacity > 0 && $scheduledAll > 0 && $demand > $nominalTotal);
                 // Over TANPA penanda lembur: data SIREP saling bertentangan — demand tidak
                 // muat di kapasitas normal, tapi PPC tidak menyatakan lembur.
@@ -416,9 +416,10 @@ class ScheduleVerificationService
             $dayOvertime = (bool) ($sirepMeta['is_overtime'] ?? false);
         }
 
-        // Ambang nominal ikut penanda lembur: tanpa lembur CO5 tidak tersedia,
-        // jadi kapasitas nominal hari itu hanya shift × kapasitas.
-        $nominalTotal   = $shiftQty * ($capacity + ($dayOvertime ? (int) $cutOff5Capacity : 0));
+        // Rumus yang sama dengan layar daftar dan dengan pembuat jadwal.
+        $nominalTotal   = $this->capacityCalculator->nominalDayCapacity(
+            $capacity, $ambangEfektif, $shiftQty, $dayOvertime
+        );
         $overflow       = max(0, $listingDemand - $nominalTotal);
         $isOverCapacity = ($shift == $lastShift && $listingDemand > $nominalTotal);
         // Over tanpa penanda lembur = data SIREP saling bertentangan.

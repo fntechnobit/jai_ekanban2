@@ -137,20 +137,49 @@ class ShiftCapacityCalculator
     }
 
     /**
-     * Kapasitas nominal satu hari — dipakai menandai hari yang demand-nya
-     * melampaui rencana.
+     * Kapasitas nominal satu hari — ambang tunggal untuk menandai hari yang
+     * demand-nya melampaui rencana.
      *
-     *   1 shift : overtime_capacity
-     *   2 shift : 2 x normal + CO5 shift pertama (CO5 shift terakhir penampung,
-     *             jadi tidak ikut dihitung sebagai batas)
+     *   nominal = jumlah shift x ( normal_capacity + CO5 nominal shift itu )
+     *
+     * CO5 nominalnya sendiri tergantung jumlah shift (lihat cutoff5Nominal):
+     * pada hari satu shift ia selisih overtime dan normal, pada hari dua shift
+     * 7/8 cutoff normal.
+     *
+     *   1 shift : normal + (overtime - normal) = overtime_capacity
+     *   2 shift : 2 x (normal + CO5 nominal)
+     *
+     * SETIAP shift dihitung punya jatah CO5 yang sama. Rumus lama hanya
+     * menghitung CO5 satu kali pada hari dua shift, dengan alasan CO5 shift
+     * terakhir adalah penampung. Itu keliru: "penampung" adalah cara alokasi
+     * menaruh kelebihan, bukan pernyataan bahwa shift terakhir tidak punya jatah
+     * lembur. Akibatnya hari yang setiap CO5-nya masih di dalam jatah tetap
+     * ditandai over — peringatan palsu yang membuat tanda itu diabaikan.
+     *
+     * Dengan rumus ini, tandanya menyala tepat ketika CO5 shift terakhir
+     * melewati jatah nominalnya, yaitu saat penampung benar-benar dipakai di
+     * luar rencana.
+     *
+     * @param  bool  $overtimeDeclared  Penanda lembur SIREP untuk hari itu. Bila
+     *         lembur belum dinyatakan, CO5 dianggap tidak tersedia sehingga
+     *         ambangnya hanya shift x kapasitas normal — memakai ambang ber-CO5
+     *         akan menyembunyikan hari yang sebenarnya over.
      */
-    public function nominalDayCapacity(int $normalCapacity, ?int $overtimeCapacity, int $shiftCount): int
-    {
-        if ($shiftCount >= 2) {
-            return (2 * $normalCapacity) + $this->calculateCutoff5Capacity($normalCapacity);
+    public function nominalDayCapacity(
+        int $normalCapacity,
+        ?int $overtimeCapacity,
+        int $shiftCount,
+        bool $overtimeDeclared = true
+    ): int {
+        $shiftCount = max(1, $shiftCount);
+
+        if (!$overtimeDeclared) {
+            return $shiftCount * $normalCapacity;
         }
 
-        return max($normalCapacity, (int) ($overtimeCapacity ?? 0));
+        return $shiftCount * (
+            $normalCapacity + $this->cutoff5Nominal($normalCapacity, $overtimeCapacity, $shiftCount)
+        );
     }
 
     /**
