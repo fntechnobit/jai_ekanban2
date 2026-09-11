@@ -263,9 +263,29 @@ class ScheduleVerificationService
      *
      * @return array<string, mixed>
      */
-    protected function sirepMeta(MasterConveyor $conveyor, $date): array
+    protected function sirepMeta(MasterConveyor $conveyor, $date, ?int $shiftCount = null): array
     {
         $capacity = (int) ($conveyor->capacity ?? 0);
+
+        // Besar jatah CO5 tergantung jumlah shift hari itu (lihat cutoff5Nominal),
+        // jadi ia harus dihitung di sini — bukan diwarisi dari pemanggil. Pemanggil
+        // yang sudah tahu jumlah shiftnya melewatkannya supaya tidak query dua kali.
+        if ($shiftCount === null) {
+            $shiftCount = (int) AssySchedule::where('conveyor_id', $conveyor->id)
+                ->whereDate('schedule', $date)
+                ->distinct()
+                ->count('shift');
+        }
+
+        $shiftCount = max(1, $shiftCount);
+
+        $co5Nominal = $capacity > 0
+            ? $this->capacityCalculator->cutoff5Nominal(
+                $capacity,
+                $this->capacityCalculator->effectiveOvertimeCapacity($capacity, $conveyor->overtime_capacity),
+                $shiftCount
+            )
+            : 0;
 
         $listing = ListingStage::where('conveyor', $conveyor->conveyor)
             ->whereDate('listing_date_time', $date)
@@ -278,7 +298,7 @@ class ScheduleVerificationService
         return [
             'capacity'            => $capacity ?: null,
             'overtime_capacity'   => $conveyor->overtime_capacity ? (int) $conveyor->overtime_capacity : null,
-            'co5_nominal'         => $capacity > 0 ? (int) $cutOff5Capacity : null,
+            'co5_nominal'         => $capacity > 0 ? (int) $co5Nominal : null,
             'capacity_synced_at'  => $conveyor->capacity_synced_at?->format('d M Y H:i'),
             'capacity_is_synced'  => $conveyor->hasSyncedCapacity() && $conveyor->capacity_synced_at !== null,
             'sirep_code'          => $conveyor->sirepName(),
@@ -412,7 +432,7 @@ class ScheduleVerificationService
                 ->sum('qty');
             // Asal-usul angka yang dipakai layar ini, supaya user tahu data SIREP mana
             // yang sedang dilihat dan sesegar apa.
-            $sirepMeta   = $this->sirepMeta($conveyor, $date);
+            $sirepMeta   = $this->sirepMeta($conveyor, $date, $shiftQty);
             $dayOvertime = (bool) ($sirepMeta['is_overtime'] ?? false);
         }
 
