@@ -689,7 +689,14 @@
         const SCALE_W = (RASTER_SCALE_MODE & 0x01) ? 2 : 1;
         const SCALE_H = (RASTER_SCALE_MODE & 0x02) ? 2 : 1;
         const BASE_DOTS = Math.floor((TARGET_DOTS / SCALE_W) / 8) * 8;
-        const SLICE_ROWS = 256;
+        // Tinggi maksimum data satu perintah GS v 0. JANGAN dinaikkan lagi ke 256.
+        // Satu band 256 baris = 72 byte x 256 = 18.432 byte, melebihi image buffer
+        // printer. Firmware ESC/POS yang kehabisan buffer MENGABAIKAN perintahnya
+        // lalu memperlakukan sisa byte gambar sebagai data teks biasa - itulah
+        // karakter acak berlembar-lembar yang keluar di antara tiket yang normal.
+        // 256 juga memaksa yH=1 (0x0100), dan sebagian firmware klon hanya membaca
+        // yL sehingga panjang band salah dibaca. 64 baris = 4.608 byte, aman.
+        const SLICE_ROWS = 64;
         const THRESHOLD = 190;
         const BLANK_AFTER_PAGE_DOTS = 20;
         const CUT_OFFSET_DOTS = 184; // ~23mm feed to pass cutter blade position
@@ -1095,7 +1102,8 @@
             const m = RASTER_SCALE_MODE & 0xFF;
 
             for (let y0 = 0; y0 < h; y0 += SLICE_ROWS) {
-                const sH = Math.min(SLICE_ROWS, h - y0);
+                // Clamp 255 supaya yH selalu 0, apa pun nilai SLICE_ROWS di atas.
+                const sH = Math.min(SLICE_ROWS, 255, h - y0);
                 const band = new Uint8Array(bpr * sH);
                 
                 for (let y = 0; y < sH; y++) {
