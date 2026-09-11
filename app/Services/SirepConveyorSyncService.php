@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\MasterConveyor;
 use App\Services\Listing\SirepApiClient;
-use App\Services\Schedule\ShiftCapacityCalculator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -30,7 +29,6 @@ class SirepConveyorSyncService
 {
     public function __construct(
         private SirepApiClient $client,
-        private ShiftCapacityCalculator $calculator,
     ) {
     }
 
@@ -125,12 +123,16 @@ class SirepConveyorSyncService
                     $catatan[] = 'kapasitas ' . ($kapasitasLama ?? 'kosong') . ' -> ' . (int) $normal;
                 }
 
-                if ($normal !== null && $overtime !== null) {
-                    $hitunganKami = $this->calculator->calculateOvertimeCapacity((int) $normal);
+                // overtime_capacity SIREP kini dipakai apa adanya sebagai ambang
+                // pemecahan shift dan batas CO5 (lihat ShiftCapacityCalculator), jadi
+                // perubahannya wajib tercatat. Ia hanya ikut ditulis bila kapasitas
+                // normal ada, sehingga catatannya memakai syarat yang sama.
+                if ($normal !== null) {
+                    $overtimeLama = $conveyor->overtime_capacity !== null ? (int) $conveyor->overtime_capacity : null;
+                    $overtimeBaru = $overtime !== null ? (int) $overtime : null;
 
-                    if ((int) $overtime !== $hitunganKami) {
-                        // Informatif saja: overtime_capacity SIREP tidak dipakai sebagai batas CO5.
-                        $catatan[] = "over SIREP {$overtime} vs hitungan kami {$hitunganKami}";
+                    if ($overtimeLama !== $overtimeBaru) {
+                        $catatan[] = 'lembur ' . ($overtimeLama ?? 'kosong') . ' -> ' . ($overtimeBaru ?? 'kosong');
                     }
                 }
 
