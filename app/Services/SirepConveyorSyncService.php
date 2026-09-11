@@ -37,7 +37,8 @@ class SirepConveyorSyncService
      * @return array{
      *     success: bool, message: string, applied: bool,
      *     rows: array<int, array<string, mixed>>,
-     *     ditambah: int, diperbarui: int, dinonaktifkan: int, tanpa_kapasitas: int
+     *     ditambah: int, diperbarui: int, dinonaktifkan: int, tanpa_kapasitas: int,
+     *     dilewati: int
      * }
      */
     public function sync(bool $apply = false): array
@@ -57,10 +58,10 @@ class SirepConveyorSyncService
         }
 
         $rows = [];
-        $ditambah = $diperbarui = $tanpaKapasitas = 0;
+        $ditambah = $diperbarui = $tanpaKapasitas = $dilewati = 0;
         $idTersentuh = [];
 
-        $jalankan = function () use ($apiConveyors, $apply, &$rows, &$ditambah, &$diperbarui, &$tanpaKapasitas, &$idTersentuh) {
+        $jalankan = function () use ($apiConveyors, $apply, &$rows, &$ditambah, &$diperbarui, &$tanpaKapasitas, &$dilewati, &$idTersentuh) {
             foreach ($apiConveyors as $item) {
                 $nama    = trim((string) ($item['name'] ?? ''));
                 $sirepId = isset($item['id']) ? (int) $item['id'] : null;
@@ -75,6 +76,20 @@ class SirepConveyorSyncService
 
                 if ($normal === null) {
                     $tanpaKapasitas++;
+                }
+
+                // Conveyor yang belum punya kapasitas apa pun di SIREP tidak dibuatkan
+                // baris master. Ia tidak dapat dijadwalkan (generate melewatinya karena
+                // capacity <= 0), jadi menambahkannya hanya menghasilkan master mati dan
+                // peringatan berulang pada setiap generate. Yang sudah terlanjur ada di
+                // master tetap diproses jalur di bawah supaya nama dan id SIREP-nya ikut
+                // terbarui, dan namanya tetap masuk daftar API sehingga tidak ikut
+                // dinonaktifkan.
+                if (!$conveyor && $normal === null && $overtime === null) {
+                    $dilewati++;
+                    $rows[] = $this->baris($nama, null, null, null, null, 'kapasitas kosong di SIREP — dilewati', 'dilewati');
+
+                    continue;
                 }
 
                 // ── Conveyor baru ────────────────────────────────────────────
@@ -227,13 +242,14 @@ class SirepConveyorSyncService
 
         return [
             'success'         => true,
-            'message'         => $this->pesan($apply, $ditambah, $diperbarui, $hilang->count(), $tanpaKapasitas),
+            'message'         => $this->pesan($apply, $ditambah, $diperbarui, $hilang->count(), $tanpaKapasitas, $dilewati),
             'applied'         => $apply,
             'rows'            => $rows,
             'ditambah'        => $ditambah,
             'diperbarui'      => $diperbarui,
             'dinonaktifkan'   => $hilang->count(),
             'tanpa_kapasitas' => $tanpaKapasitas,
+            'dilewati'        => $dilewati,
         ];
     }
 
@@ -276,13 +292,19 @@ class SirepConveyorSyncService
         ];
     }
 
-    private function pesan(bool $apply, int $tambah, int $ubah, int $nonaktif, int $kosong): string
+    private function pesan(bool $apply, int $tambah, int $ubah, int $nonaktif, int $kosong, int $dilewati = 0): string
     {
         $kata = $apply ? 'Sinkronisasi selesai' : 'Pratinjau';
         $p = "{$kata}: {$tambah} conveyor baru, {$ubah} diperbarui, {$nonaktif} dinonaktifkan.";
 
-        if ($kosong > 0) {
-            $p .= " {$kosong} conveyor kapasitasnya masih kosong di SIREP dan belum bisa dijadwalkan.";
+        if ($dilewati > 0) {
+            $p .= " {$dilewati} conveyor dilewati karena SIREP belum mengisi kapasitasnya sama sekali.";
+        }
+
+        $kosongLain = max(0, $kosong - $dilewati);
+
+        if ($kosongLain > 0) {
+            $p .= " {$kosongLain} conveyor di master kapasitasnya masih kosong di SIREP dan belum bisa dijadwalkan.";
         }
 
         if ($apply) {
@@ -304,6 +326,7 @@ class SirepConveyorSyncService
             'diperbarui'      => 0,
             'dinonaktifkan'   => 0,
             'tanpa_kapasitas' => 0,
+            'dilewati'        => 0,
         ];
     }
 }

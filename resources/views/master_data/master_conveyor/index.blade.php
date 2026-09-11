@@ -222,7 +222,8 @@
                     baru:     '<span class="badge bg-primary">baru</span>',
                     berubah:  '<span class="badge bg-warning text-dark">berubah</span>',
                     sama:     '<span class="badge bg-success">sama</span>',
-                    nonaktif: '<span class="badge bg-secondary">dinonaktifkan</span>'
+                    nonaktif: '<span class="badge bg-secondary">dinonaktifkan</span>',
+                    dilewati: '<span class="badge bg-light text-dark border">dilewati</span>'
                 };
 
                 rows.forEach(function (r) {
