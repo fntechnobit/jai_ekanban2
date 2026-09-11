@@ -156,4 +156,28 @@ return [
         'max_shrink_percent' => (int) env('SIREP_RECONCILE_MAX_SHRINK', 50),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Pengaman Sinkron + Generate
+    |--------------------------------------------------------------------------
+    |
+    | Setiap halaman jadwal memicu generate otomatis begitu dibuka, dan tombol
+    | Generate memicu proses kedua yang sama beratnya. Keduanya menggarap tabel
+    | yang sama, jadi bila berjalan serentak lamanya berlipat sampai timeout.
+    |
+    | Dipakai bersama Dashboard, Assy Scheduler dan Schedule Verification lewat
+    | trait GuardsGenerate.
+    |
+    */
+    'generate' => [
+        // Lama hasil generate dianggap masih segar. Panggilan OTOMATIS untuk
+        // rentang yang sama dalam tenggang ini dilewati; penekanan tombol manual
+        // tidak pernah dilewati.
+        'auto_throttle_seconds' => (int) env('SIREP_GENERATE_THROTTLE', 300),
+
+        // Umur kunci: cukup panjang untuk menampung proses terlama, dan tetap
+        // lepas sendiri bila prosesnya mati tanpa sempat melepaskan.
+        'lock_seconds' => (int) env('SIREP_GENERATE_LOCK', 600),
+    ],
+
 ];

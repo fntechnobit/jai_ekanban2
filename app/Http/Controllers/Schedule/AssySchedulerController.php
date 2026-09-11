@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Schedule;
 
+use App\Http\Controllers\Concerns\GuardsGenerate;
 use App\Http\Controllers\Controller;
 use App\Services\AssySchedulerService;
 use App\Models\MasterConveyor;
@@ -13,6 +14,8 @@ use Carbon\Carbon;
 
 class AssySchedulerController extends Controller
 {
+    use GuardsGenerate;
+
     protected $assySchedulerService;
 
     public function __construct(AssySchedulerService $assySchedulerService)
@@ -329,6 +332,29 @@ class AssySchedulerController extends Controller
             'conveyor_id' => 'nullable|exists:master_conveyor,id',
         ]);
 
+        // Pengaman yang sama dengan Dashboard, dan berbagi ruang kunci dengannya.
+        // Halaman ini menjalankan generate otomatis begitu dibuka, sementara tombol
+        // Generate memicu proses kedua yang sama beratnya; tanpa kunci keduanya
+        // berjalan bersamaan di atas tabel yang sama dan saling memperlambat.
+        $scope  = $this->generateScope($request);
+        $recent = $this->generateBaruSelesai($request, $scope);
+
+        if ($recent) {
+            return $this->skippedResponse(
+                'Jadwal untuk rentang ini baru saja disinkronkan pukul ' . $recent['at']
+                . ' (' . $recent['generated'] . ' schedule). Sinkronisasi otomatis dilewati.',
+                $recent['generated']
+            );
+        }
+
+        $lock = $this->ambilGenerateLock($scope);
+
+        if (!$lock->get()) {
+            return $this->skippedResponse(
+                'Sinkron & generate untuk rentang ini sedang berjalan. Tunggu sampai proses tersebut selesai.'
+            );
+        }
+
         try {
             $result = $this->assySchedulerService->generateSchedules(
                 $request->input('start_date'),
@@ -337,6 +363,8 @@ class AssySchedulerController extends Controller
             );
 
             if ($result['success']) {
+                $this->catatGenerateSelesai($scope, (int) $result['generated']);
+
                 return response()->json([
                     'success'     => true,
                     'message'     => $result['message'],
@@ -357,8 +385,13 @@ class AssySchedulerController extends Controller
                     ],
                 ], 400);
             }
-        } catch (\Exception $e) {
-            Log::error("Schedule generation error", ['error' => $e->getMessage()]);
+        // \Throwable, bukan \Exception: kekeliruan kode (mis. memanggil method yang
+        // sudah dihapus) adalah \Error dan sebelumnya lolos ke handler bawaan Laravel
+        // sebagai 500 mentah. Layar lalu menerjemahkannya jadi "gagal mengambil data
+        // listing dari PPC" — menuduh pihak yang tidak bersalah dan menyesatkan
+        // penelusuran. Ditangkap di sini supaya pesannya jujur dan tercatat.
+        } catch (\Throwable $e) {
+            Log::error('Schedule generation error', ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
 
             return response()->json([
                 'success'     => false,
@@ -366,6 +399,8 @@ class AssySchedulerController extends Controller
                 'message'     => 'Terjadi kesalahan: ' . $e->getMessage(),
                 'data'        => ['generated' => 0, 'sync_detail' => null],
             ], 500);
+        } finally {
+            $lock->release();
         }
     }
 

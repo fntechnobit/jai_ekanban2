@@ -352,12 +352,13 @@ $(function () {
                     showGenerateBanner(true, generated);
                     refreshSyncStatusBadges('{{ route("dashboard.sync-status") }}');
                 } else {
-                    var isSyncFail = (response.step_failed === 'sync_listing' || response.step_failed === 'unknown');
-                    showGenerateBanner(false, 0, isSyncFail);
+                    showGenerateBanner(false, 0, response.step_failed, response.message);
                 }
             },
-            error: function() {
-                showGenerateBanner(false, 0, true);
+            error: function(xhr) {
+                // Gagal HTTP belum tentu gagal PPC — 500 dari bug kode juga ke sini.
+                var res = (xhr && xhr.responseJSON) || {};
+                showGenerateBanner(false, 0, res.step_failed, res.message);
             }
         });
     }
@@ -371,7 +372,7 @@ $(function () {
         );
     }
 
-    function showGenerateBanner(success, generated, isSyncFail) {
+    function showGenerateBanner(success, generated, stepFailed, serverMsg) {
         var banner = $('#assy-generate-banner');
         var msg, bgColor, textColor, iconClass;
         if (success) {
@@ -379,13 +380,10 @@ $(function () {
             bgColor   = '#d1e7dd';
             textColor = '#0a3622';
             iconClass = 'fa-circle-check';
-        } else if (isSyncFail) {
-            msg       = 'Gagal mengambil data listing dari PPC.';
-            bgColor   = '#f8d7da';
-            textColor = '#58151c';
-            iconClass = 'fa-circle-xmark';
         } else {
-            msg       = 'Gagal melakukan generate jadwal assy.';
+            // Kalimatnya mengikuti penyebab sebenarnya (assy-generate-shared.js),
+            // bukan selalu menuduh PPC.
+            msg       = assyGenerateFailText(stepFailed, serverMsg);
             bgColor   = '#f8d7da';
             textColor = '#58151c';
             iconClass = 'fa-circle-xmark';

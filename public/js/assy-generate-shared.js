@@ -125,11 +125,39 @@ function initAssyGenerateModal(opts) {
         var generated  = response.data ? (response.data.generated || 0) : 0;
         var msg        = response.message || '';
 
-        if (stepFailed === 'sync_listing' || stepFailed === 'unknown') {
+        // Permintaan yang sengaja tidak dijalankan — proses untuk rentang yang sama
+        // sedang berjalan. Menandainya "berhasil" akan berbohong: tidak ada schedule
+        // yang dibuat oleh penekanan tombol ini.
+        if (response.skipped) {
+            setStepSkipped(1, msg || 'Proses untuk rentang ini sedang berjalan.');
+            setStepSkipped(2, 'Menunggu proses yang sedang berjalan selesai.');
+
+            $('#generate-result-banner')
+                .removeClass('alert-success alert-danger alert-warning')
+                .addClass('alert-warning')
+                .html('<i class="fa-solid fa-circle-info me-2"></i>' + assyEscapeHtml(msg))
+                .fadeIn(300);
+
+            $('#btn-close-after-generate').show();
+            $('#btn-modal-close').show();
+
+            return;
+        }
+
+        if (stepFailed === 'sync_listing') {
             setStepFail(1, syncDetail
                 ? buildSyncText(syncDetail)
                 : 'Gagal terhubung ke API SIREP. Proses dihentikan, tidak ada sumber cadangan yang dicoba.');
             setStepSkipped(2, 'Dilewati karena step 1 gagal.');
+        } else if (stepFailed === 'sync_conveyor') {
+            // Step 0 (samakan daftar conveyor) berhenti sebelum listing diambil.
+            setStepFail(1, msg || 'Daftar conveyor gagal disamakan dengan SIREP, listing belum sempat diambil.');
+            setStepSkipped(2, 'Dilewati karena proses berhenti sebelum listing diambil.');
+        } else if (stepFailed === 'unknown') {
+            // Kesalahan tak terduga di server. Sebabnya belum tentu SIREP, jadi yang
+            // ditampilkan adalah pesan asli dari server — bukan tuduhan ke PPC.
+            setStepFail(1, msg || 'Proses berhenti karena kesalahan di server.');
+            setStepSkipped(2, 'Dilewati karena proses berhenti.');
         } else {
             setStepSuccess(1, syncDetail ? buildSyncText(syncDetail) : 'Data listing berhasil di-clone ke listing_stage.');
 
@@ -235,26 +263,45 @@ function initAssyAutoSync(opts) {
                 _token: csrfToken,
                 start_date: start,
                 end_date: end,
-                conveyor_id: null
+                conveyor_id: null,
+                // Menandai proses ini sebagai otomatis: server boleh melewatinya bila
+                // rentang yang sama baru saja selesai atau sedang dikerjakan. Tanpa
+                // penanda ini, membuka halaman lalu menekan Generate menjalankan dua
+                // proses berat serentak di atas tabel yang sama.
+                auto: 1
             },
             success: function (response) {
                 var generated = response.data ? (response.data.generated || 0) : 0;
-                if (response.success) {
+                if (response.skipped) {
+                    // Bukan keberhasilan dan bukan kegagalan — data yang ada sudah segar.
+                    showSkipped(response.message);
+                    refreshSyncStatusBadges(syncStatusUrl);
+                    onSuccess();
+                } else if (response.success) {
                     showBanner(true, generated);
                     refreshSyncStatusBadges(syncStatusUrl);
                     onSuccess();
                 } else {
-                    var isSyncFail = (response.step_failed === 'sync_listing' || response.step_failed === 'unknown');
-                    showBanner(false, 0, isSyncFail);
+                    showBanner(false, 0, response.step_failed, response.message);
                 }
             },
-            error: function () {
-                showBanner(false, 0, true);
+            error: function (xhr) {
+                // Kegagalan HTTP bukan otomatis kegagalan PPC — 500 dari bug kode
+                // juga mendarat di sini. Pakai balasan server bila ada.
+                var res = (xhr && xhr.responseJSON) || {};
+                showBanner(false, 0, res.step_failed, res.message);
             }
         });
     }
 
-    function showBanner(success, generated, isSyncFail) {
+    function showSkipped(message) {
+        renderBanner(
+            assyEscapeHtml(message || 'Sinkronisasi otomatis dilewati, data yang ada sudah segar.'),
+            '#cff4fc', '#055160', 'fa-circle-info'
+        );
+    }
+
+    function showBanner(success, generated, stepFailed, serverMsg) {
         var banner = $('#assy-generate-banner');
         if (!banner.length) return;
 
@@ -262,13 +309,17 @@ function initAssyAutoSync(opts) {
         if (success) {
             msg = 'Berhasil generate jadwal assy dengan <strong>' + generated + '</strong> data.';
             bgColor = '#d1e7dd'; textColor = '#0a3622'; iconClass = 'fa-circle-check';
-        } else if (isSyncFail) {
-            msg = 'Gagal mengambil data listing dari PPC.';
-            bgColor = '#f8d7da'; textColor = '#58151c'; iconClass = 'fa-circle-xmark';
         } else {
-            msg = 'Gagal melakukan generate jadwal assy.';
+            msg = assyGenerateFailText(stepFailed, serverMsg);
             bgColor = '#f8d7da'; textColor = '#58151c'; iconClass = 'fa-circle-xmark';
         }
+
+        renderBanner(msg, bgColor, textColor, iconClass);
+    }
+
+    function renderBanner(msg, bgColor, textColor, iconClass) {
+        var banner = $('#assy-generate-banner');
+        if (!banner.length) return;
 
         var html = '<i class="fa-solid ' + iconClass + ' me-2"></i>' +
             '<span class="flex-grow-1">' + msg + '</span>' +
@@ -293,4 +344,42 @@ function initAssyAutoSync(opts) {
         var day = String(d.getDate()).padStart(2, '0');
         return y + '-' + m + '-' + day;
     }
+}
+
+/**
+ * Kalimat kegagalan generate yang sesuai penyebabnya.
+ *
+ * Sebelumnya setiap kegagalan — termasuk error 500 dari bug kode — dilaporkan
+ * sebagai "Gagal mengambil data listing dari PPC", sehingga layar menuduh PPC
+ * padahal sinkronisasi dan generate terakhirnya justru masih segar. Pesan asli
+ * dari server dipakai apa adanya bila ada; ia jauh lebih menjelaskan daripada
+ * kalimat umum apa pun.
+ */
+function assyGenerateFailText(stepFailed, serverMsg) {
+    if (serverMsg) {
+        return assyEscapeHtml(String(serverMsg));
+    }
+
+    if (stepFailed === 'sync_listing') {
+        return 'Gagal mengambil data listing dari PPC.';
+    }
+
+    if (stepFailed === 'sync_conveyor') {
+        return 'Gagal menyamakan daftar conveyor dengan SIREP.';
+    }
+
+    if (stepFailed === 'generate') {
+        return 'Gagal melakukan generate jadwal assy.';
+    }
+
+    return 'Generate jadwal assy berhenti karena kesalahan di server. Periksa log aplikasi.';
+}
+
+/** Pesan server ditulis lewat .html(), jadi karakter khusus harus dijinakkan. */
+function assyEscapeHtml(teks) {
+    return teks
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }
