@@ -1263,12 +1263,13 @@ class ScheduleVerificationService
                     // Jumlah shift yang berjalan ditentukan dari demand PENUH hari itu —
                     // sama seperti engine generate. Memakai sisa setelah pengurangan akan
                     // menyusutkan hari 2-shift jadi 1 shift dan shift target tak pernah dibangun.
+                    $fullDemand    = (int) $listings->sum('qty');
                     $maxShifts     = $this->capacityCalculator->resolveShiftCount(
                         $this->capacityCalculator->effectiveOvertimeCapacity(
                             (int) $conveyor->capacity,
                             $conveyor->overtime_capacity
                         ),
-                        (int) $listings->sum('qty')
+                        $fullDemand
                     );
 
                     // Hanya shift ini yang dihapus; shift lain masih memegang bagiannya,
