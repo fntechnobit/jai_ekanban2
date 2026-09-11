@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Version
+    |--------------------------------------------------------------------------
+    |
+    | Nomor rilis yang ditampilkan pada footer. Yang membedakan satu deploy dari
+    | deploy lain adalah sha commit di sebelahnya (lihat App\Support\AppVersion),
+    | jadi angka ini cukup dinaikkan saat rilis besar saja.
+    |
+    */
+
+    'version' => env('APP_VERSION', '1.0.0'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
