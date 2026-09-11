@@ -81,8 +81,9 @@
                         </div>
                         <p class="cv-panel-note">
                             Kapasitas ditarik dari API SIREP lewat tombol <strong>Sync Conveyor SIREP</strong>
-                            dan tidak dapat diubah di sini. Jumlah shift diisi manual di atas &mdash; alokasi
-                            selalu mulai dari shift 1, dan shift 2 hanya dipakai bila conveyor ini dua shift.
+                            dan tidak dapat diubah di sini. Jumlah shift tidak diisi manual: ia dihitung per
+                            tanggal saat generate &mdash; listing yang melampaui kapasitas lembur memecah hari
+                            itu menjadi dua shift. Alokasi selalu mulai dari shift 1.
                         </p>
                     </div>
 

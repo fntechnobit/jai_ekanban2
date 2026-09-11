@@ -23,7 +23,9 @@
                 dari sini. Tekan <strong>Sync Conveyor SIREP</strong> untuk menariknya. Conveyor yang sudah
                 tidak dikirim SIREP otomatis berstatus <span class="badge bg-secondary">Nonaktif</span> dan
                 berhenti ikut dijadwalkan maupun diverifikasi &mdash; datanya tidak dihapus.
-                Yang masih bisa diubah di sini: Area, Family, Kode Conveyor SIREP, <strong>Jumlah Shift</strong>, dan Pallet Qty.
+                Yang masih bisa diubah di sini: Area, Family, Kode Conveyor SIREP, dan Pallet Qty.
+                Jumlah shift tidak lagi disimpan &mdash; ia dihitung per tanggal saat generate, dari listing
+                dibanding kapasitas lembur.
             </div>
 
             <style>
@@ -110,8 +112,10 @@
                 <div class="alert alert-warning py-2 small mb-3">
                     Sinkronisasi <strong>menambah</strong> conveyor baru dari SIREP, <strong>memperbarui</strong>
                     nama dan kapasitas yang sudah ada, dan <strong>menonaktifkan</strong> conveyor yang tidak
-                    dikirim lagi oleh SIREP. Tidak ada data yang dihapus. Jumlah shift tidak tersedia di API
-                    dan dihitung per tanggal saat generate. Jadwal yang sudah dibuat tidak ikut berubah.
+                    dikirim lagi oleh SIREP. Tidak ada data yang dihapus. Conveyor yang kapasitasnya masih
+                    kosong di SIREP <strong>dilewati</strong> &mdash; tanpa kapasitas ia tidak bisa dijadwalkan.
+                    Jumlah shift tidak tersedia di API dan dihitung per tanggal saat generate. Jadwal yang
+                    sudah dibuat tidak ikut berubah.
                 </div>
 
                 <div class="table-responsive">

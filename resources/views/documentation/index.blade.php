@@ -151,7 +151,9 @@
                                 <span>urutan</span><b>1</b>
                             </div>
                             <p class="small text-muted mb-0 mt-2">Penanda lembur ditetapkan PPC di SIREP, bukan dihitung sistem.
-                            Inilah yang menentukan apakah cutoff ke-5 boleh dibuka.</p>
+                            Ia <strong>tidak</strong> menentukan pembagian shift maupun jatah CO5 &mdash; lihat tab
+                            <em>Shift &amp; Cutoff</em>. Pemakaiannya hanya satu: menilai apakah sebuah hari pantas
+                            disebut <em>over</em> di layar verifikasi.</p>
                         </div>
                     </div>
                 </div>
@@ -167,11 +169,23 @@
                                 <tr><td>Conveyor baru muncul</td><td>Ditambahkan otomatis, langsung bisa dijadwalkan</td></tr>
                                 <tr><td>Nama atau kapasitas berubah</td><td>Diperbarui otomatis</td></tr>
                                 <tr><td>Conveyor tidak dikirim lagi</td><td><span class="badge bg-secondary">Nonaktif</span> &mdash; berhenti dijadwalkan, <strong>data lama tidak dihapus</strong></td></tr>
+                                <tr><td>Conveyor baru, tetapi kapasitasnya masih kosong di SIREP</td><td><span class="badge bg-light text-dark border">Dilewati</span> &mdash; tidak dibuatkan baris master. Tanpa kapasitas ia memang tidak bisa dijadwalkan, dan menambahkannya hanya melahirkan peringatan berulang setiap generate. Begitu SIREP mengisi kapasitasnya, ia masuk sendiri pada sinkronisasi berikutnya.</td></tr>
                             </tbody>
                         </table>
                     </div>
                     <p class="small text-muted mb-0">Conveyor tidak bisa ditambah atau dihapus manual. Yang masih diisi orang hanyalah
-                    Area, Family, dan Pallet Qty &mdash; keterangan yang tidak dikirim SIREP.</p>
+                    Area, Family, Kode Conveyor SIREP, dan Pallet Qty &mdash; keterangan yang tidak dikirim SIREP.</p>
+                </div>
+
+                <div class="doc-panel mt-4">
+                    <div class="doc-panel-title">Listing yang hilang dari SIREP dianggap dibatalkan</div>
+                    <p class="small mb-2">API SIREP tidak mengirim penanda pembatalan. Karena itu setiap sinkronisasi
+                    membandingkan <em>seluruh isi rentang</em>: baris yang tidak lagi muncul dianggap sudah dibatalkan PPC
+                    dan ikut dihapus dari staging.</p>
+                    <p class="small mb-0 text-muted">Dua pengaman menjaga agar gangguan API tidak terbaca sebagai
+                    &ldquo;semua dibatalkan&rdquo;: bila API mengembalikan nol baris untuk sebuah conveyor padahal
+                    sebelumnya berisi, tidak ada yang dihapus; dan bila jumlah baris menyusut lebih dari separuh,
+                    penghapusan dibatalkan lalu dilaporkan sebagai peringatan untuk diperiksa manual.</p>
                 </div>
             </div>
 
@@ -223,29 +237,33 @@
                 </div>
 
                 <h6 class="mt-4 mb-2">Contoh: B3-EGI</h6>
-                <p class="text-muted small" style="max-width:72ch">normal 136, overtime 160 &rarr; CO1&ndash;CO4 = 34,
-                CO5 satu shift = 160 &minus; 136 = <strong>24</strong>, CO5 shift 1 saat dua shift = 7/8 &times; 34 =
-                <strong>30</strong>.</p>
+                <p class="text-muted small" style="max-width:72ch">normal 135, overtime 160 &rarr; CO1&ndash;CO4 =
+                <strong>36</strong>/33/33/33 (sisa pembagian masuk CO1), CO5 satu shift = 160 &minus; 135 =
+                <strong>25</strong>, CO5 shift 1 saat dua shift = 7/8 &times; 33,75 = <strong>30</strong>.</p>
 
                 <div class="doc-bars">
                     <div class="doc-barrow">
                         <div class="doc-barlab">Listing 160<br><span class="badge bg-light text-dark border">tepat di ambang</span></div>
                         <div class="doc-bar">
-                            <div class="doc-seg" style="flex:34">34</div><div class="doc-seg" style="flex:34">34</div>
-                            <div class="doc-seg" style="flex:34">34</div><div class="doc-seg" style="flex:34">34</div>
-                            <div class="doc-seg doc-seg-ot" style="flex:24">CO5 24</div>
+                            <div class="doc-seg" style="flex:36">36</div><div class="doc-seg" style="flex:33">33</div>
+                            <div class="doc-seg" style="flex:33">33</div><div class="doc-seg" style="flex:33">33</div>
+                            <div class="doc-seg doc-seg-ot" style="flex:25">CO5 25</div>
                         </div>
                     </div>
                     <div class="doc-barrow">
                         <div class="doc-barlab">Listing 310<br><span class="badge bg-warning text-dark">di atas ambang</span></div>
                         <div class="doc-bar">
-                            <div class="doc-seg" style="flex:136">shift 1 &middot; CO1&ndash;CO4 = 136</div>
+                            <div class="doc-seg" style="flex:135">shift 1 &middot; CO1&ndash;CO4 = 135</div>
                             <div class="doc-seg doc-seg-ot" style="flex:30">30</div>
-                            <div class="doc-seg" style="flex:136">shift 2 &middot; CO1&ndash;CO4 = 136</div>
-                            <div class="doc-seg doc-seg-ot" style="flex:8">8</div>
+                            <div class="doc-seg" style="flex:135">shift 2 &middot; CO1&ndash;CO4 = 135</div>
+                            <div class="doc-seg doc-seg-ot" style="flex:10">10</div>
                         </div>
                     </div>
                 </div>
+
+                <p class="small text-muted mt-2 mb-0" style="max-width:72ch">Pada baris kedua, sisa setelah CO1&ndash;CO4
+                kedua shift adalah 310 &minus; 270 = 40. CO5 shift 1 mengambil jatah nominalnya (30), dan sepuluh sisanya
+                jatuh ke CO5 shift 2 &mdash; cutoff penampung.</p>
 
                 <div class="row g-3 mt-1">
                     <div class="col-lg-6">
@@ -269,11 +287,24 @@
                 </div>
 
                 <div class="alert alert-secondary py-2 px-3 mt-3 mb-0">
-                    <div class="fw-semibold mb-1"><i class="fa-solid fa-circle-info me-1"></i> Penanda lembur tidak menentukan apa pun</div>
-                    <div class="small mb-0"><code>is_overtime</code> dari SIREP hanya ditampilkan sebagai keterangan. PPC
-                    menetapkannya mendekati hari produksi, sehingga pada tanggal ke depan nilainya mayoritas masih
-                    &ldquo;belum ditetapkan&rdquo;. Kalau dipakai menentukan shift, jadwal untuk tanggal yang sama akan
-                    berubah tergantung kapan digenerate.</div>
+                    <div class="fw-semibold mb-1"><i class="fa-solid fa-circle-info me-1"></i> Penanda lembur tidak menentukan bentuk jadwal</div>
+                    <div class="small mb-2"><code>is_overtime</code> dari SIREP <strong>tidak</strong> dipakai menentukan
+                    jumlah shift maupun jatah CO5. PPC menetapkannya mendekati hari produksi, sehingga pada tanggal ke depan
+                    nilainya mayoritas masih 0 yang berarti &ldquo;belum ditetapkan&rdquo;, bukan &ldquo;tidak lembur&rdquo;.
+                    Kalau dipakai menentukan shift, jadwal untuk tanggal yang sama akan berubah tergantung kapan digenerate.</div>
+                    <div class="small mb-0">Satu-satunya pemakaiannya ada di layar verifikasi, untuk menghitung ambang
+                    <em>over</em> &mdash; lihat tab Verifikasi.</div>
+                </div>
+
+                <div class="doc-panel mt-3">
+                    <div class="doc-panel-title">CO5 terakhir selalu menampung sisanya</div>
+                    <p class="small mb-2">Angka CO5 pada aturan di atas adalah <em>nominal</em> &mdash; rencana. Pada
+                    pelaksanaannya, CO5 shift <strong>terakhir yang tidak terkunci</strong> menampung seluruh sisa demand,
+                    berapa pun jumlahnya.</p>
+                    <p class="small mb-0 text-muted">Alasannya: membuang baris listing jauh lebih berbahaya daripada
+                    mencetak satu cutoff di luar rencana &mdash; permintaan yang hilang baru ketahuan di lapangan.
+                    Hari yang melampaui nominal tidak disembunyikan, melainkan ditandai <span class="badge bg-danger">over</span>
+                    di layar verifikasi supaya diputuskan orang.</p>
                 </div>
             </div>
 
@@ -292,13 +323,15 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td><span class="fw-semibold">Capacity (SIREP)</span> <span class="doc-num">136</span><br>
+                                <td><span class="fw-semibold">Capacity (SIREP)</span> <span class="doc-num">135</span><br>
                                     <small class="text-muted">18 Aug 2026 10:01</small></td>
                                 <td>Kapasitas per shift, beserta kapan terakhir ditarik dari SIREP. Tanggal lama berarti angkanya mungkin sudah tidak berlaku.</td>
                             </tr>
                             <tr>
                                 <td><span class="badge bg-warning text-dark">OT: ya</span> &nbsp;/&nbsp; <span class="badge bg-secondary">OT: tidak</span></td>
-                                <td>Penanda lembur dari SIREP untuk hari itu. Menentukan CO5 dibuka atau tidak.</td>
+                                <td>Penanda lembur dari SIREP untuk hari itu. <strong>Tidak mengubah jadwal</strong> &mdash;
+                                    jadwalnya sudah terbentuk sebelum penanda ini dilihat. Perannya hanya menentukan ambang
+                                    yang dipakai menilai <em>over</em> pada baris ini.</td>
                             </tr>
                             <tr>
                                 <td><span class="badge bg-danger">belum sinkron</span></td>
@@ -312,6 +345,17 @@
                     </table>
                 </div>
 
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Bagaimana tanda &ldquo;over&rdquo; dihitung</div>
+                    <div class="doc-calc">ambang nominal = jumlah shift &times; ( kapasitas + CO5 nominal bila OT dinyatakan )
+
+over  bila  listing hari itu &gt; ambang nominal</div>
+                    <p class="small mb-0 mt-2 text-muted">Tanpa penanda lembur, CO5 dianggap tidak tersedia sehingga
+                    ambangnya hanya shift &times; kapasitas. Ini disengaja: memakai ambang ber-CO5 pada hari yang lemburnya
+                    belum dinyatakan akan <em>menyembunyikan</em> hari yang sebenarnya over. Tandanya muncul pada baris
+                    shift terakhir, karena di situlah kelebihannya benar-benar ditampung.</p>
+                </div>
+
                 <div class="doc-panel">
                     <div class="doc-panel-title">Baris yang sudah terkunci menyimpan angkanya sendiri</div>
                     <p class="small mb-2">Saat jadwal diverifikasi, nilai SIREP yang berlaku <em>saat itu</em> ikut disimpan:
@@ -322,11 +366,48 @@
                     punya simpanan tersebut dan tetap menampilkan nilai terkini.</p>
                 </div>
 
-                <div class="alert alert-warning py-2 px-3 mb-0">
+                <div class="alert alert-warning py-2 px-3 mb-4">
                     <div class="fw-semibold mb-1"><i class="fa-solid fa-triangle-exclamation me-1"></i> Tanda &ldquo;over tanpa OT&rdquo; bukan kesalahan sistem</div>
                     <div class="small mb-0">Itu tanda dua informasi dari SIREP saling bertentangan: jumlah yang diminta tidak muat dalam
                     kapasitas normal, tetapi lembur tidak dinyatakan. Sistem tetap menjadwalkan seluruhnya agar tidak ada permintaan yang
                     hilang, dan menandainya supaya diperiksa manusia.</div>
+                </div>
+
+                <h6 class="mt-4 mb-2">Memindahkan item sebelum dikunci</h6>
+                <p class="small" style="max-width:72ch">Di layar detail, item dapat diseret ke cutoff, shift, atau tanggal lain
+                bila urutan hasil perhitungan tidak cocok dengan kenyataan lapangan. Item yang berpindah tetap mengingat asalnya
+                dan ditampilkan dengan lencana tanggal &middot; shift &middot; cutoff asal.</p>
+
+                <h6 class="mt-4 mb-2">Membuka kembali jadwal (Unverify)</h6>
+                <p class="small" style="max-width:72ch">Unverify bukan sekadar membuka kunci. Empat hal terjadi berurutan,
+                seluruhnya dalam satu transaksi &mdash; kalau salah satu gagal, tidak ada yang berubah sama sekali:</p>
+
+                <div class="doc-panel mb-3">
+                    <div class="row g-3">
+                        <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">1</span><div>Item yang dulu <strong>dipindahkan ke sini</strong> dikembalikan ke jadwal asalnya.</div></div></div>
+                        <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">2</span><div><strong>Saldo dikembalikan</strong> sebesar yang dulu benar-benar dicatat, dibaca dari buku mutasi &mdash; bukan dihitung ulang.</div></div></div>
+                        <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">3</span><div>Kanban yang sudah terbit untuk jadwal itu <strong>dihapus</strong>. Nomor urut barcode tidak pernah ikut mundur.</div></div></div>
+                        <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">4</span><div>Jadwalnya <strong>dibangun ulang</strong> dari listing asli, seolah belum pernah disentuh.</div></div></div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-lg-6">
+                        <div class="alert alert-danger py-2 px-3 h-100 mb-0">
+                            <div class="fw-semibold mb-1"><i class="fa-solid fa-circle-exclamation me-1"></i> Item pindahan bisa hilang</div>
+                            <div class="small mb-0">Bila jadwal <em>asal</em> item pindahan sudah terverifikasi, item itu tidak
+                            dapat dikembalikan &mdash; jadwal asal sudah terkunci. Layar menghitungnya lebih dulu dan
+                            memperingatkan sebelum unverify dijalankan, lalu melaporkan berapa yang hilang.</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="alert alert-primary py-2 px-3 h-100 mb-0">
+                            <div class="fw-semibold mb-1"><i class="fa-solid fa-lock me-1"></i> Shift lain tidak ikut terganggu</div>
+                            <div class="small mb-0">Hanya shift yang dibuka yang dibangun ulang; shift lain diperlakukan
+                            terkunci dan bagiannya tidak dialokasikan dua kali. Jumlah shift hari itu tetap dihitung dari
+                            demand <strong>penuh</strong>, supaya hari dua shift tidak menyusut jadi satu shift.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -338,6 +419,19 @@
                 sendiri, dan masing-masing punya <strong>isi per kartu</strong> yang tetap. Kalau satu kartu berisi 12 unit, maka kebutuhan
                 160 unit memerlukan 14 kartu &mdash; karena 13 kartu hanya menutup 156. Kartu tidak pernah diterbitkan setengah; selalu utuh,
                 dan kelebihannya menjadi saldo.</p>
+
+                <div class="doc-panel mb-4">
+                    <div class="doc-panel-title">Kartu dihitung per cutoff, bukan per hari</div>
+                    <p class="small mb-2">Perhitungannya berjalan cutoff demi cutoff mengikuti urutan jadwal. Untuk setiap
+                    cutoff: buka kartu satu per satu sampai barang yang tersedia cukup menutup kebutuhan cutoff itu, lalu
+                    kebutuhannya diambil. Kelebihannya tidak dikembalikan &mdash; ia langsung menjadi modal cutoff berikutnya,
+                    lalu shift berikutnya, lalu hari berikutnya.</p>
+                    <div class="doc-calc">untuk tiap cutoff berurutan:
+    selama tersedia &lt; kebutuhan cutoff   &rarr;  terbitkan 1 kartu (tersedia += isi kartu)
+    tersedia &minus;= kebutuhan cutoff        &rarr;  selebihnya terbawa ke cutoff berikutnya</div>
+                    <p class="small text-muted mb-0 mt-2">Karena itu jumlah kartu satu hari tidak selalu sama dengan
+                    kebutuhan hari dibagi isi kartu: kartu terakhir hari kemarin ikut menentukan.</p>
+                </div>
 
                 <div class="doc-panel">
                     <div class="doc-panel-title">Membaca barcode kanban</div>
@@ -356,9 +450,13 @@
                         <div class="col-6 col-md"><div class="doc-bckey doc-bck-5"><b>0030</b>Nomor urut berjalan</div></div>
                     </div>
 
-                    <p class="small text-muted mb-0 mt-3">Empat angka terakhir adalah nomor urut yang <strong>terus naik dan tidak pernah
-                    diulang</strong>. Kalau nomor ini dikembalikan ke nol, barcode baru akan kembar dengan kartu yang sudah beredar di
-                    lapangan dan pemindaian jadi tidak bisa dipercaya.</p>
+                    <p class="small text-muted mb-2 mt-3">Tiga angka di tengah adalah nomor kartu dalam shift ini beserta
+                    totalnya (kartu ke-14 dari sekian), sedangkan empat angka terakhir adalah nomor urut berjalan yang
+                    <strong>hanya bergerak naik</strong>. Ia dihitung terpisah untuk setiap pasangan conveyor &amp; komponen,
+                    dan setelah 9999 berputar kembali ke 0001 &mdash; jarak sejauh itu sudah jauh melewati umur kartu di lapangan.</p>
+                    <p class="small text-muted mb-0">Yang tidak boleh terjadi adalah nomor ini <em>dimundurkan</em>. Unverify
+                    menghapus kanban tetapi sengaja tidak mengembalikan nomor urutnya; kalau dikembalikan, barcode baru akan
+                    kembar dengan kartu yang sudah beredar dan pemindaian tidak bisa dipercaya lagi.</p>
                 </div>
             </div>
 
@@ -408,10 +506,32 @@
                                     <tr><td>Defect di layar cutting</td><td class="text-center"><span class="badge bg-danger">&minus;</span></td></tr>
                                 </tbody>
                             </table>
-                            <p class="small text-muted mb-0">Setiap perubahan tercatat. Kalau saldo tidak sama dengan hasil penjumlahan
-                            ketiganya, berarti ada yang mengubah saldo tanpa jejak &mdash; dan itu selalu bisa dilacak.</p>
+                            <p class="small text-muted mb-0">Setiap perubahan tercatat beserta saldo sebelum dan sesudahnya.
+                            Kalau saldo tidak sama dengan hasil penjumlahan ketiganya, berarti ada yang mengubah saldo tanpa
+                            jejak &mdash; dan itu selalu bisa dilacak.</p>
                         </div>
                     </div>
+                </div>
+
+                <div class="doc-panel mt-4">
+                    <div class="doc-panel-title">Buku mutasi: kenapa saldo bisa dikembalikan dengan tepat</div>
+                    <p class="small mb-2">Setiap kali kanban dibuat, sistem mencatat satu baris berisi kebutuhan yang dilayani,
+                    jumlah yang diproduksi, serta saldo sebelum dan sesudahnya. Saat jadwal dibuka kembali (unverify), saldo
+                    dikembalikan <strong>sebesar catatan itu</strong>.</p>
+                    <p class="small mb-0 text-muted">Sebelumnya pengembalian dihitung ulang dari jumlah kartu dikurangi kebutuhan.
+                    Cara itu meleset pada cutoff yang seluruhnya dilayani saldo &mdash; tidak ada kartu terbit, tetapi saldo tetap
+                    berkurang. Karena selisihnya kecil dan berulang, saldo merosot perlahan tanpa ketahuan. Dengan catatan
+                    mutasi, yang dikembalikan persis yang dulu diambil.</p>
+                </div>
+
+                <div class="doc-panel mt-3">
+                    <div class="doc-panel-title">Menelusuri saldo: menu Balance History</div>
+                    <p class="small mb-2">Untuk satu item pada satu tanggal, laporan menyusun ulang pergerakan saldo hari itu
+                    dari ketiga buku mutasi:</p>
+                    <div class="doc-calc">saldo H-1  +  produksi kanban  &minus;  kebutuhan  +  addition  &minus;  defect   =   saldo hari ini</div>
+                    <p class="small mb-0 mt-2 text-muted">Kolom pemeriksaan menampilkan selisih persamaan di atas. Nol berarti
+                    hari itu utuh; selain nol menunjukkan persis di tanggal dan item mana rantainya terputus &mdash; jauh lebih
+                    berguna daripada mereset saldo dan kehilangan jejaknya.</p>
                 </div>
             </div>
 
@@ -437,11 +557,13 @@
                     <div class="col-lg-4">
                         <div class="doc-check h-100">
                             <span class="doc-check-n">2</span>
-                            <h6>Periksa penanda lembur</h6>
-                            <p>Bentuk jadwal yang berubah tiba-tiba &mdash; misalnya mendadak menjadi dua shift &mdash; hampir selalu karena
-                            penanda <strong>OT</strong> berbeda dari kemarin, bukan karena kapasitasnya salah.</p>
-                            <div class="doc-check-do"><span>Kalau OT tidak sesuai kenyataan</span>
-                            konfirmasi ke PPC; penanda itu ditetapkan di SIREP, bukan di sini.</div>
+                            <h6>Bandingkan listing dengan kapasitas lembur</h6>
+                            <p>Bentuk jadwal yang berubah &mdash; misalnya mendadak menjadi dua shift &mdash; selalu berasal dari
+                            satu perbandingan: listing hari itu melampaui <code>overtime_capacity</code> atau tidak. Penanda
+                            <strong>OT</strong> tidak ada hubungannya.</p>
+                            <div class="doc-check-do"><span>Kalau jumlah shift terasa keliru</span>
+                            cocokkan total listing hari itu dengan kapasitas lembur conveyornya; bila kapasitasnya yang
+                            salah, perbaikannya di SIREP.</div>
                         </div>
                     </div>
                     <div class="col-lg-4">
@@ -467,14 +589,17 @@
                 <h6 class="text-uppercase text-muted small fw-bold mb-3" style="letter-spacing:.08em">Istilah</h6>
                 <div class="row g-0 doc-gloss">
                     <div class="col-md-6"><dl class="doc-gitem"><dt>Listing</dt><dd>Daftar permintaan dari PPC lewat SIREP: assy apa, berapa, tanggal berapa.</dd></dl></div>
-                    <div class="col-md-6"><dl class="doc-gitem"><dt>Cutoff (CO)</dt><dd>Potongan waktu penyerahan dalam satu shift. CO1&ndash;CO4 normal, CO5 lembur.</dd></dl></div>
+                    <div class="col-md-6"><dl class="doc-gitem"><dt>Cutoff (CO)</dt><dd>Potongan waktu penyerahan dalam satu shift. CO1&ndash;CO4 dari kapasitas normal; CO5 adalah jatah tambahan, dan CO5 shift terakhir menampung seluruh sisa.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>normal_capacity</dt><dd>Kapasitas satu shift tanpa lembur. Dibagi menjadi CO1&ndash;CO4.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>Jumlah shift</dt><dd>Satu atau dua. Dihitung sendiri: listing melebihi <code>overtime_capacity</code> berarti dua shift.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>overtime_capacity</dt><dd>Kapasitas satu shift dengan lembur, sekaligus ambang pemecahan shift. Bila belum dikirim SIREP, dipakai <code>normal_capacity</code>.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>Isi per kartu</dt><dd>Jumlah unit dalam satu lembar kanban. Tetap per komponen, tidak pernah setengah.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>Saldo (sisa)</dt><dd>Kelebihan dari kartu terakhir yang terbawa ke hari berikutnya.</dd></dl></div>
                     <div class="col-md-6"><dl class="doc-gitem"><dt>Verifikasi</dt><dd>Persetujuan manusia atas jadwal. Sesudahnya jadwal terkunci dan kanban dicetak.</dd></dl></div>
-                    <div class="col-md-6"><dl class="doc-gitem"><dt>Nomor urut</dt><dd>Empat angka terakhir barcode. Terus naik, tidak boleh diulang.</dd></dl></div>
+                    <div class="col-md-6"><dl class="doc-gitem"><dt>Nomor urut</dt><dd>Empat angka terakhir barcode. Hanya bergerak naik, berputar setelah 9999, dan tidak pernah dimundurkan.</dd></dl></div>
+                    <div class="col-md-6"><dl class="doc-gitem"><dt>Unverify</dt><dd>Membuka kembali jadwal terkunci: item pindahan dikembalikan, saldo dipulihkan dari buku mutasi, kanban dihapus, jadwal dibangun ulang dari listing asli.</dd></dl></div>
+                    <div class="col-md-6"><dl class="doc-gitem"><dt>Buku mutasi</dt><dd>Catatan setiap perubahan saldo beserta nilai sebelum dan sesudahnya. Dasar pemulihan saldo dan laporan Balance History.</dd></dl></div>
+                    <div class="col-md-6"><dl class="doc-gitem"><dt>Over</dt><dd>Listing hari itu melampaui ambang nominal. Jadwalnya tetap dibuat utuh; tandanya untuk diperiksa orang.</dd></dl></div>
                 </div>
             </div>
 
@@ -499,7 +624,7 @@
                     <div class="doc-panel-title">CO5 satu shift mengikuti angka SIREP</div>
                     <p class="small mb-2">Dulu jatah CO5 selalu 7/8 cutoff normal. Sekarang hanya berlaku untuk CO5 shift
                     pertama pada hari dua shift; pada hari satu shift, CO5 = <code>overtime_capacity &minus; normal_capacity</code>.</p>
-                    <div class="doc-calc">B3-EGI  normal 136  overtime 160   CO5 satu shift = <b>24</b>
+                    <div class="doc-calc">B3-EGI  normal 135  overtime 160   CO5 satu shift = <b>25</b>
 B3-ENG  normal  78  overtime  96   CO5 satu shift = <b>18</b></div>
                 </div>
 
@@ -527,7 +652,41 @@ B3-ENG  cap  78    dulu 19/19/19/<b>21</b>    kini <b>21</b>/19/19/19</div>
                     <p class="small mb-0">Conveyor tidak lagi bisa ditambah atau dihapus manual. Yang baru di SIREP masuk
                     otomatis, yang sudah tidak dikirim berstatus <span class="badge bg-secondary">Nonaktif</span> dan berhenti
                     dijadwalkan &mdash; datanya tidak dihapus. Kapasitas juga ditarik dari SIREP; yang tersisa untuk diisi
-                    orang hanya Area, Family, Kode Conveyor SIREP, Jumlah Shift, dan Pallet Qty.</p>
+                    orang hanya Area, Family, Kode Conveyor SIREP, dan Pallet Qty.</p>
+                </div>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Conveyor tanpa kapasitas tidak lagi ditambahkan</div>
+                    <p class="small mb-0">SIREP mengirim sebagian conveyor dengan kapasitas kosong. Sebelumnya semuanya
+                    dibuatkan baris master, lalu muncul sebagai peringatan &ldquo;kapasitas belum tersinkron&rdquo; pada setiap
+                    generate padahal memang tidak bisa dijadwalkan. Kini conveyor seperti itu dilewati dan ditandai
+                    <span class="badge bg-light text-dark border">dilewati</span> pada pratinjau sinkronisasi; begitu SIREP
+                    mengisi kapasitasnya, ia masuk sendiri.</p>
+                </div>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Sinkron &amp; generate tidak lagi berjalan berlipat</div>
+                    <p class="small mb-2">Membuka halaman jadwal memicu generate otomatis, sementara tombol
+                    <strong>Generate</strong> memicu proses kedua yang sama beratnya. Keduanya menggarap tabel yang sama,
+                    sehingga bila berjalan bersamaan lamanya berlipat sampai timeout.</p>
+                    <p class="small mb-0 text-muted">Sekarang hanya satu proses per rentang tanggal yang boleh berjalan.
+                    Proses otomatis juga dilewati bila rentang yang sama baru saja selesai &mdash; ditampilkan sebagai
+                    pesan biru <em>&ldquo;sinkronisasi otomatis dilewati&rdquo;</em>, bukan kegagalan. Penekanan tombol
+                    manual tidak pernah dilewati; bila terhalang proses lain, hasilnya jujur disebut dilewati, bukan berhasil.</p>
+                </div>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Pesan gagal generate menyebut sebab yang benar</div>
+                    <p class="small mb-0">Dulu setiap kegagalan &mdash; termasuk kesalahan di dalam sistem sendiri &mdash;
+                    dilaporkan sebagai &ldquo;gagal mengambil data listing dari PPC&rdquo;, sehingga penelusuran mengarah ke
+                    pihak yang tidak bersalah. Sekarang pesan yang tampil adalah sebab sebenarnya, dan langkah mana yang berhenti.</p>
+                </div>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Versi aplikasi tampil di footer</div>
+                    <p class="small mb-0">Footer menampilkan versi kode yang sedang berjalan beserta waktu pembaruannya.
+                    Gunanya untuk memastikan perbaikan benar-benar sudah terpasang di server &mdash; bila nomornya belum
+                    berubah, yang berjalan masih kode lama.</p>
                 </div>
 
                 <div class="doc-panel mb-3">
@@ -555,7 +714,7 @@ B3-ENG  cap  78    dulu 19/19/19/<b>21</b>    kini <b>21</b>/19/19/19</div>
         </div>
 
         <div class="card-footer bg-transparent">
-            <small class="text-muted">Angka contoh diambil dari conveyor B3-EGI dan shikake BONDER isi 12 unit, tanggal 3&ndash;4 September 2026.</small>
+            <small class="text-muted">Angka contoh diambil dari conveyor B3-EGI (normal 135, lembur 160) dan shikake BONDER isi 12 unit, tanggal 3&ndash;4 September 2026. Bila kapasitas di SIREP berubah, angka contoh ini ikut tidak berlaku &mdash; yang mengikat adalah aturannya, bukan angkanya.</small>
         </div>
     </div>
 </div>
