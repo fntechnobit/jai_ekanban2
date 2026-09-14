@@ -221,14 +221,17 @@ class MasterCircuitController extends Controller
     {
         try {
             $request->validate([
-                'conveyor_id' => 'required|exists:master_conveyor,id'
+                'conveyor_id' => 'required|exists:master_conveyor,id',
+                'type' => 'nullable|string|in:CUTTING,CUTTING_TWIST',
             ]);
 
-            $deleted = $this->masterCircuitService->deleteByConveyor($request->conveyor_id);
-            
+            $type = $request->input('type') ?: null;
+            $deleted = $this->masterCircuitService->deleteByConveyor($request->conveyor_id, $type);
+
+            $scope = $type ? "the selected conveyor and type {$type}" : 'the selected conveyor';
             return ResponseHelper::success([
                 'count' => $deleted
-            ], "Successfully deleted {$deleted} Circuit record(s) for the selected conveyor");
+            ], "Successfully deleted {$deleted} Circuit record(s) for {$scope}");
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }

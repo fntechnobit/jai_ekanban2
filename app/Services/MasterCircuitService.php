@@ -213,18 +213,20 @@ class MasterCircuitService
         return $importer->import($filePath, $startRow);
     }
 
-    public function deleteByConveyor($conveyorId)
+    public function deleteByConveyor($conveyorId, $type = null)
     {
         DB::beginTransaction();
         try {
             $userId = Auth::id();
-            
+
+            $query = fn () => MasterCircuit::where('conveyor_id', $conveyorId)
+                ->when($type, fn ($q) => $q->where('type', $type));
+
             // Update deleted_by before soft deleting
-            MasterCircuit::where('conveyor_id', $conveyorId)
-                ->update(['deleted_by' => $userId]);
-            
-            // Soft delete all records for the conveyor
-            $deleted = MasterCircuit::where('conveyor_id', $conveyorId)->delete();
+            $query()->update(['deleted_by' => $userId]);
+
+            // Soft delete all records for the conveyor (and type, if given)
+            $deleted = $query()->delete();
             
             DB::commit();
             return $deleted;

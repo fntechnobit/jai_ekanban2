@@ -20,9 +20,18 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label for="remove_process">Process Type</label>
+                        <select class="form-select select2" id="remove_process" name="process" style="width: 100%;">
+                            <option value="">- All Process -</option>
+                            @foreach($processTypes as $processType)
+                                <option value="{{ $processType->value }}">{{ $processType->value }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="alert alert-warning">
-                        <i class="fa-solid fa-exclamation-triangle"></i> 
-                        <strong>Warning!</strong> This action will permanently delete all Shikake data associated with the selected conveyor.
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        <strong>Warning!</strong> This action will permanently delete all Shikake data associated with the selected conveyor and process type (all process types if none is selected).
                     </div>
                 </div>
                 <div class="modal-footer">

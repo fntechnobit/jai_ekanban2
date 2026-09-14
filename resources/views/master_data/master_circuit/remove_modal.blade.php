@@ -20,9 +20,17 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label for="remove_type">Type Process</label>
+                        <select class="form-select select2" id="remove_type" name="type" style="width: 100%;">
+                            <option value="">- All Type -</option>
+                            <option value="CUTTING">CUTTING</option>
+                            <option value="CUTTING_TWIST">CUTTING TWIST</option>
+                        </select>
+                    </div>
                     <div class="alert alert-warning">
-                        <i class="fa-solid fa-exclamation-triangle"></i> 
-                        <strong>Warning!</strong> This action will permanently delete all Circuit data associated with the selected conveyor.
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        <strong>Warning!</strong> This action will permanently delete all Circuit data associated with the selected conveyor and type (all types if none is selected).
                     </div>
                 </div>
                 <div class="modal-footer">

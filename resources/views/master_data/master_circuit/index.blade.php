@@ -505,7 +505,7 @@
                 $('#removeDataModal').modal('show');
                 // Re-initialize Select2 after modal is shown
                 setTimeout(function() {
-                    $('#remove_conveyor_id').select2({
+                    $('#remove_conveyor_id, #remove_type').select2({
                         theme: 'bootstrap-5',
                         dropdownParent: $('#removeDataModal')
                     });
@@ -515,10 +515,12 @@
             // Remove Data form submission
             $('#removeDataForm').submit(function(e) {
                 e.preventDefault();
-                
+
                 var conveyorId = $('#remove_conveyor_id').val();
                 var conveyorName = $('#remove_conveyor_id option:selected').text();
-                
+                var type = $('#remove_type').val();
+                var typeLabel = type ? $('#remove_type option:selected').text() : 'Semua Type';
+
                 if (!conveyorId) {
                     Swal.fire('Warning!', 'Please select a conveyor', 'warning');
                     return;
@@ -526,7 +528,7 @@
 
                 Swal.fire({
                     title: 'Are you sure?',
-                    html: `<p>Semua data Circuit pada conveyor <strong>${conveyorName}</strong> akan dihapus permanen.</p><p class="text-danger mb-0">Tindakan ini tidak dapat dibatalkan!</p>`,
+                    html: `<p>Semua data Circuit pada conveyor <strong>${conveyorName}</strong> dengan type <strong>${typeLabel}</strong> akan dihapus permanen.</p><p class="text-danger mb-0">Tindakan ini tidak dapat dibatalkan!</p>`,
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#d33',
@@ -540,14 +542,15 @@
                             type: 'POST',
                             data: {
                                 _token: '{{ csrf_token() }}',
-                                conveyor_id: conveyorId
+                                conveyor_id: conveyorId,
+                                type: type
                             },
                             success: function(response) {
                                 if (response.success) {
                                     $('#removeDataModal').modal('hide');
                                     table.ajax.reload();
                                     Swal.fire('Deleted!', response.message, 'success');
-                                    $('#remove_conveyor_id').val('').trigger('change');
+                                    $('#remove_conveyor_id, #remove_type').val('').trigger('change');
                                 }
                             },
                             error: function(xhr) {

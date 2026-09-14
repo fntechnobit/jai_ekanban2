@@ -378,14 +378,17 @@ class MasterShikakeController extends Controller
     {
         try {
             $request->validate([
-                'conveyor_id' => 'required|exists:master_conveyor,id'
+                'conveyor_id' => 'required|exists:master_conveyor,id',
+                'process' => 'nullable|string|in:' . implode(',', ProcessType::toArray()),
             ]);
 
-            $deleted = $this->masterShikakeService->deleteByConveyor($request->conveyor_id);
-            
+            $process = $request->input('process') ?: null;
+            $deleted = $this->masterShikakeService->deleteByConveyor($request->conveyor_id, $process);
+
+            $scope = $process ? "the selected conveyor and process {$process}" : 'the selected conveyor';
             return ResponseHelper::success([
                 'count' => $deleted
-            ], "Successfully deleted {$deleted} Shikake record(s) for the selected conveyor");
+            ], "Successfully deleted {$deleted} Shikake record(s) for {$scope}");
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 500);
         }

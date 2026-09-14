@@ -262,18 +262,20 @@ class MasterShikakeService
         };
     }
 
-    public function deleteByConveyor($conveyorId)
+    public function deleteByConveyor($conveyorId, $process = null)
     {
         DB::beginTransaction();
         try {
             $userId = Auth::id();
-            
+
+            $query = fn () => MasterShikake::where('conveyor_id', $conveyorId)
+                ->when($process, fn ($q) => $q->where('process', $process));
+
             // Update deleted_by before soft deleting
-            MasterShikake::where('conveyor_id', $conveyorId)
-                ->update(['deleted_by' => $userId]);
-            
-            // Soft delete all records for the conveyor
-            $deleted = MasterShikake::where('conveyor_id', $conveyorId)->delete();
+            $query()->update(['deleted_by' => $userId]);
+
+            // Soft delete all records for the conveyor (and process, if given)
+            $deleted = $query()->delete();
             
             DB::commit();
             return $deleted;
