@@ -13,9 +13,12 @@
                 <h5 class="card-title mb-0">Machine Data</h5>
                 <div class="card-tools float-end">
                     @if(auth()->user()->hasMenuPermission('master_machine', 'can_create'))
+                        <button type="button" class="btn btn-success btn-sm" id="btn-import">
+                            <i class="fa-solid fa-file-import"></i> Import
+                        </button>
                         <button type="button" class="btn btn-primary btn-sm" id="btn-add">
                             <i class="fa-solid fa-plus"></i> Add New Data
-                        </button>       
+                        </button>
                     @endif
                 </div>
             </div>
@@ -59,6 +62,7 @@
     </div>
 
     @include('master_data.master_machine.form')
+    @include('master_data.master_machine.import_modal')
 @endsection
 
 @section('script')
@@ -260,6 +264,81 @@
                         } else {
                             Swal.fire('Error!', xhr.responseJSON.message || 'Something went wrong', 'error');
                         }
+                    }
+                });
+            });
+
+            // Import button handler
+            $('#btn-import').click(function() {
+                $('#importMachineModal').modal('show');
+            });
+
+            // Update file input label
+            $('#import_file').on('change', function() {
+                var fileName = $(this).val().split('\\').pop();
+                $(this).next('.custom-file-label').html(fileName || 'Browse File');
+            });
+
+            // Download Template
+            $('#btn-download-template-machine').click(function() {
+                window.location.href = "{{ route('master-data.master-machine.download-template') }}";
+            });
+
+            // Submit Import Form
+            $('#importMachineForm').submit(function(e) {
+                e.preventDefault();
+                $('.error-text, .text-danger').text('');
+
+                var formData = new FormData(this);
+                var submitBtn = $('#btn-submit-import-machine');
+
+                submitBtn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> Importing...');
+
+                $.ajax({
+                    url: "{{ route('master-data.master-machine.import') }}",
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        $('#importMachineModal').modal('hide');
+                        $('#importMachineForm')[0].reset();
+                        $('.custom-file-label').html('Browse File');
+                        table.ajax.reload();
+
+                        var result = response.data.result;
+                        var message = response.message;
+
+                        if (result.errors && result.errors.length > 0) {
+                            message += '<br><br><strong>Errors:</strong><br>' + result.errors.slice(0, 5).join('<br>');
+                            if (result.errors.length > 5) {
+                                message += '<br>... and ' + (result.errors.length - 5) + ' more errors';
+                            }
+                            Swal.fire({
+                                title: 'Import Completed with Warnings',
+                                html: message,
+                                icon: 'warning'
+                            });
+                        } else {
+                            Swal.fire('Success!', message, 'success');
+                        }
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 422) {
+                            var errors = xhr.responseJSON.data || xhr.responseJSON.errors;
+                            if (typeof errors === 'object') {
+                                $.each(errors, function(key, value) {
+                                    var errorKey = key.replace('.', '_');
+                                    $('.import_' + errorKey + '_error, .' + errorKey + '_error').text(Array.isArray(value) ? value[0] : value);
+                                });
+                            }
+                            Swal.fire('Error!', xhr.responseJSON.message || 'Import failed', 'error');
+                        } else {
+                            Swal.fire('Error!', (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong', 'error');
+                        }
+                    },
+                    complete: function() {
+                        submitBtn.prop('disabled', false).html('<i class="fa-solid fa-upload"></i> Import');
                     }
                 });
             });

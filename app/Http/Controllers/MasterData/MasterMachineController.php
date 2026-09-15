@@ -20,7 +20,7 @@ class MasterMachineController extends Controller
         $this->masterMachineService = $masterMachineService;
 
         $this->middleware('check.menu:master_machine,can_read')->only(['index', 'datatable', 'show']);
-        $this->middleware('check.menu:master_machine,can_create')->only(['create', 'store']);
+        $this->middleware('check.menu:master_machine,can_create')->only(['create', 'store', 'import']);
         $this->middleware('check.menu:master_machine,can_update')->only(['edit', 'update']);
         $this->middleware('check.menu:master_machine,can_delete')->only(['destroy']);
     }
@@ -91,5 +91,53 @@ class MasterMachineController extends Controller
         } catch (\Exception $e) {
             return ResponseHelper::error($e->getMessage(), 422);
         }
+    }
+
+    public function import(Request $request)
+    {
+        try {
+            $request->validate([
+                'file' => 'required|file|mimes:xlsx,xls|max:10240',
+                'rows_start' => 'required|integer|min:1',
+            ]);
+
+            $file = $request->file('file');
+            $rowsStart = $request->input('rows_start', 2);
+
+            $result = $this->masterMachineService->import($file->getRealPath(), $rowsStart);
+
+            if ($result['success']) {
+                $message = "Import completed successfully. {$result['success_count']} records imported";
+                if ($result['failed_count'] > 0) {
+                    $message .= ", {$result['failed_count']} records failed.";
+                }
+
+                return ResponseHelper::success([
+                    'result' => $result,
+                    'errors' => $result['errors'] ?? [],
+                ], $message);
+            }
+
+            return ResponseHelper::error('Import failed', 422);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = [];
+            foreach ($e->errors() as $field => $messages) {
+                $errors[$field] = $messages[0];
+            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $errors,
+            ], 422);
+        } catch (\Exception $e) {
+            return ResponseHelper::error($e->getMessage(), 422);
+        }
+    }
+
+    public function downloadTemplate()
+    {
+        $tempPath = $this->masterMachineService->generateTemplateFile();
+
+        return response()->download($tempPath, 'Template_Machine.xlsx')->deleteFileAfterSend(true);
     }
 }

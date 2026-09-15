@@ -107,8 +107,10 @@ Route::middleware('auth')->group(function () {
         Route::get('master-conveyor/families/data', [MasterConveyorController::class, 'getFamilies'])->name('master-conveyor.families');
 
         // Master Machine Management
-        Route::resource('master-machine', MasterMachineController::class);
         Route::get('master-machine/datatable/data', [MasterMachineController::class, 'datatable'])->name('master-machine.datatable');
+        Route::post('master-machine/import', [MasterMachineController::class, 'import'])->name('master-machine.import');
+        Route::get('master-machine/download-template', [MasterMachineController::class, 'downloadTemplate'])->name('master-machine.download-template');
+        Route::resource('master-machine', MasterMachineController::class);
 
         // Master Shikake Management
         Route::get('master-shikake/datatable', [MasterShikakeController::class, 'datatable'])->name('master-shikake.datatable');
