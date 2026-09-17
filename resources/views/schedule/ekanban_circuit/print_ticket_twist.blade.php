@@ -46,20 +46,26 @@
 }
 
 .ticket-twist-print {
-    width: 870px;
-    min-width: 870px;
+    /* Lebar MENGIKUTI ISI TABEL (colgroup), bukan angka tetap.
+       Pelajaran dari bug lama "kolom kanan hilang" (BONDER): lebar container
+       yang dikunci lebih kecil dari isi tabel membuat tabel meluber, dan bagian
+       yang meluber itu ikut hilang saat html2canvas meng-capture kotak elemen.
+       Dengan max-content, container selalu memeluk tabel berapa pun colgroup-nya. */
+    width: max-content;
     height: 100%;
     flex-shrink: 0;
     background: white;
     margin: 0;
     padding: 0;
     border: 2px solid #000;
-    overflow: hidden;
+    overflow: visible;
     font-family: Arial, sans-serif;
 }
 
 .ticket-twist-print table {
-    width: 100%;
+    /* auto + table-layout:fixed => lebar = jumlah colgroup, tidak pernah
+       dipaksa menyusut/meluber terhadap container. */
+    width: auto;
     height: 100%;
     border-collapse: collapse;
     table-layout: fixed;
@@ -149,16 +155,12 @@
     max-width: 0; /* force cell to respect colgroup width */
 }
 
-.twist-qr-label {
-    font-size: 14px;
-    font-weight: bold;
-    margin-bottom: 2px;
-}
-
 .twist-qr-img {
+    /* Tinggi QR dimaksimalkan mengikuti tinggi cell bawah (4 baris rowspan).
+       Tinggi kertas tetap 80mm, jadi cell yang melebar (lihat colgroup col 3). */
+    height: 155px;
+    width: 155px;
     max-width: 100%;
-    width: 90px;
-    height: auto;
     aspect-ratio: 1 / 1;
     display: block;
     margin: 0 auto;
@@ -306,7 +308,7 @@
         <colgroup>
             <col style="width: 46px">   {{-- Col 1: Section label --}}
             <col style="width: 92px">   {{-- Col 2: Label --}}
-            <col style="width: 92px">   {{-- Col 3: Value --}}
+            <col style="width: 165px">  {{-- Col 3: Value + QR Drawing (lebar mengikuti tinggi QR) --}}
             <col style="width: 92px">   {{-- Col 4: Label/Value --}}
             <col style="width: 92px">   {{-- Col 5: Label/Value --}}
             <col style="width: 92px">   {{-- Col 6: Value --}}
@@ -460,19 +462,18 @@
                     @if(isset($circuit->qr_qrcode_drawing_path))
                         <img src="{{ $circuit->qr_qrcode_drawing_path }}" alt="QR Drawing" class="twist-qr-img">
                     @elseif(!empty($circuit->qrcode_drawing))
-                        <div style="width:100%;max-width:88px;aspect-ratio:1/1;border:1px solid #ccc;margin:0 auto;font-size:10px;display:flex;align-items:center;justify-content:center;word-break:break-all;padding:2px;">{{ $circuit->qrcode_drawing }}</div>
+                        <div style="width:155px;max-width:100%;aspect-ratio:1/1;border:1px solid #ccc;margin:0 auto;font-size:10px;display:flex;align-items:center;justify-content:center;word-break:break-all;padding:2px;">{{ $circuit->qrcode_drawing }}</div>
                     @else
-                        <div style="width:100%;max-width:88px;aspect-ratio:1/1;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">DRW</div>
+                        <div style="width:155px;max-width:100%;aspect-ratio:1/1;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">DRW</div>
                     @endif
                 </td>
                 <td class="twist-label-cell text-left" style="padding:1px 3px;">CV NO</td>
                 <td colspan="3" class="twist-value-cell text-left" style="padding:1px 3px;">{{ $circuit->conveyor ?? '-' }}</td>
                 <td colspan="2" rowspan="4" class="twist-qrcode-cell">
-                    <div class="twist-qr-label">SHIKAKE CODE</div>
                     @if(isset($circuit->qr_code_path))
                         <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="twist-qr-img">
                     @else
-                        <div style="width:100%;max-width:90px;aspect-ratio:1/1;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR</div>
+                        <div style="width:155px;max-width:100%;aspect-ratio:1/1;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR</div>
                     @endif
                     @if(!empty($circuit->barcode_kanban))
                         <div style="font-size:11px;font-weight:bold;margin-top:2px;word-break:break-all;line-height:1.2;">{{ $circuit->barcode_kanban }}</div>
