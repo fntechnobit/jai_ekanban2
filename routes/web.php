@@ -117,7 +117,7 @@ Route::middleware('auth')->group(function () {
         Route::get('master-shikake/import-form', [MasterShikakeController::class, 'importForm'])->name('master-shikake.import-form');
         Route::post('master-shikake/import', [MasterShikakeController::class, 'import'])->name('master-shikake.import');
         Route::get('master-shikake/download-template', [MasterShikakeController::class, 'downloadTemplate'])->name('master-shikake.download-template');
-        Route::get('master-shikake/machines', [MasterShikakeController::class, 'machines'])->name('master-shikake.machines');
+        Route::get('master-shikake/filter-options', [MasterShikakeController::class, 'filterOptions'])->name('master-shikake.filter-options');
         Route::post('master-shikake/remove-by-conveyor', [MasterShikakeController::class, 'removeByConveyor'])->name('master-shikake.remove-by-conveyor');
         Route::resource('master-shikake', MasterShikakeController::class);
 
@@ -126,7 +126,7 @@ Route::middleware('auth')->group(function () {
         Route::get('master-circuit/import-form', [MasterCircuitController::class, 'importForm'])->name('master-circuit.import-form');
         Route::post('master-circuit/import', [MasterCircuitController::class, 'import'])->name('master-circuit.import');
         Route::get('master-circuit/download-template', [MasterCircuitController::class, 'downloadTemplate'])->name('master-circuit.download-template');
-        Route::get('master-circuit/machines', [MasterCircuitController::class, 'machines'])->name('master-circuit.machines');
+        Route::get('master-circuit/filter-options', [MasterCircuitController::class, 'filterOptions'])->name('master-circuit.filter-options');
         Route::post('master-circuit/remove-by-conveyor', [MasterCircuitController::class, 'removeByConveyor'])->name('master-circuit.remove-by-conveyor');
         Route::post('master-circuit/{id}/upload-drawing', [MasterCircuitController::class, 'uploadDrawing'])->name('master-circuit.upload-drawing');
         Route::resource('master-circuit', MasterCircuitController::class);

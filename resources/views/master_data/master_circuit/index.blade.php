@@ -18,11 +18,11 @@
                             <option value="{{ $area->id }}">{{ $area->area }}</option>
                         @endforeach
                     </select>
+                    <select class="form-select form-select-sm select2" id="filter_family" data-placeholder="- All Family -" style="width: 200px;">
+                        <option value="">- All Family -</option>
+                    </select>
                     <select class="form-select form-select-sm select2" id="filter_conveyor_id" data-placeholder="- All Conveyor -" style="width: 180px;">
                         <option value="">- All Conveyor -</option>
-                        @foreach($conveyors as $conveyor)
-                            <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
-                        @endforeach
                     </select>
                     <select class="form-select form-select-sm select2" id="filter_type" data-placeholder="- All Type -" style="width: 160px;">
                         <option value="">- All Type -</option>
@@ -83,11 +83,10 @@
     @include('master_data.partials.cascade_select_script')
     <script>
         $(function () {
-            var conveyorOptions = {{ Js::from($conveyors->map(fn ($c) => ['id' => $c->id, 'text' => $c->conveyor, 'area_id' => $c->master_area_id])->values()) }};
-            var machinesUrl = "{{ route('master-data.master-circuit.machines') }}";
+            var optionsUrl = "{{ route('master-data.master-circuit.filter-options') }}";
 
             // Initialize Select2 for filters
-            $('#filter_area_id, #filter_conveyor_id, #filter_type, #filter_machine').select2({
+            $('#filter_area_id, #filter_family, #filter_conveyor_id, #filter_type, #filter_machine').select2({
                 theme: 'bootstrap-5',
                 allowClear: true,
                 placeholder: function() {
@@ -95,20 +94,24 @@
                 }
             });
 
-            function loadFilterMachines() {
-                return MasterCascade.loadMachines($('#filter_machine'), machinesUrl, {
-                    area_id: $('#filter_area_id').val(),
-                    conveyor_id: $('#filter_conveyor_id').val(),
-                    type: $('#filter_type').val()
-                }, '- All Machine -');
-            }
-            loadFilterMachines();
+            // Cascading filters (Area -> Family -> Conveyor -> Type -> Machine), all optional
+            var filterCascade = MasterCascade.create({
+                url: optionsUrl,
+                typeParam: 'type',
+                selects: {
+                    area: $('#filter_area_id'),
+                    family: $('#filter_family'),
+                    conveyor: $('#filter_conveyor_id'),
+                    type: $('#filter_type'),
+                    machine: $('#filter_machine')
+                },
+                placeholders: { family: '- All Family -', conveyor: '- All Conveyor -', machine: '- All Machine -' },
+                onChange: function () { table.ajax.reload(); }
+            });
 
             // Reset filter button
             $('#btn-reset-filter').on('click', function () {
-                $('#filter_area_id, #filter_type').val('').trigger('change.select2');
-                MasterCascade.fillConveyors($('#filter_conveyor_id'), conveyorOptions, '', '- All Conveyor -');
-                loadFilterMachines();
+                filterCascade.reset();
                 table.ajax.reload();
             });
 
@@ -120,6 +123,7 @@
                     url: "{{ route('master-data.master-circuit.datatable') }}",
                     data: function(d) {
                         d.area_id = $('#filter_area_id').val();
+                        d.family = $('#filter_family').val();
                         d.conveyor_id = $('#filter_conveyor_id').val();
                         d.type = $('#filter_type').val();
                         d.machine = $('#filter_machine').val();
@@ -143,20 +147,6 @@
                 pageLength: 100,
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
                 order: [[1, 'asc']]
-            });
-
-            // Cascading filter events: every level resets the levels below it
-            $('#filter_area_id').on('change', function() {
-                MasterCascade.fillConveyors($('#filter_conveyor_id'), conveyorOptions, $(this).val(), '- All Conveyor -');
-                loadFilterMachines();
-                table.ajax.reload();
-            });
-            $('#filter_conveyor_id, #filter_type').on('change', function() {
-                loadFilterMachines();
-                table.ajax.reload();
-            });
-            $('#filter_machine').on('change', function() {
-                table.ajax.reload();
             });
 
             // Import button handler
@@ -529,52 +519,29 @@
                 });
             });
 
-            // Remove Data form: Area and Conveyor are mandatory, Type and Machine optional
-            $('#remove_area_id, #remove_conveyor_id, #remove_type, #remove_machine').select2({
+            // Remove Data form: Area, Family and Conveyor are mandatory, Type and Machine optional
+            $('#remove_area_id, #remove_family, #remove_conveyor_id, #remove_type, #remove_machine').select2({
                 theme: 'bootstrap-5',
                 dropdownParent: $('#removeDataModal')
             });
 
-            function fillRemoveConveyors(areaId) {
-                var $conveyor = $('#remove_conveyor_id');
-                if (areaId) {
-                    MasterCascade.fillConveyors($conveyor, conveyorOptions, areaId, '- Choose Conveyor -');
-                } else {
-                    $conveyor.empty().append(new Option('- Choose Conveyor -', '')).trigger('change.select2');
-                }
-                $conveyor.prop('disabled', !areaId);
-            }
-
-            function loadRemoveMachines() {
-                var $machine = $('#remove_machine');
-                var conveyorId = $('#remove_conveyor_id').val();
-                $machine.prop('disabled', !conveyorId);
-                if (!conveyorId) {
-                    $machine.empty().append(new Option('- All Machine -', '')).trigger('change.select2');
-                    return;
-                }
-                MasterCascade.loadMachines($machine, machinesUrl, {
-                    area_id: $('#remove_area_id').val(),
-                    conveyor_id: conveyorId,
-                    type: $('#remove_type').val()
-                }, '- All Machine -');
-            }
-
-            function resetRemoveForm() {
-                $('#remove_area_id, #remove_type').val('').trigger('change.select2');
-                fillRemoveConveyors('');
-                loadRemoveMachines();
-            }
-
-            $('#remove_area_id').on('change', function() {
-                fillRemoveConveyors($(this).val());
-                loadRemoveMachines();
+            var removeCascade = MasterCascade.create({
+                url: optionsUrl,
+                typeParam: 'type',
+                required: true,
+                selects: {
+                    area: $('#remove_area_id'),
+                    family: $('#remove_family'),
+                    conveyor: $('#remove_conveyor_id'),
+                    type: $('#remove_type'),
+                    machine: $('#remove_machine')
+                },
+                placeholders: { family: '- Choose Family -', conveyor: '- Choose Conveyor -', machine: '- All Machine -' }
             });
-            $('#remove_conveyor_id, #remove_type').on('change', loadRemoveMachines);
 
             // Remove Data button click
             $('#btn-remove-data').click(function() {
-                resetRemoveForm();
+                removeCascade.reset();
                 $('#removeDataModal').modal('show');
             });
 
@@ -584,6 +551,7 @@
 
                 var areaId = $('#remove_area_id').val();
                 var areaName = $('#remove_area_id option:selected').text();
+                var family = $('#remove_family').val();
                 var conveyorId = $('#remove_conveyor_id').val();
                 var conveyorName = $('#remove_conveyor_id option:selected').text();
                 var type = $('#remove_type').val();
@@ -594,6 +562,10 @@
                     Swal.fire('Warning!', 'Please select an area', 'warning');
                     return;
                 }
+                if (!family) {
+                    Swal.fire('Warning!', 'Please select a family', 'warning');
+                    return;
+                }
                 if (!conveyorId) {
                     Swal.fire('Warning!', 'Please select a conveyor', 'warning');
                     return;
@@ -601,6 +573,7 @@
 
                 var scope = $('<div>')
                     .append('Area: ', $('<strong>').text(areaName), '<br>')
+                    .append('Family: ', $('<strong>').text(family), '<br>')
                     .append('Conveyor: ', $('<strong>').text(conveyorName), '<br>')
                     .append('Type: ', $('<strong>').text(typeLabel), '<br>')
                     .append('Machine: ', $('<strong>').text(machine || 'Semua Machine'))
@@ -623,6 +596,7 @@
                             data: {
                                 _token: '{{ csrf_token() }}',
                                 area_id: areaId,
+                                family: family,
                                 conveyor_id: conveyorId,
                                 type: type,
                                 machine: machine
@@ -630,8 +604,7 @@
                             success: function(response) {
                                 if (response.success) {
                                     $('#removeDataModal').modal('hide');
-                                    resetRemoveForm();
-                                    loadFilterMachines();
+                                    removeCascade.reset();
                                     table.ajax.reload();
                                     Swal.fire('Deleted!', response.message, 'success');
                                 }

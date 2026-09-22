@@ -21,6 +21,12 @@
                         </select>
                     </div>
                     <div class="mb-3">
+                        <label for="remove_family">Family <span class="text-danger">*</span></label>
+                        <select class="form-select select2" id="remove_family" name="family" style="width: 100%;" required disabled>
+                            <option value="">- Choose Family -</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label for="remove_conveyor_id">Conveyor <span class="text-danger">*</span></label>
                         <select class="form-select select2" id="remove_conveyor_id" name="conveyor_id" style="width: 100%;" required disabled>
                             <option value="">- Choose Conveyor -</option>
@@ -43,7 +49,7 @@
                     </div>
                     <div class="alert alert-warning">
                         <i class="fa-solid fa-exclamation-triangle"></i>
-                        <strong>Warning!</strong> This action will permanently delete all Shikake data on the selected conveyor that match the chosen process type and machine (all of them when left empty).
+                        <strong>Warning!</strong> This action will permanently delete all Shikake data of the selected family on the selected conveyor that match the chosen process type and machine (all of them when left empty).
                     </div>
                 </div>
                 <div class="modal-footer">

@@ -3,11 +3,13 @@
 namespace App\Services;
 
 use App\Models\MasterShikake;
+use App\Models\MasterConveyor;
 use App\Imports\MasterShikakeTwistImport;
 use App\Imports\MasterShikakeBonderImport;
 use App\Imports\MasterShikakeJointImport;
 use App\Imports\MasterShikakeShieldImport;
 use App\Imports\MasterShikakeDblCrimpImport;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
@@ -19,7 +21,7 @@ class MasterShikakeService
         return MasterShikake::with(['conveyor'])->select('master_shikake.*');
     }
 
-    public function getDatatable($areaId = null, $conveyorId = null, $process = null, $machine = null)
+    public function getDatatable(array $filters = [])
     {
         $query = MasterShikake::select([
                 'master_shikake.id',
@@ -50,21 +52,25 @@ class MasterShikakeService
             ->leftJoin('master_shikake_shield', 'master_shikake.id', '=', 'master_shikake_shield.master_shikake_id')
             ->leftJoin('master_shikake_dbl_crimp', 'master_shikake.id', '=', 'master_shikake_dbl_crimp.master_shikake_id');
 
-        // Apply filters
-        if ($areaId) {
-            $query->where('master_area.id', $areaId);
+        // Apply filters (Area -> Family -> Conveyor -> Process -> Machine)
+        if (!empty($filters['area_id'])) {
+            $query->where('master_area.id', $filters['area_id']);
         }
 
-        if ($conveyorId) {
-            $query->where('master_conveyor.id', $conveyorId);
+        if (!empty($filters['family'])) {
+            $query->where('master_shikake.family', $filters['family']);
         }
 
-        if ($process) {
-            $query->where('master_shikake.process', $process);
+        if (!empty($filters['conveyor_id'])) {
+            $query->where('master_conveyor.id', $filters['conveyor_id']);
         }
 
-        if ($machine) {
-            $query->where('master_shikake.machine', $machine);
+        if (!empty($filters['process'])) {
+            $query->where('master_shikake.process', $filters['process']);
+        }
+
+        if (!empty($filters['machine'])) {
+            $query->where('master_shikake.machine', $filters['machine']);
         }
 
         return DataTables::of($query)
@@ -273,37 +279,64 @@ class MasterShikakeService
     }
 
     /**
-     * Distinct machine values present in the data, narrowed by the upper filter levels.
+     * Data query narrowed by the cascading filters (Area -> Family -> Conveyor -> Process -> Machine).
      */
-    public function getMachineOptions($areaId = null, $conveyorId = null, $process = null)
+    private function filteredQuery(array $filters)
     {
         return MasterShikake::query()
-            ->when($areaId, fn ($q) => $q->whereHas('conveyor', fn ($c) => $c->where('master_area_id', $areaId)))
-            ->when($conveyorId, fn ($q) => $q->where('conveyor_id', $conveyorId))
-            ->when($process, fn ($q) => $q->where('process', $process))
-            ->whereNotNull('machine')
-            ->where('machine', '<>', '')
-            ->distinct()
-            ->orderBy('machine')
-            ->pluck('machine');
+            ->when($filters['area_id'] ?? null, fn ($q, $areaId) => $q->whereHas('conveyor', fn ($c) => $c->where('master_area_id', $areaId)))
+            ->when($filters['family'] ?? null, fn ($q, $family) => $q->where('family', $family))
+            ->when($filters['conveyor_id'] ?? null, fn ($q, $conveyorId) => $q->where('conveyor_id', $conveyorId))
+            ->when($filters['process'] ?? null, fn ($q, $value) => $q->where('process', $value))
+            ->when($filters['machine'] ?? null, fn ($q, $machine) => $q->where('machine', $machine));
     }
 
-    public function deleteByConveyor($conveyorId, $process = null, $machine = null)
+    /**
+     * Options for the cascading selects, taken from the data itself so every choice
+     * matches existing rows. Each level is narrowed only by the levels above it.
+     */
+    public function getFilterOptions(array $filters)
     {
+        $distinct = fn (array $levels, string $column) => $this->filteredQuery(Arr::only($filters, $levels))
+            ->whereNotNull($column)
+            ->where($column, '<>', '')
+            ->distinct()
+            ->orderBy($column)
+            ->pluck($column);
+
+        $conveyorIds = $this->filteredQuery(Arr::only($filters, ['area_id', 'family']))->distinct()->pluck('conveyor_id');
+
+        return [
+            'families' => $distinct(['area_id'], 'family'),
+            'conveyors' => MasterConveyor::whereIn('id', $conveyorIds)
+                ->orderBy('conveyor')
+                ->get(['id', 'conveyor'])
+                ->map(fn ($c) => ['id' => $c->id, 'text' => $c->conveyor])
+                ->values(),
+            'machines' => $distinct(['area_id', 'family', 'conveyor_id', 'process'], 'machine'),
+        ];
+    }
+
+    /**
+     * Soft delete every row on one conveyor matching the given family / process / machine.
+     */
+    public function deleteByFilters(array $filters)
+    {
+        if (empty($filters['conveyor_id'])) {
+            throw new \InvalidArgumentException('A conveyor is required to remove data');
+        }
+
         DB::beginTransaction();
         try {
             $userId = Auth::id();
 
-            $query = fn () => MasterShikake::where('conveyor_id', $conveyorId)
-                ->when($process, fn ($q) => $q->where('process', $process))
-                ->when($machine, fn ($q) => $q->where('machine', $machine));
+            $query = fn () => $this->filteredQuery(Arr::only($filters, ['conveyor_id', 'family', 'process', 'machine']));
 
             // Update deleted_by before soft deleting
             $query()->update(['deleted_by' => $userId]);
 
-            // Soft delete all records for the conveyor (and process/machine, if given)
             $deleted = $query()->delete();
-            
+
             DB::commit();
             return $deleted;
         } catch (\Exception $e) {

@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\MasterCircuit;
+use App\Models\MasterConveyor;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
@@ -14,32 +16,12 @@ class MasterCircuitService
         return MasterCircuit::with(['conveyor'])->select('master_circuit.*');
     }
 
-    public function getDatatable($areaId = null, $conveyorId = null, $type = null, $machine = null)
+    public function getDatatable(array $filters = [])
     {
-        $query = MasterCircuit::with(['conveyor.area'])
+        // Area -> Family -> Conveyor -> Type -> Machine
+        $query = $this->filteredQuery($filters)
+            ->with(['conveyor.area'])
             ->select('master_circuit.*');
-
-        // Filter by area through conveyor relationship
-        if ($areaId) {
-            $query->whereHas('conveyor', function ($q) use ($areaId) {
-                $q->where('master_area_id', $areaId);
-            });
-        }
-
-        // Filter by conveyor
-        if ($conveyorId) {
-            $query->where('conveyor_id', $conveyorId);
-        }
-
-        // Filter by type
-        if ($type) {
-            $query->where('type', $type);
-        }
-
-        // Filter by machine
-        if ($machine) {
-            $query->where('machine', $machine);
-        }
 
         return DataTables::of($query)
             ->addIndexColumn()
@@ -222,37 +204,64 @@ class MasterCircuitService
     }
 
     /**
-     * Distinct machine values present in the data, narrowed by the upper filter levels.
+     * Data query narrowed by the cascading filters (Area -> Family -> Conveyor -> Type -> Machine).
      */
-    public function getMachineOptions($areaId = null, $conveyorId = null, $type = null)
+    private function filteredQuery(array $filters)
     {
         return MasterCircuit::query()
-            ->when($areaId, fn ($q) => $q->whereHas('conveyor', fn ($c) => $c->where('master_area_id', $areaId)))
-            ->when($conveyorId, fn ($q) => $q->where('conveyor_id', $conveyorId))
-            ->when($type, fn ($q) => $q->where('type', $type))
-            ->whereNotNull('machine')
-            ->where('machine', '<>', '')
-            ->distinct()
-            ->orderBy('machine')
-            ->pluck('machine');
+            ->when($filters['area_id'] ?? null, fn ($q, $areaId) => $q->whereHas('conveyor', fn ($c) => $c->where('master_area_id', $areaId)))
+            ->when($filters['family'] ?? null, fn ($q, $family) => $q->where('family', $family))
+            ->when($filters['conveyor_id'] ?? null, fn ($q, $conveyorId) => $q->where('conveyor_id', $conveyorId))
+            ->when($filters['type'] ?? null, fn ($q, $value) => $q->where('type', $value))
+            ->when($filters['machine'] ?? null, fn ($q, $machine) => $q->where('machine', $machine));
     }
 
-    public function deleteByConveyor($conveyorId, $type = null, $machine = null)
+    /**
+     * Options for the cascading selects, taken from the data itself so every choice
+     * matches existing rows. Each level is narrowed only by the levels above it.
+     */
+    public function getFilterOptions(array $filters)
     {
+        $distinct = fn (array $levels, string $column) => $this->filteredQuery(Arr::only($filters, $levels))
+            ->whereNotNull($column)
+            ->where($column, '<>', '')
+            ->distinct()
+            ->orderBy($column)
+            ->pluck($column);
+
+        $conveyorIds = $this->filteredQuery(Arr::only($filters, ['area_id', 'family']))->distinct()->pluck('conveyor_id');
+
+        return [
+            'families' => $distinct(['area_id'], 'family'),
+            'conveyors' => MasterConveyor::whereIn('id', $conveyorIds)
+                ->orderBy('conveyor')
+                ->get(['id', 'conveyor'])
+                ->map(fn ($c) => ['id' => $c->id, 'text' => $c->conveyor])
+                ->values(),
+            'machines' => $distinct(['area_id', 'family', 'conveyor_id', 'type'], 'machine'),
+        ];
+    }
+
+    /**
+     * Soft delete every row on one conveyor matching the given family / type / machine.
+     */
+    public function deleteByFilters(array $filters)
+    {
+        if (empty($filters['conveyor_id'])) {
+            throw new \InvalidArgumentException('A conveyor is required to remove data');
+        }
+
         DB::beginTransaction();
         try {
             $userId = Auth::id();
 
-            $query = fn () => MasterCircuit::where('conveyor_id', $conveyorId)
-                ->when($type, fn ($q) => $q->where('type', $type))
-                ->when($machine, fn ($q) => $q->where('machine', $machine));
+            $query = fn () => $this->filteredQuery(Arr::only($filters, ['conveyor_id', 'family', 'type', 'machine']));
 
             // Update deleted_by before soft deleting
             $query()->update(['deleted_by' => $userId]);
 
-            // Soft delete all records for the conveyor (and type/machine, if given)
             $deleted = $query()->delete();
-            
+
             DB::commit();
             return $deleted;
         } catch (\Exception $e) {

@@ -18,7 +18,7 @@ class MasterCircuitController extends Controller
     {
         $this->masterCircuitService = $masterCircuitService;
 
-        $this->middleware('check.menu:master_circuit,can_read')->only(['index', 'datatable', 'show', 'machines']);
+        $this->middleware('check.menu:master_circuit,can_read')->only(['index', 'datatable', 'show', 'filterOptions']);
         $this->middleware('check.menu:master_circuit,can_create')->only(['create', 'store', 'importForm', 'import']);
         $this->middleware('check.menu:master_circuit,can_update')->only(['edit', 'update', 'uploadDrawing']);
         $this->middleware('check.menu:master_circuit,can_delete')->only(['destroy', 'removeByConveyor']);
@@ -34,26 +34,20 @@ class MasterCircuitController extends Controller
     public function datatable(Request $request)
     {
         if ($request->ajax()) {
-            $areaId = $request->get('area_id');
-            $conveyorId = $request->get('conveyor_id');
-            $type = $request->get('type');
-            $machine = $request->get('machine');
-            return $this->masterCircuitService->getDatatable($areaId, $conveyorId, $type, $machine);
+            return $this->masterCircuitService->getDatatable(
+                $request->only(['area_id', 'family', 'conveyor_id', 'type', 'machine'])
+            );
         }
     }
 
     /**
-     * Machine options for the cascading filter / remove form.
+     * Family / Conveyor / Machine options for the cascading filter and remove form.
      */
-    public function machines(Request $request)
+    public function filterOptions(Request $request)
     {
-        $machines = $this->masterCircuitService->getMachineOptions(
-            $request->get('area_id'),
-            $request->get('conveyor_id'),
-            $request->get('type')
-        );
-
-        return ResponseHelper::success($machines);
+        return ResponseHelper::success($this->masterCircuitService->getFilterOptions(
+            $request->only(['area_id', 'family', 'conveyor_id', 'type'])
+        ));
     }
 
     public function create()
@@ -237,6 +231,7 @@ class MasterCircuitController extends Controller
         try {
             $request->validate([
                 'area_id' => 'required|exists:master_area,id',
+                'family' => 'required|string|max:255',
                 'conveyor_id' => 'required|exists:master_conveyor,id',
                 'type' => 'nullable|string|in:CUTTING,CUTTING_TWIST',
                 'machine' => 'nullable|string|max:100',
@@ -249,9 +244,14 @@ class MasterCircuitController extends Controller
 
             $type = $request->input('type') ?: null;
             $machine = $request->input('machine') ?: null;
-            $deleted = $this->masterCircuitService->deleteByConveyor($conveyor->id, $type, $machine);
+            $deleted = $this->masterCircuitService->deleteByFilters([
+                'conveyor_id' => $conveyor->id,
+                'family' => $request->input('family'),
+                'type' => $type,
+                'machine' => $machine,
+            ]);
 
-            $scope = 'the selected conveyor'
+            $scope = "family {$request->input('family')} on the selected conveyor"
                 . ($type ? ", type {$type}" : '')
                 . ($machine ? ", machine {$machine}" : '');
             return ResponseHelper::success([
