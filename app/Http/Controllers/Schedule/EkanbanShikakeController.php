@@ -20,6 +20,14 @@ use Carbon\Carbon;
 
 class EkanbanShikakeController extends Controller
 {
+    /**
+     * Tinggi barcode Code 39 (dot) per cell tiket BONDER. Tinggi tiket terkunci
+     * 576px (lebar kepala cetak), jadi nilai ini diukur lewat raster capture agar
+     * tidak ada baris yang terdorong keluar.
+     */
+    private const NAVIGASI_BARCODE_HEIGHT = 88;
+    private const PROCESS_BARCODE_HEIGHT = 88;
+
     protected $ekanbanShikakeService;
 
     public function __construct(EkanbanShikakeService $ekanbanShikakeService)
@@ -220,38 +228,31 @@ class EkanbanShikakeController extends Controller
                 $processData->qrcode_drawing_path = BarcodeHelper::generateQRCodeCached($processData->qrcode_drawing, 'shikake');
             }
 
-            // Barcode for barcode_navigasi (top-right)
+            // Barcode 1D memakai Code 39 dengan bar sempit 3 dot / lebar 7 dot
+            // (lihat BarcodeHelper::CODE39_NARROW). Bar 3 dot tahan dot bleed printer
+            // thermal; bar 2 dot membuat celah tertutup, bar menyatu, gagal discan.
             //
-            // PENTING - jangan naikkan widthFactor tanpa melebarkan cell-nya juga.
-            // barcode_navigasi berisi teks ber-tanda hubung (mis. "B-AK496"), jadi
-            // Code128 terkunci di mode B tanpa kompresi Code C -> barcode jauh lebih
-            // lebar daripada barcode_process yang murni alfanumerik pendek ("A0220").
-            // Dengan widthFactor 3 native-nya 336-402px, sementara cell hanya sanggup
-            // menampilkan ~210px, sehingga barcode DIPERKECIL ke ~62%. Bar 3px menyusut
-            // jadi ~1.9px lalu melebur saat di-threshold hitam-putih untuk printer
-            // thermal 203dpi -> inilah sebabnya barcode navigasi selalu gagal discan
-            // sementara barcode_process (yang justru sedikit membesar) selalu terbaca.
-            //
-            // widthFactor 3 -> bar tipis jadi 3 dot (0.37mm), bukan 2 dot. Printer
-            // thermal punya dot bleed (titik yang dipanaskan melebar di kertas), dan
-            // dengan bar 2 dot + celah 2 dot pelebaran itu menutup celahnya sampai
-            // bar menyatu -> hasil print terlihat "terlalu bold" dan gagal discan.
-            // Native maksimum jadi 402px (data terpanjang "B-AK172.A"), dan cell
-            // BARCODE NAVIGASI sudah dilebarkan ke 90mm (konten 416px) agar tetap
-            // muat ditampilkan 1:1 tanpa penyusutan.
+            // PENTING - PNG WAJIB tampil 1:1 (tanpa width/max-width/height CSS yang
+            // berbeda dari ukuran aslinya). Barcode 1D yang diperkecil membuat bar
+            // berdekatan melebur saat di-threshold hitam-putih untuk thermal 203dpi -
+            // itu penyebab barcode navigasi dulu selalu gagal discan. Cell bonder
+            // memakai table-layout:auto sehingga lebarnya mengikuti barcode
+            // (terpanjang "B-AK172.A" = 459px).
             if (!empty($processData->barcode_navigasi)) {
-                $processData->barcode_navigasi_path = BarcodeHelper::generateBarcodeCached($processData->barcode_navigasi, null, 3, 72, 'shikake');
+                $processData->barcode_navigasi_path = BarcodeHelper::generateCode39Cached($processData->barcode_navigasi, self::NAVIGASI_BARCODE_HEIGHT, 'shikake');
+                $processData->barcode_navigasi_data = BarcodeHelper::sanitizeCode39($processData->barcode_navigasi);
             }
 
             // Barcode for barcode_process (middle-right)
             if (!empty($processData->barcode_process)) {
-                $processData->barcode_process_path = BarcodeHelper::generateBarcodeCached($processData->barcode_process, null, 2, 50, 'shikake');
+                $processData->barcode_process_path = BarcodeHelper::generateCode39Cached($processData->barcode_process, self::PROCESS_BARCODE_HEIGHT, 'shikake');
+                $processData->barcode_process_data = BarcodeHelper::sanitizeCode39($processData->barcode_process);
             }
         }
 
         // Barcode for barcode_mesin (DBL CRIMP specific)
         if ($process === 'DBL CRIMP' && $processData && !empty($processData->barcode_mesin)) {
-            $processData->barcode_mesin_path = BarcodeHelper::generateBarcodeCached($processData->barcode_mesin, null, 2, 50, 'shikake');
+            $processData->barcode_mesin_path = BarcodeHelper::generateCode39Cached($processData->barcode_mesin, self::PROCESS_BARCODE_HEIGHT, 'shikake');
         }
 
     }

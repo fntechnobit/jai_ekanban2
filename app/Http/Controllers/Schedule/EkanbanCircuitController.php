@@ -18,6 +18,13 @@ use Illuminate\Support\Facades\Log;
 
 class EkanbanCircuitController extends Controller
 {
+    /**
+     * Tinggi barcode Code 39 pada tiket CUTTING TWIST (dot). Lebih pendek dari
+     * CODE39_HEIGHT karena cell barcode twist hanya rowspan=2 dan tinggi tiket
+     * terkunci 576px (lebar kepala cetak) - diukur lewat raster capture.
+     */
+    private const TWIST_BARCODE_HEIGHT = 64;
+
     protected $ekanbanCircuitService;
 
     public function __construct(EkanbanCircuitService $ekanbanCircuitService)
@@ -202,9 +209,15 @@ class EkanbanCircuitController extends Controller
             $circuit->qr_code_path = BarcodeHelper::generateQRCodeCached($circuit->barcode_kanban, 'circuit');
         }
 
+        // Linear barcodes (Code 39) - tinggi dibatasi oleh tinggi cell rowspan=2 di
+        // tiket twist (tinggi tiket terkunci 576px), lebar ditampilkan 1:1.
+        $twistBarcodeHeight = self::TWIST_BARCODE_HEIGHT;
+
         // Linear barcode for barcode_mesin (top-right)
         if (!empty($circuit->barcode_mesin)) {
-            $circuit->barcode_mesin_path = BarcodeHelper::generateBarcodeCached($circuit->barcode_mesin, null, 4, 90, 'circuit');
+            $circuit->barcode_mesin_path = BarcodeHelper::generateCode39Cached($circuit->barcode_mesin, $twistBarcodeHeight, 'circuit');
+            $circuit->barcode_mesin_data = BarcodeHelper::sanitizeCode39($circuit->barcode_mesin);
+            $circuit->barcode_mesin_width = BarcodeHelper::code39Width($circuit->barcode_mesin);
         }
 
         // QR code for barcode_shikake (static from master, bottom-right)
@@ -219,12 +232,14 @@ class EkanbanCircuitController extends Controller
 
         // Linear barcode for barcode_process (section A/B right side)
         if (!empty($circuit->barcode_process)) {
-            $circuit->barcode_process_path = BarcodeHelper::generateBarcodeCached($circuit->barcode_process, null, 4, 90, 'circuit');
+            $circuit->barcode_process_path = BarcodeHelper::generateCode39Cached($circuit->barcode_process, $twistBarcodeHeight, 'circuit');
         }
 
         // Linear barcode for barcode_twist (replaces barcode_process in twist print)
         if (!empty($circuit->barcode_twist)) {
-            $circuit->barcode_twist_path = BarcodeHelper::generateBarcodeCached($circuit->barcode_twist, null, 4, 90, 'circuit');
+            $circuit->barcode_twist_path = BarcodeHelper::generateCode39Cached($circuit->barcode_twist, $twistBarcodeHeight, 'circuit');
+            $circuit->barcode_twist_data = BarcodeHelper::sanitizeCode39($circuit->barcode_twist);
+            $circuit->barcode_twist_width = BarcodeHelper::code39Width($circuit->barcode_twist);
         }
 
         // QR code for qrcode_drawing (replaces qrcode_shikake in twist print)

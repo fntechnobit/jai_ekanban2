@@ -46,20 +46,22 @@
 }
 
 .ticket-circuit-print {
-    width: 880px;
-    min-width: 880px;
+    /* Lebar MENGIKUTI ISI TABEL (colgroup), bukan angka tetap. Kolom 9 melebar
+       mengikuti lebar barcode Code 39 (lihat colgroup), dan container yang dikunci
+       lebih sempit dari tabel membuat bagian kanan hilang saat html2canvas capture. */
+    width: max-content;
     height: 100%;
     flex-shrink: 0;
     background: white;
     margin: 0;
     padding: 0;
     border: 2px solid #000;
-    overflow: hidden;
+    overflow: visible;
     font-family: Arial, sans-serif;
 }
 
 .ticket-circuit-print table {
-    width: 100%;
+    width: auto;
     height: 100%;
     border-collapse: collapse;
     table-layout: fixed;
@@ -165,20 +167,23 @@
     word-break: break-all;
 }
 
+/* Padding horizontal 30px = quiet zone minimum Code 39 (10x bar sempit 3 dot). */
 .ticket-circuit-print .barcode-cell {
-    padding: 2px;
+    padding: 2px 30px;
     vertical-align: middle;
     text-align: center;
 }
 
+/* Barcode Code 39 WAJIB tampil 1:1 (ukuran asli PNG = dot printer). Jangan beri
+   width %/max-height: barcode 1D yang diperkecil membuat bar melebur saat
+   di-threshold hitam-putih untuk thermal 203dpi dan gagal discan. */
 .ticket-circuit-print .barcode-cell img {
-    width: 95%;
-    max-height: 18mm;
+    width: auto;
     height: auto;
-    object-fit: contain;
+    max-width: none;
     display: block;
     margin: 0 auto;
-    box-sizing: border-box;
+    image-rendering: pixelated;
 }
 
 .ticket-circuit-print .barcode-label {
@@ -266,6 +271,11 @@
 </style>
 
 @foreach($circuits as $circuit)
+@php
+    // Cell BARCODE MESIN = kolom 7+8+9 (72+60+col9). Kolom 9 dilebarkan sampai
+    // barcode Code 39 muat 1:1 plus quiet zone 30px di kiri-kanan (+2 border).
+    $barcodeCol9 = max(192, ($circuit->barcode_width ?? 0) + 2 * \App\Helpers\BarcodeHelper::CODE39_QUIET_ZONE + 2 - (72 + 60));
+@endphp
 <div class="ticket circuit-print-wrapper" data-orientation="landscape">
     @if(!empty($circuit->image_path))
     <div class="circuit-image-section">
@@ -284,7 +294,7 @@
                 <col style="width: 72px">   {{-- Col 6: COL --}}
                 <col style="width: 72px">   {{-- Col 7: CL --}}
                 <col style="width: 60px">   {{-- Col 8: SEQ --}}
-                <col style="width: 192px">  {{-- Col 9: MACHINE --}}
+                <col style="width: {{ $barcodeCol9 }}px">  {{-- Col 9: MACHINE (min 192, melebar ikut barcode) --}}
             </colgroup>
             <thead>
                 <tr>
@@ -407,7 +417,7 @@
                         <div class="barcode-label">BARCODE MESIN</div>
                         @if(isset($circuit->barcode_path))
                             <img src="{{ $circuit->barcode_path }}" alt="Barcode Mesin">
-                            <div class="barcode-label">{{ $circuit->barcode_mesin ?? '' }}</div>
+                            <div class="barcode-label">{{ $circuit->barcode_data ?? $circuit->barcode_mesin ?? '' }}</div>
                         @elseif(!empty($circuit->barcode_mesin))
                             <div style="font-size:18px;font-weight:bold;">{{ $circuit->barcode_mesin }}</div>
                         @endif

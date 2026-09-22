@@ -169,20 +169,25 @@
 
 
 
-.twist-barcode-cell {
-    padding: 2px;
+/* Padding horizontal 30px = quiet zone minimum Code 39 (10x bar sempit 3 dot).
+   Selector diawali .ticket-twist-print supaya mengalahkan padding umum
+   ".ticket-twist-print td" (1px 3px) - tanpa itu quiet zone hilang. */
+.ticket-twist-print .twist-barcode-cell {
+    padding: 1px 30px;
     vertical-align: middle;
     text-align: center;
 }
 
+/* Barcode Code 39 WAJIB tampil 1:1 (ukuran asli PNG = dot printer). Jangan beri
+   width %/max-height: barcode 1D yang diperkecil membuat bar melebur saat
+   di-threshold hitam-putih untuk thermal 203dpi dan gagal discan. */
 .twist-barcode-cell img {
-    width: 95%;
-    max-height: 18mm;
+    width: auto;
     height: auto;
-    object-fit: contain;
+    max-width: none;
     display: block;
     margin: 0 auto;
-    box-sizing: border-box;
+    image-rendering: pixelated;
 }
 
 .twist-barcode-label {
@@ -296,6 +301,12 @@
 </style>
 
 @foreach($circuits as $circuit)
+@php
+    // Cell barcode mesin & twist = kolom 7+8+9 (92+92+col9). Kolom 9 dilebarkan
+    // sampai barcode Code 39 terlebar muat 1:1 plus quiet zone 30px kiri-kanan.
+    $twistBarcodeWidth = max($circuit->barcode_mesin_width ?? 0, $circuit->barcode_twist_width ?? 0);
+    $twistCol9 = max(180, $twistBarcodeWidth + 2 * \App\Helpers\BarcodeHelper::CODE39_QUIET_ZONE + 2 - (92 + 92));
+@endphp
 <div class="ticket twist-print-wrapper" data-orientation="landscape">
     @if(!empty($circuit->image_path))
     <div class="twist-image-section">
@@ -314,7 +325,7 @@
             <col style="width: 92px">   {{-- Col 6: Value --}}
             <col style="width: 92px">   {{-- Col 7: Value --}}
             <col style="width: 92px">   {{-- Col 8: Value --}}
-            <col style="width: 180px">  {{-- Col 9: Barcode/QR area --}}
+            <col style="width: {{ $twistCol9 }}px">  {{-- Col 9: Barcode/QR area (min 180, melebar ikut barcode) --}}
         </colgroup>
         <thead>
             <tr>
@@ -332,7 +343,7 @@
                 <td colspan="3" rowspan="2" class="twist-barcode-cell">
                     @if(isset($circuit->barcode_mesin_path))
                         <img src="{{ $circuit->barcode_mesin_path }}" alt="Barcode Mesin">
-                        <div class="twist-barcode-label">{{ $circuit->barcode_mesin ?? '' }}</div>
+                        <div class="twist-barcode-label">{{ $circuit->barcode_mesin_data ?? $circuit->barcode_mesin ?? '' }}</div>
                     @else
                         <div style="font-size:22px;font-weight:bold;">{{ $circuit->barcode_mesin ?? '-' }}</div>
                     @endif
@@ -397,7 +408,7 @@
                 <td colspan="3" rowspan="2" class="twist-barcode-cell">
                     @if(isset($circuit->barcode_twist_path))
                         <img src="{{ $circuit->barcode_twist_path }}" alt="Barcode Twist">
-                        <div class="twist-barcode-label">{{ $circuit->barcode_twist ?? '' }}</div>
+                        <div class="twist-barcode-label">{{ $circuit->barcode_twist_data ?? $circuit->barcode_twist ?? '' }}</div>
                     @elseif(!empty($circuit->barcode_twist))
                         <div style="font-size:18px;font-weight:bold;">{{ $circuit->barcode_twist }}</div>
                     @endif

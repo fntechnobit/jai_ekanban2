@@ -982,8 +982,13 @@
             }
 
             const restore = makeVisibleForCapture(ticket, isLandscape);
-            // Capture at 2x resolution for sharper details (supersampling)
-            const CAPTURE_SCALE = 2;
+            // JANGAN naikkan ke 2. Dengan scale 1, canvas hasil rotate lebarnya
+            // persis BASE_DOTS (576) sehingga dstW === srcW dan canvas dikembalikan
+            // APA ADANYA - nol resampling, piksel 1:1 ke dot printer. Dengan scale 2
+            // canvas harus diperkecil 0.5x: bar barcode Code 39 ikut di-blur oleh
+            // interpolasi, lalu melebar/menyatu saat di-threshold hitam-putih
+            // sehingga barcode mesin tercetak "tebal" dan sulit discan.
+            const CAPTURE_SCALE = 1;
             const canvas = await html2canvas(ticket, { scale: CAPTURE_SCALE, backgroundColor: '#fff', useCORS: true });
             restore();
 
@@ -1023,9 +1028,9 @@
                 out.width = dstW;
                 out.height = dstH;
                 const ctx = out.getContext('2d');
-                // Enable smoothing for high-quality downscale from 2x capture
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
+                // Smoothing HARUS off: interpolasi membuat bar barcode tipis jadi
+                // abu-abu kabur dan hancur saat di-threshold hitam-putih untuk thermal.
+                ctx.imageSmoothingEnabled = false;
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(0, 0, dstW, dstH);
                 ctx.drawImage(finalCanvas, 0, 0, dstW, dstH);

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Log;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Picqer\Barcode\BarcodeGeneratorPNG;
+use Picqer\Barcode\Types\TypeCode39;
 
 class BarcodeHelper
 {
@@ -107,6 +108,126 @@ class BarcodeHelper
             return asset("storage/{$cachePath}");
         } catch (\Exception $e) {
             Log::error('Barcode generation failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Lebar bar sempit / lebar Code 39 dalam dot printer (1px = 1 dot @203dpi).
+     *
+     * Picqer hanya bisa rasio 3:1 dengan lebar bar bilangan bulat, sehingga
+     * pilihannya cuma 2/6 dot (celah 2 dot tertutup dot bleed thermal) atau 3/9
+     * dot (terlalu lebar untuk cell). 3/7 (rasio 2.33, masih dalam spesifikasi
+     * Code 39 yaitu 2.0-3.0 dan >= 2.2 untuk X < 0.5mm) menyamai ukuran barcode
+     * Code 39 referensi dari user (~0.3-0.37mm per modul): bar sempit 0.375mm
+     * cukup tebal untuk tahan dot bleed, total 5 karakter ~36mm.
+     * JANGAN render PNG ini lalu diperkecil/diperbesar via CSS - harus tampil 1:1.
+     */
+    const CODE39_NARROW = 3;
+    const CODE39_WIDE = 7;
+
+    /** Quiet zone minimum Code 39 = 10x bar sempit, disediakan oleh padding cell. */
+    const CODE39_QUIET_ZONE = 30;
+
+    /** Tinggi bar default ~11mm, sama dengan barcode Code 39 referensi user. */
+    const CODE39_HEIGHT = 88;
+
+    /**
+     * Normalisasi data untuk Code 39: trim, buang tanda '*' (start/stop Code 39 -
+     * kalau ikut di-encode scanner membaca stop di awal dan data jadi kosong),
+     * lalu huruf besar. Mengembalikan null bila ada karakter di luar set Code 39.
+     */
+    public static function sanitizeCode39($data)
+    {
+        $clean = strtoupper(trim(trim((string) $data), '*'));
+        $clean = trim($clean);
+
+        if ($clean === '' || !preg_match('/^[A-Z0-9 .$\/+%-]+$/', $clean)) {
+            return null;
+        }
+
+        return $clean;
+    }
+
+    /**
+     * Lebar PNG Code 39 (dot) tanpa quiet zone, untuk menghitung lebar cell.
+     * Tiap karakter = 3 bar lebar + 6 bar sempit, antar karakter dipisah 1 celah
+     * sempit, ditambah karakter start/stop '*' di kedua ujung.
+     */
+    public static function code39Width($data, $narrow = self::CODE39_NARROW, $wide = self::CODE39_WIDE)
+    {
+        $clean = self::sanitizeCode39($data);
+        if ($clean === null) {
+            return 0;
+        }
+
+        $symbols = strlen($clean) + 2;
+
+        return $symbols * (3 * $wide + 6 * $narrow) + ($symbols - 1) * $narrow;
+    }
+
+    /**
+     * Generate cached Code 39 barcode PNG dengan lebar bar sempit/lebar sendiri.
+     *
+     * Pola bar diambil dari picqer (TypeCode39, modul 1 = sempit, 3 = lebar),
+     * lalu digambar ulang dengan GD memakai lebar dot $narrow/$wide. PNG tidak
+     * punya margin putih - quiet zone harus datang dari padding cell.
+     *
+     * @return string|null URL gambar, atau null bila data kosong / tidak valid
+     */
+    public static function generateCode39Cached($data, $height = self::CODE39_HEIGHT, $subfolder = 'barcode', $narrow = self::CODE39_NARROW, $wide = self::CODE39_WIDE)
+    {
+        $clean = self::sanitizeCode39($data);
+        if ($clean === null) {
+            if (!empty(trim((string) $data))) {
+                Log::warning('Code39: data tidak valid, barcode tidak dibuat: ' . $data);
+            }
+            return null;
+        }
+
+        try {
+            $hash = md5('C39|' . $clean . '|' . $narrow . '|' . $wide . '|' . $height);
+            $cachePath = "cache/{$subfolder}/barcode39_{$hash}.png";
+            $fullPath = storage_path("app/public/{$cachePath}");
+
+            if (file_exists($fullPath)) {
+                return asset("storage/{$cachePath}");
+            }
+
+            $bars = (new TypeCode39())->getBarcode($clean)->getBars();
+            // picqer menambahkan celah antar-karakter setelah '*' terakhir juga;
+            // buang supaya PNG berakhir tepat di bar terakhir.
+            if (!empty($bars) && !end($bars)->isBar()) {
+                array_pop($bars);
+            }
+
+            $toDots = fn($bar) => $bar->getWidth() > 1 ? $wide : $narrow;
+            $width = array_sum(array_map($toDots, $bars));
+
+            $img = imagecreate($width, $height);
+            $white = imagecolorallocate($img, 255, 255, 255);
+            $black = imagecolorallocate($img, 0, 0, 0);
+            imagefill($img, 0, 0, $white);
+
+            $x = 0;
+            foreach ($bars as $bar) {
+                $w = $toDots($bar);
+                if ($bar->isBar()) {
+                    imagefilledrectangle($img, $x, 0, $x + $w - 1, $height - 1, $black);
+                }
+                $x += $w;
+            }
+
+            ob_start();
+            imagepng($img);
+            $png = ob_get_clean();
+            imagedestroy($img);
+
+            Storage::disk('public')->put($cachePath, $png);
+
+            return asset("storage/{$cachePath}");
+        } catch (\Exception $e) {
+            Log::error('Code39 generation failed: ' . $e->getMessage());
             return null;
         }
     }
@@ -232,12 +353,14 @@ class BarcodeHelper
             }
         }
 
-        // Generate Barcode using cached method
+        // Generate Barcode (Code 39) using cached method
         $barcodeData = !empty($circuit->$barcodeField) ? $circuit->$barcodeField : ($circuit->$barcodeFallbackField ?? '');
         if (!empty($barcodeData)) {
-            $barcodePath = self::generateBarcodeCached($barcodeData, null, 4, 90, 'circuit');
+            $barcodePath = self::generateCode39Cached($barcodeData, self::CODE39_HEIGHT, 'circuit');
             if ($barcodePath) {
                 $circuit->barcode_path = $barcodePath;
+                $circuit->barcode_data = self::sanitizeCode39($barcodeData);
+                $circuit->barcode_width = self::code39Width($barcodeData);
             }
         }
     }

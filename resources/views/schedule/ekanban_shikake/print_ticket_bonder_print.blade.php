@@ -137,42 +137,45 @@
     margin-bottom: 4px;
 }
 
+/* Padding horizontal 30px = quiet zone minimum Code 39 (10x bar sempit 3 dot).
+   table-layout:auto membuat cell melebar mengikuti barcode. */
 .ticket-bonder-print .barcode-cell {
-    padding: 2px;
+    padding: 2px 30px;
     vertical-align: middle;
-}
-
-.ticket-bonder-print .barcode-cell img {
-    max-width: 180px;
-    height: 60px;
-    display: block;
-    margin: 0 auto;
 }
 
 /* Padding horizontal 40px = TEPAT 5mm di kertas (203dpi, 8 dot/mm) dan inilah
    yang menentukan jarak barcode ke border. Karena lebar tabel content-driven
    (width:auto di atas), cell memeluk barcode sehingga jarak = padding persis,
    konsisten 5mm untuk semua panjang data.
-   5mm juga masih di atas quiet zone minimum Code128 (10x X-dimension = 10 x 3px
+   5mm juga masih di atas quiet zone minimum Code 39 (10x bar sempit = 10 x 3px
    = 30px = 3.75mm), jadi aman untuk scanner. JANGAN turunkan di bawah 30px. */
 .ticket-bonder-print .barcode-navigasi-cell {
     padding: 4px 40px;
     vertical-align: middle;
 }
 
-/* max-width 402px = persis native terlebar (@widthFactor 3), jadi barcode SELALU
-   tampil di ukuran aslinya dan tidak pernah diperkecil. Menyusutkan barcode 1D
-   membuat bar berdekatan melebur saat di-threshold hitam-putih untuk thermal
-   203dpi. height 72px juga sama persis dengan tinggi PNG hasil generate, supaya
-   tidak ada penskalaan sama sekali (piksel 1:1 ke dot printer).
+/* Barcode Code 39 SELALU tampil di ukuran asli PNG (width/height auto = piksel
+   1:1 ke dot printer), tidak pernah diperkecil/diperbesar. Menyusutkan barcode
+   1D membuat bar berdekatan melebur saat di-threshold hitam-putih untuk thermal
+   203dpi. JANGAN beri max-width lagi: navigasi terpanjang "B-AK172.A" = 459px.
    CATATAN: PNG dari generator TIDAK punya margin putih bawaan (bar mulai di
    piksel 0), jadi seluruh quiet zone berasal dari padding cell di atas. */
+.ticket-bonder-print .barcode-cell img,
 .ticket-bonder-print .barcode-navigasi-cell img {
     width: auto;
-    max-width: 402px;
-    height: 72px;
+    height: auto;
+    max-width: none;
     display: block;
     margin: 0 auto;
+    image-rendering: pixelated;
+}
+
+.ticket-bonder-print .barcode-text {
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 1px;
 }
 
 .ticket-bonder-print .qrcode-placeholder,
@@ -356,7 +359,7 @@
                     <td colspan="3" rowspan="3" class="barcode-cell">
                         @if(isset($processData->barcode_process_path))
                             <img src="{{ $processData->barcode_process_path }}" alt="Barcode">
-                            <div style="font-size: 6px; text-align: center;">{{ $processData->barcode_process ?? '' }}</div>
+                            <div class="barcode-text">{{ $processData->barcode_process_data ?? $processData->barcode_process ?? '' }}</div>
                         @else
                             <div class="barcode-placeholder">BARCODE</div>
                         @endif
@@ -428,7 +431,8 @@
                     <td colspan="2" rowspan="2" class="barcode-navigasi-cell">
                         <div class="qr-label">BARCODE NAVIGASI</div>
                         @if(isset($processData->barcode_navigasi_path))
-                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi" style="width:auto;max-width:402px;height:72px;display:block;margin:0 auto;">
+                            <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi">
+                            <div class="barcode-text">{{ $processData->barcode_navigasi_data ?? $processData->barcode_navigasi ?? '' }}</div>
                         @else
                             <div class="barcode-placeholder">BARCODE</div>
                         @endif
