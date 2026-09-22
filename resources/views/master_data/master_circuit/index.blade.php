@@ -29,6 +29,9 @@
                         <option value="CUTTING">CUTTING</option>
                         <option value="CUTTING_TWIST">CUTTING TWIST</option>
                     </select>
+                    <select class="form-select form-select-sm select2" id="filter_machine" data-placeholder="- All Machine -" style="width: 160px;">
+                        <option value="">- All Machine -</option>
+                    </select>
                     <button type="button" class="btn btn-outline-danger btn-sm" id="btn-reset-filter" title="Reset Filter">
                         <i class="fa-solid fa-arrows-rotate"></i>
                     </button>
@@ -51,6 +54,7 @@
                             <th width="5%">No</th>
                             <th width="10%">Type</th>
                             <th>Carline</th>
+                            <th>Area</th>
                             <th>Conveyor</th>
                             <th>CCT No</th>
                             <th>CCT Code</th>
@@ -76,10 +80,14 @@
 @endsection
 
 @section('script')
+    @include('master_data.partials.cascade_select_script')
     <script>
         $(function () {
+            var conveyorOptions = {{ Js::from($conveyors->map(fn ($c) => ['id' => $c->id, 'text' => $c->conveyor, 'area_id' => $c->master_area_id])->values()) }};
+            var machinesUrl = "{{ route('master-data.master-circuit.machines') }}";
+
             // Initialize Select2 for filters
-            $('#filter_area_id, #filter_conveyor_id, #filter_type').select2({
+            $('#filter_area_id, #filter_conveyor_id, #filter_type, #filter_machine').select2({
                 theme: 'bootstrap-5',
                 allowClear: true,
                 placeholder: function() {
@@ -87,11 +95,21 @@
                 }
             });
 
+            function loadFilterMachines() {
+                return MasterCascade.loadMachines($('#filter_machine'), machinesUrl, {
+                    area_id: $('#filter_area_id').val(),
+                    conveyor_id: $('#filter_conveyor_id').val(),
+                    type: $('#filter_type').val()
+                }, '- All Machine -');
+            }
+            loadFilterMachines();
+
             // Reset filter button
             $('#btn-reset-filter').on('click', function () {
-                $('#filter_area_id').val('').trigger('change');
-                $('#filter_conveyor_id').val('').trigger('change');
-                $('#filter_type').val('').trigger('change');
+                $('#filter_area_id, #filter_type').val('').trigger('change.select2');
+                MasterCascade.fillConveyors($('#filter_conveyor_id'), conveyorOptions, '', '- All Conveyor -');
+                loadFilterMachines();
+                table.ajax.reload();
             });
 
             // Initialize DataTable
@@ -104,12 +122,14 @@
                         d.area_id = $('#filter_area_id').val();
                         d.conveyor_id = $('#filter_conveyor_id').val();
                         d.type = $('#filter_type').val();
+                        d.machine = $('#filter_machine').val();
                     }
                 },
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                     { data: 'type_badge', name: 'type', orderable: true, searchable: false },
                     { data: 'carline', name: 'carline' },
+                    { data: 'area_name', name: 'area_name', orderable: false, searchable: false },
                     { data: 'conveyor_name', name: 'conveyor_name', searchable: false },
                     { data: 'cct_no', name: 'cct_no' },
                     { data: 'cct_code', name: 'cct_code' },
@@ -125,8 +145,17 @@
                 order: [[1, 'asc']]
             });
 
-            // Filter handlers
-            $('#filter_area_id, #filter_conveyor_id, #filter_type').on('change', function() {
+            // Cascading filter events: every level resets the levels below it
+            $('#filter_area_id').on('change', function() {
+                MasterCascade.fillConveyors($('#filter_conveyor_id'), conveyorOptions, $(this).val(), '- All Conveyor -');
+                loadFilterMachines();
+                table.ajax.reload();
+            });
+            $('#filter_conveyor_id, #filter_type').on('change', function() {
+                loadFilterMachines();
+                table.ajax.reload();
+            });
+            $('#filter_machine').on('change', function() {
                 table.ajax.reload();
             });
 
@@ -500,35 +529,86 @@
                 });
             });
 
+            // Remove Data form: Area and Conveyor are mandatory, Type and Machine optional
+            $('#remove_area_id, #remove_conveyor_id, #remove_type, #remove_machine').select2({
+                theme: 'bootstrap-5',
+                dropdownParent: $('#removeDataModal')
+            });
+
+            function fillRemoveConveyors(areaId) {
+                var $conveyor = $('#remove_conveyor_id');
+                if (areaId) {
+                    MasterCascade.fillConveyors($conveyor, conveyorOptions, areaId, '- Choose Conveyor -');
+                } else {
+                    $conveyor.empty().append(new Option('- Choose Conveyor -', '')).trigger('change.select2');
+                }
+                $conveyor.prop('disabled', !areaId);
+            }
+
+            function loadRemoveMachines() {
+                var $machine = $('#remove_machine');
+                var conveyorId = $('#remove_conveyor_id').val();
+                $machine.prop('disabled', !conveyorId);
+                if (!conveyorId) {
+                    $machine.empty().append(new Option('- All Machine -', '')).trigger('change.select2');
+                    return;
+                }
+                MasterCascade.loadMachines($machine, machinesUrl, {
+                    area_id: $('#remove_area_id').val(),
+                    conveyor_id: conveyorId,
+                    type: $('#remove_type').val()
+                }, '- All Machine -');
+            }
+
+            function resetRemoveForm() {
+                $('#remove_area_id, #remove_type').val('').trigger('change.select2');
+                fillRemoveConveyors('');
+                loadRemoveMachines();
+            }
+
+            $('#remove_area_id').on('change', function() {
+                fillRemoveConveyors($(this).val());
+                loadRemoveMachines();
+            });
+            $('#remove_conveyor_id, #remove_type').on('change', loadRemoveMachines);
+
             // Remove Data button click
             $('#btn-remove-data').click(function() {
+                resetRemoveForm();
                 $('#removeDataModal').modal('show');
-                // Re-initialize Select2 after modal is shown
-                setTimeout(function() {
-                    $('#remove_conveyor_id, #remove_type').select2({
-                        theme: 'bootstrap-5',
-                        dropdownParent: $('#removeDataModal')
-                    });
-                }, 200);
             });
 
             // Remove Data form submission
             $('#removeDataForm').submit(function(e) {
                 e.preventDefault();
 
+                var areaId = $('#remove_area_id').val();
+                var areaName = $('#remove_area_id option:selected').text();
                 var conveyorId = $('#remove_conveyor_id').val();
                 var conveyorName = $('#remove_conveyor_id option:selected').text();
                 var type = $('#remove_type').val();
                 var typeLabel = type ? $('#remove_type option:selected').text() : 'Semua Type';
+                var machine = $('#remove_machine').val();
 
+                if (!areaId) {
+                    Swal.fire('Warning!', 'Please select an area', 'warning');
+                    return;
+                }
                 if (!conveyorId) {
                     Swal.fire('Warning!', 'Please select a conveyor', 'warning');
                     return;
                 }
 
+                var scope = $('<div>')
+                    .append('Area: ', $('<strong>').text(areaName), '<br>')
+                    .append('Conveyor: ', $('<strong>').text(conveyorName), '<br>')
+                    .append('Type: ', $('<strong>').text(typeLabel), '<br>')
+                    .append('Machine: ', $('<strong>').text(machine || 'Semua Machine'))
+                    .html();
+
                 Swal.fire({
                     title: 'Are you sure?',
-                    html: `<p>Semua data Circuit pada conveyor <strong>${conveyorName}</strong> dengan type <strong>${typeLabel}</strong> akan dihapus permanen.</p><p class="text-danger mb-0">Tindakan ini tidak dapat dibatalkan!</p>`,
+                    html: `<p>Semua data Circuit dengan kriteria berikut akan dihapus permanen:<br>${scope}</p><p class="text-danger mb-0">Tindakan ini tidak dapat dibatalkan!</p>`,
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#d33',
@@ -542,15 +622,18 @@
                             type: 'POST',
                             data: {
                                 _token: '{{ csrf_token() }}',
+                                area_id: areaId,
                                 conveyor_id: conveyorId,
-                                type: type
+                                type: type,
+                                machine: machine
                             },
                             success: function(response) {
                                 if (response.success) {
                                     $('#removeDataModal').modal('hide');
+                                    resetRemoveForm();
+                                    loadFilterMachines();
                                     table.ajax.reload();
                                     Swal.fire('Deleted!', response.message, 'success');
-                                    $('#remove_conveyor_id, #remove_type').val('').trigger('change');
                                 }
                             },
                             error: function(xhr) {

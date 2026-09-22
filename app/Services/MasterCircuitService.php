@@ -14,9 +14,9 @@ class MasterCircuitService
         return MasterCircuit::with(['conveyor'])->select('master_circuit.*');
     }
 
-    public function getDatatable($areaId = null, $conveyorId = null, $type = null)
+    public function getDatatable($areaId = null, $conveyorId = null, $type = null, $machine = null)
     {
-        $query = MasterCircuit::with(['conveyor'])
+        $query = MasterCircuit::with(['conveyor.area'])
             ->select('master_circuit.*');
 
         // Filter by area through conveyor relationship
@@ -36,6 +36,11 @@ class MasterCircuitService
             $query->where('type', $type);
         }
 
+        // Filter by machine
+        if ($machine) {
+            $query->where('machine', $machine);
+        }
+
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('type_badge', function ($row) {
@@ -47,6 +52,9 @@ class MasterCircuitService
             })
             ->addColumn('carline', function ($row) {
                 return $row->carline ?? '-';
+            })
+            ->addColumn('area_name', function ($row) {
+                return $row->getRelation('conveyor')?->area?->area ?? '-';
             })
             ->addColumn('conveyor_name', function ($row) {
                 return $row->getRelation('conveyor') ? $row->getRelation('conveyor')->conveyor : ($row->conveyor ?? '-');
@@ -213,19 +221,36 @@ class MasterCircuitService
         return $importer->import($filePath, $startRow);
     }
 
-    public function deleteByConveyor($conveyorId, $type = null)
+    /**
+     * Distinct machine values present in the data, narrowed by the upper filter levels.
+     */
+    public function getMachineOptions($areaId = null, $conveyorId = null, $type = null)
+    {
+        return MasterCircuit::query()
+            ->when($areaId, fn ($q) => $q->whereHas('conveyor', fn ($c) => $c->where('master_area_id', $areaId)))
+            ->when($conveyorId, fn ($q) => $q->where('conveyor_id', $conveyorId))
+            ->when($type, fn ($q) => $q->where('type', $type))
+            ->whereNotNull('machine')
+            ->where('machine', '<>', '')
+            ->distinct()
+            ->orderBy('machine')
+            ->pluck('machine');
+    }
+
+    public function deleteByConveyor($conveyorId, $type = null, $machine = null)
     {
         DB::beginTransaction();
         try {
             $userId = Auth::id();
 
             $query = fn () => MasterCircuit::where('conveyor_id', $conveyorId)
-                ->when($type, fn ($q) => $q->where('type', $type));
+                ->when($type, fn ($q) => $q->where('type', $type))
+                ->when($machine, fn ($q) => $q->where('machine', $machine));
 
             // Update deleted_by before soft deleting
             $query()->update(['deleted_by' => $userId]);
 
-            // Soft delete all records for the conveyor (and type, if given)
+            // Soft delete all records for the conveyor (and type/machine, if given)
             $deleted = $query()->delete();
             
             DB::commit();

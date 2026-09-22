@@ -18,7 +18,7 @@ class MasterCircuitController extends Controller
     {
         $this->masterCircuitService = $masterCircuitService;
 
-        $this->middleware('check.menu:master_circuit,can_read')->only(['index', 'datatable', 'show']);
+        $this->middleware('check.menu:master_circuit,can_read')->only(['index', 'datatable', 'show', 'machines']);
         $this->middleware('check.menu:master_circuit,can_create')->only(['create', 'store', 'importForm', 'import']);
         $this->middleware('check.menu:master_circuit,can_update')->only(['edit', 'update', 'uploadDrawing']);
         $this->middleware('check.menu:master_circuit,can_delete')->only(['destroy', 'removeByConveyor']);
@@ -37,8 +37,23 @@ class MasterCircuitController extends Controller
             $areaId = $request->get('area_id');
             $conveyorId = $request->get('conveyor_id');
             $type = $request->get('type');
-            return $this->masterCircuitService->getDatatable($areaId, $conveyorId, $type);
+            $machine = $request->get('machine');
+            return $this->masterCircuitService->getDatatable($areaId, $conveyorId, $type, $machine);
         }
+    }
+
+    /**
+     * Machine options for the cascading filter / remove form.
+     */
+    public function machines(Request $request)
+    {
+        $machines = $this->masterCircuitService->getMachineOptions(
+            $request->get('area_id'),
+            $request->get('conveyor_id'),
+            $request->get('type')
+        );
+
+        return ResponseHelper::success($machines);
     }
 
     public function create()
@@ -221,14 +236,24 @@ class MasterCircuitController extends Controller
     {
         try {
             $request->validate([
+                'area_id' => 'required|exists:master_area,id',
                 'conveyor_id' => 'required|exists:master_conveyor,id',
                 'type' => 'nullable|string|in:CUTTING,CUTTING_TWIST',
+                'machine' => 'nullable|string|max:100',
             ]);
 
-            $type = $request->input('type') ?: null;
-            $deleted = $this->masterCircuitService->deleteByConveyor($request->conveyor_id, $type);
+            $conveyor = MasterConveyor::findOrFail($request->conveyor_id);
+            if ((int) $conveyor->master_area_id !== (int) $request->area_id) {
+                return ResponseHelper::error('The selected conveyor does not belong to the selected area', 422);
+            }
 
-            $scope = $type ? "the selected conveyor and type {$type}" : 'the selected conveyor';
+            $type = $request->input('type') ?: null;
+            $machine = $request->input('machine') ?: null;
+            $deleted = $this->masterCircuitService->deleteByConveyor($conveyor->id, $type, $machine);
+
+            $scope = 'the selected conveyor'
+                . ($type ? ", type {$type}" : '')
+                . ($machine ? ", machine {$machine}" : '');
             return ResponseHelper::success([
                 'count' => $deleted
             ], "Successfully deleted {$deleted} Circuit record(s) for {$scope}");

@@ -5,19 +5,25 @@
             <div class="modal-header">
                 <h5 class="modal-title" id="removeDataModalLabel">Remove Data Shikake</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-                    
+
                 </button>
             </div>
-            <form id="removeDataForm">
+            <form id="removeDataForm" novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="remove_conveyor_id">Conveyor <span class="text-danger">*</span></label>
-                        <select class="form-select select2" id="remove_conveyor_id" name="conveyor_id" style="width: 100%;" required>
-                            <option value="">- Choose Conveyor -</option>
-                            @foreach($conveyors as $conveyor)
-                                <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
+                        <label for="remove_area_id">Area <span class="text-danger">*</span></label>
+                        <select class="form-select select2" id="remove_area_id" name="area_id" style="width: 100%;" required>
+                            <option value="">- Choose Area -</option>
+                            @foreach($areas as $area)
+                                <option value="{{ $area->id }}">{{ $area->area }}</option>
                             @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="remove_conveyor_id">Conveyor <span class="text-danger">*</span></label>
+                        <select class="form-select select2" id="remove_conveyor_id" name="conveyor_id" style="width: 100%;" required disabled>
+                            <option value="">- Choose Conveyor -</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -29,9 +35,15 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label for="remove_machine">Machine</label>
+                        <select class="form-select select2" id="remove_machine" name="machine" style="width: 100%;" disabled>
+                            <option value="">- All Machine -</option>
+                        </select>
+                    </div>
                     <div class="alert alert-warning">
                         <i class="fa-solid fa-exclamation-triangle"></i>
-                        <strong>Warning!</strong> This action will permanently delete all Shikake data associated with the selected conveyor and process type (all process types if none is selected).
+                        <strong>Warning!</strong> This action will permanently delete all Shikake data on the selected conveyor that match the chosen process type and machine (all of them when left empty).
                     </div>
                 </div>
                 <div class="modal-footer">

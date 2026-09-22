@@ -19,7 +19,7 @@ class MasterShikakeService
         return MasterShikake::with(['conveyor'])->select('master_shikake.*');
     }
 
-    public function getDatatable($areaId = null, $conveyorId = null, $process = null)
+    public function getDatatable($areaId = null, $conveyorId = null, $process = null, $machine = null)
     {
         $query = MasterShikake::select([
                 'master_shikake.id',
@@ -63,13 +63,23 @@ class MasterShikakeService
             $query->where('master_shikake.process', $process);
         }
 
+        if ($machine) {
+            $query->where('master_shikake.machine', $machine);
+        }
+
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('carline', function ($row) {
                 return $row->carline ?? '-';
             })
+            ->addColumn('area_name', function ($row) {
+                return $row->area ?? '-';
+            })
             ->addColumn('conveyor_name', function ($row) {
                 return $row->conveyor ?? '-';
+            })
+            ->addColumn('machine_name', function ($row) {
+                return $row->machine ?: '-';
             })
             ->filterColumn('carline', function($query, $keyword) {
                 $query->where('master_shikake.carline', 'like', "%{$keyword}%");
@@ -262,19 +272,36 @@ class MasterShikakeService
         };
     }
 
-    public function deleteByConveyor($conveyorId, $process = null)
+    /**
+     * Distinct machine values present in the data, narrowed by the upper filter levels.
+     */
+    public function getMachineOptions($areaId = null, $conveyorId = null, $process = null)
+    {
+        return MasterShikake::query()
+            ->when($areaId, fn ($q) => $q->whereHas('conveyor', fn ($c) => $c->where('master_area_id', $areaId)))
+            ->when($conveyorId, fn ($q) => $q->where('conveyor_id', $conveyorId))
+            ->when($process, fn ($q) => $q->where('process', $process))
+            ->whereNotNull('machine')
+            ->where('machine', '<>', '')
+            ->distinct()
+            ->orderBy('machine')
+            ->pluck('machine');
+    }
+
+    public function deleteByConveyor($conveyorId, $process = null, $machine = null)
     {
         DB::beginTransaction();
         try {
             $userId = Auth::id();
 
             $query = fn () => MasterShikake::where('conveyor_id', $conveyorId)
-                ->when($process, fn ($q) => $q->where('process', $process));
+                ->when($process, fn ($q) => $q->where('process', $process))
+                ->when($machine, fn ($q) => $q->where('machine', $machine));
 
             // Update deleted_by before soft deleting
             $query()->update(['deleted_by' => $userId]);
 
-            // Soft delete all records for the conveyor (and process, if given)
+            // Soft delete all records for the conveyor (and process/machine, if given)
             $deleted = $query()->delete();
             
             DB::commit();

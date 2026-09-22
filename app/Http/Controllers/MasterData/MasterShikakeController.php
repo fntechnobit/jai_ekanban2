@@ -27,7 +27,7 @@ class MasterShikakeController extends Controller
     {
         $this->masterShikakeService = $masterShikakeService;
 
-        $this->middleware('check.menu:master_shikake,can_read')->only(['index', 'datatable', 'show']);
+        $this->middleware('check.menu:master_shikake,can_read')->only(['index', 'datatable', 'show', 'machines']);
         $this->middleware('check.menu:master_shikake,can_create')->only(['create', 'store', 'importForm', 'import']);
         $this->middleware('check.menu:master_shikake,can_update')->only(['edit', 'update']);
         $this->middleware('check.menu:master_shikake,can_delete')->only(['destroy', 'removeByConveyor']);
@@ -148,8 +148,23 @@ class MasterShikakeController extends Controller
             $areaId = $request->get('area_id');
             $conveyorId = $request->get('conveyor_id');
             $process = $request->get('process');
-            return $this->masterShikakeService->getDatatable($areaId, $conveyorId, $process);
+            $machine = $request->get('machine');
+            return $this->masterShikakeService->getDatatable($areaId, $conveyorId, $process, $machine);
         }
+    }
+
+    /**
+     * Machine options for the cascading filter / remove form.
+     */
+    public function machines(Request $request)
+    {
+        $machines = $this->masterShikakeService->getMachineOptions(
+            $request->get('area_id'),
+            $request->get('conveyor_id'),
+            $request->get('process')
+        );
+
+        return ResponseHelper::success($machines);
     }
 
     public function create()
@@ -378,14 +393,24 @@ class MasterShikakeController extends Controller
     {
         try {
             $request->validate([
+                'area_id' => 'required|exists:master_area,id',
                 'conveyor_id' => 'required|exists:master_conveyor,id',
                 'process' => 'nullable|string|in:' . implode(',', ProcessType::toArray()),
+                'machine' => 'nullable|string|max:100',
             ]);
 
-            $process = $request->input('process') ?: null;
-            $deleted = $this->masterShikakeService->deleteByConveyor($request->conveyor_id, $process);
+            $conveyor = MasterConveyor::findOrFail($request->conveyor_id);
+            if ((int) $conveyor->master_area_id !== (int) $request->area_id) {
+                return ResponseHelper::error('The selected conveyor does not belong to the selected area', 422);
+            }
 
-            $scope = $process ? "the selected conveyor and process {$process}" : 'the selected conveyor';
+            $process = $request->input('process') ?: null;
+            $machine = $request->input('machine') ?: null;
+            $deleted = $this->masterShikakeService->deleteByConveyor($conveyor->id, $process, $machine);
+
+            $scope = 'the selected conveyor'
+                . ($process ? ", process {$process}" : '')
+                . ($machine ? ", machine {$machine}" : '');
             return ResponseHelper::success([
                 'count' => $deleted
             ], "Successfully deleted {$deleted} Shikake record(s) for {$scope}");
