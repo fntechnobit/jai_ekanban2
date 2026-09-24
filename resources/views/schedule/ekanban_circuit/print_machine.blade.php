@@ -919,6 +919,19 @@
         // Tinggi raster kosong "tumbal" di awal tiap tiket - lihat printStackNow.
         // Naikkan kalau strip pertama tiket masih ada yang hilang.
         const WARMUP_DOTS = 16;
+        // Bantalan byte 0x00 di depan tiap perintah raster. Kalau ada byte yang
+        // hilang di perjalanan (kabel/hub/derau), printer terlanjur menelan
+        // sejumlah byte sesudahnya untuk menggenapi payload yang kurang. Kalau
+        // yang tertelan bantalan ini, header perintah berikutnya selamat dan
+        // aliran pulih sendiri - rusaknya tinggal satu strip tipis, bukan satu
+        // band penuh yang tercetak jadi karakter acak. Asumsinya printer
+        // mengabaikan 0x00 (didukung foto: data raster yang tercetak sebagai teks
+        // keluar jarang-jarang, byte putihnya tidak memunculkan apa pun) sehingga
+        // bantalan ini tidak memakan kertas. Kalau ternyata dicetak sebagai spasi
+        // dan kertas jadi boros, set ke 0.
+        const GUARD_NULS = 256;
+        const GUARD_HEX = '00'.repeat(GUARD_NULS);
+        const guarded = (hex) => GUARD_NULS > 0 ? GUARD_HEX + hex : hex;
 
         async function printStackNow(stackRootSel, printer) {
             const tickets = Array.from(document.querySelectorAll(stackRootSel + ' .ticket'));
@@ -938,24 +951,24 @@
                 const cvs = trimCanvasWhitespace(rawCvs);
                 const { slices, bpr } = canvasToEscposSlices(cvs);
 
-                // Perintah GS v 0 PERTAMA sesudah ESC @ (awal job) dan sesudah
-                // potong tidak dihormati printer: perintahnya diabaikan lalu
-                // datanya ikut tercetak sebagai teks - itulah karakter acak, dan
-                // itu sebabnya strip pertama tiket (kolom label A/B) hilang.
-                // Kirim satu raster KOSONG sebagai tumbal lebih dulu: isinya 0x00
-                // semua, jadi kalau diabaikan pun tidak mencetak apa pun, dan
-                // kalau dihormati hanya keluar WARMUP_DOTS dot kertas kosong.
+                // Perintah raster PERTAMA tiap tiket (sesudah ESC @ di awal job,
+                // sesudah potong di antar-tiket) SESEKALI gagal diparse printer:
+                // perintahnya terlewat lalu datanya tercetak sebagai teks - itulah
+                // karakter acak, dan itu sebabnya strip awal tiket hilang. Kirim
+                // satu raster KOSONG sebagai tumbal lebih dulu: isinya 0x00 semua,
+                // jadi kalau gagal pun tidak mencetak apa pun, dan kalau berhasil
+                // cuma keluar WARMUP_DOTS dot kertas kosong.
                 if (WARMUP_DOTS > 0) {
-                    jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: makeBlankRasterHex(bpr, WARMUP_DOTS) });
+                    jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: guarded(makeBlankRasterHex(bpr, WARMUP_DOTS)) });
                 }
 
                 for (const hex of slices) {
-                    jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: hex });
+                    jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: guarded(hex) });
                 }
 
                 // Blank after page
                 if (BLANK_AFTER_PAGE_DOTS > 0) {
-                    jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: makeBlankRasterHex(bpr, BLANK_AFTER_PAGE_DOTS) });
+                    jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: guarded(makeBlankRasterHex(bpr, BLANK_AFTER_PAGE_DOTS)) });
                 }
 
                 // Feed before cut
