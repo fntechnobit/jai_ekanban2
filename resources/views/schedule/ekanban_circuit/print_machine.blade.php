@@ -483,7 +483,7 @@
                     { data: 'actions', name: 'actions', orderable: false, searchable: false, width: '12%' }
                 ],
                 ordering: false,
-                pageLength: 100,
+                pageLength: 25,
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
             });
 

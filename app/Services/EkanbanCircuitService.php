@@ -268,7 +268,13 @@ class EkanbanCircuitService
                 'assy_schedule_circuit.qty_kanban',
                 'assy_schedule_circuit.cutoff as kanban_cutoff'
             ])
-            ->orderBy('master_circuit.cct_no')
+            // Match the print-machine listing's default order (shift, cutoff, sequence,
+            // conveyor) so printed tickets come out in the same order shown on screen -
+            // previously ordered by cct_no/issue, which could scramble a bulk-print batch.
+            ->orderBy('assy_schedule.shift')
+            ->orderBy('assy_schedule_circuit.cutoff')
+            ->orderBy(DB::raw('CAST(master_circuit.sequence AS UNSIGNED)'))
+            ->orderBy('master_conveyor.conveyor')
             ->orderBy('assy_schedule_circuit.issue')
             ->get();
     }

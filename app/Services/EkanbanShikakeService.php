@@ -218,7 +218,13 @@ class EkanbanShikakeService
                 'master_shikake_dbl_crimp.drawing_no as dbl_crimp_drawing_no',
                 DB::raw('CEIL(assy_schedule.qty / NULLIF(master_conveyor.pallet_qty, 0)) as pallet_count')
             ])
-            ->orderBy('master_shikake.process')
+            // Match the print-machine listing's default order (shift, cutoff, sequence,
+            // conveyor) so printed tickets come out in the same order shown on screen -
+            // previously ordered by process/issue, which could scramble a bulk-print batch.
+            ->orderBy('assy_schedule.shift')
+            ->orderBy('assy_schedule_shikake.cutoff')
+            ->orderBy(DB::raw('CAST(master_shikake.sequence AS UNSIGNED)'))
+            ->orderBy('master_conveyor.conveyor')
             ->orderBy('assy_schedule_shikake.issue')
             ->get();
 
