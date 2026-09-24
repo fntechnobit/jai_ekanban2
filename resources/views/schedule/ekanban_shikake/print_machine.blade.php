@@ -700,6 +700,9 @@
         const THRESHOLD = 190;
         const BLANK_AFTER_PAGE_DOTS = 20;
         const CUT_OFFSET_DOTS = 184; // ~23mm feed to pass cutter blade position
+        // Tinggi raster kosong "tumbal" di awal tiap tiket - lihat printStackNow.
+        // Naikkan kalau strip pertama tiket masih ada yang hilang.
+        const WARMUP_DOTS = 16;
 
         async function printShikake(ids) {
             console.log('%c[EKANBAN-DEBUG] printShikake running - BUILD-MARKER-2026-09-01-B SLICE_ROWS=' + SLICE_ROWS + ' BASE_DOTS=' + BASE_DOTS, 'background:#222;color:#0f0;font-weight:bold;padding:2px 6px;');
@@ -885,6 +888,17 @@
                 const cvs = trimCanvasWhitespace(rawCvs);
                 console.log('[EKANBAN-DEBUG] ticket #' + ticketIdx + ' trimmed canvas: ' + cvs.width + 'x' + cvs.height);
                 const { slices, bpr } = canvasToEscposSlices(cvs);
+
+                // Perintah GS v 0 PERTAMA sesudah ESC @ (awal job) dan sesudah
+                // potong tidak dihormati printer: perintahnya diabaikan lalu
+                // datanya ikut tercetak sebagai teks - itulah karakter acak, dan
+                // itu sebabnya strip pertama tiket (kolom label A/B) hilang.
+                // Kirim satu raster KOSONG sebagai tumbal lebih dulu: isinya 0x00
+                // semua, jadi kalau diabaikan pun tidak mencetak apa pun, dan
+                // kalau dihormati hanya keluar WARMUP_DOTS dot kertas kosong.
+                if (WARMUP_DOTS > 0) {
+                    jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: makeBlankRasterHex(bpr, WARMUP_DOTS) });
+                }
                 console.log('[EKANBAN-DEBUG] ticket #' + ticketIdx + ': canvas=' + cvs.width + 'x' + cvs.height + ' bpr=' + bpr + ' sliceCount=' + slices.length + ' totalHexChars=' + slices.reduce((a, s) => a + s.length, 0));
 
                 for (const hex of slices) {
@@ -911,8 +925,28 @@
             console.log('[EKANBAN-DEBUG] qz.print() resolved OK');
         }
 
+        // Barcode 1D HARUS tercetak seukuran PNG-nya (1 piksel = 1 dot). Kalau CSS
+        // tiket memperkecilnya, bar menyatu saat di-threshold hitam-putih dan hasil
+        // cetak gagal discan - tanpa error apa pun. Ini pernah terjadi karena view
+        // Blade lama masih ter-cache di server sementara gambarnya sudah Code 39,
+        // jadi lebih baik print DIBATALKAN dengan pesan jelas daripada mencetak
+        // ratusan tiket yang tidak bisa discan.
+        function assertBarcodesNotScaled(ticket) {
+            for (const img of ticket.querySelectorAll('img[alt^="Barcode"]')) {
+                if (!img.naturalWidth) continue; // gambar belum termuat, tidak bisa dicek
+                if (img.width !== img.naturalWidth || img.height !== img.naturalHeight) {
+                    throw new Error(
+                        'Barcode diperkecil (' + img.naturalWidth + 'x' + img.naturalHeight +
+                        ' jadi ' + img.width + 'x' + img.height + '), hasil cetak tidak akan bisa discan. ' +
+                        'Jalankan "php artisan view:clear" di server lalu refresh halaman ini.'
+                    );
+                }
+            }
+        }
+
         async function renderTicketToCanvas(ticket) {
             const isLandscape = ticket.dataset.orientation === 'landscape';
+            assertBarcodesNotScaled(ticket);
 
             // Save original inline styles
             const saved = {

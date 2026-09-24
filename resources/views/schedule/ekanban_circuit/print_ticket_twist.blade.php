@@ -181,7 +181,7 @@
 /* Barcode Code 39 WAJIB tampil 1:1 (ukuran asli PNG = dot printer). Jangan beri
    width %/max-height: barcode 1D yang diperkecil membuat bar melebur saat
    di-threshold hitam-putih untuk thermal 203dpi dan gagal discan. */
-.twist-barcode-cell img {
+.ticket-twist-print .twist-barcode-cell img {
     width: auto;
     height: auto;
     max-width: none;

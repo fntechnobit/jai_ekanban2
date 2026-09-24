@@ -916,6 +916,9 @@
         const THRESHOLD = 190;
         const BLANK_AFTER_PAGE_DOTS = 20;
         const CUT_OFFSET_DOTS = 184; // ~23mm feed to pass cutter blade position
+        // Tinggi raster kosong "tumbal" di awal tiap tiket - lihat printStackNow.
+        // Naikkan kalau strip pertama tiket masih ada yang hilang.
+        const WARMUP_DOTS = 16;
 
         async function printStackNow(stackRootSel, printer) {
             const tickets = Array.from(document.querySelectorAll(stackRootSel + ' .ticket'));
@@ -934,6 +937,17 @@
                 const rawCvs = await renderTicketToCanvas(t);
                 const cvs = trimCanvasWhitespace(rawCvs);
                 const { slices, bpr } = canvasToEscposSlices(cvs);
+
+                // Perintah GS v 0 PERTAMA sesudah ESC @ (awal job) dan sesudah
+                // potong tidak dihormati printer: perintahnya diabaikan lalu
+                // datanya ikut tercetak sebagai teks - itulah karakter acak, dan
+                // itu sebabnya strip pertama tiket (kolom label A/B) hilang.
+                // Kirim satu raster KOSONG sebagai tumbal lebih dulu: isinya 0x00
+                // semua, jadi kalau diabaikan pun tidak mencetak apa pun, dan
+                // kalau dihormati hanya keluar WARMUP_DOTS dot kertas kosong.
+                if (WARMUP_DOTS > 0) {
+                    jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: makeBlankRasterHex(bpr, WARMUP_DOTS) });
+                }
 
                 for (const hex of slices) {
                     jobs.push({ type: 'raw', format: 'command', flavor: 'hex', data: hex });
@@ -957,8 +971,28 @@
             await qz.print(cfg, jobs);
         }
 
+        // Barcode 1D HARUS tercetak seukuran PNG-nya (1 piksel = 1 dot). Kalau CSS
+        // tiket memperkecilnya, bar menyatu saat di-threshold hitam-putih dan hasil
+        // cetak gagal discan - tanpa error apa pun. Ini pernah terjadi karena view
+        // Blade lama masih ter-cache di server sementara gambarnya sudah Code 39,
+        // jadi lebih baik print DIBATALKAN dengan pesan jelas daripada mencetak
+        // ratusan tiket yang tidak bisa discan.
+        function assertBarcodesNotScaled(ticket) {
+            for (const img of ticket.querySelectorAll('img[alt^="Barcode"]')) {
+                if (!img.naturalWidth) continue; // gambar belum termuat, tidak bisa dicek
+                if (img.width !== img.naturalWidth || img.height !== img.naturalHeight) {
+                    throw new Error(
+                        'Barcode diperkecil (' + img.naturalWidth + 'x' + img.naturalHeight +
+                        ' jadi ' + img.width + 'x' + img.height + '), hasil cetak tidak akan bisa discan. ' +
+                        'Jalankan "php artisan view:clear" di server lalu refresh halaman ini.'
+                    );
+                }
+            }
+        }
+
         async function renderTicketToCanvas(ticket) {
             const isLandscape = ticket.dataset.orientation === 'landscape';
+            assertBarcodesNotScaled(ticket);
 
             // Save original inline styles
             const saved = {
