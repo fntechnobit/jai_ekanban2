@@ -5,10 +5,8 @@ namespace App\Services;
 use App\Models\AssySchedule;
 use App\Models\ListingStage;
 use App\Models\MasterConveyor;
+use App\Services\Schedule\DayScheduleBuilder;
 use App\Services\Schedule\ShiftCapacityCalculator;
-use App\Services\Schedule\ShiftLockChecker;
-use App\Services\Schedule\ListingAllocator;
-use App\Services\Schedule\ScheduleCleanupService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,26 +16,20 @@ class AssySchedulerService
 {
     protected $listingSyncService;
     protected $capacityCalculator;
-    protected $lockChecker;
-    protected $listingAllocator;
-    protected $scheduleCleanup;
+    protected $dayBuilder;
 
     protected $conveyorSync;
 
     public function __construct(
         ListingSyncService $listingSyncService,
         ShiftCapacityCalculator $capacityCalculator,
-        ShiftLockChecker $lockChecker,
-        ListingAllocator $listingAllocator,
-        ScheduleCleanupService $scheduleCleanup,
+        DayScheduleBuilder $dayBuilder,
         SirepConveyorSyncService $conveyorSync
     ) {
         $this->conveyorSync = $conveyorSync;
         $this->listingSyncService = $listingSyncService;
         $this->capacityCalculator = $capacityCalculator;
-        $this->lockChecker = $lockChecker;
-        $this->listingAllocator = $listingAllocator;
-        $this->scheduleCleanup = $scheduleCleanup;
+        $this->dayBuilder = $dayBuilder;
     }
 
     /**
@@ -157,47 +149,12 @@ class AssySchedulerService
         try {
             DB::beginTransaction();
 
-            // Get fresh listing data from listing_stage for the date range
-            // Skip listings that already have locked schedules (matching SP logic: NOT EXISTS verified)
-            $listingsQuery = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])
-                ->whereNotNull('assycode')
-                ->where('assycode', '!=', '')
-                ->whereNotNull('assy')
-                ->where('assy', '!=', '')
-                ->where('qty', '>', 0)
-                ->whereNotExists(function ($query) {
-                    $query->select(DB::raw(1))
-                        ->from('assy_schedule')
-                        ->whereColumn('assy_schedule.schedule', DB::raw('DATE(listing_stage.listing_date_time)'))
-                        ->whereColumn('assy_schedule.assycode', 'listing_stage.assycode')
-                        ->whereColumn('assy_schedule.assy', 'listing_stage.assy')
-                        ->whereExists(function ($subQuery) {
-                            $subQuery->select(DB::raw(1))
-                                ->from('master_conveyor')
-                                ->whereColumn('master_conveyor.id', 'assy_schedule.conveyor_id')
-                                ->whereColumn('master_conveyor.conveyor', 'listing_stage.conveyor');
-                        })
-                        // Skip listings that already belong to a protected schedule: either
-                        // locked/verified OR carrying generated kanbans. The kanban check keeps
-                        // this in sync with ScheduleCleanupService::applyHasKanbanGuard so a
-                        // protected-but-unlocked schedule is not re-generated into a duplicate.
-                        ->where(function ($q) {
-                            $q->where('assy_schedule.is_lock', '!=', 0)
-                                ->orWhereExists(function ($k) {
-                                    $k->select(DB::raw(1))
-                                        ->from('assy_schedule_circuit')
-                                        ->whereColumn('assy_schedule_circuit.assy_schedule_id', 'assy_schedule.id');
-                                })
-                                ->orWhereExists(function ($k) {
-                                    $k->select(DB::raw(1))
-                                        ->from('assy_schedule_shikake')
-                                        ->whereColumn('assy_schedule_shikake.assy_schedule_id', 'assy_schedule.id');
-                                });
-                        });
-                })
-                ->orderBy('id_listing', 'asc')
-                ->orderBy('listing_date_time', 'asc')
-                ->orderBy('assycode', 'asc');
+            // Seluruh listing rentang itu, termasuk yang sebagian sudah dipegang jadwal
+            // terkunci. Bagian yang sudah dipegang dikurangkan per listing_id oleh
+            // DayScheduleBuilder — dulu listing seperti itu dibuang utuh, sehingga
+            // potongan milik shift yang belum diverifikasi ikut hilang.
+            $listingsQuery = $this->dayBuilder->listingQuery()
+                ->whereBetween('listing_date_time', [$startDate, $endDate]);
 
             if ($conveyorId) {
                 $listingsQuery->where('conveyor', function($query) use ($conveyorId) {
@@ -232,7 +189,14 @@ class AssySchedulerService
             $capacityErrors = [];
             $ambangCadangan = [];
             $conveyorErrors = [];
+            $belumTerjadwal = [];
+            $days = [];
 
+            // Tahap 1: pilih hari yang boleh dijadwalkan, lalu bersihkan jadwalnya yang
+            // belum terlindungi. SEMUA hari dibersihkan lebih dulu sebelum satu pun disusun:
+            // item yang dipindah antar tanggal lewat layar verifikasi masih memegang
+            // listing asalnya, dan bila pembersihan diselang-seling dengan penyusunan,
+            // urutan grup menentukan apakah qty itu terhitung dua kali atau hilang.
             foreach ($groupedListings as $groupKey => $groupListings) {
                 list($date, $conveyorName) = explode('_', $groupKey, 2);
                 
@@ -275,154 +239,73 @@ class AssySchedulerService
                 // tidak punya jatah lembur, sehingga ambangnya jatuh ke normal_capacity.
                 // Ia tetap terjadwal, dan hari yang melampaui kapasitas normal pecah jadi
                 // dua shift alih-alih menumpuk di CO5.
-                $overtimeCap = $this->capacityCalculator->effectiveOvertimeCapacity(
-                    $shiftCapacity,
-                    $conveyor->overtime_capacity
-                );
-
                 if ($this->capacityCalculator->overtimeCapacityIsFallback($conveyor->overtime_capacity)) {
                     $ambangCadangan[$conveyorName] = $conveyorName;
                 }
 
-                // Step 4: Initialize tracking field for listings (rem_qty)
-                $this->listingAllocator->initializeListings($groupListings);
+                $this->dayBuilder->clearUnprotected($conveyor, $scheduleDate);
 
-                // Jumlah shift DIHITUNG dari data SIREP: satu shift menampung tepat
-                // overtime_capacity, jadi qty di atas itu berarti dua shift. Penanda
-                // is_overtime sengaja tidak dipakai — ia baru ditetapkan PPC mendekati
-                // hari produksi, sehingga generate untuk tanggal ke depan akan berubah
-                // hasilnya tergantung kapan dijalankan.
-                $totalQtyForShift = (int) $groupListings->sum('rem_qty');
-                $maxShifts        = $this->capacityCalculator->resolveShiftCount($overtimeCap, $totalQtyForShift);
+                $days[] = [$conveyor, $scheduleDate, $groupListings];
+            }
 
-                // Step 5: Check shift lock status for this conveyor on this date
-                $shiftLockStatus = $this->lockChecker->getShiftLockStatus(
-                    $scheduleDate,
-                    $conveyor->id
-                );
-
-                // Step 6: Delete only unlocked schedules
-                $this->scheduleCleanup->deleteUnlockedSchedulesInRange(
-                    $scheduleDate,
-                    $scheduleDate,
-                    $conveyor->id
-                );
-
-                // Step 7: Calculate cutoff capacities for each shift
-                $shiftCapacities = $this->capacityCalculator->calculateShiftCapacities(
-                    $shiftCapacity,
-                    $shiftLockStatus,
-                    $maxShifts
-                );
-
-                // Step 8: Jatah CO5 per shift. Pada hari satu shift CO5 adalah selisih
-                // overtime_capacity dan normal_capacity; pada hari dua shift, CO5 shift
-                // pertama dibatasi 7/8 CO normal dan shift terakhir menampung sisanya.
-                $totalQty  = $totalQtyForShift;
-                $co5Needed = $this->capacityCalculator->preMapCutoff5(
-                    $shiftCapacities, $shiftCapacity, $totalQty
-                );
+            // Tahap 2: susun tiap hari. Jumlah shift DIHITUNG dari demand penuh SIREP hari
+            // itu (satu shift menampung tepat overtime_capacity); bagian listing yang sudah
+            // dipegang shift terkunci dikurangkan, dan sisanya diisi ke shift yang masih
+            // kosong. Penanda is_overtime sengaja tidak dipakai — ia baru ditetapkan PPC
+            // mendekati hari produksi, sehingga generate untuk tanggal ke depan akan
+            // berubah hasilnya tergantung kapan dijalankan.
+            foreach ($days as [$conveyor, $scheduleDate, $groupListings]) {
+                $plan = $this->dayBuilder->plan($conveyor, $scheduleDate, $groupListings);
 
                 // Demand yang melampaui kapasitas nominal hari itu tetap dijadwalkan
                 // (CO5 shift terakhir menampungnya), tetapi harus terlihat supaya bisa
                 // diperiksa sebelum jadwal dikunci.
-                $nominalHari = $this->capacityCalculator->nominalDayCapacity(
-                    $shiftCapacity, $overtimeCap, $maxShifts
+                $shiftCapacity = (int) $conveyor->capacity;
+                $nominalHari   = $this->capacityCalculator->nominalDayCapacity(
+                    $shiftCapacity, $plan['overtime_capacity'], $plan['max_shifts']
                 );
 
-                if ($totalQty > $nominalHari) {
+                if ($plan['full_demand'] > $nominalHari) {
                     Log::warning('Listing melampaui kapasitas nominal hari itu', [
-                        'conveyor'          => $conveyorName,
+                        'conveyor'          => $conveyor->conveyor,
                         'schedule_date'     => $scheduleDate->format('Y-m-d'),
-                        'total_qty'         => $totalQty,
+                        'total_qty'         => $plan['full_demand'],
                         'normal_capacity'   => $shiftCapacity,
-                        'overtime_capacity' => $overtimeCap,
-                        'shift_dipakai'     => $maxShifts,
+                        'overtime_capacity' => $plan['overtime_capacity'],
+                        'shift_dipakai'     => $plan['max_shifts'],
                         'kapasitas_nominal' => $nominalHari,
                     ]);
                 }
 
+                // Hanya terjadi bila semua shift hari itu sudah terkunci, mis. SIREP
+                // menambah qty setelah verifikasi. Tidak dibuang diam-diam.
+                if ($plan['unallocated'] > 0) {
+                    $belumTerjadwal[] = sprintf(
+                        '%s %s (%d pcs)',
+                        $conveyor->conveyor,
+                        $scheduleDate->format('d-m-Y'),
+                        $plan['unallocated']
+                    );
+                    Log::warning('Sebagian listing belum terjadwal: seluruh shift hari itu sudah terkunci', [
+                        'conveyor'      => $conveyor->conveyor,
+                        'schedule_date' => $scheduleDate->format('Y-m-d'),
+                        'full_demand'   => $plan['full_demand'],
+                        'unallocated'   => $plan['unallocated'],
+                    ]);
+                }
+
                 Log::info("CO5 pre-mapping result", [
-                    'conveyor_id'     => $conveyor->id,
-                    'schedule_date'   => $scheduleDate->format('Y-m-d'),
-                    'total_qty'       => $totalQty,
-                    'max_shifts'      => $maxShifts,
-                    'co5_needed'       => $co5Needed,
-                    'overtime_capacity'=> $overtimeCap,
-                    'shift_capacities' => $shiftCapacities,
+                    'conveyor_id'      => $conveyor->id,
+                    'schedule_date'    => $scheduleDate->format('Y-m-d'),
+                    'total_qty'        => $plan['full_demand'],
+                    'remaining_qty'    => $plan['remaining'],
+                    'max_shifts'       => $plan['max_shifts'],
+                    'co5_needed'       => $plan['co5_needed'],
+                    'overtime_capacity'=> $plan['overtime_capacity'],
+                    'shift_capacities' => $plan['shift_capacities'],
                 ]);
 
-                // Step 9: Allocate (budgets pre-mapped by preMapCutoff5)
-                //   2-shift: S1-CO1→4 → S2-CO1→4 → S1-CO5 (capped at nominal) → S2-CO5
-                //            (catch-all = all remaining)
-                //   1-shift: CO1 → CO2 → CO3 → CO4 → CO5 (catch-all = all remaining)
-                if ($maxShifts >= 2) {
-                    // Phase 1: CO1-4 for every unlocked shift (base capacity)
-                    foreach (range(1, $maxShifts) as $shift) {
-                        if (($shiftLockStatus[$shift] ?? false) || !isset($shiftCapacities[$shift])) continue;
-
-                        $result = $this->listingAllocator->allocateToShift(
-                            $groupListings,
-                            $shiftCapacities[$shift],
-                            $shift,
-                            $conveyor->id,
-                            $scheduleDate->format('Y-m-d'),
-                            [1, 2, 3, 4]
-                        );
-                        $schedulesToCreate = array_merge($schedulesToCreate, $result['schedules']);
-                        if ($groupListings->sum('rem_qty') <= 0) break;
-                    }
-
-                    // Phase 2: CO5 forward — S1.CO5 (capped at nominal) first, then
-                    // S2.CO5 (catch-all = all remaining). Budgets set by preMapCutoff5.
-                    foreach (range(1, $maxShifts) as $shift) {
-                        if ($groupListings->sum('rem_qty') <= 0) break;
-                        if (($shiftLockStatus[$shift] ?? false) || !isset($shiftCapacities[$shift])) continue;
-
-                        if (($shiftCapacities[$shift]['c5'] ?? 0) > 0) {
-                            $result = $this->listingAllocator->allocateToShift(
-                                $groupListings,
-                                $shiftCapacities[$shift],
-                                $shift,
-                                $conveyor->id,
-                                $scheduleDate->format('Y-m-d'),
-                                [5]
-                            );
-                            $schedulesToCreate = array_merge($schedulesToCreate, $result['schedules']);
-                        }
-                    }
-                } else {
-                    // ── 1-shift: CO1-4 → CO5 (pre-mapped; single shift is the last shift, so CO5 = catch-all) ──
-                    for ($shift = 1; $shift <= $maxShifts; $shift++) {
-                        if ($shiftLockStatus[$shift] ?? false) continue;
-                        if (!isset($shiftCapacities[$shift])) continue;
-
-                        // CO1-4 dulu
-                        $result = $this->listingAllocator->allocateToShift(
-                            $groupListings,
-                            $shiftCapacities[$shift],
-                            $shift,
-                            $conveyor->id,
-                            $scheduleDate->format('Y-m-d'),
-                            [1, 2, 3, 4]
-                        );
-                        $schedulesToCreate = array_merge($schedulesToCreate, $result['schedules']);
-
-                        // CO5: gunakan budget pre-mapped (catch-all = seluruh sisa listing)
-                        if (($shiftCapacities[$shift]['c5'] ?? 0) > 0) {
-                            $result = $this->listingAllocator->allocateToShift(
-                                $groupListings,
-                                $shiftCapacities[$shift],
-                                $shift,
-                                $conveyor->id,
-                                $scheduleDate->format('Y-m-d'),
-                                [5]
-                            );
-                            $schedulesToCreate = array_merge($schedulesToCreate, $result['schedules']);
-                        }
-                        if ($groupListings->sum('rem_qty') === 0) break;
-                    }
-                }
+                $schedulesToCreate = array_merge($schedulesToCreate, $plan['schedules']);
             }
 
             // Step 10: Bulk insert all schedules
@@ -460,6 +343,12 @@ class AssySchedulerService
                     . 'overtime_capacity: ' . implode(', ', $ambangCadangan) . '.';
             }
 
+            if (!empty($belumTerjadwal)) {
+                $message .= ' Sebagian listing belum terjadwal karena seluruh shift hari itu sudah '
+                    . 'diverifikasi: ' . implode(', ', $belumTerjadwal) . '. Unverify shift terkait '
+                    . 'lalu generate ulang untuk memasukkannya.';
+            }
+
             return [
                 'success'          => true,
                 'step_failed'      => null,
@@ -474,6 +363,7 @@ class AssySchedulerService
                 'capacity_missing' => array_values($capacityErrors),
                 'conveyor_inactive' => array_values($conveyorErrors),
                 'ambang_cadangan'   => array_values($ambangCadangan),
+                'belum_terjadwal'   => $belumTerjadwal,
             ];
         } catch (\Exception $e) {
             DB::rollBack();

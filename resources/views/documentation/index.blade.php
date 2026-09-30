@@ -311,6 +311,17 @@
                     Hari yang melampaui nominal tidak disembunyikan, melainkan ditandai <span class="badge bg-danger">over</span>
                     di layar verifikasi supaya diputuskan orang.</p>
                 </div>
+
+                <div class="doc-panel mt-3">
+                    <div class="doc-panel-title">Hari yang baru sebagian diverifikasi</div>
+                    <p class="small mb-2">Pada hari dua shift, shift yang sudah diverifikasi tidak disentuh dan bagian
+                    listing yang dipegangnya tidak dijadwalkan lagi. Sisanya dibangun ulang ke shift yang masih pending.
+                    Jumlah shift tetap dihitung dari listing <strong>penuh</strong> hari itu, sehingga verifikasi satu
+                    shift tidak membuat shift lainnya hilang atau menyusut.</p>
+                    <p class="small mb-0 text-muted">Bila semua shift hari itu sudah diverifikasi lalu SIREP menambah
+                    qty, tambahannya tidak dijadwalkan diam-diam &mdash; pesan hasil generate menyebut conveyor, tanggal,
+                    dan jumlahnya. Unverify shift terkait lalu generate ulang untuk memasukkannya.</p>
+                </div>
             </div>
 
             {{-- ══════════════ 03 VERIFIKASI ══════════════ --}}

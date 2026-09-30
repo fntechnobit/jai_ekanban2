@@ -97,18 +97,30 @@ Ini "kebenaran demand". Aplikasi kanban **tidak mengubahnya**, hanya menyalin & 
 Urutan per grup **(tanggal × conveyor)**:
 
 1. **Sync ulang staging dulu** (generate tidak berdiri sendiri).
-2. **Ambil listing valid**: dalam rentang, `assycode`/`assy` tidak kosong, `qty>0`, dan **belum** punya
-   jadwal terkunci/ber-kanban untuk kombinasi sama (listing terverifikasi tak boleh di-generate ulang).
+2. **Ambil listing valid**: dalam rentang, `assycode`/`assy` tidak kosong, `qty>0`. Listing yang
+   **sebagian** sudah dipegang jadwal terkunci **tetap diambil** (lihat langkah 6).
 3. **Group** by `DATE(listing_date_time) + conveyor`; cocokkan nama conveyor → master conveyor.
-4. **Cek shift lock**: shift terkunci diberi kapasitas **0** (jadwal final tak ditimpa).
-5. **Hapus hanya** `assy_schedule` yang **belum lock** (`is_lock=0`) untuk slot itu.
-6. **Hitung kapasitas CO & alokasikan** listing (lihat §6 — aturan resmi). Alokasi **FIFO** by
+4. **Hapus hanya** `assy_schedule` yang **belum terlindungi** (`is_lock=0` dan belum ber-kanban) — untuk
+   **semua** grup lebih dulu, baru grup mana pun disusun (item transfer antar tanggal masih memegang
+   listing asalnya; tanpa urutan ini qty-nya bisa terhitung dua kali atau hilang tergantung urutan grup).
+5. **Jumlah shift dari demand PENUH** hari itu (`qty > overtime_capacity` → 2 shift), termasuk bagian
+   yang sudah terkunci. Shift yang masih punya baris (terkunci/ber-kanban) diberi kapasitas **0**.
+6. **Kurangi qty yang sudah dipegang** baris `assy_schedule` yang tersisa, per `listing_id` (dari tanggal
+   mana pun). Hanya **sisanya** yang dialokasikan (lihat §6 — aturan resmi). Alokasi **FIFO** by
    `id_listing`/`seq`; satu listing bisa pecah ke beberapa cutoff/shift (`rem_qty` tracking).
 7. **Bulk insert** ke `assy_schedule` dengan `is_lock=0` / `is_verified=0`.
 
 State awal hasil generate: `is_lock=0`, `verified_at=null`, `verified_by=null`.
 
-> **Konsistensi:** Dashboard & halaman Assy-Scheduler (ekanban) memanggil method generate yang sama.
+> **Konsistensi:** Dashboard & halaman Assy-Scheduler (ekanban) memanggil method generate yang sama, dan
+> generate + unverify memakai penyusun hari yang sama (`DayScheduleBuilder`).
+
+> ⚠️ **Aturan lama yang sudah dibuang (bug 30-09-2026, B3-ENG):** listing yang punya jadwal terkunci
+> dibuang **utuh**, dan jumlah shift dihitung dari **sisa** listing. Akibatnya, pada hari 2 shift yang baru
+> satu shiftnya diverifikasi, generate berikutnya (termasuk auto-sync saat halaman dibuka) menghapus shift
+> pending lalu tidak membangunnya lagi (verify S1 → S2 hilang) atau membangunnya kurang
+> (verify S2 → S1 tinggal 22 dari 78). Bila semua shift sudah terkunci dan SIREP menambah qty, sisanya
+> **tidak** dijadwalkan diam-diam — generate melaporkannya di pesan hasil.
 
 ---
 
@@ -218,7 +230,9 @@ sebagai source; urut `shift → cutoff → listing_id`. (Hanya jadwal tentative 
 3. **Reverse balance** carry-over dari kanban lama.
 4. **Hapus** kanban (`assy_schedule_circuit`/`_shikake` / `t_circuit_schedule`) untuk grup itu.
 5. **Hapus** `assy_schedule` slot itu.
-6. **Regenerate** dari `listing_stage` (engine generate yang sama → distribusi/CO5 konsisten).
+6. **Regenerate** dari `listing_stage` (engine generate yang sama → distribusi/CO5 konsisten). Shift lain
+   (terkunci maupun pending) **tidak disentuh**: bagiannya dikurangkan, jumlah shift tetap dari demand
+   penuh, dan hanya shift yang kosong yang diisi.
 
 > Kolom audit transfer (`transferred_from_*`) adalah **inti integritas data**, bukan fitur tambahan —
 > tanpa itu unverify tak tahu ke mana item dikembalikan.
@@ -337,12 +351,14 @@ function generate_schedules($start, $end, $conveyorId = null) {
     refresh_listing_stage($start, $end);
     $groups = group_by_date_and_conveyor(get_valid_listing_stage($start, $end, $conveyorId));
     begin_transaction();
+    foreach ($groups as $g) delete_unprotected_schedule($g->date, $g->cv->id); // SEMUA grup dulu
     foreach ($groups as $g) {
         $cv = find_master_conveyor($g->conveyor_name); if (!$cv) continue;
         initialize_rem_qty($g->rows);
-        $lock = get_shift_lock_status($g->date, $cv->id);
-        delete_unlocked_schedule($g->date, $cv->id);
-        $caps = calculate_shift_capacities($cv, $lock);
+        $maxShift = resolve_shift_count($cv, sum_qty($g->rows));        // demand PENUH, bukan sisa
+        deduct_held_by_listing_id($g->rows);                            // bagian yg sudah dipegang
+        $lock = shifts_still_having_rows($g->date, $cv->id);
+        $caps = calculate_shift_capacities($cv, $lock, $maxShift);
         premap_cutoff5($caps, $cv->capacity, sum_rem_qty($g->rows)); // §6: earlier capped, last catch-all
         // CO1-4 semua shift → CO5 forward (S1 capped, S2 catch-all)
         foreach (available_shifts($cv) as $shift) {
@@ -366,7 +382,9 @@ function generate_schedules($start, $end, $conveyorId = null) {
 4. **Jangan abaikan kolom audit transfer** — tanpa itu unverify rusak.
 5. **Jangan rollback `nomor_urut` kanban** — hanya balik `sisa`.
 6. **Pastikan transaction boundary sama** untuk verify & unverify.
-7. **Saat mengubah aturan CO5:** ubah satu sumber (`ShiftCapacityCalculator::preMapCutoff5` /
+7. **Jangan buang listing utuh karena sebagian sudah terkunci** — kurangkan bagian yang dipegang per
+   `listing_id`, dan hitung jumlah shift dari demand penuh (§5 langkah 5–6).
+8. **Saat mengubah aturan CO5:** ubah satu sumber (`ShiftCapacityCalculator::preMapCutoff5` /
    `Assy_schedule_model::generatePhp`), perbarui unit test, samakan nominal CO5 di form + flag over di list,
    jaga konsistensi ekanban ↔ filter_kanban.
 
@@ -377,7 +395,9 @@ function generate_schedules($start, $end, $conveyorId = null) {
 ### jai_ekanban (Laravel) — acuan + unit test
 - `app/Services/Schedule/ShiftCapacityCalculator.php` — `calculateCutoff5Capacity()` (nominal `round`),
   `preMapCutoff5()` (budget c5: earlier capped, last catch-all), `calculateCutoffDistribution()`
-- `app/Services/AssySchedulerService.php` → `generateSchedules()` (CO1–4 semua shift → CO5 forward `[1,2]`)
+- `app/Services/AssySchedulerService.php` → `generateSchedules()` (sync, bersihkan semua hari, lalu susun)
+- `app/Services/Schedule/DayScheduleBuilder.php` — penyusun satu hari untuk generate & unverify
+  (demand penuh → jumlah shift, kurangi qty terpegang, CO1–4 semua shift kosong → CO5 forward)
 - `app/Services/Schedule/ListingAllocator.php` · `app/Services/Schedule/ShiftLockChecker.php` ·
   `app/Services/Schedule/ScheduleCleanupService.php`
 - `app/Services/ScheduleVerificationService.php` — `getDatatableQuery()` (flag over), `getVerificationDetails()`
@@ -386,6 +406,7 @@ function generate_schedules($start, $end, $conveyorId = null) {
 - `public/js/schedule-verification.js`, `resources/views/schedule/schedule_verification/index.blade.php`
 - **Unit test (case A–F):** `tests/Unit/Services/Schedule/ShiftCapacityCalculatorTest.php`
   → `vendor/bin/phpunit --filter ShiftCapacityCalculatorTest`
+- **Unit test verifikasi parsial (B3-ENG 30-09):** `tests/Unit/Services/Schedule/DayScheduleBuilderTest.php`
 
 ### jai_filter_kanban (CodeIgniter 3)
 - `application/modules/scheduler/models/Assy_schedule_model.php` → `stage()`, `generatePhp()`

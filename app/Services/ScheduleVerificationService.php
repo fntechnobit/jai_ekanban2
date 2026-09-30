@@ -5,9 +5,8 @@ namespace App\Services;
 use App\Models\AssySchedule;
 use App\Models\ListingStage;
 use App\Models\MasterConveyor;
+use App\Services\Schedule\DayScheduleBuilder;
 use App\Services\Schedule\ShiftCapacityCalculator;
-use App\Services\Schedule\ShiftLockChecker;
-use App\Services\Schedule\ListingAllocator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -17,19 +16,16 @@ class ScheduleVerificationService
 {
     protected KanbanGeneratorService $kanbanGenerator;
     protected ShiftCapacityCalculator $capacityCalculator;
-    protected ShiftLockChecker $lockChecker;
-    protected ListingAllocator $listingAllocator;
+    protected DayScheduleBuilder $dayBuilder;
 
     public function __construct(
         KanbanGeneratorService $kanbanGenerator,
         ShiftCapacityCalculator $capacityCalculator,
-        ShiftLockChecker $lockChecker,
-        ListingAllocator $listingAllocator
+        DayScheduleBuilder $dayBuilder
     ) {
         $this->kanbanGenerator = $kanbanGenerator;
         $this->capacityCalculator = $capacityCalculator;
-        $this->lockChecker = $lockChecker;
-        $this->listingAllocator = $listingAllocator;
+        $this->dayBuilder = $dayBuilder;
     }
 
     /**
@@ -1183,44 +1179,6 @@ class ScheduleVerificationService
     }
 
     /**
-     * Kurangi demand yang sudah dipegang shift LAIN pada tanggal+conveyor yang sama
-     * dari rem_qty listing.
-     *
-     * Unverify menghapus dan membangun ulang satu shift saja; baris pada shift lain tetap
-     * utuh. Tanpa pengurangan ini, pembangunan ulang akan mengalokasikan seluruh demand
-     * harian ke satu shift dan menghitung ganda qty yang masih dipegang shift lain.
-     *
-     * Schedule yang listing_id-nya milik tanggal lain (item hasil transfer) tidak akan
-     * ketemu di sini dan diabaikan — memang bukan bagian dari demand tanggal ini.
-     *
-     * @param \Illuminate\Support\Collection $listings Listing dengan rem_qty sudah diinisialisasi
-     */
-    private function deductOtherShiftsFromListings($listings, $conveyorId, $dateStr, $exceptShift): void
-    {
-        $consumed = AssySchedule::where('conveyor_id', $conveyorId)
-            ->whereDate('schedule', $dateStr)
-            ->where('shift', '!=', $exceptShift)
-            ->whereNotNull('listing_id')
-            ->groupBy('listing_id')
-            ->selectRaw('listing_id, SUM(qty) AS used')
-            ->pluck('used', 'listing_id');
-
-        if ($consumed->isEmpty()) {
-            return;
-        }
-
-        $byId = $listings->keyBy('id');
-
-        foreach ($consumed as $listingId => $used) {
-            $listing = $byId->get($listingId);
-            if (!$listing) {
-                continue;
-            }
-            $listing->rem_qty = max(0, (int) ($listing->rem_qty ?? 0) - (int) $used);
-        }
-    }
-
-    /**
      * Unverify schedule - unlock the schedule for specific conveyor, date, and shift.
      * Reverses balance, clears kanbans, then regenerates schedules from listing_stage
      * to restore the pre-verification state.
@@ -1258,6 +1216,7 @@ class ScheduleVerificationService
             // Step 4: Regenerate from listing_stage (restore original allocation)
             $conveyor = MasterConveyor::find($conveyorId);
             $regeneratedCount = 0;
+            $unallocated = 0;
 
             if ($conveyor) {
                 // JANGAN saring dengan listing_stage.shift di sini. Engine generate
@@ -1266,82 +1225,29 @@ class ScheduleVerificationService
                 // luberan dari baris yang ditandai shift lain oleh SIREP. Menyaring per shift
                 // membuat shift tersebut tidak menemukan listing apa pun dan tersangkut di
                 // status "No Data" setelah unverify.
-                $listings = ListingStage::where('conveyor', $conveyor->conveyor)
+                $listings = $this->dayBuilder->listingQuery()
+                    ->where('conveyor', $conveyor->conveyor)
                     ->whereDate('listing_date_time', $dateStr)
-                    ->whereNotNull('assycode')
-                    ->where('assycode', '!=', '')
-                    ->whereNotNull('assy')
-                    ->where('assy', '!=', '')
-                    ->where('qty', '>', 0)
-                    ->orderBy('id_listing', 'asc')
-                    ->orderBy('seq', 'asc')
                     ->get();
 
                 if ($listings->isNotEmpty()) {
-                    // Initialize rem_qty tracking
-                    $this->listingAllocator->initializeListings($listings);
+                    // Engine yang sama dengan generate. Hanya shift ini yang dihapus, jadi
+                    // shift lain — terkunci maupun pending — tetap memegang bagiannya dan
+                    // tidak diisi lagi; jumlah shift tetap dihitung dari demand penuh.
+                    $plan = $this->dayBuilder->plan($conveyor, $date, $listings);
 
-                    // Jumlah shift yang berjalan ditentukan dari demand PENUH hari itu —
-                    // sama seperti engine generate. Memakai sisa setelah pengurangan akan
-                    // menyusutkan hari 2-shift jadi 1 shift dan shift target tak pernah dibangun.
-                    $fullDemand    = (int) $listings->sum('qty');
-                    $maxShifts     = $this->capacityCalculator->resolveShiftCount(
-                        $this->capacityCalculator->effectiveOvertimeCapacity(
-                            (int) $conveyor->capacity,
-                            $conveyor->overtime_capacity
-                        ),
-                        $fullDemand
-                    );
-
-                    // Hanya shift ini yang dihapus; shift lain masih memegang bagiannya,
-                    // jadi demand itu tidak boleh dialokasikan untuk kedua kalinya.
-                    $this->deductOtherShiftsFromListings($listings, $conveyorId, $dateStr, $shift);
-                    $remainingQty = (int) $listings->sum('rem_qty');
-
-                    // Bangun ulang shift ini saja: shift lain diperlakukan terkunci.
-                    $shiftLockStatus = [];
-                    for ($s = 1; $s <= max(2, $maxShifts); $s++) {
-                        $shiftLockStatus[$s] = ((int) $s !== (int) $shift);
+                    foreach (array_chunk($plan['schedules'], 500) as $chunk) {
+                        AssySchedule::insert($chunk);
                     }
-
-                    // Calculate cutoff capacities
-                    $shiftCapacities = $this->capacityCalculator->calculateShiftCapacities(
-                        (int) $conveyor->capacity,
-                        $shiftLockStatus,
-                        $maxShifts
-                    );
-
-                    if ($remainingQty > 0 && isset($shiftCapacities[$shift])) {
-                        // Pre-map CO5 untuk shift ini saja. Ia satu-satunya shift yang tidak
-                        // terkunci, jadi CO5-nya berperan catch-all — sisa demand tidak terbuang.
-                        $targetCaps = [$shift => $shiftCapacities[$shift]];
-                        $this->capacityCalculator->preMapCutoff5(
-                            $targetCaps, (int) $conveyor->capacity, $remainingQty
-                        );
-
-                        // Allocate to shift (CO1-4 then CO5)
-                        $allocationResult = $this->listingAllocator->allocateToShift(
-                            $listings,
-                            $targetCaps[$shift],
-                            $shift,
-                            $conveyor->id,
-                            $dateStr
-                        );
-
-                        // Bulk insert
-                        if (!empty($allocationResult['schedules'])) {
-                            foreach (array_chunk($allocationResult['schedules'], 500) as $chunk) {
-                                AssySchedule::insert($chunk);
-                            }
-                            $regeneratedCount = count($allocationResult['schedules']);
-                        }
-                    }
+                    $regeneratedCount = count($plan['schedules']);
+                    $unallocated      = $plan['unallocated'];
 
                     Log::info("unverifySchedule: Regenerated from listing_stage", [
                         'listings_found' => $listings->count(),
-                        'listing_demand' => $fullDemand,
-                        'max_shifts' => $maxShifts,
-                        'remaining_qty' => $remainingQty,
+                        'listing_demand' => $plan['full_demand'],
+                        'max_shifts' => $plan['max_shifts'],
+                        'remaining_qty' => $plan['remaining'],
+                        'unallocated' => $unallocated,
                         'schedules_created' => $regeneratedCount,
                     ]);
                 } else {
@@ -1360,6 +1266,9 @@ class ScheduleVerificationService
             }
             if (!empty($restoreResult['lost_count'])) {
                 $message .= " {$restoreResult['lost_count']} item transfer HILANG karena jadwal asal sudah diverifikasi.";
+            }
+            if ($unallocated > 0) {
+                $message .= " {$unallocated} pcs listing belum terjadwal karena shift lain hari itu sudah terisi.";
             }
 
             return [
