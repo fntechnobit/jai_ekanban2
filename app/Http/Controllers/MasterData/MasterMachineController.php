@@ -97,14 +97,16 @@ class MasterMachineController extends Controller
     {
         try {
             $request->validate([
+                'area_id' => 'required|exists:master_area,id',
                 'file' => 'required|file|mimes:xlsx,xls|max:10240',
                 'rows_start' => 'required|integer|min:1',
             ]);
 
             $file = $request->file('file');
+            $areaId = $request->input('area_id');
             $rowsStart = $request->input('rows_start', 2);
 
-            $result = $this->masterMachineService->import($file->getRealPath(), $rowsStart);
+            $result = $this->masterMachineService->import($file->getRealPath(), $areaId, $rowsStart);
 
             if ($result['success']) {
                 $message = "Import completed successfully. {$result['success_count']} records imported";
@@ -134,10 +136,18 @@ class MasterMachineController extends Controller
         }
     }
 
-    public function downloadTemplate()
+    public function downloadTemplate(Request $request)
     {
-        $tempPath = $this->masterMachineService->generateTemplateFile();
+        $request->validate([
+            'area_id' => 'required|exists:master_area,id',
+        ]);
 
-        return response()->download($tempPath, 'Template_Machine.xlsx')->deleteFileAfterSend(true);
+        $area = MasterArea::findOrFail($request->input('area_id'));
+        $tempPath = $this->masterMachineService->generateTemplateFile($area->id);
+
+        $safeAreaName = preg_replace('/[^A-Za-z0-9]+/', '_', $area->area);
+        $filename = 'Template_Machine_' . trim($safeAreaName, '_') . '.xlsx';
+
+        return response()->download($tempPath, $filename)->deleteFileAfterSend(true);
     }
 }

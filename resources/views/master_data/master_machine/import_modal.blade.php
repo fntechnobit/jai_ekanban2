@@ -11,7 +11,20 @@
                 <div class="modal-body">
                     <div class="alert alert-info">
                         <i class="fa-solid fa-circle-info"></i>
-                        <strong>Important:</strong> Maximum 1000 rows per upload. Conveyor is not part of the template - assign it manually after import via Edit. Type and Area columns in the template are dropdowns limited to valid values.
+                        <strong>Important:</strong> Maximum 1000 rows per upload. Every machine in the file will be assigned to the Area selected below. Conveyor is not part of the template - assign it manually after import via Edit.
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label for="import_area_id" class="col-sm-3 col-form-label">Area <span class="text-danger">*</span>:</label>
+                        <div class="col-sm-9">
+                            <select class="form-select select2" id="import_area_id" name="area_id" style="width: 100%;" required>
+                                <option value="">- Choose Area -</option>
+                                @foreach($areas as $area)
+                                    <option value="{{ $area->id }}">{{ $area->area }}</option>
+                                @endforeach
+                            </select>
+                            <small class="form-text text-danger import_area_id_error"></small>
+                        </div>
                     </div>
 
                     <div class="mb-3 row">
@@ -38,7 +51,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-success btn-sm" id="btn-download-template-machine">
+                    <button type="button" class="btn btn-success btn-sm me-auto" id="btn-download-template-machine">
                         <i class="fa-solid fa-file-spreadsheet"></i> Download Template
                     </button>
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>

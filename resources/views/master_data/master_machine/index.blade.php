@@ -268,8 +268,19 @@
                 });
             });
 
+            // Initialize Select2 for import modal
+            $('#import_area_id').select2({
+                theme: 'bootstrap-5',
+                dropdownParent: $('#importMachineModal'),
+                allowClear: true
+            });
+
             // Import button handler
             $('#btn-import').click(function() {
+                $('#importMachineForm')[0].reset();
+                $('.custom-file-label').html('Browse File');
+                $('.error-text, .text-danger').text('');
+                $('#import_area_id').val('').trigger('change.select2');
                 $('#importMachineModal').modal('show');
             });
 
@@ -279,9 +290,15 @@
                 $(this).next('.custom-file-label').html(fileName || 'Browse File');
             });
 
-            // Download Template
+            // Download Template - area is required first, same as import itself
             $('#btn-download-template-machine').click(function() {
-                window.location.href = "{{ route('master-data.master-machine.download-template') }}";
+                var areaId = $('#import_area_id').val();
+                if (!areaId) {
+                    $('.import_area_id_error').text('Please choose an Area first.');
+                    return;
+                }
+                $('.import_area_id_error').text('');
+                window.location.href = "{{ route('master-data.master-machine.download-template') }}?area_id=" + areaId;
             });
 
             // Submit Import Form

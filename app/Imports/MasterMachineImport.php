@@ -13,10 +13,16 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class MasterMachineImport
 {
+    protected $areaId;
     protected $errors = [];
     protected $successCount = 0;
     protected $failedCount = 0;
     protected $totalRows = 0;
+
+    public function __construct($areaId)
+    {
+        $this->areaId = $areaId;
+    }
 
     public function import($filePath, $startRow = 2)
     {
@@ -43,8 +49,13 @@ class MasterMachineImport
                 throw new \Exception("Data exceeds 1000 rows limit. You are trying to upload {$this->totalRows} rows. Please split your data into smaller batches.");
             }
 
-            // Area name -> id, for resolving the Area column
-            $areaIdsByName = MasterArea::pluck('id', 'area');
+            // Area is chosen once for the whole batch (like Circuit's conveyor_id),
+            // not per row, so every machine in this file ends up in the same area.
+            $area = MasterArea::find($this->areaId);
+            if (!$area) {
+                throw new \Exception('Selected area was not found.');
+            }
+
             $validTypes = MachineType::toArray();
 
             DB::beginTransaction();
@@ -60,7 +71,6 @@ class MasterMachineImport
 
                     $machineName = ImportHelper::cleanValue($rowData[0] ?? null);
                     $type = ImportHelper::cleanValue($rowData[1] ?? null);
-                    $areaName = ImportHelper::cleanValue($rowData[2] ?? null);
 
                     if (!$machineName) {
                         throw new \Exception('Machine is required.');
@@ -70,14 +80,10 @@ class MasterMachineImport
                         throw new \Exception("Type '{$type}' is invalid. Must be one of: " . implode(', ', $validTypes) . '.');
                     }
 
-                    if (!$areaName || !$areaIdsByName->has($areaName)) {
-                        throw new \Exception("Area '{$areaName}' was not found in Master Area.");
-                    }
-
                     $data = [
                         'machine' => $machineName,
                         'type' => $type,
-                        'master_area_id' => $areaIdsByName->get($areaName),
+                        'master_area_id' => $area->id,
                     ];
 
                     // Update or create by machine name. Conveyors are not part of

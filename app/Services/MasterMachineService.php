@@ -154,29 +154,33 @@ class MasterMachineService
         return MasterMachine::with(['area', 'conveyors'])->findOrFail($id);
     }
 
-    public function import($filePath, $startRow = 2)
+    public function import($filePath, $areaId, $startRow = 2)
     {
-        $importer = new \App\Imports\MasterMachineImport();
+        $importer = new \App\Imports\MasterMachineImport($areaId);
         return $importer->import($filePath, $startRow);
     }
 
     /**
-     * Build the Machine import template as a temp .xlsx file and return its path.
-     * Type and Area columns get an in-cell dropdown sourced from a hidden
-     * "Lists" sheet, so Area always reflects current Master Area data.
+     * Build the Machine import template as a temp .xlsx file, scoped to one
+     * area, and return its path. Area is not a column here - it is chosen
+     * once for the whole import batch (like Circuit's conveyor_id) - so the
+     * template only needs a Type dropdown, sourced from a hidden "Lists" sheet.
      */
-    public function generateTemplateFile(): string
+    public function generateTemplateFile(int $areaId): string
     {
-        $areas = MasterArea::orderBy('area')->pluck('area')->values();
+        $area = MasterArea::findOrFail($areaId);
         $types = MachineType::toArray();
 
         $spreadsheet = new Spreadsheet();
 
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Template');
+        // Sheet name carries the area so it stays visible even if the file
+        // gets renamed; row 1 stays the header row (data import reads it).
+        $safeAreaName = str_replace(['\\', '/', '?', '*', '[', ']', ':'], '-', $area->area);
+        $sheet->setTitle(mb_substr('Machine - ' . $safeAreaName, 0, 31));
 
         $headers = MachineTemplateConfig::getHeaders();
-        $columnLetters = ['A', 'B', 'C'];
+        $columnLetters = ['A', 'B'];
         foreach ($headers as $i => $header) {
             $cell = $sheet->getCell($columnLetters[$i] . '1');
             $cell->setValue($header);
@@ -185,23 +189,20 @@ class MasterMachineService
                 ->setFillType(Fill::FILL_SOLID)
                 ->getStartColor()->setRGB('DDEBF7');
         }
-        foreach (['A' => 30, 'B' => 15, 'C' => 20] as $col => $width) {
+        foreach (['A' => 30, 'B' => 15] as $col => $width) {
             $sheet->getColumnDimension($col)->setWidth($width);
         }
 
-        // Hidden sheet holding the dropdown source lists
+        // Hidden sheet holding the Type dropdown source list
         $listSheet = new Worksheet($spreadsheet, 'Lists');
         $spreadsheet->addSheet($listSheet);
-        $listSheet->setCellValue('A1', 'Area');
-        foreach ($areas as $i => $area) {
-            $listSheet->setCellValue('A' . ($i + 2), $area);
-        }
-        $listSheet->setCellValue('B1', 'Type');
+        $listSheet->setCellValue('A1', 'Type');
         foreach ($types as $i => $type) {
-            $listSheet->setCellValue('B' . ($i + 2), $type);
+            $listSheet->setCellValue('A' . ($i + 2), $type);
         }
         $listSheet->setSheetState(Worksheet::SHEETSTATE_VERYHIDDEN);
 
+        $firstDataRow = 2;
         $lastDataRow = 1000;
 
         $typeValidation = new DataValidation();
@@ -212,19 +213,8 @@ class MasterMachineService
         $typeValidation->setShowErrorMessage(true);
         $typeValidation->setErrorTitle('Invalid Type');
         $typeValidation->setError('Please choose a Type from the dropdown list.');
-        $typeValidation->setFormula1('Lists!$B$2:$B$' . (count($types) + 1));
-        $sheet->setDataValidation('B2:B' . $lastDataRow, clone $typeValidation);
-
-        $areaValidation = new DataValidation();
-        $areaValidation->setType(DataValidation::TYPE_LIST);
-        $areaValidation->setErrorStyle(DataValidation::STYLE_STOP);
-        $areaValidation->setAllowBlank(true);
-        $areaValidation->setShowDropDown(true);
-        $areaValidation->setShowErrorMessage(true);
-        $areaValidation->setErrorTitle('Invalid Area');
-        $areaValidation->setError('Please choose an Area from the dropdown list.');
-        $areaValidation->setFormula1('Lists!$A$2:$A$' . (count($areas) + 1));
-        $sheet->setDataValidation('C2:C' . $lastDataRow, clone $areaValidation);
+        $typeValidation->setFormula1('Lists!$A$2:$A$' . (count($types) + 1));
+        $sheet->setDataValidation('B' . $firstDataRow . ':B' . $lastDataRow, clone $typeValidation);
 
         $spreadsheet->setActiveSheetIndex(0);
 
