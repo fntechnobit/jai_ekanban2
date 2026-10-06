@@ -225,6 +225,14 @@ class EkanbanShikakeService
             ->orderBy('assy_schedule_shikake.cutoff')
             ->orderBy(DB::raw('CAST(master_shikake.sequence AS UNSIGNED)'))
             ->orderBy('master_conveyor.conveyor')
+            // Several shikake may share a sequence (e.g. 5 bonders at 210): keep each
+            // one's tickets together instead of interleaving them by issue.
+            ->orderBy(DB::raw("COALESCE(
+                master_shikake_bonder.bonder_no,
+                master_shikake_joint.bonder_no,
+                master_shikake_shield.shield_no,
+                master_shikake_dbl_crimp.drawing_no
+            )"))
             ->orderBy('assy_schedule_shikake.issue')
             ->get();
 
@@ -349,7 +357,8 @@ class EkanbanShikakeService
             ->orderBy('assy_schedule.shift', 'ASC')
             ->orderBy(DB::raw('MAX(assy_schedule_shikake.cutoff)'), 'ASC')
             ->orderBy('master_shikake.sequence', 'ASC')
-            ->orderBy('master_conveyor.conveyor', 'ASC');
+            ->orderBy('master_conveyor.conveyor', 'ASC')
+            ->orderBy('identifier', 'ASC');
     }
 
     /**

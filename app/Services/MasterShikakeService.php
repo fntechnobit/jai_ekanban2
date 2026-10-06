@@ -166,16 +166,14 @@ class MasterShikakeService
             $machine = $data['machine'] ?? null;
             $sequence = $data['sequence'] ?? null;
 
-            // Enforce uniqueness on (conveyor_id, process, machine, sequence) -
-            // the same identifier the Excel import matches on, so a manual add
-            // can't silently create a duplicate of what import would have merged.
+            // Enforce uniqueness on (conveyor_id, process, machine, sequence) plus
+            // shikake code - the same identifier the Excel import matches on, so a
+            // manual add can't silently create a duplicate of what import would
+            // have merged. Several shikake may share one sequence (e.g. bonders).
             if ($conveyorId && $process && $machine && $sequence !== null) {
-                $existing = MasterShikake::withTrashed()
-                    ->where('conveyor_id', $conveyorId)
-                    ->where('process', $process)
-                    ->where('machine', $machine)
-                    ->where('sequence', $sequence)
-                    ->first();
+                $code = $this->requestedCode($process, $data);
+                $existing = MasterShikake::inSlot($conveyorId, $process, $machine, $sequence)
+                    ->first(fn ($m) => MasterShikake::normalizeCode($m->shikake_code) === $code);
 
                 if ($existing) {
                     // A soft-deleted match is restored and updated instead of
@@ -190,7 +188,7 @@ class MasterShikakeService
                         return $existing;
                     }
 
-                    throw new \Exception("Shikake with Process '{$process}', Machine '{$machine}' and Sequence '{$sequence}' already exists on this conveyor.");
+                    throw new \Exception($this->duplicateMessage($process, $machine, $sequence, $code));
                 }
             }
 
@@ -214,18 +212,17 @@ class MasterShikakeService
             $machine = array_key_exists('machine', $data) ? $data['machine'] : $shikake->machine;
             $sequence = array_key_exists('sequence', $data) ? $data['sequence'] : $shikake->sequence;
 
-            // Block updates that would duplicate another shikake's
-            // (conveyor_id, process, machine, sequence) combination.
+            // Block updates that would duplicate another live shikake's
+            // (conveyor_id, process, machine, sequence) + shikake code combination.
             if ($conveyorId && $process && $machine && $sequence !== null) {
-                $duplicate = MasterShikake::where('conveyor_id', $conveyorId)
-                    ->where('process', $process)
-                    ->where('machine', $machine)
-                    ->where('sequence', $sequence)
-                    ->where('id', '!=', $shikake->id)
-                    ->first();
+                $code = $this->requestedCode($process, $data, $shikake);
+                $duplicate = MasterShikake::inSlot($conveyorId, $process, $machine, $sequence)
+                    ->first(fn ($m) => $m->isNot($shikake)
+                        && !$m->trashed()
+                        && MasterShikake::normalizeCode($m->shikake_code) === $code);
 
                 if ($duplicate) {
-                    throw new \Exception("Shikake with Process '{$process}', Machine '{$machine}' and Sequence '{$sequence}' already exists on this conveyor.");
+                    throw new \Exception($this->duplicateMessage($process, $machine, $sequence, $code));
                 }
             }
 
@@ -238,6 +235,33 @@ class MasterShikakeService
             DB::rollBack();
             throw $e;
         }
+    }
+
+    /**
+     * Shikake code (bonder_no, shield_no, ...) a create/update request carries in
+     * process_data, falling back to the existing master's current code.
+     */
+    private function requestedCode(string $process, array $data, ?MasterShikake $shikake = null): string
+    {
+        [$table, $column] = MasterShikake::CODE_COLUMNS[$process] ?? [null, null];
+        if (!$column) {
+            return '';
+        }
+
+        if (isset($data['process_data']) && array_key_exists($column, $data['process_data'])) {
+            return MasterShikake::normalizeCode($data['process_data'][$column]);
+        }
+
+        return $shikake
+            ? MasterShikake::normalizeCode(DB::table($table)->where('master_shikake_id', $shikake->id)->value($column))
+            : '';
+    }
+
+    private function duplicateMessage($process, $machine, $sequence, string $code): string
+    {
+        return "Shikake with Process '{$process}', Machine '{$machine}', Sequence '{$sequence}'"
+            . ($code !== '' ? " and code '{$code}'" : '')
+            . ' already exists on this conveyor.';
     }
 
     public function delete($shikake)

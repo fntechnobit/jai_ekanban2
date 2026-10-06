@@ -159,6 +159,54 @@ class MasterShikake extends Model
     }
 
     /**
+     * Child table + column holding the shikake code printed on the kanban, per
+     * process (same source as KanbanGeneratorService::resolveShikakeCode()).
+     */
+    public const CODE_COLUMNS = [
+        'BONDER' => ['master_shikake_bonder', 'bonder_no'],
+        'DBL CRIMP' => ['master_shikake_dbl_crimp', 'drawing_no'],
+        'JOINT' => ['master_shikake_joint', 'bonder_no'],
+        'SHIELD' => ['master_shikake_shield', 'shield_no'],
+        'TWIST' => ['master_shikake_twist', 'cct_code'],
+    ];
+
+    /**
+     * Masters (soft-deleted included, live first) in one (conveyor, process,
+     * machine, sequence) slot, each carrying its shikake code as `shikake_code`.
+     *
+     * Several shikake may legitimately share one slot - e.g. five bonders all at
+     * sequence 210 on HW32.NPR-03 - so a slot alone does not identify a master;
+     * the slot plus the shikake code does.
+     */
+    public static function inSlot($conveyorId, $process, $machine, $sequence)
+    {
+        $query = static::withTrashed()
+            ->select('master_shikake.*')
+            ->where('master_shikake.conveyor_id', $conveyorId)
+            ->where('master_shikake.process', $process)
+            ->where('master_shikake.machine', $machine)
+            ->where('master_shikake.sequence', $sequence)
+            ->orderByRaw('master_shikake.deleted_at IS NOT NULL')
+            ->orderBy('master_shikake.id');
+
+        [$table, $column] = self::CODE_COLUMNS[$process] ?? [null, null];
+        if ($table) {
+            $query->leftJoin($table, "{$table}.master_shikake_id", '=', 'master_shikake.id')
+                ->addSelect("{$table}.{$column} as shikake_code");
+        }
+
+        return $query->get()->unique('id')->values();
+    }
+
+    /**
+     * Normalize a shikake code for comparison (null/blank both mean "no code").
+     */
+    public static function normalizeCode($code): string
+    {
+        return trim((string) $code);
+    }
+
+    /**
      * Resolve the type-specific "kode shikake" for a row that carries the
      * child-table identifier columns (twist_cct_no, bonder_no, joint_bonder_no,
      * shield_no, dbl_crimp_drawing_no) alongside `process`, e.g. via the

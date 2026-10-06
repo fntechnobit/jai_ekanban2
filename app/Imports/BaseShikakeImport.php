@@ -52,6 +52,12 @@ abstract class BaseShikakeImport
     abstract protected function getAssyStartColumn(): int;
 
     /**
+     * Get field mapping: database column => Excel header name
+     * @return array
+     */
+    abstract protected function getFieldMapping(): array;
+
+    /**
      * Map process-specific data from row
      * @param array $rowData
      * @param int $shikakeId
@@ -119,6 +125,55 @@ abstract class BaseShikakeImport
         return $rowData[$index] ?? null;
     }
 
+    protected function slotKey($machine, $sequence): string
+    {
+        return $machine . '|' . $sequence;
+    }
+
+    /**
+     * Shikake code of a row (Bonder No, Shield No, ...) - see MasterShikake::CODE_COLUMNS.
+     */
+    protected function getRowCode(array $rowData): string
+    {
+        $column = MasterShikake::CODE_COLUMNS[$this->process][1] ?? null;
+        $header = $column ? ($this->getFieldMapping()[$column] ?? null) : null;
+
+        return $header ? MasterShikake::normalizeCode($this->getValueByHeader($rowData, $header)) : '';
+    }
+
+    /**
+     * Find the master a row updates, or a new one.
+     *
+     * Rows are matched on slot (conveyor, process, machine, sequence) AND shikake
+     * code. Matching on the slot alone made rows sharing a sequence overwrite each
+     * other - five bonders at sequence 210 ended up as one master holding only the
+     * last bonder, so the other four never reached the e-kanban.
+     *
+     * Soft-deleted masters are included so a re-import after "remove by conveyor"
+     * restores the existing master in place instead of creating a duplicate.
+     * Locked schedules still reference the original master_shikake_id, so a new
+     * row would orphan them (e.g. qrcode_drawing not printing).
+     *
+     * @param string[] $codesInSlot codes this file holds for the same slot
+     */
+    protected function findOrNewMaster(string $machine, $sequence, string $code, array $codesInSlot): MasterShikake
+    {
+        $masters = MasterShikake::inSlot($this->conveyorId, $this->process, $machine, $sequence);
+
+        // Same slot + same code: the same shikake.
+        $shikake = $masters->first(fn ($m) => MasterShikake::normalizeCode($m->shikake_code) === $code)
+            // A master whose code no longer appears in this slot of the file had its
+            // code changed (e.g. new bonder no): update it in place to keep its id.
+            ?? $masters->first(fn ($m) => !in_array(MasterShikake::normalizeCode($m->shikake_code), $codesInSlot, true));
+
+        return $shikake ?? new MasterShikake([
+            'conveyor_id' => $this->conveyorId,
+            'process' => $this->process,
+            'machine' => $machine,
+            'sequence' => $sequence,
+        ]);
+    }
+
     public function import($filePath, $startRow = 2)
     {
         try {
@@ -160,34 +215,38 @@ abstract class BaseShikakeImport
                 }
             }
 
+            // Read every non-empty row up front so each slot's codes in this file are
+            // known before any row is matched (see findOrNewMaster()).
+            $rows = [];
+            $slotCodes = [];
+            for ($row = $startRow; $row <= $highestRow; $row++) {
+                $rowData = $worksheet->rangeToArray("A{$row}:{$highestColumn}{$row}", null, true, false)[0];
+                if ($this->isEmptyRow($rowData)) {
+                    continue;
+                }
+                $rows[$row] = $rowData;
+
+                $shikakeData = $this->mapShikakeData($rowData, $conveyor);
+                $slot = $this->slotKey($shikakeData['machine'], $shikakeData['sequence']);
+                $slotCodes[$slot][] = $this->getRowCode($rowData);
+            }
+
             DB::beginTransaction();
 
-            for ($row = $startRow; $row <= $highestRow; $row++) {
+            foreach ($rows as $row => $rowData) {
                 try {
-                    $rowData = $worksheet->rangeToArray("A{$row}:{$highestColumn}{$row}", null, true, false)[0];
-                    
-                    // Skip empty rows
-                    if ($this->isEmptyRow($rowData)) {
-                        continue;
-                    }
-
                     // Map and update or create MasterShikake
                     $shikakeData = $this->mapShikakeData($rowData, $conveyor);
                     $machine = $shikakeData['machine'] ?? null;
                     $sequence = $shikakeData['sequence'] ?? null;
-                    
+
                     if ($machine && $sequence !== null) {
-                        // Look up including soft-deleted rows so a re-import after a
-                        // "remove by conveyor" restores the existing master in place
-                        // instead of creating a duplicate. Locked schedules still
-                        // reference the original master_shikake_id, so creating a new
-                        // row would orphan them (e.g. qrcode_drawing not printing).
-                        $shikake = MasterShikake::withTrashed()->firstOrNew([
-                            'conveyor_id' => $this->conveyorId,
-                            'process' => $this->process,
-                            'machine' => $machine,
-                            'sequence' => $sequence,
-                        ]);
+                        $shikake = $this->findOrNewMaster(
+                            $machine,
+                            $sequence,
+                            $this->getRowCode($rowData),
+                            $slotCodes[$this->slotKey($machine, $sequence)] ?? []
+                        );
                         if ($shikake->trashed()) {
                             $shikake->restore();
                             $shikake->deleted_by = null;
