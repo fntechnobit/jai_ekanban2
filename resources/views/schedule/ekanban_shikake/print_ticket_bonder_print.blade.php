@@ -1,166 +1,43 @@
-{{-- BONDER Process Print Template - PRINT VERSION (landscape, 80mm height) --}}
+{{-- BONDER - template tiket (landscape, tinggi 576 dot = kertas thermal 80 mm).
+     Dipakai untuk print (raster QZ) dan preview, supaya preview selalu sama dengan hasil cetak.
+     7 kolom x 14 baris @ 37 px. Bagian bawah (4 baris): QR Drawing | family/CV/tanggal/note |
+     barcode navigasi | address store + QTY/ISSUE | QR Kanban - kode-kode dipisah blok teks. --}}
+@include('schedule.ekanban_shikake.partials.ticket_style', ['p' => 'bonder'])
 <style>
-/* BONDER Print Template - Landscape layout for 80mm thermal printer */
-/* Native 576px height = 80mm paper width at 203dpi (1:1 no scaling) */
-/* Ticket width: 130mm = 1070px at 203dpi */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-.bonder-print-wrapper {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    gap: 0;
-    margin: 0;
-    padding: 0;
-    justify-content: flex-start;
-    align-items: stretch;
-    background: white;
-    page-break-after: always;
-    min-height: 576px;
-}
-
-.bonder-print-wrapper .shikake-image-section {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    background: white;
-    height: 100%;
-    margin: 0;
+/* QR Drawing & QR Kanban 130 px (tiket lama 130 dan 95 px). Sel 4 baris = 148 px, jadi
+   label & kode di sel QR dikecilkan ke 8 px tanpa jarak; quiet zone sudah ada di PNG. */
+.ticket-bonder-print .qrcode-cell.qr-tight {
     padding: 0;
 }
 
-.bonder-print-wrapper .shikake-image-section img {
-    height: 100%;
-    width: auto;
-    object-fit: contain;
-    margin: 0;
-    padding: 0;
-    display: block;
-    /* Enhance drawing visibility for thermal printing */
-    filter: contrast(2.0) brightness(0.95);
-    -webkit-filter: contrast(2.0) brightness(0.95);
+.ticket-bonder-print .qr-img,
+.ticket-bonder-print .qrcode-placeholder {
+    width: 130px;
+    height: 130px;
 }
 
-.ticket-bonder-print {
-    /* Lebar MENGIKUTI ISI (content-driven), bukan angka tetap.
-       Alasannya: lebar barcode navigasi bervariasi 270-402px mengikuti panjang
-       datanya. Dengan lebar cell tetap, jarak barcode ke border = (lebar cell -
-       lebar barcode)/2 sehingga barcode pendek otomatis punya sisa ruang besar -
-       mustahil menjaga jarak 5mm untuk semua data. Dengan max-content, cell
-       memeluk barcode-nya dan jarak ditentukan murni oleh padding = selalu 5mm.
-       Kertas roll memanjang bebas, jadi tiket boleh berbeda panjang.
-       CATATAN: JANGAN kembalikan ke lebar tetap yang lebih kecil dari isi tabel -
-       dulu itu membuat tabel meluber dan kolom kanan (QRCODE KANBAN) hilang saat
-       html2canvas capture. width:max-content aman karena selalu memuat isi. */
-    width: max-content;
-    min-width: 0;
-    min-height: 100%;
-    flex-shrink: 0;
-    background: white;
-    margin: 0;
-    padding: 0;
-    border: 2px solid #000;
-    font-family: Arial, sans-serif;
-}
-
-.ticket-bonder-print table {
-    /* auto (bukan 100%) supaya lebar tabel ditentukan isinya - ini yang membuat
-       cell barcode memeluk barcode-nya, bukan ikut diregangkan mengisi container */
-    width: auto;
-    height: 100%;
-    border-collapse: collapse;
-    /* auto layout: colgroup widths below act as a MINIMUM per column,
-       columns grow past that minimum when a value doesn't fit, instead of
-       wrapping to 2 lines and blowing out the row height past the fixed
-       80mm print height. */
-    table-layout: auto;
-}
-
-.ticket-bonder-print th,
-.ticket-bonder-print td {
-    border: 1px solid #000;
-    padding: 2px 4px;
-    text-align: center;
-    vertical-align: middle;
-    line-height: 1.2;
-    font-size: 18px;
-    box-sizing: border-box;
-}
-
-.ticket-bonder-print thead th {
-    background-color: transparent;
-    color: #000;
-    font-weight: bold;
-    font-size: 28px;
-    padding: 4px;
-    border: 2px solid #000;
-}
-
-.ticket-bonder-print .label-cell {
-    background-color: transparent;
-    font-weight: 500;
-    font-size: 14px;
-    white-space: nowrap;
-}
-
-.ticket-bonder-print .value-cell {
-    font-weight: bold;
-    font-size: 18px;
-    white-space: nowrap;
-}
-
-.ticket-bonder-print .qrcode-cell {
-    padding: 2px;
-    vertical-align: middle;
-}
-
-.ticket-bonder-print .qrcode-cell img {
-    max-width: 180px;
-    max-height: 180px;
-    display: block;
-    margin: 0 auto;
-}
-
-.ticket-bonder-print .qr-img {
-    width: 180px;
-    height: 180px;
-}
-
-.ticket-bonder-print .qr-label {
-    font-size: 12px;
-    font-weight: bold;
-    margin-bottom: 4px;
+.ticket-bonder-print .qr-tight .qr-label,
+.ticket-bonder-print .qr-tight .qr-text {
+    font-size: 8px;
 }
 
 /* Padding horizontal 30px = quiet zone minimum Code 39 (10x bar sempit 3 dot).
    table-layout:auto membuat cell melebar mengikuti barcode. */
 .ticket-bonder-print .barcode-cell {
     padding: 2px 30px;
-    vertical-align: middle;
 }
 
-/* Padding horizontal 40px = TEPAT 5mm di kertas (203dpi, 8 dot/mm) dan inilah
-   yang menentukan jarak barcode ke border. Karena lebar tabel content-driven
-   (width:auto di atas), cell memeluk barcode sehingga jarak = padding persis,
-   konsisten 5mm untuk semua panjang data.
-   5mm juga masih di atas quiet zone minimum Code 39 (10x bar sempit = 10 x 3px
-   = 30px = 3.75mm), jadi aman untuk scanner. JANGAN turunkan di bawah 30px. */
+/* Padding horizontal 40px = TEPAT 5mm di kertas (203dpi, 8 dot/mm): jarak barcode
+   navigasi ke border selalu 5mm karena cell memeluk barcode-nya. JANGAN turunkan di
+   bawah 30px (quiet zone minimum Code 39). */
 .ticket-bonder-print .barcode-navigasi-cell {
     padding: 4px 40px;
-    vertical-align: middle;
 }
 
-/* Barcode Code 39 SELALU tampil di ukuran asli PNG (width/height auto = piksel
-   1:1 ke dot printer), tidak pernah diperkecil/diperbesar. Menyusutkan barcode
-   1D membuat bar berdekatan melebur saat di-threshold hitam-putih untuk thermal
-   203dpi. JANGAN beri max-width lagi: navigasi terpanjang "B-AK172.A" = 459px.
-   CATATAN: PNG dari generator TIDAK punya margin putih bawaan (bar mulai di
-   piksel 0), jadi seluruh quiet zone berasal dari padding cell di atas. */
+/* Barcode Code 39 SELALU tampil di ukuran asli PNG (1 px = 1 dot printer), tidak pernah
+   diperkecil/diperbesar: barcode 1D yang diskalakan melebur saat di-threshold hitam-putih
+   untuk thermal 203dpi. JANGAN beri width/max-width/height. PNG tidak punya margin putih
+   bawaan, jadi seluruh quiet zone berasal dari padding cell di atas. */
 .ticket-bonder-print .barcode-cell img,
 .ticket-bonder-print .barcode-navigasi-cell img {
     width: auto;
@@ -171,154 +48,47 @@
     image-rendering: pixelated;
 }
 
+.ticket-bonder-print .barcode-navigasi-cell .qr-label {
+    margin-bottom: 2px;
+}
+
 .ticket-bonder-print .barcode-text {
     font-size: 12px;
     font-weight: bold;
-    text-align: center;
     margin-top: 1px;
 }
 
-.ticket-bonder-print .qrcode-placeholder,
 .ticket-bonder-print .barcode-placeholder {
+    width: 180px;
+    height: 60px;
     border: 1px solid #000;
     margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    color: #000;
-}
-
-.ticket-bonder-print .qrcode-placeholder {
-    width: 180px;
-    height: 180px;
-}
-
-.ticket-bonder-print .barcode-placeholder {
-    width: 180px;
-    height: 60px;
-}
-
-/* Punch strip - right-side spacing with punch circle (same as cutting/twist) */
-.bonder-punch-strip {
-    /* Jarak 5mm antara tabel kanban dan lingkaran blok hitam.
-       box-sizing: border-box membuat lebar strip tetap 30mm,
-       lingkaran hanya bergeser 5mm ke kanan. */
-    padding-left: 5mm;
-    width: 30mm;
-    min-width: 30mm;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    background: white;
-    height: 100%;
-}
-
-.bonder-punch-strip .punch-circle {
-    width: 15mm;
-    height: 15mm;
-    border-radius: 50%;
-    background-color: #000;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    flex-shrink: 0;
-}
-
-/* Thermal Printer Optimization */
-@media print {
-    body {
-        margin: 0;
-        padding: 0;
-        background: white;
-    }
-    
-    .bonder-print-wrapper {
-        flex-direction: row;
-        gap: 0;
-        margin: 0;
-        justify-content: flex-start;
-        page-break-after: always;
-        page-break-inside: avoid;
-    }
-    
-    .bonder-print-wrapper .shikake-image-section {
-        display: flex;
-        flex-shrink: 0;
-        align-items: center;
-    }
-    
-    .bonder-print-wrapper .shikake-image-section img {
-        height: 70mm;
-        width: auto;
-        object-fit: contain;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-    
-    .ticket-bonder-print {
-        width: auto;
-        max-width: none;
-        height: auto;
-        border: none;
-        margin: 0;
-        padding: 0;
-    }
-    
-    .ticket-bonder-print table {
-        page-break-inside: avoid;
-        /* let the table shrink/grow to its auto-layout content width instead
-           of being forced to 100% of an already-truncated container */
-        width: auto;
-    }
-    
-    .ticket-bonder-print th,
-    .ticket-bonder-print td {
-        border: 1px solid #000 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-
-    .bonder-punch-strip {
-        padding-left: 5mm;
-        display: flex;
-        width: 30mm;
-        min-width: 30mm;
-        flex-shrink: 0;
-    }
-
-    .bonder-punch-strip .punch-circle {
-        background-color: #000 !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
-
-    @page {
-        size: landscape;
-        margin: 1mm;
-    }
 }
 </style>
+@php
+    $releaseDate = $shikake->release_date
+        ? \Carbon\Carbon::parse($shikake->release_date)->locale('id')->translatedFormat('d-M-y')
+        : '';
+@endphp
 
-{{-- Wrapper with flexbox for image + ticket --}}
 <div class="ticket bonder-print-wrapper" data-orientation="landscape">
-    {{-- Image section (LEFT) - only if image exists --}}
     @if(!empty($shikake->image_path))
     <div class="shikake-image-section">
         <img src="{{ asset($shikake->image_path) }}" alt="Shikake Image">
     </div>
     @endif
-    
-    {{-- Ticket section (RIGHT) - landscape layout for 80mm thermal printer --}}
+
     <div class="ticket-bonder-print">
         <table>
             <colgroup>
                 <col style="width: 21mm">
                 <col style="width: 24mm">
-                {{-- kolom 3 & 4 menampung cell BARCODE NAVIGASI (colspan=2). Sengaja
-                     dibiarkan sempit (sekadar minimum untuk teks CCT/BONDER NO) supaya
-                     yang menentukan lebar kolom adalah barcode + padding-nya, bukan
-                     angka di sini. Itu yang menjaga jaraknya tetap 5mm. --}}
+                {{-- kolom 3 & 4 menampung BARCODE NAVIGASI (colspan=2): sengaja sempit supaya
+                     lebarnya ditentukan barcode + padding, bukan angka di sini (jarak 5mm). --}}
                 <col style="width: 21mm">
                 <col style="width: 24mm">
                 <col style="width: 30mm">
@@ -327,35 +97,35 @@
             </colgroup>
             <thead>
                 <tr>
-                    <th colspan="7">EKANBAN BONDER - {{ $shikake->carline ?? '' }}</th>
+                    <th colspan="7">E-KANBAN BONDER {{ $shikake->carline ?? '' }}</th>
                 </tr>
             </thead>
             <tbody>
-                <!-- Row 1: BONDER NO / ADDRESS Labels -->
                 <tr>
-                    <td colspan="4" class="label-cell">BONDER NO</td>
-                    <td colspan="3" class="label-cell">ADDRESS</td>
+                    <td colspan="4" class="label-cell">BONDER NO.</td>
+                    <td colspan="3" class="label-cell">ADDRESS S/A</td>
                 </tr>
-                <!-- Row 2: BONDER NO / ADDRESS Values -->
                 <tr>
                     <td colspan="4" class="value-cell">{{ $processData->bonder_no ?? '' }}</td>
                     <td colspan="3" class="value-cell">{{ $processData->address ?? '' }}</td>
                 </tr>
-                
-                <!-- Row 3: CCT NO / BONDER NO Labels + BARCODE PROCESS -->
+
                 <tr>
-                    <td class="label-cell">CCT NO</td>
+                    <td class="label-cell">CCT NO.</td>
                     <td class="label-cell">BONDER NO</td>
-                    <td class="label-cell">CCT NO</td>
+                    <td class="label-cell">CCT NO.</td>
                     <td class="label-cell">BONDER NO</td>
                     <td colspan="3" class="label-cell">BARCODE PROCESS</td>
                 </tr>
-                <!-- Row 4-10: 7 CCT/Bonder pairs (Side A left, Side B right) with Barcode (rowspan=3) -->
+                {{-- 7 pasangan CCT/Bonder (sisi A kiri, sisi B kanan); kolom kanan berisi
+                     barcode process (3 baris), lalu MACHINE/DIES dan TO MACHINE/SEQ --}}
+                @for($i = 1; $i <= 7; $i++)
                 <tr>
-                    <td class="value-cell">{{ $processData->cct_no_a_1 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_a_1 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->cct_no_b_1 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_b_1 ?? '-' }}</td>
+                    <td class="value-cell">{{ $processData->{'cct_no_a_' . $i} ?? '-' }}</td>
+                    <td class="value-cell">{{ $processData->{'bonder_no_a_' . $i} ?? '-' }}</td>
+                    <td class="value-cell">{{ $processData->{'cct_no_b_' . $i} ?? '-' }}</td>
+                    <td class="value-cell">{{ $processData->{'bonder_no_b_' . $i} ?? '-' }}</td>
+                    @if($i === 1)
                     <td colspan="3" rowspan="3" class="barcode-cell">
                         @if(isset($processData->barcode_process_path))
                             <img src="{{ $processData->barcode_process_path }}" alt="Barcode">
@@ -364,71 +134,36 @@
                             <div class="barcode-placeholder">BARCODE</div>
                         @endif
                     </td>
-                </tr>
-                <tr>
-                    <td class="value-cell">{{ $processData->cct_no_a_2 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_a_2 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->cct_no_b_2 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_b_2 ?? '-' }}</td>
-                </tr>
-                <tr>
-                    <td class="value-cell">{{ $processData->cct_no_a_3 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_a_3 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->cct_no_b_3 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_b_3 ?? '-' }}</td>
-                </tr>
-                <!-- Row 6: MACHINE / DIES Labels with pair 4 -->
-                <tr>
-                    <td class="value-cell">{{ $processData->cct_no_a_4 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_a_4 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->cct_no_b_4 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_b_4 ?? '-' }}</td>
+                    @elseif($i === 4)
                     <td colspan="2" class="label-cell">MACHINE</td>
                     <td class="label-cell">DIES</td>
-                </tr>
-                <!-- Row 7: MACHINE / DIES Values with pair 5 -->
-                <tr>
-                    <td class="value-cell">{{ $processData->cct_no_a_5 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_a_5 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->cct_no_b_5 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_b_5 ?? '-' }}</td>
+                    @elseif($i === 5)
                     <td colspan="2" class="value-cell">{{ $shikake->machine ?? '' }}</td>
                     <td class="value-cell">{{ $processData->dies ?? '' }}</td>
-                </tr>
-
-                <!-- Row 8: TO MACHINE / SEQ Labels with pair 6 -->
-                <tr>
-                    <td class="value-cell">{{ $processData->cct_no_a_6 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_a_6 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->cct_no_b_6 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_b_6 ?? '-' }}</td>
+                    @elseif($i === 6)
                     <td colspan="2" class="label-cell">TO MACHINE</td>
                     <td class="label-cell">SEQ</td>
-                </tr>
-                <!-- Row 9: TO MACHINE / SEQ Values with pair 7 -->
-                <tr>
-                    <td class="value-cell">{{ $processData->cct_no_a_7 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_a_7 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->cct_no_b_7 ?? '-' }}</td>
-                    <td class="value-cell">{{ $processData->bonder_no_b_7 ?? '-' }}</td>
+                    @elseif($i === 7)
                     <td colspan="2" class="value-cell">{{ $processData->to_machine ?? '' }}</td>
                     <td class="value-cell">{{ $shikake->sequence ?? '' }}</td>
+                    @endif
                 </tr>
-                
-                <!-- Bottom: QR DRAWING (qrcode_drawing) | BARCODE NAVIGASI | QTY/ISSUE | QRCODE KANBAN -->
+                @endfor
+
+                {{-- Bawah 4 baris. CV & tanggal ikut ditumpuk di kolom 2 karena barcode
+                     navigasi butuh 4 baris penuh (label + Code 39 88 dot + teks). --}}
                 <tr>
-                    <td colspan="2" rowspan="4" class="qrcode-cell">
-                        <div class="qr-label">QR DRAWING</div>
-                        @if(!empty($processData->qrcode_drawing))
-                            <div style="font-size: 9px; margin-bottom: 2px; font-weight: bold;">{{ $processData->qrcode_drawing }}</div>
-                        @endif
+                    <td rowspan="4" class="qrcode-cell qr-tight">
+                        <div class="qr-label">QR</div>
                         @if(isset($processData->qrcode_drawing_path))
-                            <img src="{{ $processData->qrcode_drawing_path }}" alt="QR Drawing" style="width:130px;height:130px;display:block;margin:0 auto;">
+                            <img src="{{ $processData->qrcode_drawing_path }}" alt="QR Drawing" class="qr-img">
                         @else
-                            <div class="qrcode-placeholder" style="width:120px;height:120px;">QR DRAWING</div>
+                            <div class="qrcode-placeholder">QR DRAWING</div>
                         @endif
+                        <div class="qr-text">{{ $processData->qrcode_drawing ?? '' }}</div>
                     </td>
-                    <td colspan="2" rowspan="2" class="barcode-navigasi-cell">
+                    <td class="one-cell">{{ $shikake->family ?? '' }}</td>
+                    <td colspan="2" rowspan="4" class="barcode-navigasi-cell">
                         <div class="qr-label">BARCODE NAVIGASI</div>
                         @if(isset($processData->barcode_navigasi_path))
                             <img src="{{ $processData->barcode_navigasi_path }}" alt="Barcode Navigasi">
@@ -437,39 +172,37 @@
                             <div class="barcode-placeholder">BARCODE</div>
                         @endif
                     </td>
-                    <td class="label-cell">QTY</td>
-                    <td class="label-cell">ISSUE</td>
-                    <td rowspan="4" class="qrcode-cell">
+                    <td colspan="2" class="label-cell">ADDRESS STORE</td>
+                    <td rowspan="4" class="qrcode-cell qr-tight">
                         <div class="qr-label">QRCODE KANBAN</div>
                         @if(isset($shikake->qr_code_path))
-                            <img src="{{ $shikake->qr_code_path }}" alt="QR Code" style="width:95px;height:95px;display:block;margin:0 auto;">
+                            <img src="{{ $shikake->qr_code_path }}" alt="QR Code" class="qr-img">
                         @else
-                            <div class="qrcode-placeholder" style="width:90px;height:90px;">QR</div>
+                            <div class="qrcode-placeholder">QR</div>
                         @endif
-                        @if(!empty($shikake->barcode_kanban))
-                            <div style="font-size: 8px; margin-top: 1px; font-weight: bold;">{{ $shikake->barcode_kanban }}</div>
-                        @endif
+                        <div class="qr-text">{{ $shikake->barcode_kanban ?? '' }}</div>
                     </td>
                 </tr>
                 <tr>
+                    <td class="one-cell">{{ $shikake->conveyor ?? '' }}</td>
+                    <td colspan="2" class="store-cell">{{ $processData->address_store ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="one-cell">{{ $releaseDate }}</td>
+                    <td class="label-cell">QTY</td>
+                    <td class="label-cell">ISSUE</td>
+                </tr>
+                <tr>
+                    <td class="one-cell">{{ $shikake->released_note ?? '' }}</td>
                     <td class="value-cell">{{ $shikake->qty ?? '' }}</td>
                     <td class="value-cell">{{ $shikake->issue ?? '' }}</td>
-                </tr>
-                <tr>
-                    <td colspan="2" class="value-cell">{{ $shikake->conveyor ? 'CV ' . $shikake->conveyor : '' }}</td>
-                    <td colspan="2" class="value-cell">{{ $shikake->family ?? '' }}</td>
-                </tr>
-                <tr>
-                    <td colspan="2" class="value-cell">{{ $shikake->release_date ? \Carbon\Carbon::parse($shikake->release_date)->format('d M y') : '' }}</td>
-                    <td colspan="2" class="value-cell">{{ $shikake->released_note ?? '' }}</td>
                 </tr>
             </tbody>
         </table>
     </div>
 
-    {{-- Punch strip (RIGHT) - spacing + punch circle, same as cutting/twist --}}
+    {{-- Punch strip (RIGHT) - jarak 5mm + lingkaran hitam, sama seperti cutting/twist --}}
     <div class="bonder-punch-strip">
         <div class="punch-circle"></div>
     </div>
 </div>
-{{-- End of bonder-print-wrapper --}}

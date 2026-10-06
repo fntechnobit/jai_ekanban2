@@ -468,6 +468,7 @@
             function populateViewBonder(pd) {
                 $('#v_sk_bonder_no').text(pd.bonder_no || '-');
                 $('#v_sk_bonder_address').text(pd.address || '-');
+                $('#v_sk_bonder_address_store').text(pd.address_store || '-');
                 $('#v_sk_bonder_dies').text(pd.dies || '-');
                 $('#v_sk_bonder_to_machine').text(pd.to_machine || '-');
                 $('#v_sk_bonder_barcode_navigasi').text(pd.barcode_navigasi || '-');
@@ -500,6 +501,7 @@
             function populateViewShield(pd) {
                 $('#v_sk_shield_no').text(pd.shield_no || '-');
                 $('#v_sk_shield_address').text(pd.address || '-');
+                $('#v_sk_shield_address_store').text(pd.address_store || '-');
                 $('#v_sk_shield_blade').text(pd.blade || '-');
                 $('#v_sk_shield_to_machine').text(pd.to_machine || '-');
                 $('#v_sk_shield_qrcode_drawing').text(pd.qrcode_drawing || '-');
@@ -519,6 +521,7 @@
             function populateViewDblCrimp(pd) {
                 $('#v_sk_dbl_drawing_no').text(pd.drawing_no || '-');
                 $('#v_sk_dbl_address').text(pd.address || '-');
+                $('#v_sk_dbl_address_store').text(pd.address_store || '-');
                 $('#v_sk_dbl_barcode_mesin').text(pd.barcode_mesin || '-');
                 $('#v_sk_dbl_to_machine').text(pd.to_machine || '-');
                 $('#v_sk_dbl_qrcode_drawing').text(pd.qrcode_drawing || '-');
@@ -603,6 +606,7 @@
             function populateBonderFields(data) {
                 $('#bonder_bonder_no').val(data.bonder_no);
                 $('#bonder_address').val(data.address);
+                $('#bonder_address_store').val(data.address_store);
                 $('#bonder_dies').val(data.dies);
                 $('#bonder_to_machine').val(data.to_machine);
                 $('#bonder_barcode_navigasi').val(data.barcode_navigasi);
@@ -666,6 +670,7 @@
             function populateShieldFields(data) {
                 $('#shield_shield_no').val(data.shield_no);
                 $('#shield_address').val(data.address);
+                $('#shield_address_store').val(data.address_store);
                 $('#shield_blade').val(data.blade);
                 $('#shield_to_machine').val(data.to_machine);
                 $('#shield_qrcode_drawing').val(data.qrcode_drawing);
@@ -691,6 +696,7 @@
             function populateDblCrimpFields(data) {
                 $('#dbl_crimp_drawing_no').val(data.drawing_no);
                 $('#dbl_crimp_address').val(data.address);
+                $('#dbl_crimp_address_store').val(data.address_store);
                 $('#dbl_crimp_barcode_mesin').val(data.barcode_mesin);
                 $('#dbl_crimp_to_machine').val(data.to_machine);
                 $('#dbl_crimp_qrcode_drawing').val(data.qrcode_drawing);

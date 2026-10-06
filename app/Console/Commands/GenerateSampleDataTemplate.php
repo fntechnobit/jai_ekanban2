@@ -399,6 +399,7 @@ class GenerateSampleDataTemplate extends Command
             case 'BONDER':
                 $shared['bonder_no'] = 'BND-' . str_pad($identifierIndex, 4, '0', STR_PAD_LEFT);
                 $shared['address'] = 'ADDR-' . chr(65 + ($identifierIndex % 5));
+                $shared['address_store'] = 'STORE-' . chr(65 + ($identifierIndex % 3));
                 $shared['dies'] = 'DIE-' . str_pad(rand(1, 20), 2, '0', STR_PAD_LEFT);
                 $shared['to_machine'] = 'TO-MACH-' . rand(1, 10);
                 // CCT and Bonder pairs
@@ -424,7 +425,9 @@ class GenerateSampleDataTemplate extends Command
             case 'SHIELD':
                 $shared['shield_no'] = 'SHD-' . str_pad($identifierIndex, 4, '0', STR_PAD_LEFT);
                 $shared['address'] = 'ADDR-' . chr(65 + ($identifierIndex % 5));
+                $shared['address_store'] = 'STORE-' . chr(65 + ($identifierIndex % 3));
                 $shared['blade'] = 'BLADE-' . str_pad(rand(1, 10), 2, '0', STR_PAD_LEFT);
+                $shared['to_machine'] = 'TO-MACH-' . rand(1, 10);
                 $shared['cct_no_1'] = 'CCT-1-' . $identifierIndex;
                 $shared['address_no_1_1'] = 'ADDR-1-' . $identifierIndex;
                 $shared['cct_no_2'] = 'CCT-2-' . $identifierIndex;
@@ -437,6 +440,7 @@ class GenerateSampleDataTemplate extends Command
             case 'DBL CRIMP':
                 $shared['drawing_no'] = 'DRW-' . str_pad($identifierIndex, 4, '0', STR_PAD_LEFT);
                 $shared['address'] = 'ADDR-' . chr(65 + ($identifierIndex % 5));
+                $shared['address_store'] = 'STORE-' . chr(65 + ($identifierIndex % 3));
                 $shared['to_machine'] = 'TO-MACH-' . rand(1, 10);
                 for ($i = 1; $i <= 5; $i++) {
                     $shared["cct_no_{$i}"] = 'CCT-' . $i . '-' . $identifierIndex;
@@ -550,10 +554,12 @@ class GenerateSampleDataTemplate extends Command
                 $data = [
                     $sharedData['bonder_no'],
                     $sharedData['address'],
+                    $sharedData['address_store'],
                     $sharedData['dies'],
                     $sharedData['to_machine'],
                     'BN-' . $uniqueSuffix,             // Barcode Navigasi (unique)
                     'BP-' . $uniqueSuffix,             // Barcode Process (unique)
+                    $sharedData['bonder_no'],          // QRCode Drawing
                 ];
                 for ($i = 1; $i <= 7; $i++) {
                     $data[] = $sharedData["cct_no_a_{$i}"];
@@ -572,6 +578,7 @@ class GenerateSampleDataTemplate extends Command
                     $sharedData['address_store'],
                     $sharedData['to_machine'],
                     'BP-' . $uniqueSuffix,             // Barcode Process (unique)
+                    $sharedData['bonder_no'],          // QRCode Drawing
                 ];
                 for ($i = 1; $i <= 5; $i++) {
                     $data[] = $sharedData["cct_no_{$i}"];
@@ -583,7 +590,10 @@ class GenerateSampleDataTemplate extends Command
                 $data = [
                     $sharedData['shield_no'],
                     $sharedData['address'],
+                    $sharedData['address_store'],
                     $sharedData['blade'],
+                    $sharedData['to_machine'],
+                    $sharedData['shield_no'],          // QRCode Drawing
                     $sharedData['cct_no_1'],
                     $sharedData['address_no_1_1'],
                     $sharedData['cct_no_2'],
@@ -598,8 +608,10 @@ class GenerateSampleDataTemplate extends Command
                 $data = [
                     $sharedData['drawing_no'],
                     $sharedData['address'],
+                    $sharedData['address_store'],
                     'BM-' . $uniqueSuffix,             // Barcode Mesin (unique)
                     $sharedData['to_machine'],
+                    $sharedData['drawing_no'],         // QRCode Drawing
                 ];
                 for ($i = 1; $i <= 5; $i++) {
                     $data[] = $sharedData["cct_no_{$i}"];

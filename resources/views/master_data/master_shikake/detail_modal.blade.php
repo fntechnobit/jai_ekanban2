@@ -74,6 +74,10 @@
                                 <td class="text-muted" width="18%">Address</td><td id="v_sk_bonder_address">-</td>
                             </tr>
                             <tr>
+                                <td class="text-muted">Address Store</td><td id="v_sk_bonder_address_store">-</td>
+                                <td></td><td></td>
+                            </tr>
+                            <tr>
                                 <td class="text-muted">Dies</td><td id="v_sk_bonder_dies">-</td>
                                 <td class="text-muted">To Machine</td><td id="v_sk_bonder_to_machine">-</td>
                             </tr>
@@ -143,6 +147,10 @@
                                 <td class="text-muted" width="18%">Address</td><td id="v_sk_shield_address">-</td>
                             </tr>
                             <tr>
+                                <td class="text-muted">Address Store</td><td id="v_sk_shield_address_store">-</td>
+                                <td></td><td></td>
+                            </tr>
+                            <tr>
                                 <td class="text-muted">Blade</td><td id="v_sk_shield_blade">-</td>
                                 <td class="text-muted">To Machine</td><td id="v_sk_shield_to_machine">-</td>
                             </tr>
@@ -173,6 +181,10 @@
                             <tr>
                                 <td class="text-muted" width="18%">Drawing No</td><td id="v_sk_dbl_drawing_no" width="32%">-</td>
                                 <td class="text-muted" width="18%">Address</td><td id="v_sk_dbl_address">-</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Address Store</td><td id="v_sk_dbl_address_store">-</td>
+                                <td></td><td></td>
                             </tr>
                             <tr>
                                 <td class="text-muted">Barcode Mesin</td><td id="v_sk_dbl_barcode_mesin">-</td>

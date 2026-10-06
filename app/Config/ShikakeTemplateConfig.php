@@ -75,39 +75,40 @@ class ShikakeTemplateConfig
         return array_merge(self::getBaseHeaders(), [
             'Bonder No',          // 7
             'Address',            // 8
-            'Dies',               // 9
-            'To Machine',         // 10
-            'Barcode Navigasi',   // 11
-            'Barcode Process',    // 12
-            'QRCode Drawing',     // 13
-            'CCT No A 1',         // 14
-            'Bonder No A 1',      // 15
-            'CCT No A 2',         // 16
-            'Bonder No A 2',      // 17
-            'CCT No A 3',         // 18
-            'Bonder No A 3',      // 19
-            'CCT No A 4',         // 20
-            'Bonder No A 4',      // 21
-            'CCT No A 5',         // 22
-            'Bonder No A 5',      // 23
-            'CCT No A 6',         // 24
-            'Bonder No A 6',      // 25
-            'CCT No A 7',         // 26
-            'Bonder No A 7',      // 27
-            'CCT No B 1',         // 28
-            'Bonder No B 1',      // 29
-            'CCT No B 2',         // 30
-            'Bonder No B 2',      // 31
-            'CCT No B 3',         // 32
-            'Bonder No B 3',      // 33
-            'CCT No B 4',         // 34
-            'Bonder No B 4',      // 35
-            'CCT No B 5',         // 36
-            'Bonder No B 5',      // 37
-            'CCT No B 6',         // 38
-            'Bonder No B 6',      // 39
-            'CCT No B 7',         // 40
-            'Bonder No B 7',      // 41
+            'Address Store',      // 9
+            'Dies',               // 10
+            'To Machine',         // 11
+            'Barcode Navigasi',   // 12
+            'Barcode Process',    // 13
+            'QRCode Drawing',     // 14
+            'CCT No A 1',         // 15
+            'Bonder No A 1',      // 16
+            'CCT No A 2',         // 17
+            'Bonder No A 2',      // 18
+            'CCT No A 3',         // 19
+            'Bonder No A 3',      // 20
+            'CCT No A 4',         // 21
+            'Bonder No A 4',      // 22
+            'CCT No A 5',         // 23
+            'Bonder No A 5',      // 24
+            'CCT No A 6',         // 25
+            'Bonder No A 6',      // 26
+            'CCT No A 7',         // 27
+            'Bonder No A 7',      // 28
+            'CCT No B 1',         // 29
+            'Bonder No B 1',      // 30
+            'CCT No B 2',         // 31
+            'Bonder No B 2',      // 32
+            'CCT No B 3',         // 33
+            'Bonder No B 3',      // 34
+            'CCT No B 4',         // 35
+            'Bonder No B 4',      // 36
+            'CCT No B 5',         // 37
+            'Bonder No B 5',      // 38
+            'CCT No B 6',         // 39
+            'Bonder No B 6',      // 40
+            'CCT No B 7',         // 41
+            'Bonder No B 7',      // 42
         ]);
     }
 
@@ -144,22 +145,23 @@ class ShikakeTemplateConfig
         return array_merge(self::getBaseHeaders(), [
             'Shield No',          // 7
             'Address',            // 8
-            'Blade',              // 9
-            'To Machine',         // 10
-            'QRCode Drawing',     // 11
-            'CCT No 1',           // 12
-            'Address 1',          // 13
-            'CCT No 2',           // 14
-            'Address 2',          // 15
-            'To 1',               // 16
-            'To 2',               // 17
-            'To 3',               // 18
-            'To 4',               // 19
-            'To 5',               // 20
-            'To 6',               // 21
-            'To 7',               // 22
-            'To 8',               // 23
-            'To 9',               // 24
+            'Address Store',      // 9
+            'Blade',              // 10
+            'To Machine',         // 11
+            'QRCode Drawing',     // 12
+            'CCT No 1',           // 13
+            'Address 1',          // 14
+            'CCT No 2',           // 15
+            'Address 2',          // 16
+            'To 1',               // 17
+            'To 2',               // 18
+            'To 3',               // 19
+            'To 4',               // 20
+            'To 5',               // 21
+            'To 6',               // 22
+            'To 7',               // 23
+            'To 8',               // 24
+            'To 9',               // 25
         ]);
     }
 
@@ -171,19 +173,20 @@ class ShikakeTemplateConfig
         return array_merge(self::getBaseHeaders(), [
             'Drawing No',         // 7
             'Address',            // 8
-            'Barcode Mesin',      // 9
-            'To Machine',         // 10
-            'QRCode Drawing',     // 11
-            'CCT No 1',           // 12
-            'Address 1',          // 13
-            'CCT No 2',           // 14
-            'Address 2',          // 15
-            'CCT No 3',           // 16
-            'Address 3',          // 17
-            'CCT No 4',           // 18
-            'Address 4',          // 19
-            'CCT No 5',           // 20
-            'Address 5',          // 21
+            'Address Store',      // 9
+            'Barcode Mesin',      // 10
+            'To Machine',         // 11
+            'QRCode Drawing',     // 12
+            'CCT No 1',           // 13
+            'Address 1',          // 14
+            'CCT No 2',           // 15
+            'Address 2',          // 16
+            'CCT No 3',           // 17
+            'Address 3',          // 18
+            'CCT No 4',           // 19
+            'Address 4',          // 20
+            'CCT No 5',           // 21
+            'Address 5',          // 22
         ]);
     }
 

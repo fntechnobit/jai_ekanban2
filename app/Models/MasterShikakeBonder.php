@@ -15,6 +15,7 @@ class MasterShikakeBonder extends Model
         'master_shikake_id',
         'bonder_no',
         'address',
+        'address_store',
         'dies',
         'to_machine',
         'barcode_navigasi',

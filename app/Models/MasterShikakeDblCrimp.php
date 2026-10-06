@@ -15,6 +15,7 @@ class MasterShikakeDblCrimp extends Model
         'master_shikake_id',
         'drawing_no',
         'address',
+        'address_store',
         'barcode_mesin',
         'to_machine',
         'qrcode_drawing',

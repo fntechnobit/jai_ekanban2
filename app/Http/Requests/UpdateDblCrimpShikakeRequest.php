@@ -25,6 +25,7 @@ class UpdateDblCrimpShikakeRequest extends FormRequest
             // DBL CRIMP process-specific fields
             'process_data.drawing_no' => 'nullable|string|max:255',
             'process_data.address' => 'nullable|string|max:255',
+            'process_data.address_store' => 'nullable|string|max:255',
             'process_data.barcode_mesin' => 'nullable|string|max:255',
             'process_data.to_machine' => 'nullable|string|max:255',
             'process_data.qrcode_drawing' => 'nullable|string|max:255',

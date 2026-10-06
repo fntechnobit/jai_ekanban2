@@ -25,6 +25,7 @@ class UpdateShieldShikakeRequest extends FormRequest
             // SHIELD process-specific fields
             'process_data.shield_no' => 'required|string|max:255',
             'process_data.address' => 'nullable|string|max:255',
+            'process_data.address_store' => 'nullable|string|max:255',
             'process_data.blade' => 'nullable|string|max:255',
             'process_data.to_machine' => 'nullable|string|max:255',
             'process_data.qrcode_drawing' => 'nullable|string|max:255',

@@ -64,7 +64,11 @@
     width: auto;
     height: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
+    /* auto (bukan fixed): colgroup jadi lebar minimum, kolom melebar mengikuti isi.
+       Dengan fixed, teks panjang (note, ACC, address) dilipat ke bawah dan tabel bisa
+       melebihi 572 px sehingga bagian bawah tiket terpotong. Tinggi tiket terkunci,
+       jadi yang boleh bertambah hanya panjang tiket di gulungan. */
+    table-layout: auto;
 }
 
 .ticket-circuit-print th,
@@ -76,15 +80,31 @@
     line-height: 1.1;
     font-size: 22px;
     box-sizing: border-box;
+    white-space: nowrap;
 }
 
+/* Semua baris isi sama tinggi: 14 baris x 37 px. Header menyerap sisanya (52 px) supaya
+   tinggi baris tetap bilangan bulat dot: 52 + 14 x 37 + border = 572 px. */
 .ticket-circuit-print thead th {
+    height: 52px;
     background-color: transparent;
     color: #000;
     font-weight: bold;
     font-size: 32px;
     padding: 4px;
     border: 2px solid #000;
+}
+
+.ticket-circuit-print tbody tr {
+    height: 37px;
+}
+
+/* Released note boleh 2 baris di dalam satu baris 37 px */
+.ticket-circuit-print td.note-cell {
+    white-space: normal;
+    font-size: 15px;
+    line-height: 1;
+    min-width: 260px;
 }
 
 .ticket-circuit-print .section-label {
@@ -141,29 +161,31 @@
     text-align: left !important;
 }
 
+/* QR Kanban 128 px (tiket lama 110 px) di sel 4 baris: label & kode 9 px tanpa jarak.
+   PNG QR sudah membawa quiet zone 4 modul sendiri. */
 .ticket-circuit-print .qrcode-cell {
-    padding: 4px;
+    padding: 0;
     vertical-align: middle;
     text-align: center;
 }
 
 .ticket-circuit-print .qr-label {
-    font-size: 14px;
+    font-size: 9px;
     font-weight: bold;
-    margin-bottom: 2px;
+    line-height: 1;
 }
 
 .ticket-circuit-print .qr-img {
-    width: 110px;
-    height: 110px;
+    width: 128px;
+    height: 128px;
     display: block;
     margin: 0 auto;
 }
 
 .ticket-circuit-print .qr-text {
-    font-size: 12px;
+    font-size: 9px;
     font-weight: bold;
-    margin-top: 1px;
+    line-height: 1;
     word-break: break-all;
 }
 
@@ -293,7 +315,7 @@
                 <col style="width: 72px">   {{-- Col 5: SIZE --}}
                 <col style="width: 72px">   {{-- Col 6: COL --}}
                 <col style="width: 72px">   {{-- Col 7: CL --}}
-                <col style="width: 60px">   {{-- Col 8: SEQ --}}
+                <col style="width: 96px">   {{-- Col 8: SEQ (label CCT CODE muat 1 baris) --}}
                 <col style="width: {{ $barcodeCol9 }}px">  {{-- Col 9: MACHINE (min 192, melebar ikut barcode) --}}
             </colgroup>
             <thead>
@@ -409,7 +431,7 @@
                             <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="qr-img">
                             <div class="qr-text">{{ $circuit->barcode_kanban ?? '' }}</div>
                         @else
-                            <div style="width:110px;height:110px;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR CODE</div>
+                            <div style="width:128px;height:128px;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR CODE</div>
                         @endif
                     </td>
                     <td colspan="3" class="value-cell text-left">{{ $circuit->carline ?? '' }}</td>
@@ -435,7 +457,7 @@
                 </tr>
                 <!-- Bottom Section - Row 4 -->
                 <tr>
-                    <td colspan="3" class="value-cell text-left">{{ $circuit->released_note ?? '' }}</td>
+                    <td colspan="3" class="value-cell text-left note-cell">{{ $circuit->released_note ?? '' }}</td>
                 </tr>
             </tbody>
         </table>

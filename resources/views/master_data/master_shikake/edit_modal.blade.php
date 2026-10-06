@@ -240,12 +240,17 @@
                                     <input type="text" name="process_data[address]" id="bonder_address" class="form-control form-control-sm">
                                     <div class="invalid-feedback" id="bonder_address-error"></div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
+                                    <label class="form-label small mb-0">Address Store</label>
+                                    <input type="text" name="process_data[address_store]" id="bonder_address_store" class="form-control form-control-sm">
+                                    <div class="invalid-feedback" id="bonder_address_store-error"></div>
+                                </div>
+                                <div class="col-md-2">
                                     <label class="form-label small mb-0">Dies</label>
                                     <input type="text" name="process_data[dies]" id="bonder_dies" class="form-control form-control-sm">
                                     <div class="invalid-feedback" id="bonder_dies-error"></div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <label class="form-label small mb-0">To Machine</label>
                                     <input type="text" name="process_data[to_machine]" id="bonder_to_machine" class="form-control form-control-sm">
                                     <div class="invalid-feedback" id="bonder_to_machine-error"></div>
@@ -665,21 +670,28 @@
                         <div class="card-body p-2">
                             <!-- Header Fields -->
                             <div class="row g-2">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="mb-1">
                                         <label class="form-label small mb-0">Shield No <span class="text-danger">*</span></label>
                                         <input type="text" name="process_data[shield_no]" id="shield_shield_no" class="form-control form-control-sm">
                                         <div class="invalid-feedback" id="shield_shield_no-error"></div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="mb-1">
                                         <label class="form-label small mb-0">Address</label>
                                         <input type="text" name="process_data[address]" id="shield_address" class="form-control form-control-sm">
                                         <div class="invalid-feedback" id="shield_address-error"></div>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
+                                    <div class="mb-1">
+                                        <label class="form-label small mb-0">Address Store</label>
+                                        <input type="text" name="process_data[address_store]" id="shield_address_store" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="shield_address_store-error"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
                                     <div class="mb-1">
                                         <label class="form-label small mb-0">Blade</label>
                                         <input type="text" name="process_data[blade]" id="shield_blade" class="form-control form-control-sm">
@@ -829,18 +841,25 @@
                         </div>
                         <div class="card-body p-2">
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="mb-1">
                                         <label class="form-label small mb-0">Drawing No</label>
                                         <input type="text" name="process_data[drawing_no]" id="dbl_crimp_drawing_no" class="form-control form-control-sm">
                                         <div class="invalid-feedback" id="dbl_crimp_drawing_no-error"></div>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="mb-1">
                                         <label class="form-label small mb-0">Address</label>
                                         <input type="text" name="process_data[address]" id="dbl_crimp_address" class="form-control form-control-sm">
                                         <div class="invalid-feedback" id="dbl_crimp_address-error"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-1">
+                                        <label class="form-label small mb-0">Address Store</label>
+                                        <input type="text" name="process_data[address_store]" id="dbl_crimp_address_store" class="form-control form-control-sm">
+                                        <div class="invalid-feedback" id="dbl_crimp_address_store-error"></div>
                                     </div>
                                 </div>
                             </div>

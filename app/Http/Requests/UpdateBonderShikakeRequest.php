@@ -25,6 +25,7 @@ class UpdateBonderShikakeRequest extends FormRequest
             // BONDER process-specific fields
             'process_data.bonder_no' => 'nullable|string|max:255',
             'process_data.address' => 'nullable|string|max:255',
+            'process_data.address_store' => 'nullable|string|max:255',
             'process_data.dies' => 'nullable|string|max:255',
             'process_data.to_machine' => 'nullable|string|max:255',
             'process_data.barcode_navigasi' => 'nullable|string|max:255',
