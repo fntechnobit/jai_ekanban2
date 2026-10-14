@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CircuitType;
 use App\Imports\CuttingStoImport;
 use App\Models\AdditionLogCircuit;
 use App\Models\AdditionLogShikake;
@@ -16,6 +17,22 @@ use Yajra\DataTables\Facades\DataTables;
 
 class AdditionService
 {
+    /**
+     * Badge type circuit untuk tabel addition & defect cutting.
+     */
+    public static function circuitTypeBadge(?string $type): string
+    {
+        $circuitType = CircuitType::fromRaw($type);
+        $class = match ($circuitType) {
+            CircuitType::CUTTING_TWIST => 'bg-info',
+            CircuitType::CUTTING_EJ => 'bg-success',
+            CircuitType::CUTTING_JAM => 'bg-dark',
+            default => 'bg-primary',
+        };
+
+        return '<span class="badge ' . $class . '">' . $circuitType->shortLabel() . '</span>';
+    }
+
     /**
      * Get datatable for cutting/circuit with balance info (Addition context).
      */
@@ -37,6 +54,8 @@ class AdditionService
                 'master_conveyor.conveyor as conveyor_name',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
+                'master_circuit.cct_no_2',
+                'master_circuit.cct_code_2',
                 'master_circuit.shikake_code',
                 'master_circuit.family',
                 'master_circuit.qty',
@@ -58,10 +77,11 @@ class AdditionService
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('type_badge', function ($row) {
-                return $row->type === 'CUTTING_TWIST'
-                    ? '<span class="badge bg-info">TWS</span>'
-                    : '<span class="badge bg-primary">CCT</span>';
+                return self::circuitTypeBadge($row->type);
             })
+            // JAM = 1 kanban untuk 2 circuit: tampilkan kedua CCT
+            ->editColumn('cct_no', fn ($row) => $row->cct_no_2 ? $row->cct_no . ' / ' . $row->cct_no_2 : $row->cct_no)
+            ->editColumn('cct_code', fn ($row) => $row->cct_code_2 ? $row->cct_code . ' / ' . $row->cct_code_2 : $row->cct_code)
             ->addColumn('balance_display', function ($row) {
                 $balance = (int) $row->balance;
                 if ($balance > 0) {

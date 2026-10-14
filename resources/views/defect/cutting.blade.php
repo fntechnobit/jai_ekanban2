@@ -28,8 +28,9 @@
                 </select>
                 <select class="form-select form-select-sm select2" id="filter_type" data-placeholder="- All Type -" style="width: 160px;">
                     <option value="">- All Type -</option>
-                    <option value="CUTTING">CUTTING</option>
-                    <option value="CUTTING_TWIST">CUTTING TWIST</option>
+                    @foreach(\App\Enums\CircuitType::cases() as $circuitType)
+                        <option value="{{ $circuitType->value }}">{{ $circuitType->label() }}</option>
+                    @endforeach
                 </select>
                 <a href="{{ route('defect.history') }}" class="btn btn-outline-secondary btn-sm" title="History">
                     <i class="fa-solid fa-clock-rotate-left"></i>

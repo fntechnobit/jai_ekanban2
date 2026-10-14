@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CircuitType;
 use App\Models\MasterCircuit;
 use App\Models\MasterConveyor;
 use Illuminate\Support\Arr;
@@ -26,11 +27,14 @@ class MasterCircuitService
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('type_badge', function ($row) {
-                $type = $row->type ?? 'CUTTING';
-                if ($type === 'CUTTING_TWIST') {
-                    return '<span class="badge bg-warning text-dark fw-semibold">TWS</span>';
-                }
-                return '<span class="badge bg-info text-white fw-semibold">CCT</span>';
+                $type = CircuitType::fromRaw($row->type);
+                $class = match ($type) {
+                    CircuitType::CUTTING_TWIST => 'bg-warning text-dark',
+                    CircuitType::CUTTING_EJ => 'bg-success text-white',
+                    CircuitType::CUTTING_JAM => 'bg-dark text-white',
+                    default => 'bg-info text-white',
+                };
+                return '<span class="badge ' . $class . ' fw-semibold">' . $type->shortLabel() . '</span>';
             })
             ->addColumn('carline', function ($row) {
                 return $row->carline ?? '-';

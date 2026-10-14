@@ -43,12 +43,13 @@ class EkanbanCircuitService
             $query->havingRaw("(
                 cct_no LIKE ?
                 OR cct_code LIKE ?
+                OR cct_code_2 LIKE ?
                 OR to_store LIKE ?
                 OR machine LIKE ?
                 OR family LIKE ?
                 OR barcodes LIKE ?
                 OR shikake_code LIKE ?
-            )", [$escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch]);
+            )", array_fill(0, 8, $escapedSearch));
         }
 
         $filteredQuery = clone $query;
@@ -133,6 +134,7 @@ class EkanbanCircuitService
                 'shikake_code' => $row->shikake_code ?? '-',
                 'cct_no' => $row->cct_no,
                 'cct_code' => $row->cct_code,
+                'cct_code_2' => $row->cct_code_2,
                 'to_store' => $row->to_store ?? '-',
                 'conveyor' => $row->conveyor,
                 'machine' => $row->machine,
@@ -255,10 +257,29 @@ class EkanbanCircuitService
                 'master_circuit.barcode_shikake',
                 'master_circuit.barcode_twist',
                 'master_circuit.qrcode_drawing',
+                'master_circuit.qrcode_ej_a',
+                'master_circuit.qrcode_ej_b',
+                'master_circuit.qrcode_mesin',
+                // Circuit ke-2 untuk CUTTING_JAM
+                'master_circuit.cct_code_2',
+                'master_circuit.cct_no_2',
+                'master_circuit.cust_no_2',
+                'master_circuit.kind_2',
+                'master_circuit.size_2',
+                'master_circuit.col_2',
+                'master_circuit.cl_2',
+                'master_circuit.barcode_mesin_2',
                 'master_circuit.shikake_code',
                 'master_circuit.to_store',
                 'master_circuit.released_note',
                 'master_circuit.image_path',
+                // Nama carline untuk judul tiket EJ/JAM. Subquery (bukan join) supaya
+                // kode carline yang terdaftar di beberapa area tidak menggandakan tiket;
+                // carline di area conveyor yang sama didahulukan.
+                DB::raw('(SELECT mcl.name FROM master_carline mcl
+                    WHERE mcl.code = master_circuit.carline AND mcl.deleted_at IS NULL
+                    ORDER BY (mcl.area_id = master_conveyor.master_area_id) DESC, mcl.id
+                    LIMIT 1) as carline_name'),
                 // Kanban fields from assy_schedule_circuit
                 'assy_schedule_circuit.issue',
                 'assy_schedule_circuit.barcode_kanban',
@@ -296,6 +317,7 @@ class EkanbanCircuitService
                 'master_circuit.shikake_code',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
+                'master_circuit.cct_code_2',
                 'master_circuit.to_store',
                 'master_circuit.machine',
                 'master_circuit.family',
@@ -322,6 +344,7 @@ class EkanbanCircuitService
                 'master_circuit.shikake_code',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
+                'master_circuit.cct_code_2',
                 'master_circuit.to_store',
                 'master_circuit.machine',
                 'master_circuit.family',
@@ -593,6 +616,7 @@ class EkanbanCircuitService
                 'master_circuit.shikake_code',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
+                'master_circuit.cct_code_2',
                 'master_circuit.to_store',
                 'master_circuit.machine',
                 'master_circuit.family',
@@ -616,6 +640,7 @@ class EkanbanCircuitService
                 'master_circuit.shikake_code',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
+                'master_circuit.cct_code_2',
                 'master_circuit.to_store',
                 'master_circuit.machine',
                 'master_circuit.family',
@@ -684,13 +709,14 @@ class EkanbanCircuitService
             $query->havingRaw("(
                 cct_no LIKE ?
                 OR cct_code LIKE ?
+                OR cct_code_2 LIKE ?
                 OR to_store LIKE ?
                 OR machine LIKE ?
                 OR family LIKE ?
                 OR barcodes LIKE ?
                 OR shikake_code LIKE ?
                 OR printed_by LIKE ?
-            )", array_fill(0, 8, $escapedSearch));
+            )", array_fill(0, 9, $escapedSearch));
         }
 
         $filteredQuery = clone $query;
@@ -745,6 +771,7 @@ class EkanbanCircuitService
             'type' => $row->type ?? 'CUTTING',
             'cct_no' => $row->cct_no,
             'cct_code' => $row->cct_code,
+            'cct_code_2' => $row->cct_code_2,
             'shikake_code' => $row->shikake_code ?? '-',
             'conveyor' => $row->conveyor,
             'to_store' => $row->to_store ?? '-',

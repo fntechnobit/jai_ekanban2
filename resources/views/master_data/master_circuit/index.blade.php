@@ -26,8 +26,9 @@
                     </select>
                     <select class="form-select form-select-sm select2" id="filter_type" data-placeholder="- All Type -" style="width: 160px;">
                         <option value="">- All Type -</option>
-                        <option value="CUTTING">CUTTING</option>
-                        <option value="CUTTING_TWIST">CUTTING TWIST</option>
+                        @foreach(\App\Enums\CircuitType::cases() as $circuitType)
+                            <option value="{{ $circuitType->value }}">{{ $circuitType->label() }}</option>
+                        @endforeach
                     </select>
                     <select class="form-select form-select-sm select2" id="filter_machine" data-placeholder="- All Machine -" style="width: 160px;">
                         <option value="">- All Machine -</option>
@@ -216,11 +217,21 @@
                         var result = response.data.result;
                         var message = response.message;
                         
-                        if (result.errors && result.errors.length > 0) {
+                        var hasErrors = result.errors && result.errors.length > 0;
+                        var hasWarnings = result.warnings && result.warnings.length > 0;
+                        if (hasErrors) {
                             message += '<br><br><strong>Errors:</strong><br>' + result.errors.slice(0, 5).join('<br>');
                             if (result.errors.length > 5) {
                                 message += '<br>... and ' + (result.errors.length - 5) + ' more errors';
                             }
+                        }
+                        if (hasWarnings) {
+                            message += '<br><br><strong>Peringatan:</strong><br>' + result.warnings.slice(0, 5).join('<br>');
+                            if (result.warnings.length > 5) {
+                                message += '<br>... dan ' + (result.warnings.length - 5) + ' peringatan lain';
+                            }
+                        }
+                        if (hasErrors || hasWarnings) {
                             Swal.fire({
                                 title: 'Import Completed with Warnings',
                                 html: message,
@@ -307,9 +318,12 @@
                         if (!response.success) return;
                         const d = response.data;
                         const v = (val) => val || '-';
-                        const typeBadge = (d.type === 'CUTTING_TWIST')
-                            ? '<span class="badge bg-warning text-dark">TWS</span>'
-                            : '<span class="badge bg-info text-white">CCT</span>';
+                        const typeBadges = {
+                            CUTTING_TWIST: '<span class="badge bg-warning text-dark">TWS</span>',
+                            CUTTING_EJ: '<span class="badge bg-success text-white">EJ</span>',
+                            CUTTING_JAM: '<span class="badge bg-dark text-white">JAM</span>'
+                        };
+                        const typeBadge = typeBadges[d.type] || '<span class="badge bg-info text-white">CCT</span>';
 
                         // Info Utama
                         $('#v_type').html(typeBadge);
@@ -339,6 +353,15 @@
                         $('#v_barcode_shikake').text(v(d.barcode_shikake));
                         $('#v_barcode_twist').text(v(d.barcode_twist));
                         $('#v_qrcode_drawing').text(v(d.qrcode_drawing));
+
+                        // QR EJ (CUTTING_EJ) & circuit 2 (CUTTING_JAM)
+                        $('#v_qrcode_ej_a').text(v(d.qrcode_ej_a));
+                        $('#v_qrcode_ej_b').text(v(d.qrcode_ej_b));
+                        $('#v_ej_section').toggle(d.type === 'CUTTING_EJ');
+                        ['cct_code_2', 'cct_no_2', 'cust_no_2', 'kind_2', 'size_2', 'col_2', 'cl_2', 'barcode_mesin_2', 'qrcode_mesin'].forEach(function (field) {
+                            $('#v_' + field).text(v(d[field]));
+                        });
+                        $('#v_jam_section').toggle(d.type === 'CUTTING_JAM');
 
                         // Terminal 1
                         $('#v_terminal_1').text(v(d.terminal_1));
@@ -445,12 +468,22 @@
                         $('#edit_tube_2').val(d.tube_2);
                         $('#edit_mark_2').val(d.mark_2);
 
+                        // Field per type selalu diisi (walau section-nya tersembunyi) supaya
+                        // nilai record yang dibuka sebelumnya tidak ikut tersimpan ke record ini.
+                        $('#edit_barcode_twist').val(d.barcode_twist);
+                        $('#edit_qrcode_drawing').val(d.qrcode_drawing);
+                        $('#edit_qrcode_ej_a').val(d.qrcode_ej_a);
+                        $('#edit_qrcode_ej_b').val(d.qrcode_ej_b);
+                        ['cct_code_2', 'cct_no_2', 'cust_no_2', 'kind_2', 'size_2', 'col_2', 'cl_2', 'barcode_mesin_2', 'qrcode_mesin'].forEach(function (field) {
+                            $('#edit_' + field).val(d[field]);
+                        });
+                        $('#edit_ej_section').toggle(d.type === 'CUTTING_EJ');
+                        $('#edit_jam_section').toggle(d.type === 'CUTTING_JAM');
+
                         // Drawing section (only for CUTTING_TWIST)
                         $('#edit_drawing_file').val('');
                         if (d.type === 'CUTTING_TWIST') {
                             $('#edit_drawing_section').show();
-                            $('#edit_barcode_twist').val(d.barcode_twist);
-                            $('#edit_qrcode_drawing').val(d.qrcode_drawing);
                             if (d.image_path) {
                                 $('#edit_drawing_preview').attr('src', '{{ asset("") }}' + d.image_path);
                                 $('#edit_drawing_preview_container').show();

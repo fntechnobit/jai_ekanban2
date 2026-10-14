@@ -47,6 +47,39 @@
                     </div>
                 </div>
 
+                <!-- QR EJ (CUTTING_EJ only) -->
+                <div id="v_ej_section" class="border rounded p-2 mb-2" style="display:none;">
+                    <h6 class="fw-semibold small mb-1 text-primary">QR EJ</h6>
+                    <table class="table table-sm table-borderless mb-0 small">
+                        <tr><td class="text-muted" width="17.5%">QRCode EJ-A</td><td id="v_qrcode_ej_a">-</td></tr>
+                        <tr><td class="text-muted">QRCode EJ-B</td><td id="v_qrcode_ej_b">-</td></tr>
+                    </table>
+                </div>
+
+                <!-- Circuit 2 (CUTTING_JAM only) -->
+                <div id="v_jam_section" class="border rounded p-2 mb-2" style="display:none;">
+                    <h6 class="fw-semibold small mb-1 text-primary">Circuit 2 (JAM Twist)</h6>
+                    <div class="row g-0">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0 small">
+                                <tr><td class="text-muted" width="35%">CCT Code 2</td><td id="v_cct_code_2">-</td></tr>
+                                <tr><td class="text-muted">CCT No 2</td><td id="v_cct_no_2">-</td></tr>
+                                <tr><td class="text-muted">Cust No 2</td><td id="v_cust_no_2">-</td></tr>
+                                <tr><td class="text-muted">Barcode Mesin 2</td><td id="v_barcode_mesin_2">-</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0 small">
+                                <tr><td class="text-muted" width="35%">Kind 2</td><td id="v_kind_2">-</td></tr>
+                                <tr><td class="text-muted">Size 2</td><td id="v_size_2">-</td></tr>
+                                <tr><td class="text-muted">Col 2</td><td id="v_col_2">-</td></tr>
+                                <tr><td class="text-muted">C/L 2</td><td id="v_cl_2">-</td></tr>
+                                <tr><td class="text-muted">QRCode Mesin</td><td id="v_qrcode_mesin">-</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Terminal 1 & 2 -->
                 <div class="row g-2 mb-2">
                     <div class="col-md-6">

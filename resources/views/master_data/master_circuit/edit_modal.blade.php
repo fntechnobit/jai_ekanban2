@@ -159,6 +159,72 @@
                         </div>
                     </div>
 
+                    <!-- QR EJ (CUTTING_EJ only) -->
+                    <div id="edit_ej_section" class="row g-2 mt-1" style="display:none;">
+                        <div class="col-12">
+                            <div class="border rounded p-2">
+                                <h6 class="fw-semibold small mb-1 text-primary">QR EJ</h6>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="form-label small mb-0">QRCode EJ-A</label>
+                                        <input type="text" name="qrcode_ej_a" id="edit_qrcode_ej_a" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small mb-0">QRCode EJ-B</label>
+                                        <input type="text" name="qrcode_ej_b" id="edit_qrcode_ej_b" class="form-control form-control-sm">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Circuit 2 (CUTTING_JAM only: 1 baris = 1 pasang circuit) -->
+                    <div id="edit_jam_section" class="row g-2 mt-1" style="display:none;">
+                        <div class="col-12">
+                            <div class="border rounded p-2">
+                                <h6 class="fw-semibold small mb-1 text-primary">Circuit 2 (JAM Twist)</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label small mb-0">CCT Code 2</label>
+                                        <input type="text" name="cct_code_2" id="edit_cct_code_2" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label small mb-0">CCT No 2</label>
+                                        <input type="text" name="cct_no_2" id="edit_cct_no_2" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label small mb-0">Cust No 2</label>
+                                        <input type="text" name="cust_no_2" id="edit_cust_no_2" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label small mb-0">Barcode Mesin 2 <span class="text-muted">(cadangan)</span></label>
+                                        <input type="text" name="barcode_mesin_2" id="edit_barcode_mesin_2" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label small mb-0">Kind 2</label>
+                                        <input type="text" name="kind_2" id="edit_kind_2" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label small mb-0">Size 2</label>
+                                        <input type="text" name="size_2" id="edit_size_2" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label small mb-0">Col 2</label>
+                                        <input type="text" name="col_2" id="edit_col_2" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-3 col-6">
+                                        <label class="form-label small mb-0">C/L 2</label>
+                                        <input type="text" name="cl_2" id="edit_cl_2" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small mb-0">QRCode Mesin <span class="text-muted">(dari MTC)</span></label>
+                                        <input type="text" name="qrcode_mesin" id="edit_qrcode_mesin" class="form-control form-control-sm">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Barcode Fields -->
                     <div class="row g-2 mt-1">
                         <div class="col-12">

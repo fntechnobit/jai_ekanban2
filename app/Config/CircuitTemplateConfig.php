@@ -72,6 +72,29 @@ class CircuitTemplateConfig
     }
 
     /**
+     * Kolom tambahan untuk CUTTING_EJ dan CUTTING_JAM, langsung setelah Memory Twist (BA).
+     * Opsional saat import: file lama tanpa kolom ini tetap bisa dipakai untuk
+     * CUTTING / CUTTING_TWIST, kolom assy-nya tetap mulai di BB.
+     * Key = kolom DB, value = header Excel.
+     */
+    public static function getExtensionHeaders(): array
+    {
+        return [
+            'qrcode_ej_a' => 'QRCode EJ-A',          // BB - 53
+            'qrcode_ej_b' => 'QRCode EJ-B',          // BC - 54
+            'cct_code_2' => 'CCT Code 2',            // BD - 55
+            'cct_no_2' => 'CCT No. 2',               // BE - 56
+            'cust_no_2' => 'Cust No. 2',             // BF - 57
+            'kind_2' => 'Kind 2',                    // BG - 58
+            'size_2' => 'Size 2',                    // BH - 59
+            'col_2' => 'Col 2',                      // BI - 60
+            'cl_2' => 'C/L 2',                       // BJ - 61
+            'barcode_mesin_2' => 'Barcode Mesin 2',  // BK - 62 (JAM: barcode mesin cadangan circuit 2)
+            'qrcode_mesin' => 'QRCode Mesin',        // BL - 63 (JAM: QR barcode mesin dari MTC)
+        ];
+    }
+
+    /**
      * Get the count of header columns
      */
     public static function getHeaderCount(): int
@@ -85,7 +108,7 @@ class CircuitTemplateConfig
     public static function getAllTemplates(): array
     {
         return [
-            'Template_Cutting.xlsx' => self::getHeaders(),
+            'Template_Cutting.xlsx' => array_merge(self::getHeaders(), array_values(self::getExtensionHeaders())),
         ];
     }
 }

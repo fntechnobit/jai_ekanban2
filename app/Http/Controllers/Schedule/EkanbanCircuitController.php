@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Schedule;
 
+use App\Enums\CircuitType;
 use App\Http\Controllers\Controller;
 use App\Helpers\BarcodeHelper;
 use App\Helpers\ExcelExportHelper;
@@ -24,6 +25,13 @@ class EkanbanCircuitController extends Controller
      * terkunci 576px (lebar kepala cetak) - diukur lewat raster capture.
      */
     private const TWIST_BARCODE_HEIGHT = 64;
+
+    /**
+     * Tinggi barcode Code 39 pada tiket JAM TWIST (dot). Dua barcode mesin bertumpuk
+     * di kolom kanan (circuit 1 baris 1-3 rata atas, circuit 2 baris 4-7 rata bawah);
+     * 64 dot menjaga jarak antar keduanya >= 116 dot, setara jarak antar barcode tiket twist.
+     */
+    private const JAM_BARCODE_HEIGHT = 64;
 
     protected $ekanbanCircuitService;
 
@@ -164,38 +172,110 @@ class EkanbanCircuitController extends Controller
     }
 
     /**
-     * Render print tickets for circuits - dispatches to type-specific templates
-     * CUTTING uses print_ticket, CUTTING_TWIST uses print_ticket_twist
+     * Render print tickets for circuits - dispatches to type-specific templates:
+     * CUTTING → print_ticket, CUTTING_TWIST → print_ticket_twist,
+     * CUTTING_EJ → print_ticket_ej, CUTTING_JAM → print_ticket_jam.
+     *
+     * Tiket dirender per rangkaian type yang berurutan (bukan dikelompokkan per type),
+     * supaya urutan cetak tetap sama dengan urutan daftar print walau satu mesin
+     * mencetak beberapa type sekaligus (mis. CUTTING dan EJ di mesin yang sama).
      */
     private function renderCircuitTickets($circuits)
     {
-        // Separate circuits by type
-        $cuttingCircuits = $circuits->filter(fn($c) => ($c->type ?? 'CUTTING') === 'CUTTING');
-        $twistCircuits = $circuits->filter(fn($c) => ($c->type ?? 'CUTTING') === 'CUTTING_TWIST');
-
         $htmlParts = [];
+        $run = [];
+        $runType = null;
 
-        // Render CUTTING circuits with standard template
-        if ($cuttingCircuits->isNotEmpty()) {
-            foreach ($cuttingCircuits as $circuit) {
-                BarcodeHelper::generateCircuitBarcodes($circuit, 'barcode_kanban', 'cct_no', 'barcode_mesin', 'cct_code');
-                // Generate QR code for qrcode_shikake
-                if (!empty($circuit->qrcode_shikake)) {
-                    $circuit->qr_shikake_path = BarcodeHelper::generateQRCodeCached($circuit->qrcode_shikake, 'circuit');
-                }
+        foreach ($circuits as $circuit) {
+            $type = CircuitType::fromRaw($circuit->type);
+            if ($runType !== null && $type !== $runType) {
+                $htmlParts[] = $this->renderTicketRun($runType, collect($run));
+                $run = [];
             }
-            $htmlParts[] = view('schedule.ekanban_circuit.print_ticket', ['circuits' => $cuttingCircuits])->render();
+            $runType = $type;
+            $run[] = $circuit;
         }
-
-        // Render CUTTING_TWIST circuits with twist template
-        if ($twistCircuits->isNotEmpty()) {
-            foreach ($twistCircuits as $circuit) {
-                $this->generateCircuitTwistBarcodes($circuit);
-            }
-            $htmlParts[] = view('schedule.ekanban_circuit.print_ticket_twist', ['circuits' => $twistCircuits])->render();
+        if ($run) {
+            $htmlParts[] = $this->renderTicketRun($runType, collect($run));
         }
 
         return '<div id="print_stack_ajax">' . implode('', $htmlParts) . '</div>';
+    }
+
+    /**
+     * Generate barcode/QR lalu render satu rangkaian tiket ber-type sama.
+     */
+    private function renderTicketRun(CircuitType $type, $circuits): string
+    {
+        foreach ($circuits as $circuit) {
+            match ($type) {
+                CircuitType::CUTTING => $this->generateCircuitCuttingBarcodes($circuit),
+                CircuitType::CUTTING_TWIST => $this->generateCircuitTwistBarcodes($circuit),
+                CircuitType::CUTTING_EJ => $this->generateCircuitEjBarcodes($circuit),
+                CircuitType::CUTTING_JAM => $this->generateCircuitJamBarcodes($circuit),
+            };
+        }
+
+        $view = match ($type) {
+            CircuitType::CUTTING => 'schedule.ekanban_circuit.print_ticket',
+            CircuitType::CUTTING_TWIST => 'schedule.ekanban_circuit.print_ticket_twist',
+            CircuitType::CUTTING_EJ => 'schedule.ekanban_circuit.print_ticket_ej',
+            CircuitType::CUTTING_JAM => 'schedule.ekanban_circuit.print_ticket_jam',
+        };
+
+        return view($view, ['circuits' => $circuits])->render();
+    }
+
+    /**
+     * Generate barcodes for CUTTING circuits: QR kanban, Code 39 barcode mesin, QR shikake
+     */
+    private function generateCircuitCuttingBarcodes($circuit)
+    {
+        BarcodeHelper::generateCircuitBarcodes($circuit, 'barcode_kanban', 'cct_no', 'barcode_mesin', 'cct_code');
+        // Generate QR code for qrcode_shikake
+        if (!empty($circuit->qrcode_shikake)) {
+            $circuit->qr_shikake_path = BarcodeHelper::generateQRCodeCached($circuit->qrcode_shikake, 'circuit');
+        }
+    }
+
+    /**
+     * Generate barcodes for CUTTING_EJ circuits: sama dengan CUTTING (QR kanban,
+     * Code 39 barcode mesin) ditambah QR EJ-A / EJ-B dari master.
+     */
+    private function generateCircuitEjBarcodes($circuit)
+    {
+        BarcodeHelper::generateCircuitBarcodes($circuit, 'barcode_kanban', 'cct_no', 'barcode_mesin', 'cct_code');
+
+        if (!empty($circuit->qrcode_ej_a)) {
+            $circuit->qr_ej_a_path = BarcodeHelper::generateQRCodeCached($circuit->qrcode_ej_a, 'circuit');
+        }
+        if (!empty($circuit->qrcode_ej_b)) {
+            $circuit->qr_ej_b_path = BarcodeHelper::generateQRCodeCached($circuit->qrcode_ej_b, 'circuit');
+        }
+    }
+
+    /**
+     * Generate barcodes for CUTTING_JAM circuits: QR barcode mesin (qrcode_mesin, isi dari
+     * MTC), QR kanban (barcode_kanban, format barcode shikake dengan kode Twist No) dan
+     * Code 39 barcode mesin cadangan untuk circuit 1 dan circuit 2.
+     */
+    private function generateCircuitJamBarcodes($circuit)
+    {
+        if (!empty($circuit->qrcode_mesin)) {
+            $circuit->qr_mesin_path = BarcodeHelper::generateQRCodeCached($circuit->qrcode_mesin, 'circuit');
+        }
+
+        if (!empty($circuit->barcode_kanban)) {
+            $circuit->qr_code_path = BarcodeHelper::generateQRCodeCached($circuit->barcode_kanban, 'circuit');
+        }
+
+        foreach (['barcode_mesin', 'barcode_mesin_2'] as $field) {
+            if (!empty($circuit->$field)) {
+                $circuit->{$field . '_path'} = BarcodeHelper::generateCode39Cached($circuit->$field, self::JAM_BARCODE_HEIGHT, 'circuit');
+                $circuit->{$field . '_data'} = BarcodeHelper::sanitizeCode39($circuit->$field);
+                $circuit->{$field . '_width'} = BarcodeHelper::code39Width($circuit->$field);
+            }
+        }
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CircuitType;
 use App\Enums\ProcessType;
 use App\Models\AssySchedule;
 use App\Models\AssyScheduleCircuit;
@@ -205,6 +206,12 @@ class KanbanGeneratorService
                 $balance->last_nomor_urut
             );
 
+            // JAM Twist (1 kanban = 1 pasang circuit): barcode kanban memakai format
+            // barcode shikake, yaitu kode Twist No (shikake_code) dan bukan CCT code circuit 1.
+            $kanbanCode = ($circuitData['type'] === CircuitType::CUTTING_JAM->value && !empty($circuitData['shikake_code']))
+                ? $circuitData['shikake_code']
+                : $circuitData['cct_code'];
+
             // Save generated kanbans
             foreach ($result['kanban_list'] as $kanban) {
                 AssyScheduleCircuit::create([
@@ -214,7 +221,7 @@ class KanbanGeneratorService
                     'master_circuit_id' => $circuitData['master_circuit_id'],
                     'issue' => $kanban['issue'],
                     'nomor_urut' => $kanban['nomor_urut'],
-                    'barcode_kanban' => $this->generateBarcode($circuitData['carline'], $circuitData['cct_code'], $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut']),
+                    'barcode_kanban' => $this->generateBarcode($circuitData['carline'], $kanbanCode, $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut']),
                     'qrcode_shikake' => !empty($circuitData['shikake_code'])
                         ? $this->generateBarcode($circuitData['carline'], $circuitData['shikake_code'], $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut'])
                         : null,
@@ -469,6 +476,7 @@ class KanbanGeneratorService
             if (!isset($circuitGroups[$key])) {
                 $circuitGroups[$key] = [
                     'master_circuit_id' => $circuit->id,
+                    'type' => $circuit->type ?? CircuitType::CUTTING->value,
                     'carline' => $circuit->carline ?? '',
                     'cct_no' => $circuit->cct_no,
                     'cct_code' => $circuit->cct_code,

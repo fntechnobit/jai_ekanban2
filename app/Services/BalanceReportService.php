@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CircuitType;
 use App\Models\AdditionLogCircuit;
 use App\Models\AdditionLogShikake;
 use App\Models\DefectLogCircuit;
@@ -247,8 +248,11 @@ class BalanceReportService
                 $c = $circuits->get($mid);
                 $meta[$key] = [
                     'conveyor_name' => $conveyors[$cid] ?? ('CV#' . $cid),
-                    'type_label'    => $c ? (($c->type === 'CUTTING_TWIST') ? 'TWS' : 'CCT') : 'CCT',
-                    'code'          => $c ? trim(($c->cct_no ?? '') . ' - ' . ($c->cct_code ?? '')) : ('#' . $mid),
+                    'type_label'    => CircuitType::fromRaw($c?->type)->shortLabel(),
+                    'code'          => $c
+                        ? trim(($c->cct_no ?? '') . ($c->cct_no_2 ? ' / ' . $c->cct_no_2 : '')
+                            . ' - ' . ($c->cct_code ?? '') . ($c->cct_code_2 ? ' / ' . $c->cct_code_2 : ''))
+                        : ('#' . $mid),
                 ];
             } else {
                 $s = $shikakes->get($mid);

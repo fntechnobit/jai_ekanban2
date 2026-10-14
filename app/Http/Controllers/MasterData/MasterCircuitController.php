@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\MasterData;
 
+use App\Enums\CircuitType;
 use App\Http\Controllers\Controller;
 use App\Services\MasterCircuitService;
 use App\Helpers\ResponseHelper;
@@ -233,7 +234,7 @@ class MasterCircuitController extends Controller
                 'area_id' => 'required|exists:master_area,id',
                 'family' => 'required|string|max:255',
                 'conveyor_id' => 'required|exists:master_conveyor,id',
-                'type' => 'nullable|string|in:CUTTING,CUTTING_TWIST',
+                'type' => 'nullable|string|in:' . implode(',', CircuitType::values()),
                 'machine' => 'nullable|string|max:100',
             ]);
 

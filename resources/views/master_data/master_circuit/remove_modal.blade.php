@@ -36,8 +36,9 @@
                         <label for="remove_type">Type Process</label>
                         <select class="form-select select2" id="remove_type" name="type" style="width: 100%;">
                             <option value="">- All Type -</option>
-                            <option value="CUTTING">CUTTING</option>
-                            <option value="CUTTING_TWIST">CUTTING TWIST</option>
+                            @foreach(\App\Enums\CircuitType::cases() as $circuitType)
+                                <option value="{{ $circuitType->value }}">{{ $circuitType->label() }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div class="mb-3">

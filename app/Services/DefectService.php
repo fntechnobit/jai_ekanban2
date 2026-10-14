@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CircuitType;
 use App\Imports\CuttingStoImport;
 use App\Models\DefectLogCircuit;
 use App\Models\DefectLogShikake;
@@ -37,6 +38,8 @@ class DefectService
                 'master_conveyor.conveyor as conveyor_name',
                 'master_circuit.cct_no',
                 'master_circuit.cct_code',
+                'master_circuit.cct_no_2',
+                'master_circuit.cct_code_2',
                 'master_circuit.shikake_code',
                 'master_circuit.family',
                 'master_circuit.qty',
@@ -58,11 +61,11 @@ class DefectService
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('type_badge', function ($row) {
-                $badge = $row->type === 'CUTTING_TWIST'
-                    ? '<span class="badge bg-info">TWS</span>'
-                    : '<span class="badge bg-primary">CCT</span>';
-                return $badge;
+                return AdditionService::circuitTypeBadge($row->type);
             })
+            // JAM = 1 kanban untuk 2 circuit: tampilkan kedua CCT
+            ->editColumn('cct_no', fn ($row) => $row->cct_no_2 ? $row->cct_no . ' / ' . $row->cct_no_2 : $row->cct_no)
+            ->editColumn('cct_code', fn ($row) => $row->cct_code_2 ? $row->cct_code . ' / ' . $row->cct_code_2 : $row->cct_code)
             ->addColumn('balance_display', function ($row) {
                 $balance = (int) $row->balance;
                 if ($balance > 0) {

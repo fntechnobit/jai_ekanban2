@@ -7,6 +7,7 @@ use App\Models\MasterConveyor;
 use App\Models\MasterAssy;
 use App\Models\MasterCircuitAssy;
 use App\Config\CircuitTemplateConfig;
+use App\Enums\CircuitType;
 use App\Helpers\ImportHelper;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,13 @@ class MasterCircuitImport
     protected $successCount = 0;
     protected $failedCount = 0;
     protected $totalRows = 0;
+    protected $warnings = [];
+
+    /** Kolom EJ/JAM yang ada di file: [kolom DB => indeks kolom Excel] */
+    protected $extensionColumns = [];
+
+    /** Baris CUTTING_JAM yang berhasil diimport: [id => ['codes' => [cct_code, cct_code_2], 'row' => nomor baris]] */
+    protected $jamRows = [];
 
     public function __construct($conveyorId)
     {
@@ -52,10 +60,16 @@ class MasterCircuitImport
 
             // Get conveyor data
             $conveyor = MasterConveyor::findOrFail($this->conveyorId);
-            
-            // Get assy columns (after column BA/MEMORI TWIST which is index 52)
+
+            // Kolom EJ / JAM (opsional) langsung setelah BA. File lama tanpa kolom
+            // ini tetap valid untuk CUTTING / CUTTING_TWIST.
+            $this->extensionColumns = $this->detectExtensionColumns($headerRow);
+
+            // Get assy columns (after the last template column: BA/MEMORI TWIST, or
+            // the EJ/JAM columns when the file has them)
             $assyColumns = [];
-            for ($col = 53; $col < count($headerRow); $col++) {
+            $assyStart = CircuitTemplateConfig::getHeaderCount() + count($this->extensionColumns);
+            for ($col = $assyStart; $col < count($headerRow); $col++) {
                 $assyName = ImportHelper::cleanValue($headerRow[$col]);
                 if ($assyName) {
                     $assyColumns[$col] = $assyName;
@@ -74,6 +88,7 @@ class MasterCircuitImport
                     }
 
                     $data = $this->mapRowToData($rowData, $conveyor);
+                    $this->validateTypeData($data, $row);
 
                     // Update or create circuit based on conveyor_id + cct_code + to_store.
                     // Within one conveyor the same cct_code may appear several times as
@@ -101,7 +116,14 @@ class MasterCircuitImport
                     // Sync assy relationships (remove old, add new)
                     $circuit->assemblies()->detach();
                     $this->processAssyRelationships($circuit, $rowData, $assyColumns);
-                    
+
+                    if ($circuit->type === CircuitType::CUTTING_JAM->value) {
+                        $this->jamRows[$circuit->id] = [
+                            'codes' => array_filter([$circuit->cct_code, $circuit->cct_code_2]),
+                            'row' => $row,
+                        ];
+                    }
+
                     $this->successCount++;
                 } catch (\Exception $e) {
                     $this->failedCount++;
@@ -117,6 +139,8 @@ class MasterCircuitImport
                 }
             }
 
+            $this->warnDoubleKanbanForJamCircuits();
+
             DB::commit();
 
             return [
@@ -124,11 +148,106 @@ class MasterCircuitImport
                 'total_rows' => $this->totalRows,
                 'success_count' => $this->successCount,
                 'failed_count' => $this->failedCount,
-                'errors' => $this->errors
+                'errors' => $this->errors,
+                'warnings' => $this->warnings,
             ];
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
+        }
+    }
+
+    /**
+     * Kolom EJ/JAM dikenali bila header tepat setelah BA cocok berurutan dengan
+     * CircuitTemplateConfig::getExtensionHeaders(). Tidak ada sama sekali = file lama
+     * (valid); ada sebagian = template salah, ditolak agar kolom assy tidak bergeser.
+     *
+     * @return array<string,int> [kolom DB => indeks kolom Excel]
+     */
+    protected function detectExtensionColumns(array $headerRow): array
+    {
+        $start = CircuitTemplateConfig::getHeaderCount();
+        $expected = CircuitTemplateConfig::getExtensionHeaders();
+        $firstHeader = reset($expected);
+
+        if (strcasecmp(trim((string) ($headerRow[$start] ?? '')), $firstHeader) !== 0) {
+            return [];
+        }
+
+        $columns = [];
+        $index = $start;
+        foreach ($expected as $dbColumn => $header) {
+            $uploaded = trim((string) ($headerRow[$index] ?? ''));
+            if (strcasecmp($uploaded, $header) !== 0) {
+                $columnLetter = ImportHelper::numberToColumnLetter($index + 1);
+                throw new \Exception("Invalid template! Column {$columnLetter}: Expected '{$header}', found '{$uploaded}'.\n\nPlease download and use the correct Circuit template.");
+            }
+            $columns[$dbColumn] = $index;
+            $index++;
+        }
+
+        return $columns;
+    }
+
+    /**
+     * Data wajib per type. Baris yang tidak lengkap digagalkan (masuk errors),
+     * bukan disimpan setengah jadi lalu tercetak tanpa data.
+     */
+    protected function validateTypeData(array $data, int $row): void
+    {
+        $type = $data['type'];
+        if (!in_array($type, [CircuitType::CUTTING_EJ->value, CircuitType::CUTTING_JAM->value], true)) {
+            return;
+        }
+
+        if (empty($this->extensionColumns)) {
+            throw new \Exception("Type {$type} membutuhkan kolom EJ/JAM (BB-BL) yang tidak ada di file ini. Download template terbaru.");
+        }
+
+        if ($type === CircuitType::CUTTING_JAM->value) {
+            if (empty($data['cct_code']) || empty($data['cct_code_2'])) {
+                throw new \Exception('CUTTING_JAM wajib mengisi CCT Code dan CCT Code 2 (1 baris = 1 pasang circuit).');
+            }
+            if (strcasecmp($data['cct_code'], $data['cct_code_2']) === 0) {
+                throw new \Exception("CUTTING_JAM: CCT Code dan CCT Code 2 tidak boleh sama ({$data['cct_code']}).");
+            }
+            if (empty($data['shikake_code'])) {
+                $this->warnings[] = "Row {$row}: CUTTING_JAM tanpa Shikake Code (Twist No): TWIST NO di tiket kosong dan barcode kanban memakai CCT Code.";
+            }
+            if (empty($data['qrcode_mesin'])) {
+                $this->warnings[] = "Row {$row}: CUTTING_JAM dengan QRCode Mesin kosong, QR barcode mesin tidak tercetak.";
+            }
+        }
+
+        if ($type === CircuitType::CUTTING_EJ->value && (empty($data['qrcode_ej_a']) || empty($data['qrcode_ej_b']))) {
+            $this->warnings[] = "Row {$row}: CUTTING_EJ dengan QRCode EJ-A / EJ-B kosong, QR tersebut tidak tercetak.";
+        }
+    }
+
+    /**
+     * JAM bukan proses lanjutan cutting: mesin JAM memotong sekaligus men-twist, jadi
+     * circuit yang dipasangkan di JAM tidak boleh juga aktif sebagai baris lain
+     * (CUTTING / CUTTING_TWIST / EJ) di conveyor yang sama - generate akan mengeluarkan
+     * kanban untuk keduanya. Tidak dihapus otomatis, hanya diperingatkan.
+     */
+    protected function warnDoubleKanbanForJamCircuits(): void
+    {
+        if (empty($this->jamRows)) {
+            return;
+        }
+
+        $codes = collect($this->jamRows)->pluck('codes')->flatten()->unique()->values();
+
+        $others = MasterCircuit::where('conveyor_id', $this->conveyorId)
+            ->where('type', '!=', CircuitType::CUTTING_JAM->value)
+            ->whereIn('cct_code', $codes)
+            ->get(['id', 'type', 'cct_code', 'cct_no', 'to_store']);
+
+        foreach ($this->jamRows as $jam) {
+            foreach ($others->whereIn('cct_code', $jam['codes']) as $other) {
+                $this->warnings[] = "Row {$jam['row']}: CCT Code {$other->cct_code} juga masih aktif sebagai {$other->type}"
+                    . " (CCT No {$other->cct_no}, store {$other->to_store}). Kanban akan keluar dobel - hapus baris tersebut bila circuit ini diproses di mesin JAM.";
+            }
         }
     }
 
@@ -225,17 +344,19 @@ class MasterCircuitImport
 
     protected function mapRowToData($rowData, $conveyor)
     {
-        // Column A (index 0) - Type: CUTTING or CUTTING_TWIST
-        $typeRaw = ImportHelper::cleanValue($rowData[0] ?? '');
-        $type = strtoupper($typeRaw);
-        
-        // Validate: Only CUTTING or CUTTING_TWIST allowed, default to CUTTING
-        if (!in_array($type, ['CUTTING', 'CUTTING_TWIST'])) {
-            $type = 'CUTTING';
+        // Column A (index 0) - Type: CUTTING, CUTTING_TWIST, CUTTING_EJ or CUTTING_JAM.
+        // Unknown values default to CUTTING.
+        $type = CircuitType::fromRaw(ImportHelper::cleanValue($rowData[0] ?? ''))->value;
+
+        // Kolom EJ/JAM (BB-BL) hanya diisi bila ada di file, supaya import file
+        // lama tidak mengosongkan data EJ/JAM yang sudah tersimpan.
+        $extension = [];
+        foreach ($this->extensionColumns as $dbColumn => $index) {
+            $extension[$dbColumn] = ImportHelper::cleanValue($rowData[$index] ?? null);
         }
-        
+
         // Map Excel columns to database fields based on Template_Cutting.xlsx structure
-        return [
+        return $extension + [
             'conveyor_id' => $this->conveyorId,
             'type' => $type,                                                    // Column A - Type
             'carline' => ImportHelper::cleanValue($rowData[1] ?? null),         // Column B - Carline

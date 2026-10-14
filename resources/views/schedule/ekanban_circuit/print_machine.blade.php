@@ -60,8 +60,9 @@
                             <div class="col-md-3">
                                 <select class="form-select form-select-sm select2" id="filter_type">
                                     <option value="all" selected>- All Type -</option>
-                                    <option value="CUTTING">CUTTING</option>
-                                    <option value="CUTTING_TWIST">CUTTING TWIST</option>
+                                    @foreach(\App\Enums\CircuitType::cases() as $circuitType)
+                                        <option value="{{ $circuitType->value }}">{{ $circuitType->label() }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -202,6 +203,27 @@
             border: 2px solid #000 !important;
         }
         #previewContent .ticket-twist-print .twist-section-label.black-bg {
+            background-color: #000 !important;
+            color: #fff !important;
+        }
+        /* JAM twist ticket borders */
+        #previewContent .ticket-jam-print {
+            border: 2px solid #000 !important;
+            overflow: visible !important;
+        }
+        #previewContent .ticket-jam-print table {
+            border-collapse: collapse !important;
+            border: 1px solid #000 !important;
+        }
+        #previewContent .ticket-jam-print th,
+        #previewContent .ticket-jam-print td {
+            border: 1px solid #000 !important;
+        }
+        #previewContent .ticket-jam-print thead th {
+            border: 2px solid #000 !important;
+        }
+        #previewContent .ticket-jam-print .jam-section.black-bg,
+        #previewContent .ticket-jam-print .jam-inv {
             background-color: #000 !important;
             color: #fff !important;
         }
@@ -410,10 +432,15 @@
                         name: 'type', 
                         width: '14%',
                         render: function(data, type, row) {
-                            var badge = data === 'CUTTING_TWIST'
-                                ? '<span class="badge bg-info">TWS</span>'
-                                : '<span class="badge bg-primary">CCT</span>';
-                            return badge + ' <span class="text-muted">' + (row.cct_code || '') + '</span>';
+                            var badges = {
+                                CUTTING_TWIST: '<span class="badge bg-info">TWS</span>',
+                                CUTTING_EJ: '<span class="badge bg-success">EJ</span>',
+                                CUTTING_JAM: '<span class="badge bg-dark">JAM</span>'
+                            };
+                            var badge = badges[data] || '<span class="badge bg-primary">CCT</span>';
+                            // JAM = 1 kanban untuk 2 circuit, tampilkan kedua CCT code
+                            var code = (row.cct_code || '') + (row.cct_code_2 ? ' / ' + row.cct_code_2 : '');
+                            return badge + ' <span class="text-muted">' + code + '</span>';
                         }
                     },
                     { data: 'shikake_code', name: 'shikake_code', width: '7%' },
