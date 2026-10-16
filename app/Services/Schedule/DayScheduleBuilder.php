@@ -47,6 +47,12 @@ class DayScheduleBuilder
     /**
      * Listing yang layak dijadwalkan, urut FIFO sesuai PPC.
      *
+     * Urutan dalam satu tanggal × conveyor mengikuti `seq` SIREP — seq terkecil
+     * dialokasikan lebih dulu. jai_ekanban memakai id_listing, tetapi id dari API
+     * SIREP tidak mengikuti urutan produksi: B3-ENG 07-10-2026 7YA1E seq 1 ber-id 7818,
+     * 7YA1B seq 2 ber-id 7817, sehingga 7YA1B ikut naik ke shift 1. id_listing
+     * hanya pemecah seri.
+     *
      * Sengaja TIDAK menyaring listing yang sudah punya jadwal terkunci: bagian yang
      * sudah dipegang dikurangkan per listing_id di plan(), bukan dibuang utuh.
      */
@@ -58,9 +64,8 @@ class DayScheduleBuilder
             ->whereNotNull('assy')
             ->where('assy', '!=', '')
             ->where('qty', '>', 0)
-            ->orderBy('id_listing', 'asc')
-            ->orderBy('listing_date_time', 'asc')
-            ->orderBy('assycode', 'asc');
+            ->orderBy('seq', 'asc')
+            ->orderBy('id_listing', 'asc');
     }
 
     /**
@@ -140,36 +145,41 @@ class DayScheduleBuilder
             $lockStatus[$shift] = in_array($shift, $occupiedShifts);
         }
 
-        $shiftCapacities = $this->capacityCalculator->calculateShiftCapacities($normalCapacity, $lockStatus, $maxShifts);
-        $co5Needed       = $this->capacityCalculator->preMapCutoff5($shiftCapacities, $normalCapacity, $remaining);
+        // Lembur atau tidak juga dari demand PENUH: hari yang sebagian shiftnya sudah
+        // diverifikasi tetap dibagi dengan aturan yang sama seperti saat masih kosong.
+        $overtimeDay = $this->capacityCalculator->isOvertimeDay($normalCapacity, $maxShifts, $fullDemand);
 
-        // Urutan isi (budget CO5 sudah dipetakan preMapCutoff5):
-        //   CO1-4 setiap shift kosong → CO5 shift kosong lebih awal (dibatasi nominal)
-        //   → CO5 shift kosong terakhir (catch-all = seluruh sisa).
+        $shiftCapacities = $this->capacityCalculator->calculateShiftCapacities($normalCapacity, $lockStatus, $maxShifts);
+        $co5Needed       = $this->capacityCalculator->preMapCutoff5(
+            $shiftCapacities, $normalCapacity, $overtimeCap, $remaining, $overtimeDay
+        );
+
+        // Shift diisi berurutan, CO1 → CO5 per shift (jatah CO5 dari preMapCutoff5):
+        //   lembur : S1.CO1-CO5 sampai overtime_capacity → S2.CO1-CO5 (CO5 = sisa)
+        //   normal : S1.CO1-CO4 sampai normal_capacity  → S2.CO1-CO4
         // Pada hari satu shift ini sama dengan CO1 → CO4 → CO5.
         $schedules = [];
 
-        foreach ([[1, 2, 3, 4], [5]] as $cutoffs) {
-            foreach ($shiftCapacities as $shift => $caps) {
-                if ($listings->sum('rem_qty') <= 0) {
-                    break 2;
-                }
-
-                if ($caps['locked'] ?? false) {
-                    continue;
-                }
-
-                $result = $this->listingAllocator->allocateToShift(
-                    $listings, $caps, $shift, $conveyorId, $scheduleDate, $cutoffs
-                );
-                $schedules = array_merge($schedules, $result['schedules']);
+        foreach ($shiftCapacities as $shift => $caps) {
+            if ($listings->sum('rem_qty') <= 0) {
+                break;
             }
+
+            if ($caps['locked'] ?? false) {
+                continue;
+            }
+
+            $result = $this->listingAllocator->allocateToShift(
+                $listings, $caps, $shift, $conveyorId, $scheduleDate
+            );
+            $schedules = array_merge($schedules, $result['schedules']);
         }
 
         return [
             'schedules'         => $schedules,
             'full_demand'       => $fullDemand,
             'remaining'         => $remaining,
+            'overtime_day'      => $overtimeDay,
             // Tidak nol hanya bila semua shift hari itu sudah terisi, mis. SIREP menambah
             // qty setelah verifikasi. Dilaporkan, bukan dibuang diam-diam.
             'unallocated'       => (int) $listings->sum('rem_qty'),

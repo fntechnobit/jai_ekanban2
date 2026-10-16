@@ -259,27 +259,16 @@ class ScheduleVerificationService
      *
      * @return array<string, mixed>
      */
-    protected function sirepMeta(MasterConveyor $conveyor, $date, ?int $shiftCount = null): array
+    protected function sirepMeta(MasterConveyor $conveyor, $date): array
     {
         $capacity = (int) ($conveyor->capacity ?? 0);
 
-        // Besar jatah CO5 tergantung jumlah shift hari itu (lihat cutoff5Nominal),
-        // jadi ia harus dihitung di sini — bukan diwarisi dari pemanggil. Pemanggil
-        // yang sudah tahu jumlah shiftnya melewatkannya supaya tidak query dua kali.
-        if ($shiftCount === null) {
-            $shiftCount = (int) AssySchedule::where('conveyor_id', $conveyor->id)
-                ->whereDate('schedule', $date)
-                ->distinct()
-                ->count('shift');
-        }
-
-        $shiftCount = max(1, $shiftCount);
-
+        // Jatah CO5 sama untuk setiap shift (overtime - normal), tidak tergantung
+        // jumlah shift hari itu — lihat cutoff5Nominal().
         $co5Nominal = $capacity > 0
             ? $this->capacityCalculator->cutoff5Nominal(
                 $capacity,
-                $this->capacityCalculator->effectiveOvertimeCapacity($capacity, $conveyor->overtime_capacity),
-                $shiftCount
+                $this->capacityCalculator->effectiveOvertimeCapacity($capacity, $conveyor->overtime_capacity)
             )
             : 0;
 
@@ -356,11 +345,12 @@ class ScheduleVerificationService
             ];
         }
 
-        // Get all schedules for this conveyor, date, and shift
+        // Get all schedules for this conveyor, date, and shift — urut seq SIREP di tiap cutoff
         $schedules = AssySchedule::where('conveyor_id', $conveyorId)
             ->whereDate('schedule', $date)
             ->where('shift', $shift)
             ->orderBy('cutoff', 'asc')
+            ->orderBy('seq', 'asc')
             ->orderBy('listing_id', 'asc')
             ->get();
 
@@ -377,9 +367,8 @@ class ScheduleVerificationService
             ? (int) $firstSchedule->verified_capacity
             : (int) ($conveyor->capacity ?? 0);
         $normalCutOffCapacity = round($capacity / 4, 2);
-        // CO5 nominal = 7/8 CO normal, sama pada setiap shift. CO5 shift TERAKHIR
+        // CO5 nominal = overtime - normal, sama pada setiap shift. CO5 shift TERAKHIR
         // adalah penampung dan boleh melampauinya (Used > Cap -> "over").
-        // Jumlah shift dibaca dari master, bukan dari jadwal yang terbentuk.
         $shiftsOnDate = AssySchedule::where('conveyor_id', $conveyorId)
             ->whereDate('schedule', $date)
             ->distinct()
@@ -393,9 +382,7 @@ class ScheduleVerificationService
         $ambangEfektif   = $this->capacityCalculator->effectiveOvertimeCapacity(
             $capacity, $conveyor->overtime_capacity
         );
-        $cutOff5Capacity = (float) $this->capacityCalculator->cutoff5Nominal(
-            $capacity, $ambangEfektif, $shiftQty
-        );
+        $cutOff5Capacity = (float) $this->capacityCalculator->cutoff5Nominal($capacity, $ambangEfektif);
 
         $scheduledAll = (int) AssySchedule::where('conveyor_id', $conveyorId)
             ->whereDate('schedule', $date)
@@ -428,7 +415,7 @@ class ScheduleVerificationService
                 ->sum('qty');
             // Asal-usul angka yang dipakai layar ini, supaya user tahu data SIREP mana
             // yang sedang dilihat dan sesegar apa.
-            $sirepMeta   = $this->sirepMeta($conveyor, $date, $shiftQty);
+            $sirepMeta   = $this->sirepMeta($conveyor, $date);
             $dayOvertime = (bool) ($sirepMeta['is_overtime'] ?? false);
         }
 
@@ -579,10 +566,11 @@ class ScheduleVerificationService
             'bindings' => $query->getBindings()
         ]);
         
-        // SORT ORDER: shift (ASC) -> cutoff (ASC) -> listing_id (ASC = urutan dari listing sumber)
+        // SORT ORDER: shift (ASC) -> cutoff (ASC) -> seq (ASC = urutan SIREP) -> listing_id (pemecah seri)
         $schedules = $query->select('id', 'assy', 'qty', 'cutoff', 'shift', 'listing_id', 'assycode', 'seq', 'plt', 'mode', 'snp', 'snpa', 'verified_at', 'is_lock')
             ->orderBy('shift', 'asc')
             ->orderBy('cutoff', 'asc')
+            ->orderBy('seq', 'asc')
             ->orderBy('listing_id', 'asc')
             ->get();
 

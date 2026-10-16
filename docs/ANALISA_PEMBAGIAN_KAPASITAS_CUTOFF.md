@@ -1,5 +1,11 @@
 # Analisa Pembagian Kapasitas Assy Listing per Cut Off Shift
 
+> ⚠️ **USANG untuk jai_ekanban2.** Dokumen ini menjelaskan aturan lama (kapasitas dari master conveyor,
+> CO5 = `round(0.875 × cap/4)`, urutan S1.CO1–4 → S2.CO1–4 → S1.CO5 → S2.CO5, listing urut `id_listing`).
+> Aturan yang berlaku sejak 2026-10-15 — listing urut `seq` SIREP, hari lembur S1.CO1–5 sampai
+> `overtime_capacity` → S2.CO1–5, hari normal S1.CO1–4 → S2.CO1–4 — ada di
+> [ALUR_BISNIS_DAN_ATURAN_JADWAL_KANBAN.md §6](ALUR_BISNIS_DAN_ATURAN_JADWAL_KANBAN.md).
+
 Dokumen ini menjelaskan **bagaimana kapasitas conveyor dibagi ke tiap cut off (CO1–CO5) pada setiap shift** saat proses *generate schedule* (Schedule Manage). Ini adalah tahap **alokasi kapasitas**, BUKAN tahap generate kanban / carry-over (lihat [PLANNING_KANBAN_GENERATION.md](PLANNING_KANBAN_GENERATION.md) untuk konsep yang berbeda itu).
 
 > **Sumber kebenaran (single source of truth):**

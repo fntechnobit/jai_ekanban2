@@ -4,7 +4,11 @@
 > (analisa sync, planning kanban, perbandingan, analisis cutoff, runbook) **sudah digabung ke sini**.
 > **Berlaku untuk:** `jai_ekanban` (Laravel) **dan** `jai_filter_kanban` (CodeIgniter 3) — konsep sama,
 > perbedaan implementasi ditandai per-app.
-> **Terakhir diperbarui:** 2026-06-19.
+> **Terakhir diperbarui:** 2026-10-15.
+>
+> **Catatan 2026-10-15:** §5 langkah 6 dan §6 pada salinan ini mengikuti aturan baru **jai_ekanban2**
+> (listing urut `seq` SIREP, shift hari lembur diisi penuh sampai `overtime_capacity` lebih dulu).
+> `jai_ekanban` (v1) dan `jai_filter_kanban` masih memakai aturan lama — perbedaannya di §6.5.
 
 Daftar isi: §1 Gambaran umum · §2 Komponen · §3 SIREP · §4 Sync · §5 Generate · **§6 Aturan CO1–CO5** ·
 §7 Halaman verifikasi · §8 Verify · §9 Unverify · §10 Generate kanban (carry-over) · §11 Defect ·
@@ -118,7 +122,8 @@ Urutan per grup **(tanggal × conveyor)**:
    yang sudah terkunci. Shift yang masih punya baris (terkunci/ber-kanban) diberi kapasitas **0**.
 6. **Kurangi qty yang sudah dipegang** baris `assy_schedule` yang tersisa, per `listing_id` (dari tanggal
    mana pun). Hanya **sisanya** yang dialokasikan (lihat §6 — aturan resmi). Alokasi **FIFO** by
-   `id_listing`/`seq`; satu listing bisa pecah ke beberapa cutoff/shift (`rem_qty` tracking).
+   **`seq` SIREP terkecil dulu** (`id_listing` hanya pemecah seri — id dari API SIREP tidak mengikuti
+   urutan produksi); satu listing bisa pecah ke beberapa cutoff/shift (`rem_qty` tracking).
 7. **Bulk insert** ke `assy_schedule` dengan `is_lock=0` / `is_verified=0`.
 
 State awal hasil generate: `is_lock=0`, `verified_at=null`, `verified_by=null`.
@@ -137,60 +142,76 @@ State awal hasil generate: `is_lock=0`, `verified_at=null`, `verified_by=null`.
 
 ## 6. ⭐ ATURAN RESMI: kapasitas & alokasi cutoff CO1–CO5
 
-### 6.1 Kapasitas tiap CO
+> Berlaku di **jai_ekanban2** sejak 2026-10-15 (permintaan user, kasus B3-ENG 07-10-2026).
+
+### 6.1 Angka dari SIREP & kapasitas tiap CO
 
 ```
-per_cutoff   = floor(capacity / 4)          # CO1, CO2, CO3
-CO4          = capacity - 3 × per_cutoff     # sisa → CO1..CO4 = tepat 1 × capacity
-CO5 nominal  = round(0.875 × capacity / 4)   # cap 100 → round(21.875) = 22
+normal_capacity   = kapasitas 1 shift tanpa lembur    (SIREP)
+overtime_capacity = kapasitas 1 shift dengan lembur   (SIREP; kosong → = normal, tanpa jatah lembur)
+CO2 = CO3 = CO4   = floor(normal / 4)
+CO1               = normal - 3 × floor(normal / 4)    # sisa pembagian masuk CO1
+CO5 (tiap shift)  = overtime - normal                  # B3-ENG: 96 - 78 = 18
 ```
 
-> **PENTING:** CO5 nominal pakai **`round`**, bukan `floor` (cap 100 ⇒ **22**, bukan 21).
-> Nilai nominal ini **sama** untuk CO5 semua shift dan hanya **angka tampilan di form** —
-> CO5 shift terakhir (catch-all) **boleh melebihinya** ("Over").
+### 6.2 Jumlah shift, lembur/normal, dan urutan isi
 
-### 6.2 Urutan isi & sifat cap
-
-**1 shift:**
 ```
-CO1 → CO2 → CO3 → CO4  (hard cap)  →  CO5 = SEMUA sisa (catch-all)
+jumlah shift : qty harian > overtime_capacity            → 2 shift, selain itu 1 shift
+lembur       : qty harian > jumlah shift × normal_capacity   (dari qty, BUKAN dari penanda is_overtime)
 ```
-**2 shift:**
-```
-S1.CO1–4  →  S2.CO1–4  (hard cap)  →  S1.CO5 (di-cap di nominal)  →  S2.CO5 = SEMUA sisa (catch-all)
-```
-> Generalisasi: CO1–4 semua shift unlocked dulu; lalu shift unlocked **terakhir** = CO5 catch-all,
-> shift unlocked **lebih awal** = CO5 di-cap nominal.
 
-**Konsekuensi: 100% listing selalu terjadwal** (tidak ada yang dibuang).
+Listing dalam satu tanggal × conveyor diurutkan **`seq` SIREP terkecil dulu** (`id_listing` hanya pemecah
+seri). Shift diisi **berurutan** — semua cutoff shift 1 dulu, baru shift 2:
 
-### 6.3 Contoh resmi (cap 100/shift, nominal CO5 = 22) — `/X` = terisi/kapasitas
+| Hari | Urutan isi |
+|---|---|
+| 1 shift | S1.CO1 → CO2 → CO3 → CO4 → **CO5 = semua sisa** |
+| 2 shift, **lembur** | S1.CO1–CO5 sampai `overtime_capacity` → S2.CO1–CO4 → **S2.CO5 = semua sisa** |
+| 2 shift, **normal** | S1.CO1–CO4 sampai `normal_capacity` → S2.CO1–CO4 (sisa) |
 
-| Case | Shift | Listing | Hasil |
+> CO5 shift unlocked **terakhir** selalu catch-all → **100% listing selalu terjadwal**. Shift yang sudah
+> terkunci (verified/ber-kanban) dilewati; status lembur tetap dihitung dari demand **penuh** hari itu.
+> Penanda `is_overtime` SIREP baru ditetapkan PPC mendekati hari-H, jadi tidak dipakai untuk keputusan.
+
+### 6.3 Contoh (B3-ENG: normal 78 → CO 21/19/19/19, overtime 96 → CO5 18) — `/X` = terisi/kapasitas
+
+| Case | Listing | Shift | Hasil |
 |---|---|---|---|
-| **A** | 1 | 150 | CO1..4 = 25/25 ; **CO5 = 50/22** (catch-all) |
-| **B** | 1 | 100 | CO1..4 = 25/25 ; CO5 = – |
-| **C** | 2 | 200 | S1.CO1..4 & S2.CO1..4 = 25/25 ; CO5 = – |
-| **D** | 2 | 220 | S2.CO1..4 penuh ; **S1.CO5 = 20/22** ; S2.CO5 = – |
-| **E** | 2 | 250 | **S1.CO5 = 22/22** (penuh) ; **S2.CO5 = 28/22 (Over)** (catch-all) |
-| **F** | 2 | 180 | S2.CO4 = 5/25 (parsial) ; CO5 = – |
+| **A** | 70 | 1 | CO1–4 = 70 (CO4 parsial) ; CO5 = – |
+| **B** | 90 | 1 | CO1–4 = 78 ; CO5 = 12/18 |
+| **C** | 140 | 2, normal | S1 = 78 (CO1–4) ; S2 = 62 (CO1–4) ; CO5 = – |
+| **D** | 176 | 2, lembur | S1 = 78 + CO5 18/18 = **96** ; S2 = 78 + CO5 2/18 = **80** |
+| **E** | 200 | 2, lembur | S1 = 96 ; S2 = 78 + CO5 **26/18 (Over)** (catch-all) |
+
+Kasus nyata B3-ENG 07-10-2026 — listing 7YA1E 96 (seq 1, id_listing 7818) + 7YA1B 80 (seq 2, id_listing 7817):
+
+| | Shift 1 | Shift 2 |
+|---|---|---|
+| Aturan lama (urut `id_listing`, CO1–4 dua shift dulu, CO5 S1 = 7/8) | 7YA1B 78 + 7YA1E 17 = 95 | 7YA1B 2 + 7YA1E 79 = 81 |
+| **Aturan sekarang** | **7YA1E 96** | **7YA1B 80** |
 
 ### 6.4 Arti "Over Capacity"
 
-- **Form (per CO):** "over" bila `terisi > nominal`. Hanya CO5 shift terakhir yang bisa over (Case E).
-- **List/Schedule (per hari):** ditandai bila `demand_harian > shift_qty × (capacity + round(0.875 × capacity/4))`.
-  - 1 shift cap 100 → batas 100+22 = **122** (Case A 150 → over).
-  - 2 shift cap 100 → batas 2×(100+22) = **244** (Case E 250 → over; Case D 220 → tidak).
-- "Over" hanya **indikator** — datanya tetap terjadwal & tetap jadi kanban. Untuk hilang: naikkan `capacity`.
+- **Form (per CO):** "over" bila terisi > CO5 nominal (`overtime - normal`). Hanya CO5 shift terakhir yang
+  bisa over (Case E).
+- **List/Schedule (per hari):** ditandai bila `demand_harian > jumlah_shift × overtime_capacity`
+  (`ShiftCapacityCalculator::nominalDayCapacity`). Bila PPC belum menandai lembur (`is_overtime = 0`),
+  batasnya `jumlah_shift × normal_capacity` dan baris diberi peringatan "over tanpa lembur".
+- "Over" hanya **indikator** — datanya tetap terjadwal & tetap jadi kanban.
 
-### 6.5 ⚠️ Perbedaan dengan aturan LAMA (sudah tidak berlaku)
+### 6.5 ⚠️ Perbedaan dengan aturan LAMA
 
-| | LAMA (usang) | SEKARANG (resmi) |
+Aturan lama masih dipakai `jai_ekanban` (v1) dan `jai_filter_kanban`, dan dipakai jai_ekanban2 sampai 2026-10-14.
+
+| | LAMA | SEKARANG (jai_ekanban2) |
 |---|---|---|
-| CO5 nominal | `floor(0.875×cap/4)` = 21 | `round(0.875×cap/4)` = 22 |
-| CO5 shift terakhir | di-cap (sisa di atas cap **dibuang**) | **catch-all** (semua sisa masuk) |
-| Urutan 2-shift | S1.CO1–5 → S2.CO1–5 | S1.CO1–4 → S2.CO1–4 → S1.CO5 → S2.CO5 |
-| Hasil | listing bisa < SIREP | listing selalu = SIREP |
+| Urutan listing | `id_listing` | **`seq` SIREP**, `id_listing` pemecah seri |
+| Urutan 2 shift | S1.CO1–4 → S2.CO1–4 → S1.CO5 → S2.CO5 | lembur: **S1.CO1–5 → S2.CO1–5** · normal: **S1.CO1–4 → S2.CO1–4** |
+| CO5 shift 1 (2 shift) | `round(7/8 × cap/4)` (B3-ENG 17), selalu dibuka bila ada sisa | `overtime − normal` (B3-ENG 18), hanya hari lembur |
+| B3-ENG 176 (07-10) | 95 / 81 | **96 / 80** |
+| B3-ENG 140 (30-09) | 78 / 62 | 78 / 62 (sama, hari normal) |
+| Hasil | listing selalu = SIREP | listing selalu = SIREP |
 
 ---
 
@@ -207,7 +228,9 @@ Kolom: Conveyor · Dates · Shift · **Capacity** · **Listing** · **Assy** · 
 
 **Source panel (H..H+10):** saat mode edit, panel kanan memuat item dari tanggal/shift lain. Aturan:
 hanya `assy_schedule` `is_lock=0` & `verified_at IS NULL`; tanggal H..H+10; shift aktif saat ini tak tampil
-sebagai source; urut `shift → cutoff → listing_id`. (Hanya jadwal tentative yang boleh dipinjam.)
+sebagai source; urut `shift → cutoff → seq → listing_id`. (Hanya jadwal tentative yang boleh dipinjam.)
+Form detail, daftar jadwal assy, dan generate kanban (nomor issue/urut) memakai urutan yang sama:
+`cutoff → seq → listing_id`.
 
 ---
 
@@ -363,13 +386,13 @@ listing_stage (snapshot lokal, boleh disync ulang selama tak melanggar jadwal ve
 ## 14. Blueprint port ke CodeIgniter 3 (pseudo-code)
 
 Yang dipindahkan bukan struktur folder, tetapi **kontrak proses**. Pertahankan: staging tetap ada · generate
-hormati shift lock · alokasi FIFO `id_listing`/`seq` · verify = recreate+lock+kanban · unverify =
+hormati shift lock · alokasi FIFO `seq` (pemecah seri `id_listing`) · verify = recreate+lock+kanban · unverify =
 reverse+restore+regenerate · audit transfer · `nomor_urut` tak dibalik · transaction boundary sama.
 
 ```php
 function generate_schedules($start, $end, $conveyorId = null) {
     refresh_listing_stage($start, $end);
-    $groups = group_by_date_and_conveyor(get_valid_listing_stage($start, $end, $conveyorId));
+    $groups = group_by_date_and_conveyor(get_valid_listing_stage($start, $end, $conveyorId)); // urut seq, id_listing
     begin_transaction();
     foreach ($groups as $g) delete_unprotected_schedule($g->date, $g->cv->id); // SEMUA grup dulu
     foreach ($groups as $g) {
@@ -379,8 +402,9 @@ function generate_schedules($start, $end, $conveyorId = null) {
         deduct_held_by_listing_id($g->rows);                            // bagian yg sudah dipegang
         $lock = shifts_still_having_rows($g->date, $cv->id);
         $caps = calculate_shift_capacities($cv, $lock, $maxShift);
-        premap_cutoff5($caps, $cv->capacity, sum_rem_qty($g->rows)); // §6: earlier capped, last catch-all
-        // CO1-4 semua shift → CO5 forward (S1 capped, S2 catch-all)
+        $lembur = sum_qty($g->rows) > $maxShift * $cv->capacity;       // demand PENUH, bukan is_overtime
+        premap_cutoff5($caps, $cv, sum_rem_qty($g->rows), $lembur);    // §6: lembur → CO5 = ot - normal; last catch-all
+        // shift berurutan: S1.CO1-5 → S2.CO1-5
         foreach (available_shifts($cv) as $shift) {
             if ($lock[$shift]) continue;
             bulk_insert(allocate_to_shift($g->rows, $caps[$shift], $shift, $cv->id, $g->date));
@@ -397,7 +421,7 @@ function generate_schedules($start, $end, $conveyorId = null) {
 ## 15. Risiko & kontrak konsistensi (wajib dijaga)
 
 1. **Jangan hilangkan staging** — generate dari snapshot, bukan langsung SIREP.
-2. **Jangan ubah urutan alokasi** — FIFO `id_listing`/`seq` menentukan hasil split.
+2. **Jangan ubah urutan alokasi** — FIFO `seq` SIREP (pemecah seri `id_listing`) menentukan hasil split.
 3. **Verify bukan sekadar update flag** — recreate + lock + generate kanban + update balance, transactional.
 4. **Jangan abaikan kolom audit transfer** — tanpa itu unverify rusak.
 5. **Jangan rollback `nomor_urut` kanban** — hanya balik `sisa`.
@@ -413,20 +437,23 @@ function generate_schedules($start, $end, $conveyorId = null) {
 ## 16. Lokasi implementasi
 
 ### jai_ekanban (Laravel) — acuan + unit test
-- `app/Services/Schedule/ShiftCapacityCalculator.php` — `calculateCutoff5Capacity()` (nominal `round`),
-  `preMapCutoff5()` (budget c5: earlier capped, last catch-all), `calculateCutoffDistribution()`
+- `app/Services/Schedule/ShiftCapacityCalculator.php` — `cutoff5Nominal()` (overtime − normal),
+  `isOvertimeDay()` (qty > shift × normal), `preMapCutoff5()` (lembur: CO5 shift awal = overtime − normal;
+  shift terakhir catch-all), `calculateCutoffDistribution()`
 - `app/Services/AssySchedulerService.php` → `generateSchedules()` (sync, bersihkan semua hari, lalu susun)
 - `app/Services/Schedule/DayScheduleBuilder.php` — penyusun satu hari untuk generate & unverify
-  (demand penuh → jumlah shift, kurangi qty terpegang, CO1–4 semua shift kosong → CO5 forward)
+  (listing urut `seq`, demand penuh → jumlah shift & lembur, kurangi qty terpegang, shift diisi berurutan
+  CO1–CO5)
 - `app/Services/Schedule/ListingAllocator.php` · `app/Services/Schedule/ShiftLockChecker.php` ·
   `app/Services/Schedule/ScheduleCleanupService.php`
 - `app/Services/ScheduleVerificationService.php` — `getDatatableQuery()` (flag over), `getVerificationDetails()`
   (nominal CO5), `verifySchedule()`, `unverifySchedule()`
 - `app/Services/KanbanGeneratorService.php` — carry-over kanban
 - `public/js/schedule-verification.js`, `resources/views/schedule/schedule_verification/index.blade.php`
-- **Unit test (case A–F):** `tests/Unit/Services/Schedule/ShiftCapacityCalculatorTest.php`
+- **Unit test aturan kapasitas:** `tests/Unit/Services/Schedule/ShiftCapacityCalculatorTest.php`
   → `vendor/bin/phpunit --filter ShiftCapacityCalculatorTest`
-- **Unit test verifikasi parsial (B3-ENG 30-09):** `tests/Unit/Services/Schedule/DayScheduleBuilderTest.php`
+- **Unit test penyusunan hari (B3-ENG 30-09 normal, 07-10 lembur, verifikasi parsial):**
+  `tests/Unit/Services/Schedule/DayScheduleBuilderTest.php`
 
 ### jai_filter_kanban (CodeIgniter 3)
 - `application/modules/scheduler/models/Assy_schedule_model.php` → `stage()`, `generatePhp()`

@@ -21,7 +21,7 @@ namespace App\Services\Schedule;
  * masih bernilai 0 yang berarti "belum ditetapkan", bukan "tidak lembur". Memakainya
  * membuat hasil generate berubah-ubah tergantung kapan dijalankan.
  *
- * Aturan lengkapnya didokumentasikan di config/sirep.php bagian `capacity`.
+ * Aturan lengkapnya didokumentasikan di config/sirep.php bagian "Kapasitas & jumlah shift".
  */
 class ShiftCapacityCalculator
 {
@@ -97,68 +97,50 @@ class ShiftCapacityCalculator
     }
 
     /**
-     * Jatah CO5 pada hari SATU shift = selisih kapasitas lembur dan normal.
+     * Jatah CO5 satu shift = selisih kapasitas lembur dan normal.
      *
-     * Diambil langsung dari data SIREP, bukan rumus. Contoh B3-EGI: 160 - 136 = 24.
-     * Bila ambangnya cadangan (sama dengan normal_capacity), hasilnya 0 — conveyor
-     * itu memang dianggap belum punya jatah lembur.
+     * Diambil langsung dari data SIREP, bukan rumus, dan sama untuk setiap shift:
+     * satu shift lembur menampung tepat `overtime_capacity`. Contoh B3-EGI:
+     * 160 - 136 = 24, B3-ENG: 96 - 78 = 18. Bila ambangnya cadangan (sama dengan
+     * normal_capacity), hasilnya 0 — conveyor itu memang dianggap belum punya
+     * jatah lembur.
+     *
+     * Aturan lama "CO5 shift pertama = 7/8 cutoff normal" sudah tidak dipakai:
+     * shift lembur kini diisi penuh sampai overtime_capacity (lihat preMapCutoff5).
      */
-    public function cutoff5ForSingleShift(int $normalCapacity, ?int $overtimeCapacity): int
+    public function cutoff5Nominal(int $normalCapacity, ?int $overtimeCapacity): int
     {
         return max(0, (int) ($overtimeCapacity ?? 0) - $normalCapacity);
     }
 
     /**
-     * Jatah CO5 shift PERTAMA pada hari dua shift = 7/8 kapasitas CO normal.
+     * Apakah hari itu lembur: demand PENUH tidak muat di kapasitas normal seluruh
+     * shift yang berjalan.
      *
-     * Berbeda dari hari satu shift: di sini CO5 bukan penampung terakhir, jadi
-     * batasnya memakai rasio, sesuai aturan PPC. Contoh kapasitas 136:
-     * 7/8 x 34 = 29,75 -> 30.
+     *   1 shift : qty > normal          (B3-ENG: 79-96)
+     *   2 shift : qty > 2 x normal      (B3-ENG: di atas 156)
+     *
+     * Diturunkan dari qty, bukan dari penanda is_overtime SIREP — penanda itu baru
+     * ditetapkan PPC mendekati hari produksi (lihat docblock kelas), sehingga hasil
+     * generate untuk tanggal ke depan akan berubah tergantung kapan dijalankan.
      */
-    public function calculateCutoff5Capacity(int $normalCapacity): int
+    public function isOvertimeDay(int $normalCapacity, int $shiftCount, int $fullDemand): bool
     {
-        $rasio = (float) config('sirep.capacity.co5_ratio', 7 / 8);
-        $raw   = $rasio * ($normalCapacity / 4);
-
-        return (int) (config('sirep.capacity.co5_rounding', 'round') === 'floor'
-            ? floor($raw)
-            : round($raw));
-    }
-
-    /**
-     * Nominal CO5 yang berlaku untuk sebuah hari, sesuai jumlah shiftnya.
-     * Dipakai layar verifikasi menampilkan batas CO5 yang benar.
-     */
-    public function cutoff5Nominal(int $normalCapacity, ?int $overtimeCapacity, int $shiftCount): int
-    {
-        return $shiftCount >= 2
-            ? $this->calculateCutoff5Capacity($normalCapacity)
-            : $this->cutoff5ForSingleShift($normalCapacity, $overtimeCapacity);
+        return $fullDemand > max(1, $shiftCount) * $normalCapacity;
     }
 
     /**
      * Kapasitas nominal satu hari — ambang tunggal untuk menandai hari yang
      * demand-nya melampaui rencana.
      *
-     *   nominal = jumlah shift x ( normal_capacity + CO5 nominal shift itu )
+     *   nominal = jumlah shift x ( normal_capacity + CO5 nominal )
+     *           = jumlah shift x overtime_capacity
      *
-     * CO5 nominalnya sendiri tergantung jumlah shift (lihat cutoff5Nominal):
-     * pada hari satu shift ia selisih overtime dan normal, pada hari dua shift
-     * 7/8 cutoff normal.
-     *
-     *   1 shift : normal + (overtime - normal) = overtime_capacity
-     *   2 shift : 2 x (normal + CO5 nominal)
-     *
-     * SETIAP shift dihitung punya jatah CO5 yang sama. Rumus lama hanya
-     * menghitung CO5 satu kali pada hari dua shift, dengan alasan CO5 shift
-     * terakhir adalah penampung. Itu keliru: "penampung" adalah cara alokasi
-     * menaruh kelebihan, bukan pernyataan bahwa shift terakhir tidak punya jatah
-     * lembur. Akibatnya hari yang setiap CO5-nya masih di dalam jatah tetap
-     * ditandai over — peringatan palsu yang membuat tanda itu diabaikan.
-     *
-     * Dengan rumus ini, tandanya menyala tepat ketika CO5 shift terakhir
-     * melewati jatah nominalnya, yaitu saat penampung benar-benar dipakai di
-     * luar rencana.
+     * SETIAP shift dihitung punya jatah CO5 yang sama. "Penampung" pada CO5 shift
+     * terakhir adalah cara alokasi menaruh kelebihan, bukan pernyataan bahwa shift
+     * terakhir tidak punya jatah lembur — jadi tandanya menyala tepat ketika CO5
+     * shift terakhir melewati jatah nominalnya, yaitu saat penampung benar-benar
+     * dipakai di luar rencana.
      *
      * @param  bool  $overtimeDeclared  Penanda lembur SIREP untuk hari itu. Bila
      *         lembur belum dinyatakan, CO5 dianggap tidak tersedia sehingga
@@ -178,7 +160,7 @@ class ShiftCapacityCalculator
         }
 
         return $shiftCount * (
-            $normalCapacity + $this->cutoff5Nominal($normalCapacity, $overtimeCapacity, $shiftCount)
+            $normalCapacity + $this->cutoff5Nominal($normalCapacity, $overtimeCapacity)
         );
     }
 
@@ -214,54 +196,58 @@ class ShiftCapacityCalculator
     }
 
     /**
-     * Tentukan jatah CO5 tiap shift, sesudah CO1-CO4 SELURUH shift diperhitungkan.
+     * Tentukan jatah CO5 tiap shift. Shift diisi BERURUTAN — CO1 sampai CO5 shift 1
+     * dulu, baru shift 2 — sehingga CO5 sebuah shift terisi sebelum CO1 shift berikutnya.
      *
-     *   1 shift  : CO5 = sisa (secara aturan tidak akan melampaui
-     *              overtime_capacity - normal_capacity, karena di atas itu
-     *              harinya sudah dipecah jadi dua shift)
-     *   2 shift  : CO5 shift pertama dibatasi 7/8 CO normal,
-     *              CO5 shift terakhir menampung seluruh sisa
+     *   Hari lembur : shift selain yang terakhir mendapat CO5 = overtime - normal,
+     *                 jadi shift 1 penuh sampai overtime_capacity sebelum shift 2 diisi.
+     *   Hari normal : shift selain yang terakhir tidak membuka CO5 — demand muat di
+     *                 CO1-CO4 seluruh shift.
+     *   Shift terakhir yang tidak terkunci: CO5 = seluruh sisa (penampung).
+     *
+     * Contoh B3-ENG (normal 78, overtime 96):
+     *   qty 176 (lembur) -> S1 78 + CO5 18 = 96 · S2 78 + CO5 2 = 80
+     *   qty 140 (normal) -> S1 78 · S2 62
      *
      * CO5 shift terakhir selalu penampung tanpa batas: membuang baris listing jauh
      * lebih berbahaya daripada mencetak satu cutoff di luar rencana. Layar
      * verifikasi menandai hari yang melampaui nominal sebagai over.
      *
      * @param  array  $shiftCapacities  Diubah di tempat; setiap shift mendapat kunci 'c5'
+     * @param  int    $remaining        Qty yang belum dipegang jadwal mana pun
+     * @param  bool   $overtimeDay      isOvertimeDay() atas demand PENUH hari itu
      * @return array<int, bool>         Shift mana saja yang memakai CO5
      */
-    public function preMapCutoff5(array &$shiftCapacities, int $normalCapacity, int $totalQty): array
-    {
-        $co5Nominal = $this->calculateCutoff5Capacity($normalCapacity);
+    public function preMapCutoff5(
+        array &$shiftCapacities,
+        int $normalCapacity,
+        ?int $overtimeCapacity,
+        int $remaining,
+        bool $overtimeDay
+    ): array {
+        $co5Nominal = $overtimeDay ? $this->cutoff5Nominal($normalCapacity, $overtimeCapacity) : 0;
         $co5Needed  = [];
-
-        $totalCo14 = 0;
-        $unlocked  = [];
+        $unlocked   = [];
 
         foreach ($shiftCapacities as $shift => $caps) {
             $shiftCapacities[$shift]['c5'] = 0;
             $co5Needed[$shift] = false;
 
-            if ($caps['locked'] ?? false) {
-                continue;
+            if (!($caps['locked'] ?? false)) {
+                $unlocked[] = $shift;
             }
-
-            $totalCo14 += $caps['total'];
-            $unlocked[] = $shift;
         }
 
-        $rem = max(0, $totalQty - $totalCo14);
-
-        if ($rem <= 0 || empty($unlocked)) {
+        if (empty($unlocked)) {
             return $co5Needed;
         }
 
         $lastShift = end($unlocked);
+        $rem       = max(0, $remaining);
 
         foreach ($unlocked as $shift) {
-            if ($rem <= 0) {
-                break;
-            }
-
+            // Sisa sesudah CO1-CO4 shift ini terisi.
+            $rem   = max(0, $rem - $shiftCapacities[$shift]['total']);
             $alloc = ($shift === $lastShift) ? $rem : min($rem, $co5Nominal);
 
             if ($alloc > 0) {

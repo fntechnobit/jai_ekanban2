@@ -138,6 +138,7 @@ class AssySchedulerController extends Controller
             ->orderBy('mc.conveyor', 'asc')
             ->orderBy('assy_schedule.shift', 'asc')
             ->orderBy('assy_schedule.cutoff', 'asc')
+            ->orderBy('assy_schedule.seq', 'asc')
             ->orderBy('assy_schedule.listing_id', 'asc');
 
         if ($request->start_date) {

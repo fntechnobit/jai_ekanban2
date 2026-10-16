@@ -90,18 +90,22 @@ return [
     |   qty listing harian > overtime_capacity  ->  2 shift
     |   selain itu                              ->  1 shift
     |
-    | Kapasitas CO5
-    |   1 shift : overtime_capacity - normal_capacity  (dari data SIREP)
-    |   2 shift : shift pertama dibatasi 7/8 CO normal,
-    |             shift terakhir menampung seluruh sisa
+    | Kapasitas CO5 (sama untuk setiap shift)
+    |   CO5 = overtime_capacity - normal_capacity  (dari data SIREP)
+    |   CO5 shift terakhir menampung seluruh sisa, supaya 100% listing terjadwal.
     |
     | Satu shift menampung tepat overtime_capacity, sehingga ambang pemecahan shift
     | dan kapasitas yang tersedia benar-benar berimpit — tidak ada qty yang jatuh di
     | celah antara keduanya.
     |
-    | Urutan pengisian
-    |   1 shift : S1.CO1 -> S1.CO2 -> S1.CO3 -> S1.CO4 -> S1.CO5
-    |   2 shift : S1.CO1..CO4 -> S2.CO1..CO4 -> S1.CO5 (<= 7/8) -> S2.CO5 (sisa semua)
+    | Lembur atau normal — diturunkan dari qty listing harian:
+    |   lembur : qty > jumlah shift x normal_capacity
+    |   normal : selain itu
+    |
+    | Urutan pengisian — shift diisi berurutan, listing urut seq SIREP terkecil
+    |   1 shift          : S1.CO1 -> S1.CO2 -> S1.CO3 -> S1.CO4 -> S1.CO5
+    |   2 shift, lembur  : S1.CO1..CO5 (sampai overtime_capacity) -> S2.CO1..CO5 (sisa)
+    |   2 shift, normal  : S1.CO1..CO4 (sampai normal_capacity)   -> S2.CO1..CO4 (sisa)
     |
     | PENANDA is_overtime TIDAK DIPAKAI untuk keputusan apa pun.
     |   Ia ditetapkan PPC mendekati hari produksi. Pada data 10 Sep 2026: baris yang
@@ -112,23 +116,23 @@ return [
     |   berubah tergantung kapan dijalankan. Nilainya tetap disimpan dan ditampilkan
     |   sebagai keterangan.
     |
-    | Conveyor tanpa normal_capacity ATAU tanpa overtime_capacity DILEWATI saat
-    | generate, dengan pesan jelas, sampai PPC melengkapinya di SIREP.
+    | Conveyor tanpa normal_capacity DILEWATI saat generate, dengan pesan jelas,
+    | sampai PPC melengkapinya di SIREP. Conveyor tanpa overtime_capacity tetap
+    | dijadwalkan sebagai conveyor tanpa jatah lembur (ambang = normal_capacity,
+    | CO5 = 0 kecuali CO5 shift terakhir sebagai penampung).
     |
-    | Contoh acuan dari PPC (normal 136, overtime 160 -> CO1-CO4 = 34):
-    |   qty 160  ->  1 shift: CO1-4 34 · CO5 = 160-136 = 24
-    |   qty 310  ->  2 shift: S1 CO1-4 34 + CO5 30 · S2 CO1-4 34 + CO5 8
+    | Contoh (normal 136, overtime 160 -> CO1-CO4 = 34, CO5 = 24):
+    |   qty 160  ->  1 shift            : CO1-4 34 · CO5 24
+    |   qty 250  ->  2 shift, normal    : S1 136 · S2 114
+    |   qty 310  ->  2 shift, lembur    : S1 136 + CO5 24 = 160 · S2 136 + CO5 14 = 150
+    |
+    | Contoh B3-ENG (normal 78, overtime 96), listing 7YA1E 96 (seq 1) +
+    | 7YA1B 80 (seq 2) = 176 -> lembur: S1 = 7YA1E 96 · S2 = 7YA1B 80.
+    |
+    | Aturan lama (sampai Okt 2026) — CO1-CO4 kedua shift dulu, lalu CO5 shift 1
+    | dibatasi 7/8 cutoff normal — sudah tidak dipakai.
     |
     */
-    'capacity' => [
-        // Batas CO5 shift pertama pada hari DUA shift, sebagai rasio terhadap
-        // CO normal. Aturan PPC: 7/8 = 87,5%. Untuk hari SATU shift batas ini tidak
-        // dipakai — yang berlaku adalah overtime_capacity dari SIREP.
-        'co5_ratio' => (float) env('SIREP_CO5_RATIO', 7 / 8),
-
-        // Pembulatan nominal CO5 dua shift: 'round' atau 'floor'.
-        'co5_rounding' => env('SIREP_CO5_ROUNDING', 'round'),
-    ],
 
     /*
     |--------------------------------------------------------------------------

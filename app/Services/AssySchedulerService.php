@@ -311,6 +311,7 @@ class AssySchedulerService
                     'total_qty'        => $plan['full_demand'],
                     'remaining_qty'    => $plan['remaining'],
                     'max_shifts'       => $plan['max_shifts'],
+                    'overtime_day'     => $plan['overtime_day'],
                     'co5_needed'       => $plan['co5_needed'],
                     'overtime_capacity'=> $plan['overtime_capacity'],
                     'shift_capacities' => $plan['shift_capacities'],
@@ -535,6 +536,7 @@ class AssySchedulerService
                 ->whereDate('schedule', $date)
                 ->with('listingStage')
                 ->orderBy('shift')
+                ->orderBy('seq')
                 ->orderBy('listing_id')
                 ->get();
 
@@ -730,6 +732,7 @@ class AssySchedulerService
                 ->where('qty', '>', 0)
                 ->orderBy('schedule')
                 ->orderBy('shift')
+                ->orderBy('seq')
                 ->orderBy('listing_id');
 
             // Get paginated results

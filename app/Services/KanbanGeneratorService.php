@@ -37,11 +37,13 @@ class KanbanGeneratorService
             'shift' => $shift
         ]);
 
-        // Get all schedules for this conveyor, date, and shift ordered by cutoff
+        // Get all schedules for this conveyor, date, and shift ordered by cutoff, lalu seq
+        // SIREP — urutan ini yang menentukan nomor issue dan nomor urut kanban.
         $schedules = AssySchedule::where('conveyor_id', $conveyorId)
             ->whereDate('schedule', $date)
             ->where('shift', $shift)
             ->orderBy('cutoff')
+            ->orderBy('seq')
             ->orderBy('listing_id')
             ->get();
 

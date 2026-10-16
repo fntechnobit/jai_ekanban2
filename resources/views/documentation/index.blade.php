@@ -218,28 +218,33 @@
                     <div class="doc-panel-title">Aturannya, dalam empat kalimat</div>
                     <div class="row g-3">
                         <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">1</span><div><strong>CO1</strong> menampung paling besar &mdash; ia mendapat sisa pembagian. CO2&ndash;CO4 masing-masing seperempat <code>normal_capacity</code>.</div></div></div>
-                        <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">2</span><div>Hari <strong>satu shift</strong>: CO5 = <code>overtime_capacity &minus; normal_capacity</code>. Satu shift jadi menampung tepat <code>overtime_capacity</code>.</div></div></div>
+                        <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">2</span><div>CO5 setiap shift = <code>overtime_capacity &minus; normal_capacity</code>. Satu shift lembur menampung tepat <code>overtime_capacity</code>.</div></div></div>
                         <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">3</span><div>Listing melebihi <code>overtime_capacity</code> &rarr; hari itu <strong>dua shift</strong>. Belum ada angka lembur? dipakai <code>normal_capacity</code>.</div></div></div>
-                        <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">4</span><div>Hari <strong>dua shift</strong>: CO5 shift 1 dibatasi <strong>7/8</strong> cutoff normal, CO5 shift 2 menampung seluruh sisa.</div></div></div>
+                        <div class="col-md-6 col-xl-3"><div class="doc-rule h-100"><span class="doc-rule-n">4</span><div>Hari <strong>dua shift</strong> lembur bila listing &gt; 2 &times; <code>normal_capacity</code>: shift 1 diisi penuh sampai <code>overtime_capacity</code>, sisanya ke shift 2. Tidak lembur: shift 1 sampai <code>normal_capacity</code>.</div></div></div>
                     </div>
                 </div>
 
                 <h6 class="mt-4 mb-2">Urutan pengisian</h6>
                 <div class="doc-panel">
+                    <p class="small mb-2">Dalam satu tanggal &times; conveyor, listing diurutkan <strong>seq SIREP
+                    terkecil</strong> lebih dulu (dulu <code>id_listing</code>). Shift diisi berurutan &mdash; semua cutoff
+                    shift 1 dulu, baru shift 2.</p>
                     <div class="doc-calc"><b>1 shift</b>
    S1.CO1 &rarr; S1.CO2 &rarr; S1.CO3 &rarr; S1.CO4 &rarr; S1.CO5
 
-<b>2 shift</b>
-   S1.CO1 &rarr; S1.CO2 &rarr; S1.CO3 &rarr; S1.CO4
-        &rarr; S2.CO1 &rarr; S2.CO2 &rarr; S2.CO3 &rarr; S2.CO4
-        &rarr; S1.CO5   (dibatasi 7/8 cutoff normal)
-        &rarr; S2.CO5   (sisa semuanya)</div>
+<b>2 shift, lembur</b>   (listing &gt; 2 &times; normal_capacity)
+   S1.CO1 &rarr; S1.CO2 &rarr; S1.CO3 &rarr; S1.CO4 &rarr; S1.CO5   (sampai overtime_capacity)
+        &rarr; S2.CO1 &rarr; S2.CO2 &rarr; S2.CO3 &rarr; S2.CO4 &rarr; S2.CO5   (sisa semuanya)
+
+<b>2 shift, tidak lembur</b>
+   S1.CO1 &rarr; S1.CO2 &rarr; S1.CO3 &rarr; S1.CO4   (sampai normal_capacity)
+        &rarr; S2.CO1 &rarr; S2.CO2 &rarr; S2.CO3 &rarr; S2.CO4   (sisa)</div>
                 </div>
 
                 <h6 class="mt-4 mb-2">Contoh: B3-EGI</h6>
                 <p class="text-muted small" style="max-width:72ch">normal 135, overtime 160 &rarr; CO1&ndash;CO4 =
-                <strong>36</strong>/33/33/33 (sisa pembagian masuk CO1), CO5 satu shift = 160 &minus; 135 =
-                <strong>25</strong>, CO5 shift 1 saat dua shift = 7/8 &times; 33,75 = <strong>30</strong>.</p>
+                <strong>36</strong>/33/33/33 (sisa pembagian masuk CO1), CO5 setiap shift = 160 &minus; 135 =
+                <strong>25</strong>. Hari dua shift lembur bila listing lebih dari 2 &times; 135 = <strong>270</strong>.</p>
 
                 <div class="doc-bars">
                     <div class="doc-barrow">
@@ -251,19 +256,27 @@
                         </div>
                     </div>
                     <div class="doc-barrow">
-                        <div class="doc-barlab">Listing 310<br><span class="badge bg-warning text-dark">di atas ambang</span></div>
+                        <div class="doc-barlab">Listing 250<br><span class="badge bg-light text-dark border">dua shift, tidak lembur</span></div>
                         <div class="doc-bar">
                             <div class="doc-seg" style="flex:135">shift 1 &middot; CO1&ndash;CO4 = 135</div>
-                            <div class="doc-seg doc-seg-ot" style="flex:30">30</div>
+                            <div class="doc-seg" style="flex:115">shift 2 &middot; CO1&ndash;CO4 = 115</div>
+                        </div>
+                    </div>
+                    <div class="doc-barrow">
+                        <div class="doc-barlab">Listing 310<br><span class="badge bg-warning text-dark">dua shift, lembur</span></div>
+                        <div class="doc-bar">
+                            <div class="doc-seg" style="flex:135">shift 1 &middot; CO1&ndash;CO4 = 135</div>
+                            <div class="doc-seg doc-seg-ot" style="flex:25">25</div>
                             <div class="doc-seg" style="flex:135">shift 2 &middot; CO1&ndash;CO4 = 135</div>
-                            <div class="doc-seg doc-seg-ot" style="flex:10">10</div>
+                            <div class="doc-seg doc-seg-ot" style="flex:15">15</div>
                         </div>
                     </div>
                 </div>
 
-                <p class="small text-muted mt-2 mb-0" style="max-width:72ch">Pada baris kedua, sisa setelah CO1&ndash;CO4
-                kedua shift adalah 310 &minus; 270 = 40. CO5 shift 1 mengambil jatah nominalnya (30), dan sepuluh sisanya
-                jatuh ke CO5 shift 2 &mdash; cutoff penampung.</p>
+                <p class="small text-muted mt-2 mb-0" style="max-width:72ch">Listing 250 masih muat di 2 &times; 135, jadi
+                tidak ada lembur: shift 1 berhenti di 135 dan sisanya 115 masuk shift 2. Listing 310 melampaui 270, jadi
+                hari itu lembur: shift 1 diisi penuh sampai 160 (CO5 25), lalu sisanya 150 masuk shift 2 &mdash; CO5 shift 2
+                adalah cutoff penampung.</p>
 
                 <div class="row g-3 mt-1">
                     <div class="col-lg-6">
@@ -282,11 +295,9 @@
                             belum punya jatah lembur. Hari yang melampaui kapasitas normal pecah menjadi dua shift, bukan
                             menumpuk di CO5. Yang <strong>tidak punya <code>normal_capacity</code></strong> sama sekali
                             tetap dilewati.</div>
-                            <div class="small mb-0">Catatan: ketiadaan angka lembur hanya menghapus CO5 pada hari
-                            <strong>satu</strong> shift &mdash; di sana CO5 memang didefinisikan sebagai selisih lembur dan
-                            normal, jadi hasilnya nol. Pada hari <strong>dua</strong> shift, CO5 tetap mendapat jatah 7/8
-                            cutoff normal, sebab aturan itu dinyatakan PPC terhadap kapasitas normal dan tidak menyebut
-                            angka lembur sama sekali.</div>
+                            <div class="small mb-0">Catatan: tanpa angka lembur, jatah CO5 setiap shift nol &mdash; CO5
+                            didefinisikan sebagai selisih lembur dan normal. Hanya CO5 shift terakhir yang tetap menampung
+                            sisa, supaya tidak ada listing yang hilang.</div>
                         </div>
                     </div>
                 </div>
@@ -363,13 +374,13 @@
 
                 <div class="doc-panel mb-3">
                     <div class="doc-panel-title">Bagaimana tanda &ldquo;over&rdquo; dihitung</div>
-                    <div class="doc-calc">ambang nominal = jumlah shift &times; ( kapasitas + CO5 nominal shift itu )
+                    <div class="doc-calc">ambang nominal = jumlah shift &times; ( kapasitas + CO5 nominal )
+               = jumlah shift &times; overtime_capacity
 
 over  bila  listing hari itu &gt; ambang nominal</div>
-                    <p class="small mb-2 mt-2">Setiap shift yang berjalan dihitung punya jatah CO5 yang sama. Besar
-                    jatahnya mengikuti jumlah shift hari itu: hari satu shift memakai
-                    <code>overtime &minus; normal</code>, hari dua shift memakai 7/8 cutoff normal &mdash; angka yang sama
-                    dengan yang dipakai membagi jadwal, jadi ambang dan alokasi tidak mungkin berbeda pendapat.</p>
+                    <p class="small mb-2 mt-2">Setiap shift yang berjalan dihitung punya jatah CO5 yang sama, yaitu
+                    <code>overtime &minus; normal</code> &mdash; angka yang sama dengan yang dipakai membagi jadwal, jadi
+                    ambang dan alokasi tidak mungkin berbeda pendapat.</p>
                     <p class="small mb-2 text-muted">Akibatnya tandanya menyala <strong>tepat</strong> ketika CO5 shift
                     terakhir melewati jatah nominalnya &mdash; yaitu saat cutoff penampung benar-benar dipakai di luar
                     rencana. Selama setiap CO5 masih di dalam jatahnya, hari itu tidak ditandai meskipun CO5-nya terpakai
@@ -660,6 +671,24 @@ listing 331  &rarr;  S1 CO5 30, S2 CO5 31   lewat jatah    &rarr; <b>over</b></d
                 sehari-hari. Diurutkan dari yang paling terasa di lapangan.</p>
 
                 <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Listing urut seq SIREP, shift lembur diisi penuh lebih dulu</div>
+                    <p class="small mb-2">Bila satu jadwal berisi lebih dari satu assy, urutannya kini mengikuti
+                    <strong>seq SIREP terkecil</strong>, bukan <code>id_listing</code>. Urutan ini berlaku untuk pembagian
+                    cutoff, daftar jadwal, layar verifikasi, dan nomor issue kanban.</p>
+                    <p class="small mb-2">Pada hari dua shift yang lembur (listing &gt; 2 &times; <code>normal_capacity</code>),
+                    shift 1 diisi penuh CO1&ndash;CO5 sampai <code>overtime_capacity</code>, baru sisanya ke shift 2. Hari
+                    dua shift tanpa lembur tidak berubah: shift 1 sampai <code>normal_capacity</code>, sisanya ke shift 2.
+                    Aturan lama &ldquo;CO5 shift 1 = 7/8 cutoff normal&rdquo; tidak dipakai lagi.</p>
+                    <div class="doc-calc">B3-ENG 07-10  normal 78  overtime 96
+listing  7YA1E 96 (seq 1)  +  7YA1B 80 (seq 2)  = 176  &gt; 2 &times; 78 &rarr; lembur
+
+dulu     S1 = 7YA1B 78 + 7YA1E 17 = 95    S2 = 7YA1B 2 + 7YA1E 79 = 81
+sekarang S1 = <b>7YA1E 96</b>                      S2 = <b>7YA1B 80</b></div>
+                    <p class="small mb-0 text-muted mt-2">Jadwal yang sudah diverifikasi dan kanban yang sudah tercetak tidak
+                    berubah. Aturan baru berlaku saat tanggal itu digenerate ulang atau di-unverify.</p>
+                </div>
+
+                <div class="doc-panel mb-3">
                     <div class="doc-panel-title">Jumlah shift dihitung dari data SIREP</div>
                     <p class="small mb-2">Kolom Jumlah Shift di Master Conveyor <strong>dihapus</strong>. Sekarang shift
                     ditentukan sendiri: listing harian yang melebihi <code>overtime_capacity</code> memecah hari itu
@@ -669,11 +698,11 @@ listing 331  &rarr;  S1 CO5 30, S2 CO5 31   lewat jatah    &rarr; <b>over</b></d
                 </div>
 
                 <div class="doc-panel mb-3">
-                    <div class="doc-panel-title">CO5 satu shift mengikuti angka SIREP</div>
-                    <p class="small mb-2">Dulu jatah CO5 selalu 7/8 cutoff normal. Sekarang hanya berlaku untuk CO5 shift
-                    pertama pada hari dua shift; pada hari satu shift, CO5 = <code>overtime_capacity &minus; normal_capacity</code>.</p>
-                    <div class="doc-calc">B3-EGI  normal 135  overtime 160   CO5 satu shift = <b>25</b>
-B3-ENG  normal  78  overtime  96   CO5 satu shift = <b>18</b></div>
+                    <div class="doc-panel-title">CO5 mengikuti angka SIREP</div>
+                    <p class="small mb-2">Dulu jatah CO5 selalu 7/8 cutoff normal. Sekarang CO5 setiap shift =
+                    <code>overtime_capacity &minus; normal_capacity</code>.</p>
+                    <div class="doc-calc">B3-EGI  normal 135  overtime 160   CO5 = <b>25</b>
+B3-ENG  normal  78  overtime  96   CO5 = <b>18</b></div>
                 </div>
 
                 <div class="doc-panel mb-3">
