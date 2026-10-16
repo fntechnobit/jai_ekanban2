@@ -42,6 +42,10 @@ use Illuminate\Support\Facades\Log;
  * Baris yang jadwalnya sudah terkunci atau sudah menjadi kanban tercetak tidak
  * pernah dihapus; kondisi itu dilaporkan sebagai peringatan agar operator tahu
  * PPC membatalkan sesuatu yang sudah telanjur diproses.
+ *
+ * Listing manual (source = 'manual', diinput lewat menu Listing Manual) berada di
+ * luar rekonsiliasi: tidak pernah dicocokkan, diperbarui, maupun dihapus oleh
+ * sinkronisasi — SIREP memang tidak mengenalnya.
  */
 class ListingSyncService
 {
@@ -203,7 +207,9 @@ class ListingSyncService
      */
     private function existingInScope(Carbon $from, Carbon $to, ?array $scopeConveyors): array
     {
-        $query = ListingStage::whereBetween('listing_date_time', [$from, $to]);
+        // Listing manual tidak ada di SIREP; ikut dicocokkan berarti terhapus sebagai
+        // "dibatalkan" atau tertimpa baris SIREP yang kebetulan berkunci sama.
+        $query = ListingStage::fromSirep()->whereBetween('listing_date_time', [$from, $to]);
 
         if ($scopeConveyors !== null) {
             // Conveyor yang gagal diambil tidak masuk lingkup sama sekali.
@@ -352,8 +358,9 @@ class ListingSyncService
      */
     public function getSyncStatistics()
     {
-        $latestInStage = ListingStage::orderBy('listing_date_time', 'desc')->first();
-        $totalInStage  = ListingStage::count();
+        // Statistik sinkronisasi: listing manual bukan hasil sinkron, jadi tidak dihitung.
+        $latestInStage = ListingStage::fromSirep()->orderBy('listing_date_time', 'desc')->first();
+        $totalInStage  = ListingStage::fromSirep()->count();
 
         $latestInListing = null;
 

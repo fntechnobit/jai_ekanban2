@@ -13,6 +13,7 @@ use App\Http\Controllers\Schedule\AssySchedulerController;
 use App\Http\Controllers\Schedule\ScheduleVerificationController;
 use App\Http\Controllers\Schedule\EkanbanCircuitController;
 use App\Http\Controllers\Schedule\EkanbanShikakeController;
+use App\Http\Controllers\Schedule\ManualListingController;
 use App\Http\Controllers\MasterData\MasterAreaController;
 use App\Http\Controllers\MasterData\MasterCarlineController;
 use App\Http\Controllers\MasterData\MasterFamilyController;
@@ -157,7 +158,19 @@ Route::middleware('auth')->group(function () {
         Route::get('schedule-verification/preview-unverify', [ScheduleVerificationController::class, 'previewUnverify'])->name('schedule-verification.preview-unverify');
         Route::post('schedule-verification/unverify', [ScheduleVerificationController::class, 'unverify'])->name('schedule-verification.unverify');
         Route::post('schedule-verification/reset-balance', [ScheduleVerificationController::class, 'resetBalance'])->name('schedule-verification.reset-balance');
-        
+
+        // Listing Manual (input listing langsung, di samping listing SIREP)
+        Route::get('listing-manual', [ManualListingController::class, 'index'])->name('listing-manual.index');
+        Route::get('listing-manual/datatable', [ManualListingController::class, 'datatable'])->name('listing-manual.datatable');
+        Route::get('listing-manual/assy-options', [ManualListingController::class, 'assyOptions'])->name('listing-manual.assy-options');
+        Route::get('listing-manual/day-listing', [ManualListingController::class, 'dayListing'])->name('listing-manual.day-listing');
+        Route::get('listing-manual/download-template', [ManualListingController::class, 'downloadTemplate'])->name('listing-manual.download-template');
+        Route::post('listing-manual/import', [ManualListingController::class, 'import'])->name('listing-manual.import');
+        Route::post('listing-manual', [ManualListingController::class, 'store'])->name('listing-manual.store');
+        Route::get('listing-manual/{id}', [ManualListingController::class, 'show'])->whereNumber('id')->name('listing-manual.show');
+        Route::put('listing-manual/{id}', [ManualListingController::class, 'update'])->whereNumber('id')->name('listing-manual.update');
+        Route::delete('listing-manual/{id}', [ManualListingController::class, 'destroy'])->whereNumber('id')->name('listing-manual.destroy');
+
         // eKanban Circuit
         Route::get('ekanban-circuit/print-machine', [EkanbanCircuitController::class, 'printMachine'])->name('ekanban-circuit.print-machine');
         Route::get('ekanban-circuit/print-preview', [EkanbanCircuitController::class, 'printPreview'])->name('ekanban-circuit.print-preview');
