@@ -28,3 +28,4 @@ Thumbs.db
 # Dump / backup database — jangan masuk repositori.
 # Ukurannya puluhan MB dan berisi data produksi (termasuk tabel users).
 *.sql
+backup_*.7z
