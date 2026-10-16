@@ -154,6 +154,23 @@ class ScheduleVerificationController extends Controller
                         </button>
                     </div>';
                 }
+                // Pending tetapi tanggalnya sudah lewat — tidak boleh diverifikasi lagi (lihat
+                // ScheduleVerificationService::verifyBlockedReason). Isinya tetap bisa dilihat.
+                if ($alasan = $this->scheduleVerificationService->verifyBlockedReason($schedule->schedule_date)) {
+                    return '<div class="btn-group" role="group">
+                        <button type="button" class="btn btn-info btn-sm text-white btn-detail"
+                            data-conveyor-id="' . $schedule->conveyor_id . '"
+                            data-date="' . $schedule->schedule_date . '"
+                            data-shift="' . $schedule->shift . '">
+                            <i class="ti ti-eye"></i> Detail
+                        </button>
+                        <span class="btn btn-outline-secondary btn-sm" style="cursor:help" aria-disabled="true"
+                            title="' . e($alasan) . '">
+                            <i class="ti ti-calendar-off"></i> Lewat
+                        </span>
+                    </div>';
+                }
+
                 // Pending — show Verify button (allows opening modal to drag-in from other dates)
                 return '<div class="btn-group" role="group">
                     <button type="button" class="btn btn-success btn-sm text-white btn-verify"

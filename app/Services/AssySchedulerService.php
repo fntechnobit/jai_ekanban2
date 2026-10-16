@@ -92,25 +92,20 @@ class AssySchedulerService
         // dan dulu seluruh rangkaian itu berjalan di dalam satu transaksi yang
         // sudah menghapus baris listing_stage — lock-nya tertahan selama seluruh
         // panggilan HTTP, sehingga generate yang berjalan bersamaan saling
-        // menunggu sampai lock wait timeout. Kedua langkah di bawah sudah atomik
-        // sendiri: delete adalah satu perintah, dan syncListingData membungkus
-        // tulisannya dengan DB::transaction.
+        // menunggu sampai lock wait timeout. syncListingData mengambil data dulu,
+        // baru menulis di dalam DB::transaction-nya sendiri.
+        //
+        // Staging SENGAJA tidak dikosongkan lebih dulu (dulu: deleteListingStageData).
+        // Sinkronisasi sudah merekonsiliasi — menambah, memperbarui, dan menghapus
+        // yang dibatalkan — sehingga pengosongan itu tidak menambah apa pun, tetapi
+        // membuka celah selama panggilan HTTP: listing yang belum terkunci hilang,
+        // jadwal pending-nya ikut terhapus lewat FK cascade, dan verify yang jatuh di
+        // celah itu mengunci shift tanpa listing tersebut. Kasus B3-ENG 13-10-2026:
+        // S2 diverifikasi 19:53:51, sinkron baru menulis ulang 19:54:03, 7YA1A (2 pcs)
+        // tidak pernah terjadwal. Pengosongan juga mengganti id listing di setiap
+        // generate (layar verifikasi yang sudah terbuka kehilangan acuannya) dan
+        // melangkahi pengaman rekonsiliasi untuk conveyor yang gagal diambil.
         try {
-            $deleteListingResult = $this->listingSyncService->deleteListingStageData(
-                $startDate->format('Y-m-d'),
-                $endDate->format('Y-m-d')
-            );
-
-            if (!$deleteListingResult['success']) {
-                return [
-                    'success'     => false,
-                    'step_failed' => 'sync_listing',
-                    'message'     => 'Gagal membersihkan data listing_stage: ' . $deleteListingResult['message'],
-                    'sync_detail' => null,
-                    'generated'   => 0,
-                ];
-            }
-
             $syncResult = $this->listingSyncService->syncListingData(
                 $startDate->format('Y-m-d'),
                 $endDate->format('Y-m-d')
@@ -146,9 +141,11 @@ class AssySchedulerService
         ];
 
         // ─── STEP 2: Generate assy schedules from listing_stage ──────────────
-        try {
-            DB::beginTransaction();
+        // Transaksi baru dibuka di tengah blok; catch hanya boleh me-rollback transaksi
+        // miliknya sendiri, bukan transaksi pemanggil.
+        $transaksiDibuka = false;
 
+        try {
             // Seluruh listing rentang itu, termasuk yang sebagian sudah dipegang jadwal
             // terkunci. Bagian yang sudah dipegang dikurangkan per listing_id oleh
             // DayScheduleBuilder — dulu listing seperti itu dibuang utuh, sehingga
@@ -166,10 +163,10 @@ class AssySchedulerService
                 });
             }
 
+            // Dibaca sebelum transaksi dibuka — lihat kunci di bawah.
             $listings = $listingsQuery->get();
 
             if ($listings->isEmpty()) {
-                DB::commit();
                 return [
                     'success'     => true,
                     'step_failed' => null,
@@ -178,6 +175,20 @@ class AssySchedulerService
                     'sync_detail' => $syncDetail,
                 ];
             }
+
+            DB::beginTransaction();
+            $transaksiDibuka = true;
+
+            // Verify dan unverify juga menulis ulang shift pada hari-hari ini. Tanpa saling
+            // tunggu, keduanya bisa menyusun shift yang sama bersamaan (baris ganda atau
+            // hilang). Kunci baris conveyornya — urut id supaya dua generate yang berjalan
+            // bersamaan tidak saling deadlock. Kunci ini harus menjadi bacaan PERTAMA di
+            // transaksi: pada REPEATABLE READ snapshot terbentuk di SELECT biasa pertama,
+            // jadi generate yang sempat menunggu verify tetap melihat hasil verify itu.
+            MasterConveyor::whereIn('conveyor', $listings->pluck('conveyor')->unique()->values())
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get(['id']);
 
             // Group listings by date and conveyor
             $groupedListings = $listings->groupBy(function ($listing) {
@@ -349,12 +360,23 @@ class AssySchedulerService
                     . 'lalu generate ulang untuk memasukkannya.';
             }
 
+            // Rekonsiliasi kini satu-satunya jalan listing yang dibatalkan PPC keluar dari
+            // staging. Bila pengamannya menahan penghapusan (respons kosong, penyusutan
+            // tidak wajar, jadwal sudah terkunci), operator perlu tahu.
+            $syncWarnings = $syncResult['warnings'] ?? [];
+
+            if (!empty($syncWarnings)) {
+                $message .= ' Peringatan sinkron SIREP: ' . implode(' ', array_slice($syncWarnings, 0, 2))
+                    . (count($syncWarnings) > 2 ? ' (+' . (count($syncWarnings) - 2) . ' peringatan lain di log).' : '');
+            }
+
             return [
                 'success'          => true,
                 'step_failed'      => null,
                 'message'          => $message,
                 'generated'        => $generatedCount,
                 'sync_detail'      => $syncDetail,
+                'sync_warnings'    => $syncWarnings,
                 'conveyor_sync'    => [
                     'ditambah'      => $conveyorSync['ditambah'],
                     'diperbarui'    => $conveyorSync['diperbarui'],
@@ -366,7 +388,9 @@ class AssySchedulerService
                 'belum_terjadwal'   => $belumTerjadwal,
             ];
         } catch (\Exception $e) {
-            DB::rollBack();
+            if ($transaksiDibuka) {
+                DB::rollBack();
+            }
             Log::error("Schedule generation failed", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
 
             return [
@@ -416,27 +440,19 @@ class AssySchedulerService
      */
     public function verifySchedule($scheduleId)
     {
-        try {
-            // TODO: Implement verification logic
-            $schedule = AssySchedule::findOrFail($scheduleId);
-            
-            // Update status or is_lock field
-            $schedule->is_lock = 1;
-            $schedule->updated_by = Auth::id();
-            $schedule->save();
+        // Stub lama ini dulu mengunci satu baris tanpa membuat kanban, tanpa snapshot SIREP,
+        // dan tanpa aturan verifikasi lain (mis. tanggal yang sudah lewat). Tidak ada layar
+        // yang memanggilnya; ditutup supaya tidak menjadi jalan pintas yang melangkahi
+        // ScheduleVerificationService::verifySchedule.
+        Log::warning('Verify lewat assy-scheduler ditolak; gunakan Schedule Verification', [
+            'schedule_id' => $scheduleId,
+        ]);
 
-            return [
-                'success' => true,
-                'message' => 'Schedule verified successfully',
-            ];
-        } catch (\Exception $e) {
-            Log::error("Schedule verification failed", ['error' => $e->getMessage()]);
-
-            return [
-                'success' => false,
-                'message' => 'Failed to verify schedule: ' . $e->getMessage(),
-            ];
-        }
+        return [
+            'success' => false,
+            'message' => 'Verifikasi hanya bisa dilakukan dari menu Schedule Verification '
+                . '(per conveyor, tanggal, dan shift) agar kanban dan saldo ikut terbentuk.',
+        ];
     }
 
     /**

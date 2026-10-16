@@ -114,10 +114,11 @@ class ListingSyncService
                 $existing = $this->existingInScope($from, $to, $fetched->scopeConveyors);
 
                 // ── Tambah & perbarui ────────────────────────────────────────
-                // Baris baru dikumpulkan lebih dulu lalu ditulis massal. Generate
-                // selalu mengosongkan staging pada rentangnya sebelum sinkron, jadi
-                // hampir semua baris masuk lewat jalur "baru" ini - satu INSERT per
-                // baris berarti ribuan perjalanan ke database untuk satu generate.
+                // Baris baru dikumpulkan lebih dulu lalu ditulis massal - pada rentang
+                // yang belum pernah ditarik hampir semua baris masuk lewat jalur "baru"
+                // ini, dan satu INSERT per baris berarti ribuan perjalanan ke database.
+                // Baris yang sudah ada diperbarui di tempat sehingga id-nya tetap:
+                // jadwal dan layar verifikasi yang sedang terbuka mengacu ke id itu.
                 $newRows = [];
 
                 foreach ($incoming as $key => $attributes) {
@@ -171,6 +172,7 @@ class ListingSyncService
             'updated'  => $updated,
             'deleted'  => $deleted,
             'skipped'  => $skipped,
+            'warnings' => $warnings,
         ]);
 
         return [
@@ -340,70 +342,6 @@ class ListingSyncService
                     });
             })
             ->exists();
-    }
-
-    /**
-     * Hapus data listing_stage untuk rentang tanggal tertentu.
-     *
-     * Baris yang terikat jadwal terkunci atau sudah ber-kanban tetap dilindungi.
-     */
-    public function deleteListingStageData($startDate, $endDate)
-    {
-        try {
-            $startDate = Carbon::parse($startDate)->startOfDay();
-            $endDate = Carbon::parse($endDate)->endOfDay();
-
-            $protectionFilter = function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('assy_schedule')
-                    ->whereColumn('assy_schedule.listing_id', 'listing_stage.id')
-                    ->where(function ($q) {
-                        $q->where('assy_schedule.is_lock', '!=', 0)
-                            ->orWhereExists(function ($k) {
-                                $k->select(DB::raw(1))
-                                    ->from('assy_schedule_circuit')
-                                    ->whereColumn('assy_schedule_circuit.assy_schedule_id', 'assy_schedule.id');
-                            })
-                            ->orWhereExists(function ($k) {
-                                $k->select(DB::raw(1))
-                                    ->from('assy_schedule_shikake')
-                                    ->whereColumn('assy_schedule_shikake.assy_schedule_id', 'assy_schedule.id');
-                            });
-                    });
-            };
-
-            $deletedCount = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])
-                ->whereNotExists($protectionFilter)
-                ->delete();
-
-            $protectedCount = ListingStage::whereBetween('listing_date_time', [$startDate, $endDate])
-                ->whereExists($protectionFilter)
-                ->count();
-
-            Log::info("Deleted listing_stage records (protected locked schedules)", [
-                'start_date' => $startDate->format('Y-m-d'),
-                'end_date' => $endDate->format('Y-m-d'),
-                'deleted_count' => $deletedCount,
-                'protected_count' => $protectedCount
-            ]);
-
-            return [
-                'success' => true,
-                'deleted_count' => $deletedCount,
-                'protected_count' => $protectedCount,
-                'date_range' => [
-                    'from' => $startDate->format('Y-m-d'),
-                    'to' => $endDate->format('Y-m-d')
-                ]
-            ];
-        } catch (\Exception $e) {
-            Log::error("Failed to delete listing_stage data", ['error' => $e->getMessage()]);
-
-            return [
-                'success' => false,
-                'message' => 'Failed to delete listing_stage data: ' . $e->getMessage(),
-            ];
-        }
     }
 
     /**

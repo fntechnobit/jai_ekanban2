@@ -214,14 +214,15 @@
                 <div class="alert alert-danger border-danger mb-3">
                     <h6 class="alert-heading fw-bold"><i class="fa-solid fa-skull-crossbones me-1"></i> TINDAKAN INI TIDAK DAPAT DIBATALKAN!</h6>
                     <hr>
-                    <p class="mb-1">Anda akan <strong>mereset SEMUA sisa balance kanban</strong> (circuit &amp; shikake) menjadi <strong>0 (nol)</strong>.</p>
+                    <p class="mb-1">Anda akan <strong>mereset sisa balance kanban</strong> (circuit &amp; shikake) conveyor terpilih menjadi <strong>0 (nol)</strong>.</p>
                     <p class="mb-1">Ini berarti:</p>
                     <ul class="mb-1">
-                        <li>Semua <strong>sisa carry-over</strong> akan hilang</li>
-                        <li>Semua <strong>nomor urut</strong> akan kembali ke 0</li>
-                        <li>Perhitungan issue pada verifikasi berikutnya akan <strong>dimulai dari awal</strong></li>
+                        <li>Semua <strong>sisa carry-over</strong> hilang &mdash; termasuk sisa <strong>nyata</strong> dari produksi yang sudah berjalan, sehingga generate berikutnya mencetak lebih banyak</li>
+                        <li><strong>Riwayat saldo (ledger) dihapus</strong> &mdash; unverify jadwal lama sesudahnya tidak lagi bisa memulihkan saldo dengan tepat</li>
+                        <li><strong>Nomor urut barcode tidak berubah</strong> (sengaja, agar tidak bentrok dengan kanban yang sudah beredar)</li>
                     </ul>
-                    <p class="mb-0 fw-bold text-danger">Gunakan fitur ini HANYA untuk keperluan trial/testing!</p>
+                    <p class="mb-0 fw-bold text-danger">Hanya untuk conveyor yang seluruh verifikasinya uji coba (tidak ada kanban dipakai produksi).
+                    Untuk membuang verifikasi uji coba pada conveyor yang sudah produksi, gunakan <u>Unverify</u> per tanggal.</p>
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold">Pilih Conveyor:</label>
@@ -237,15 +238,15 @@
                     <div class="form-check">
                         <input class="form-check-input reset-mode-radio" type="radio" name="reset_mode" id="reset-mode-full" value="full" checked>
                         <label class="form-check-label" for="reset-mode-full">
-                            <strong>Reset Penuh</strong> &mdash; nol-kan saldo, <strong>hapus semua kanban</strong>, dan <strong>unverify</strong> semua jadwal.
-                            <span class="d-block form-text">Jadwal yang sudah terverifikasi harus diverifikasi ulang.</span>
+                            <strong>Reset Penuh</strong> &mdash; nol-kan saldo, <strong>hapus semua kanban termasuk yang sudah tercetak</strong>, dan <strong>unverify</strong> semua jadwal.
+                            <span class="d-block form-text text-danger">Jangan dipakai pada conveyor yang sedang produksi: riwayat cetak hilang dan jadwal berjalan ikut terbuka. Jadwal bertanggal lampau tidak bisa diverifikasi ulang.</span>
                         </label>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input reset-mode-radio" type="radio" name="reset_mode" id="reset-mode-balance" value="balance_only">
                         <label class="form-check-label" for="reset-mode-balance">
-                            <strong>Saldo Saja</strong> &mdash; hanya nol-kan saldo (sisa &amp; nomor urut). Kanban &amp; status verifikasi <strong>tidak diubah</strong>.
-                            <span class="d-block form-text text-warning">Hati-hati: jika masih ada kanban ter-generate, generate berikutnya dapat menghasilkan nomor urut/barcode duplikat.</span>
+                            <strong>Saldo Saja</strong> &mdash; nol-kan sisa dan hapus ledger saldo. Kanban, nomor urut, &amp; status verifikasi <strong>tidak diubah</strong>.
+                            <span class="d-block form-text text-warning">Hati-hati: sisa nyata ikut hilang, dan jadwal yang tetap terverifikasi jangan di-unverify sesudahnya &mdash; tanpa ledger, saldo akan terpotong lagi.</span>
                         </label>
                     </div>
                 </div>

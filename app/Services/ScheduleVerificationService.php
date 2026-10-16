@@ -796,14 +796,86 @@ class ScheduleVerificationService
     }
 
     /**
+     * Kunci baris conveyor sampai transaksi berjalan selesai.
+     *
+     * Verify, unverify, dan tahap susun generate (AssySchedulerService) sama-sama menulis
+     * ulang shift pada satu tanggal × conveyor. Bila dua di antaranya berjalan bersamaan,
+     * shift yang sama bisa tersusun dua kali (baris ganda) atau terhapus tanpa diganti.
+     * Ketiganya mengambil kunci ini lebih dulu sehingga saling menunggu.
+     */
+    private function lockConveyorForScheduling($conveyorId): void
+    {
+        MasterConveyor::whereKey($conveyorId)->lockForUpdate()->first(['id']);
+    }
+
+    /**
+     * Pesan bila item di layar verifikasi sudah tidak punya baris jadwal maupun listing.
+     * Biasanya karena generate/sinkron SIREP berjalan atau PPC membatalkan listing setelah
+     * layar dibuka — menyimpan isi layar lama berarti mengunci shift yang tidak utuh.
+     */
+    private function stalePayloadMessage(array $item): string
+    {
+        return sprintf(
+            'Item %s (qty %d) sudah tidak ada di jadwal maupun listing SIREP — data berubah sejak '
+            . 'layar verifikasi dibuka (generate/sinkron SIREP berjalan atau PPC membatalkan listing). '
+            . 'Tidak ada yang dikunci. Muat ulang layar verifikasi lalu ulangi.',
+            $item['assy'] ?? '-',
+            (int) ($item['qty'] ?? 0)
+        );
+    }
+
+    /**
+     * Alasan sebuah tanggal tidak boleh diverifikasi lagi, atau null bila boleh.
+     *
+     * Verify membuat kanban dan menggeser sisa lot terakhir (carry-over) ke tanggal
+     * berikutnya — dengan anggapan kanban itu benar-benar diproduksi. Untuk hari yang
+     * sudah lewat anggapan itu tidak pernah benar: kanbannya tidak dicetak, sisanya fiktif,
+     * dan tanggal berikutnya dicetak kurang. Kasus C1 16-10-2026: C1 08-10 diverifikasi
+     * 14-10 tanpa satu pun cetak, B-K162.D butuh 64 tetapi hanya dicetak 60 karena
+     * dianggap ada sisa 4 (155 circuit lain ikut kurang). Di seluruh data tidak ada
+     * verifikasi tanggal lampau yang sungguh dicetak untuk produksi. Unverify tetap boleh
+     * — itu jalan membersihkan verifikasi seperti ini.
+     */
+    public function verifyBlockedReason($date): ?string
+    {
+        $tanggal = Carbon::parse($date)->startOfDay();
+
+        if ($tanggal->gte(Carbon::today())) {
+            return null;
+        }
+
+        return sprintf(
+            'Tanggal %s sudah lewat sehingga tidak bisa diverifikasi. Verifikasi membuat kanban dan '
+            . 'memindahkan sisa lot ke tanggal berikutnya; kanban untuk hari yang sudah lewat tidak '
+            . 'akan diproduksi, sehingga sisanya fiktif dan tanggal berikutnya dicetak kurang. '
+            . 'Bila jadwal ini tidak dijalankan, biarkan Pending.',
+            $tanggal->format('d-m-Y')
+        );
+    }
+
+    /**
      * Verify schedule - save changes and lock the schedule for specific conveyor, date, and shift
      */
     public function verifySchedule($conveyorId, $date, $shift, $cutoffs = [])
     {
+        if ($alasan = $this->verifyBlockedReason($date)) {
+            Log::warning('Verify ditolak: tanggal sudah lewat', [
+                'conveyor_id' => $conveyorId,
+                'date'        => $date,
+                'shift'       => $shift,
+            ]);
+
+            return ['success' => false, 'message' => $alasan];
+        }
+
         try {
             DB::beginTransaction();
 
             $date = Carbon::parse($date);
+
+            // Generate (termasuk auto-sync saat Dashboard dibuka) dan unverify juga menulis
+            // ulang shift hari ini. Tunggu mereka selesai sebelum membaca isi shift.
+            $this->lockConveyorForScheduling($conveyorId);
 
             Log::info("verifySchedule called", [
                 'conveyor_id' => $conveyorId,
@@ -909,6 +981,7 @@ class ScheduleVerificationService
                                     $this->deductSourceQuantity($sourceItem, $item['qty']);
                                 } else {
                                     Log::warning("Source item not found", ['source_id' => $sourceId]);
+                                    throw new \RuntimeException($this->stalePayloadMessage($item));
                                 }
                             } else {
                                 // Regular item - use original schedule data if available
@@ -964,9 +1037,12 @@ class ScheduleVerificationService
                                         ]);
                                         Log::info("Created schedule from listing_stage", ['listing_id' => $listingId]);
                                     } else {
-                                        Log::warning("Skipping item - no valid data found", ['item' => $item]);
+                                        // Dulu item ini dilewati diam-diam lalu shift tetap dikunci tanpa
+                                        // dia — begitulah 7YA1A (2 pcs) hilang dari B3-ENG 13-10-2026 S2.
+                                        // Yang tampil di layar operator harus sama dengan yang dikunci.
+                                        Log::warning("Item verifikasi tidak dapat dibentuk ulang", ['item' => $item]);
+                                        throw new \RuntimeException($this->stalePayloadMessage($item));
                                     }
-                                    // Skip items without valid data (same as saveManageData behavior)
                                 }
                             }
                         }
@@ -1190,6 +1266,10 @@ class ScheduleVerificationService
 
             $date = Carbon::parse($date);
             $dateStr = $date->format('Y-m-d');
+
+            // Unverify menyusun ulang shift ini dengan DayScheduleBuilder — tidak boleh
+            // berselang-seling dengan generate atau verify pada conveyor yang sama.
+            $this->lockConveyorForScheduling($conveyorId);
 
             // Step 0: Restore transferred items back to their origin (if origin still unverified)
             $restoreResult = $this->restoreTransferredItemsToOrigin($conveyorId, $dateStr, $shift);

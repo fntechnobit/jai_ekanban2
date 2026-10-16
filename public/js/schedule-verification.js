@@ -490,6 +490,9 @@ $(function () {
         $('#verificationModal').data('capacity', data.capacity);
         $('#verificationModal').data('normal-cutoff-capacity', data.normal_cutoff_capacity);
         $('#verificationModal').data('cutoff5-capacity', data.cutoff5_capacity);
+        // Total awal shift — pembanding saat Verify, supaya item yang terhapus dari layar
+        // (drag balik ke panel sumber / qty 0) tidak ikut terkunci hilang tanpa disadari.
+        $('#verificationModal').data('initial-total', totalUsed);
 
         // Show/hide buttons based on read-only mode
         if (readOnly) {
@@ -1041,6 +1044,21 @@ $(function () {
             });
         });
 
+        // Qty yang hilang dari layar tidak dipindah ke mana pun: begitu dikunci, ia tidak
+        // punya kanban (kasus C1 16-10-2026: CO3 1LB01 35 pcs). Tampilkan sebelum dikunci.
+        var initialTotal = parseInt($('#verificationModal').data('initial-total')) || 0;
+        var postedTotal = cutoffs.reduce(function(sum, co) {
+            return sum + co.items.reduce(function(s, item) { return s + item.qty; }, 0);
+        }, 0);
+        var shrinkHtml = '';
+        if (postedTotal < initialTotal) {
+            shrinkHtml = '<div class="alert alert-danger text-start mt-2 mb-0">' +
+                '<i class="fas fa-exclamation-circle"></i> Total shift ini <strong>berkurang ' +
+                (initialTotal - postedTotal) + ' pcs</strong> dari jadwal (' + initialTotal + ' &rarr; ' +
+                postedTotal + '). Qty yang dihapus dari layar tidak dipindah ke shift lain dan ' +
+                '<strong>tidak akan mendapat kanban</strong>. Batalkan bila tidak disengaja.</div>';
+        }
+
         Swal.fire({
             title: 'Verify This Schedule?',
             html: '<p>This will save any changes and lock the schedule for:</p>' +
@@ -1049,6 +1067,7 @@ $(function () {
                   '<li><strong>Date:</strong> ' + $('#modal-date').text() + '</li>' +
                   '<li><strong>Shift:</strong> ' + $('#modal-shift').text() + '</li>' +
                   '</ul>' +
+                  shrinkHtml +
                   '<p class="text-warning mt-2"><i class="fas fa-exclamation-triangle"></i> Once verified, the schedule cannot be modified or regenerated.</p>',
             icon: 'warning',
             showCancelButton: true,

@@ -406,10 +406,25 @@ listing 331  &rarr;  S1 CO5 30, S2 CO5 31   lewat jatah    &rarr; <b>over</b></d
                     hilang, dan menandainya supaya diperiksa manusia.</div>
                 </div>
 
+                <div class="doc-panel mb-4">
+                    <div class="doc-panel-title">Tanggal yang sudah lewat tidak bisa diverifikasi</div>
+                    <p class="small mb-2">Jadwal Pending yang tanggalnya sebelum hari ini hanya menampilkan
+                    <strong>Detail</strong> dan label <span class="badge bg-light text-dark border">Lewat</span>; server juga menolak
+                    verifikasinya. Verifikasi membuat kanban dan memindahkan sisa lot terakhir ke tanggal berikutnya dengan anggapan
+                    kanban itu diproduksi &mdash; untuk hari yang sudah lewat anggapan itu tidak pernah benar.</p>
+                    <p class="small mb-0 text-muted">Contoh nyata: C1 08-10-2026 diverifikasi 14-10 dan tidak satu pun kanbannya
+                    dicetak. Sisa fiktifnya terpakai pada 16-10: B-K162.D butuh 64 tetapi hanya dicetak 60, dan 155 circuit lain ikut
+                    kurang. Jadwal yang tidak dijalankan cukup dibiarkan Pending. Unverify tetap bisa dipakai untuk membuka verifikasi
+                    lama seperti itu.</p>
+                </div>
+
                 <h6 class="mt-4 mb-2">Memindahkan item sebelum dikunci</h6>
                 <p class="small" style="max-width:72ch">Di layar detail, item dapat diseret ke cutoff, shift, atau tanggal lain
                 bila urutan hasil perhitungan tidak cocok dengan kenyataan lapangan. Item yang berpindah tetap mengingat asalnya
                 dan ditampilkan dengan lencana tanggal &middot; shift &middot; cutoff asal.</p>
+                <p class="small" style="max-width:72ch">Item yang diseret kembali ke panel sumber atau diberi qty 0 <strong>dihapus</strong>,
+                bukan dipindah. Bila total shift berkurang dari jadwal awal, konfirmasi Verify menampilkan selisihnya dengan
+                peringatan merah &mdash; qty itu tidak akan mendapat kanban.</p>
 
                 <h6 class="mt-4 mb-2">Membuka kembali jadwal (Unverify)</h6>
                 <p class="small" style="max-width:72ch">Unverify bukan sekadar membuka kunci. Empat hal terjadi berurutan,

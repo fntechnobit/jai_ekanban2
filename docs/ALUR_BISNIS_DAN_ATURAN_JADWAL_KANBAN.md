@@ -75,8 +75,17 @@ Ini "kebenaran demand". Aplikasi kanban **tidak mengubahnya**, hanya menyalin & 
 - ekanban: `ListingSyncService` (dipanggil di `AssySchedulerService::generateSchedules` Step 1).
 - filter_kanban: `Assy_schedule_model::stage()` (clone `listing_ppc.listing` → `t_listing_stage`).
 
-**Urutan:** validasi koneksi → ambil `listing` per rentang `time` (urut `id_listing ASC`) → hapus aman
-`listing_stage` rentang itu (kecuali yang terikat jadwal terkunci / ber-kanban) → insert record baru.
+**Urutan (ekanban, API SIREP):** validasi koneksi → ambil listing per conveyor × rentang → dalam satu
+transaksi **rekonsiliasi**: kunci yang sudah ada & isinya sama dibiarkan, isinya berubah diperbarui di
+tempat (id tetap), kunci baru di-insert, kunci yang hilang dari API dihapus (kecuali terikat jadwal
+terkunci / ber-kanban, dan dengan pengaman respons kosong / penyusutan tak wajar / conveyor gagal diambil).
+
+> ⚠️ **Sejak 16-10-2026 generate TIDAK lagi mengosongkan `listing_stage` sebelum sinkron.** Pengosongan
+> lama (`deleteListingStageData`) terjadi sebelum panggilan HTTP ke SIREP: selama beberapa detik listing
+> yang belum terkunci hilang, jadwal pending-nya ikut terhapus lewat FK cascade, dan verify yang jatuh di
+> celah itu mengunci shift tanpa listing tersebut (B3-ENG 13-10-2026 S2: verify 19:53:51, sinkron menulis
+> ulang 19:54:03 → 7YA1A 2 pcs tidak pernah terjadwal). Pengosongan juga mengganti id listing tiap generate
+> dan melangkahi pengaman rekonsiliasi. filter_kanban masih memakai pola hapus-lalu-insert.
 
 **Duplicate check (ekanban):** record dianggap sudah ada bila sama pada
 `listing_date_time + conveyor + assycode + seq`.
@@ -96,9 +105,11 @@ Ini "kebenaran demand". Aplikasi kanban **tidak mengubahnya**, hanya menyalin & 
 
 Urutan per grup **(tanggal × conveyor)**:
 
-1. **Sync ulang staging dulu** (generate tidak berdiri sendiri).
+1. **Sync ulang staging dulu** (generate tidak berdiri sendiri; rekonsiliasi §4, tanpa pengosongan).
 2. **Ambil listing valid**: dalam rentang, `assycode`/`assy` tidak kosong, `qty>0`. Listing yang
-   **sebagian** sudah dipegang jadwal terkunci **tetap diambil** (lihat langkah 6).
+   **sebagian** sudah dipegang jadwal terkunci **tetap diambil** (lihat langkah 6). Lalu transaksi dibuka
+   dan baris `master_conveyor` yang terlibat dikunci (`FOR UPDATE`, urut id) sebelum bacaan lain —
+   verify/unverify mengambil kunci yang sama, jadi ketiganya tidak menyusun shift yang sama bersamaan.
 3. **Group** by `DATE(listing_date_time) + conveyor`; cocokkan nama conveyor → master conveyor.
 4. **Hapus hanya** `assy_schedule` yang **belum terlindungi** (`is_lock=0` dan belum ber-kanban) — untuk
    **semua** grup lebih dulu, baru grup mana pun disusun (item transfer antar tanggal masih memegang
@@ -205,7 +216,13 @@ sebagai source; urut `shift → cutoff → listing_id`. (Hanya jadwal tentative 
 **Service:** `ScheduleVerificationService::verifySchedule(conveyorId, date, shift, cutoffs)` /
 `Verif_schedule_model::verify_group(...)`. Verify adalah proses **komposit** (bukan sekadar flag).
 
-1. **Transaction**.
+0. **Tanggal < hari ini ditolak** (`verifyBlockedReason`, zona Asia/Jakarta); tombol Verify diganti Detail +
+   "Lewat". Alasan: verify mengkreditkan sisa lot ke tanggal berikutnya seolah kanban diproduksi — C1 08-10-2026
+   diverifikasi 14-10 tanpa satu pun cetak, sisa fiktifnya membuat C1 16-10 dicetak kurang (B-K162.D 60 dari 64,
+   155 circuit lain). Unverify tidak dibatasi. Stub lama `assy-scheduler/{id}/verify` (mengunci tanpa kanban)
+   ditutup. Dialog konfirmasi memperingatkan bila total shift berkurang dari jadwal awal (item terhapus dari layar
+   tidak dipindah ke mana pun).
+1. **Transaction** + kunci baris `master_conveyor` (sama dengan generate/unverify, lihat §5).
 2. Baca schedule existing slot itu (di-key by `id`) — untuk pertahankan atribut asli.
 3. **Hapus** semua `assy_schedule` slot itu (strategi delete + recreate, bukan update per item).
 4. **Recreate** sesuai payload cutoff final. 3 cabang item:
@@ -213,6 +230,9 @@ sebagai source; urut `shift → cutoff → listing_id`. (Hanya jadwal tentative 
    - **B. Transfer** dari source panel (`source_id`) → buat record baru, isi jejak
      `transferred_from_date/shift/cutoff/listing_id`, **kurangi qty source** (hapus bila habis).
    - **C. Fallback** ke `listing_stage` by `listing_id` bila tak ada di existing.
+   - Item yang tidak cocok dengan cabang mana pun (baris jadwal, source, dan listing-nya sudah tidak ada)
+     **menggagalkan seluruh verify** dengan pesan "muat ulang layar". Dulu item itu dilewati diam-diam
+     dan shift tetap dikunci tanpa dia.
 5. **Lock**: `is_lock=1` / `is_verified=1`, isi `verified_at`, `verified_by`.
 6. **Generate kanban** (§10). **Gagal kanban → seluruh verify di-rollback** (jadwal tak boleh verified
    tanpa kanban konsisten). (filter_kanban: hanya conveyor yang benar-benar menghasilkan kanban yang
@@ -224,7 +244,7 @@ sebagai source; urut `shift → cutoff → listing_id`. (Hanya jadwal tentative 
 
 **Service:** `unverifySchedule(conveyorId, date, shift)` / `do_cancel(...)`.
 
-1. Transaction.
+1. Transaction + kunci baris `master_conveyor` (lihat §5).
 2. **Kembalikan item transfer ke asal** bila asal masih unverified (bila asal sudah verified → item
    dianggap hilang, dicatat warning).
 3. **Reverse balance** carry-over dari kanban lama.
