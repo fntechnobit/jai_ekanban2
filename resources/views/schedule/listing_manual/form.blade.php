@@ -33,13 +33,17 @@
                                 <div class="col-md-8">
                                     <label for="assy" class="form-label">Assy Number <span class="text-danger">*</span></label>
                                     <select class="form-select form-select-sm" id="assy" name="assy" required style="width: 100%;"></select>
-                                    <small class="text-muted">Pilih conveyor dulu. Assy yang belum ada di daftar bisa diketik langsung.</small>
+                                    <small class="text-muted">Pilih conveyor dulu. Assy baru yang belum ada di daftar bisa diketik langsung.</small>
+                                    <div class="small text-warning-emphasis d-none" id="assy-new-hint">
+                                        <i class="fa-solid fa-triangle-exclamation"></i> Assy baru: jadwal terbentuk, tetapi kanban baru keluar
+                                        setelah master circuit/shikake dengan kolom assy ini diimport — lakukan sebelum shift-nya diverifikasi.
+                                    </div>
                                     <span class="text-danger small error-text assy_error d-block"></span>
                                 </div>
                                 <div class="col-md-4">
                                     <label for="assycode" class="form-label">Assy Code</label>
                                     <input type="text" class="form-control form-control-sm" id="assycode" name="assycode" maxlength="255">
-                                    <small class="text-muted">Kosong = dari listing terakhir.</small>
+                                    <small class="text-muted">Kosong = dari listing terakhir; assy baru = Assy Number.</small>
                                     <span class="text-danger small error-text assycode_error d-block"></span>
                                 </div>
 

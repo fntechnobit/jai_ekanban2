@@ -6,6 +6,7 @@ use App\Config\ManualListingTemplateConfig;
 use App\Models\AssySchedule;
 use App\Models\ListingStage;
 use App\Models\MasterConveyor;
+use App\Services\Schedule\AssyMasterChecker;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +41,10 @@ class ManualListingService
         'listing_date_time', 'conveyor', 'assycode', 'assy', 'qty', 'seq', 'plt', 'mode', 'snp', 'snpa',
     ];
 
+    public function __construct(private readonly AssyMasterChecker $masterChecker)
+    {
+    }
+
     public function getDatatable(array $filters)
     {
         $kanban = fn (string $table) => "EXISTS (SELECT 1 FROM assy_schedule a
@@ -55,7 +60,12 @@ class ManualListingService
             ->selectRaw("(SELECT GROUP_CONCAT(DISTINCT CONCAT('S', a.shift, ' CO', a.cutoff)
                 ORDER BY a.shift, a.cutoff SEPARATOR ', ') FROM assy_schedule a
                 WHERE a.listing_id = listing_stage.id) AS slots")
-            ->selectRaw("({$kanban('assy_schedule_circuit')} OR {$kanban('assy_schedule_shikake')}) AS has_kanban");
+            ->selectRaw("({$kanban('assy_schedule_circuit')} OR {$kanban('assy_schedule_shikake')}) AS has_kanban")
+            ->selectRaw('(' . AssyMasterChecker::existsSql(
+                'listing_stage.assy',
+                '(SELECT mcv.id FROM master_conveyor mcv WHERE mcv.conveyor = listing_stage.conveyor
+                    AND mcv.deleted_at IS NULL ORDER BY mcv.is_active DESC LIMIT 1)'
+            ) . ') AS has_master');
 
         if (!empty($filters['start_date'])) {
             $query->where('listing_stage.listing_date_time', '>=', Carbon::parse($filters['start_date'])->startOfDay());
@@ -82,7 +92,15 @@ class ManualListingService
             ->addIndexColumn()
             ->addColumn('tanggal', fn ($row) => $row->listing_date_time->format('d-m-Y'))
             ->addColumn('assy_label', function ($row) {
-                return e($row->assy) . '<div class="small text-muted">' . e($row->assycode) . '</div>';
+                $label = e($row->assy) . '<div class="small text-muted">' . e($row->assycode) . '</div>';
+
+                if (!$row->has_master) {
+                    $label .= '<span class="badge bg-warning text-dark" title="Belum ada master circuit/shikake '
+                        . 'untuk assy ini di conveyor ini — kanban tidak keluar. Import master circuit/shikake '
+                        . 'dengan kolom assy ini sebelum shift-nya diverifikasi.">Belum ada master</span>';
+                }
+
+                return $label;
             })
             ->addColumn('kemasan', function ($row) {
                 return '<span class="small text-nowrap">SNP ' . (int) $row->snp . ' · SNPA ' . (int) $row->snpa
@@ -239,7 +257,9 @@ class ManualListingService
      * didahulukan dari listing manual — supaya operator cukup mengisi tanggal, conveyor,
      * assy, qty dan seq.
      *
-     * @throws ValidationException bila assy code tidak diisi dan tidak ada acuan
+     * Assy baru (belum pernah di listing) tidak punya acuan dan belum punya assy code dari
+     * SIREP, jadi assy code-nya memakai assy number. Assy code wajib terisi: generate
+     * melewati listing yang assy code-nya kosong.
      */
     public function prepare(array $data): array
     {
@@ -260,9 +280,7 @@ class ManualListingService
         $assycode = trim((string) $pick('assycode'));
 
         if ($assycode === '') {
-            throw ValidationException::withMessages([
-                'assycode' => 'Assy Code wajib diisi — belum ada listing sebelumnya untuk assy ini yang bisa dijadikan acuan.',
-            ]);
+            $assycode = $assy;
         }
 
         $remark = trim((string) ($data['remark'] ?? ''));
@@ -351,9 +369,10 @@ class ManualListingService
                 . 'dilewati saat generate sampai kapasitasnya tersinkron.';
         }
 
-        if (!$this->assyHasMaster($listing->assy)) {
-            $warnings[] = "Assy {$listing->assy} belum terhubung ke master circuit/shikake — jadwalnya "
-                . 'terbentuk, tetapi tidak menghasilkan kanban.';
+        if (!$conveyor || $this->masterChecker->missing($conveyor->id, [$listing->assy]) !== []) {
+            $warnings[] = "Assy {$listing->assy} belum punya master circuit/shikake di conveyor {$listing->conveyor} — "
+                . 'jadwalnya terbentuk, tetapi kanban baru keluar bila master circuit/shikake dengan kolom assy '
+                . 'ini sudah diimport SEBELUM shift-nya diverifikasi.';
         }
 
         $sameSeq = ListingStage::fromSirep()
@@ -548,7 +567,8 @@ class ManualListingService
             'Isi data di sheet "Listing Manual" mulai baris 2. Jangan ubah judul kolom di baris 1.',
             'Kolom wajib (oranye): Tanggal (DD-MM-YYYY), Conveyor, Assy Number, Qty, Seq.',
             'Kolom biru boleh dikosongkan: diisi otomatis dari listing terakhir assy yang sama.',
-            'Assy Code wajib diisi bila assy tersebut belum pernah muncul di listing.',
+            'Assy baru (belum pernah di listing) boleh dimasukkan; Assy Code yang kosong diisi dengan Assy Number.',
+            'Kanban assy baru baru keluar bila master circuit/shikake dengan kolom assy itu sudah diimport sebelum shift-nya diverifikasi.',
             'Seq menentukan urutan alokasi ke cutoff, bercampur dengan listing SIREP di tanggal & conveyor yang sama.',
             'Tanggal + Conveyor + Assy Code + Seq yang sudah ada sebagai listing manual akan DIPERBARUI, bukan ditambah.',
             'Bila ada satu baris saja yang salah, seluruh file ditolak (tidak ada yang tersimpan). Maksimal 1000 baris.',
@@ -626,28 +646,6 @@ class ManualListingService
             ->orderByDesc('listing_date_time')
             ->orderByDesc('id')
             ->first();
-    }
-
-    private function assyHasMaster(string $assy): bool
-    {
-        return DB::table('master_assy AS ma')
-            ->where('ma.assy', $assy)
-            ->where(function ($q) {
-                $q->whereExists(function ($s) {
-                    $s->select(DB::raw(1))
-                        ->from('master_circuit_assy AS mca')
-                        ->join('master_circuit AS mc', 'mc.id', '=', 'mca.master_circuit_id')
-                        ->whereColumn('mca.master_assy_id', 'ma.id')
-                        ->whereNull('mc.deleted_at');
-                })->orWhereExists(function ($s) {
-                    $s->select(DB::raw(1))
-                        ->from('master_shikake_assy AS msa')
-                        ->join('master_shikake AS ms', 'ms.id', '=', 'msa.master_shikake_id')
-                        ->whereColumn('msa.master_assy_id', 'ma.id')
-                        ->whereNull('ms.deleted_at');
-                });
-            })
-            ->exists();
     }
 
     private function listValidation(string $formula, string $errorTitle, string $error): DataValidation

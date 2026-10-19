@@ -10,6 +10,7 @@ use App\Models\KanbanBalanceCircuit;
 use App\Models\KanbanBalanceShikake;
 use App\Models\KanbanGenerationLog;
 use App\Models\MasterConveyor;
+use App\Services\Schedule\AssyMasterChecker;
 use App\Services\ScheduleVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +35,25 @@ class ScheduleVerificationController extends Controller
         $conveyors = MasterConveyor::orderBy('conveyor', 'asc')->get();
 
         return view('schedule.schedule_verification.index', compact('conveyors'));
+    }
+
+    /**
+     * Assy di layar verifikasi yang belum punya master circuit/shikake di conveyor ini.
+     * Verifikasinya tetap boleh, tetapi assy itu tidak mendapat kanban — layar
+     * menandainya dan memperingatkan sebelum dikunci.
+     */
+    public function assyWithoutMaster(Request $request, AssyMasterChecker $checker)
+    {
+        $request->validate([
+            'conveyor_id' => 'required|integer',
+            'assy'        => 'nullable|array|max:500',
+            'assy.*'      => 'nullable|string|max:255',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data'    => $checker->missing((int) $request->input('conveyor_id'), $request->input('assy', [])),
+        ]);
     }
 
     /**

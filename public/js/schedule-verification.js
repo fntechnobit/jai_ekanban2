@@ -515,8 +515,53 @@ $(function () {
             initializeDragDrop();
         }
 
+        markAssyWithoutMaster();
+
         // Show modal
         $('#verificationModal').modal('show');
+    }
+
+    // Assy tanpa master circuit/shikake di conveyor ini tetap bisa diverifikasi, tetapi
+    // tidak mendapat kanban sama sekali (mis. assy baru dari Listing Manual yang master-nya
+    // belum diimport). Hasil kosong bila pemeriksaan gagal — tidak boleh menghalangi verify.
+    function fetchAssyWithoutMaster(assyList) {
+        var conveyorId = $('#verificationModal').data('conveyor-id');
+
+        if (!routeUrls.assyWithoutMaster || !conveyorId || !assyList.length) {
+            return $.Deferred().resolve([]).promise();
+        }
+
+        return $.get(routeUrls.assyWithoutMaster, { conveyor_id: conveyorId, assy: assyList }).then(
+            function (res) { return (res && res.data) || []; },
+            function () { return $.Deferred().resolve([]).promise(); }
+        );
+    }
+
+    function markAssyWithoutMaster() {
+        var $items = $('#shifts-container .cutoff-item');
+        var assyList = [];
+
+        $items.each(function () {
+            var assy = $(this).attr('data-assy') || '';
+            if (assy && assyList.indexOf(assy) === -1) {
+                assyList.push(assy);
+            }
+        });
+
+        fetchAssyWithoutMaster(assyList).then(function (missing) {
+            $items.each(function () {
+                var $item = $(this);
+                $item.find('.no-master-badge').remove();
+
+                if (missing.indexOf($item.attr('data-assy') || '') !== -1) {
+                    $item.find('.item-head').append(
+                        ' <span class="badge bg-warning text-dark badge-sm no-master-badge" ' +
+                        'title="Belum ada master circuit/shikake untuk assy ini di conveyor ini — tidak mendapat kanban">' +
+                        'Tanpa master</span>'
+                    );
+                }
+            });
+        });
     }
 
     // Initialize source date options from H to H+10 via AJAX
@@ -1060,66 +1105,89 @@ $(function () {
                 '<strong>tidak akan mendapat kanban</strong>. Batalkan bila tidak disengaja.</div>';
         }
 
-        Swal.fire({
-            title: 'Verify This Schedule?',
-            html: '<p>This will save any changes and lock the schedule for:</p>' +
-                  '<ul style="text-align: left; display: inline-block;">' +
-                  '<li><strong>Conveyor:</strong> ' + $('#modal-conveyor').text() + '</li>' +
-                  '<li><strong>Date:</strong> ' + $('#modal-date').text() + '</li>' +
-                  '<li><strong>Shift:</strong> ' + $('#modal-shift').text() + '</li>' +
-                  '</ul>' +
-                  shrinkHtml +
-                  '<p class="text-warning mt-2"><i class="fas fa-exclamation-triangle"></i> Once verified, the schedule cannot be modified or regenerated.</p>',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#28a745',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes, verify it!',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: routeUrls.verify,
-                    type: 'POST',
-                    contentType: 'application/json',
-                    headers: {
-                        'X-CSRF-TOKEN': routeUrls.csrfToken
-                    },
-                    data: JSON.stringify({
-                        conveyor_id: conveyorId,
-                        date: date,
-                        shift: shift,
-                        cutoffs: cutoffs,
-                        transferred: transferred
-                    }),
-                    beforeSend: function() {
-                        $('#btn-verify-schedule').prop('disabled', true)
-                            .html('<i class="fas fa-spinner fa-spin"></i> Verifying...');
-                    },
-                    success: function(response) {
-                        $('#verificationModal').modal('hide');
-                        scheduleVerificationTable.ajax.reload();
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Verified!',
-                            text: response.message,
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
-                    },
-                    error: function(xhr) {
-                        var message = 'Failed to verify schedule';
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            message = xhr.responseJSON.message;
-                        }
-                        Swal.fire('Error!', message, 'error');
-                    },
-                    complete: function() {
-                        $('#btn-verify-schedule').prop('disabled', false)
-                            .html('<i class="fas fa-check"></i> Verify');
-                    }
-                });
+        // Assy yang akan dikunci tanpa master circuit/shikake di conveyor ini tidak mendapat
+        // kanban. Diperiksa ulang di sini karena item bisa ditarik dari tanggal lain.
+        var postedAssy = [];
+        cutoffs.forEach(function(co) {
+            co.items.forEach(function(item) {
+                if (item.assy && postedAssy.indexOf(item.assy) === -1) {
+                    postedAssy.push(item.assy);
+                }
+            });
+        });
+
+        fetchAssyWithoutMaster(postedAssy).then(function(missing) {
+            var masterHtml = '';
+            if (missing.length) {
+                masterHtml = '<div class="alert alert-warning text-start mt-2 mb-0">' +
+                    '<i class="fas fa-exclamation-triangle"></i> <strong>' + missing.length +
+                    ' assy belum punya master circuit/shikake</strong> di conveyor ini dan ' +
+                    '<strong>tidak akan mendapat kanban</strong>: ' + $('<div>').text(missing.join(', ')).html() +
+                    '. Import master circuit/shikake dengan kolom assy tersebut dulu bila kanbannya diperlukan.</div>';
             }
+
+            Swal.fire({
+                title: 'Verify This Schedule?',
+                html: '<p>This will save any changes and lock the schedule for:</p>' +
+                      '<ul style="text-align: left; display: inline-block;">' +
+                      '<li><strong>Conveyor:</strong> ' + $('#modal-conveyor').text() + '</li>' +
+                      '<li><strong>Date:</strong> ' + $('#modal-date').text() + '</li>' +
+                      '<li><strong>Shift:</strong> ' + $('#modal-shift').text() + '</li>' +
+                      '</ul>' +
+                      shrinkHtml +
+                      masterHtml +
+                      '<p class="text-warning mt-2"><i class="fas fa-exclamation-triangle"></i> Once verified, the schedule cannot be modified or regenerated.</p>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, verify it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: routeUrls.verify,
+                        type: 'POST',
+                        contentType: 'application/json',
+                        headers: {
+                            'X-CSRF-TOKEN': routeUrls.csrfToken
+                        },
+                        data: JSON.stringify({
+                            conveyor_id: conveyorId,
+                            date: date,
+                            shift: shift,
+                            cutoffs: cutoffs,
+                            transferred: transferred
+                        }),
+                        beforeSend: function() {
+                            $('#btn-verify-schedule').prop('disabled', true)
+                                .html('<i class="fas fa-spinner fa-spin"></i> Verifying...');
+                        },
+                        success: function(response) {
+                            $('#verificationModal').modal('hide');
+                            scheduleVerificationTable.ajax.reload();
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Verified!',
+                                text: response.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                        },
+                        error: function(xhr) {
+                            var message = 'Failed to verify schedule';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                message = xhr.responseJSON.message;
+                            }
+                            Swal.fire('Error!', message, 'error');
+                        },
+                        complete: function() {
+                            $('#btn-verify-schedule').prop('disabled', false)
+                                .html('<i class="fas fa-check"></i> Verify');
+                        }
+                    });
+                }
+            });
         });
     });
 });

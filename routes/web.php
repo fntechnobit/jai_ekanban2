@@ -153,6 +153,7 @@ Route::middleware('auth')->group(function () {
         Route::get('schedule-verification/details', [ScheduleVerificationController::class, 'details'])->name('schedule-verification.details');
         Route::get('schedule-verification/available-assy', [ScheduleVerificationController::class, 'availableAssyData'])->name('schedule-verification.available-assy');
         Route::get('schedule-verification/available-dates', [ScheduleVerificationController::class, 'availableDates'])->name('schedule-verification.available-dates');
+        Route::get('schedule-verification/assy-without-master', [ScheduleVerificationController::class, 'assyWithoutMaster'])->name('schedule-verification.assy-without-master');
         Route::post('schedule-verification/save', [ScheduleVerificationController::class, 'save'])->name('schedule-verification.save');
         Route::post('schedule-verification/verify', [ScheduleVerificationController::class, 'verify'])->name('schedule-verification.verify');
         Route::get('schedule-verification/preview-unverify', [ScheduleVerificationController::class, 'previewUnverify'])->name('schedule-verification.preview-unverify');

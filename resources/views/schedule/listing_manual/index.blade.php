@@ -295,12 +295,13 @@
                 },
                 createTag: function (params) {
                     var term = $.trim(params.term);
-                    return term ? { id: term, text: term + ' (ketik manual)', newTag: true } : null;
+                    return term ? { id: term, text: term + ' (assy baru)', newTag: true } : null;
                 }
             });
 
             // Assy dari riwayat listing membawa nilai acuannya; assy master/ketikan
-            // belum punya, jadi kolom acuan dikosongkan dan diisi server bila ada.
+            // belum punya, jadi kolom acuan dikosongkan dan diisi server bila ada
+            // (assy baru: assy code = assy number).
             $('#assy').on('select2:select', function (e) {
                 var data = e.params.data || {};
                 var fromHistory = data.assycode !== undefined;
@@ -311,13 +312,12 @@
                 $('#snpa').val(fromHistory ? data.snpa : '');
                 $('#plt').val(fromHistory ? data.plt : '');
                 $('#mode').val(fromHistory && data.mode ? String(data.mode) : '');
-
-                if (!fromHistory) {
-                    $('#assycode').trigger('focus');
-                }
+                $('#assy-new-hint').toggleClass('d-none', !data.newTag);
             });
 
             function setAssy(value) {
+                $('#assy-new-hint').addClass('d-none');
+
                 var $assy = $('#assy').empty();
 
                 if (value) {

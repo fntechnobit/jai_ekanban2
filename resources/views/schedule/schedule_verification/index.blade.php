@@ -283,6 +283,7 @@
             verify: "{{ route('schedule.schedule-verification.verify') }}",
             unverify: "{{ route('schedule.schedule-verification.unverify') }}",
             previewUnverify: "{{ route('schedule.schedule-verification.preview-unverify') }}",
+            assyWithoutMaster: "{{ route('schedule.schedule-verification.assy-without-master') }}",
             csrfToken: '{{ csrf_token() }}'
         };
 
