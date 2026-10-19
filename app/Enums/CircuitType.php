@@ -28,7 +28,33 @@ enum CircuitType: string
      */
     public static function fromRaw(?string $value): self
     {
-        return self::tryFrom(strtoupper(trim((string) $value))) ?? self::CUTTING;
+        return self::tryFromInput($value) ?? self::CUTTING;
+    }
+
+    /**
+     * Resolve a type typed by a user (Excel import): accepts the enum value, the
+     * dropdown label or the short label, with spaces / hyphens in place of the
+     * underscore ("CUTTING EJ", "cutting-ej", "EJ", "JAM TWIST"). Null when unknown.
+     */
+    public static function tryFromInput(?string $value): ?self
+    {
+        $key = self::normalize((string) $value);
+        if ($key === '') {
+            return null;
+        }
+
+        foreach (self::cases() as $case) {
+            if (in_array($key, [$case->value, self::normalize($case->label()), $case->shortLabel()], true)) {
+                return $case;
+            }
+        }
+
+        return null;
+    }
+
+    private static function normalize(string $value): string
+    {
+        return trim(preg_replace('/[\s\x{00A0}\-_]+/u', '_', strtoupper($value)), '_');
     }
 
     /** Label for dropdowns */

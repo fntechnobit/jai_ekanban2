@@ -28,6 +28,9 @@ class MasterCircuitImport
     /** Baris CUTTING_JAM yang berhasil diimport: [id => ['codes' => [cct_code, cct_code_2], 'row' => nomor baris]] */
     protected $jamRows = [];
 
+    /** Nomor baris ber-Type CUTTING yang diubah ke CUTTING_EJ karena QRCode EJ terisi */
+    protected $promotedEjRows = [];
+
     public function __construct($conveyorId)
     {
         $this->conveyorId = $conveyorId;
@@ -88,6 +91,7 @@ class MasterCircuitImport
                     }
 
                     $data = $this->mapRowToData($rowData, $conveyor);
+                    $data['type'] = $this->resolveEjType($data, $row);
                     $this->validateTypeData($data, $row);
 
                     // Update or create circuit based on conveyor_id + cct_code + to_store.
@@ -141,6 +145,13 @@ class MasterCircuitImport
 
             $this->warnDoubleKanbanForJamCircuits();
 
+            // Taruh di depan: layar hasil import hanya menampilkan 5 peringatan pertama.
+            if ($this->promotedEjRows) {
+                $rows = $this->promotedEjRows;
+                $list = implode(', ', array_slice($rows, 0, 10)) . (count($rows) > 10 ? ', ...' : '');
+                array_unshift($this->warnings, count($rows) . " baris ber-Type CUTTING dengan QRCode EJ terisi disimpan sebagai CUTTING_EJ (baris {$list}).");
+            }
+
             DB::commit();
 
             return [
@@ -190,6 +201,30 @@ class MasterCircuitImport
     }
 
     /**
+     * QRCode EJ-A / EJ-B hanya tercetak di tiket CUTTING_EJ. Baris ber-Type CUTTING
+     * yang mengisinya dianggap CUTTING_EJ - tanpa ini tiket keluar format CUTTING
+     * biasa dan QR EJ hilang diam-diam. Type lain dibiarkan, cukup diperingatkan.
+     */
+    protected function resolveEjType(array $data, int $row): string
+    {
+        $type = $data['type'];
+        if (empty($data['qrcode_ej_a']) && empty($data['qrcode_ej_b'])) {
+            return $type;
+        }
+
+        if ($type === CircuitType::CUTTING->value) {
+            $this->promotedEjRows[] = $row;
+            return CircuitType::CUTTING_EJ->value;
+        }
+
+        if ($type !== CircuitType::CUTTING_EJ->value) {
+            $this->warnings[] = "Row {$row}: QRCode EJ terisi tetapi Type {$type}, QR EJ tidak tercetak di tiket {$type}.";
+        }
+
+        return $type;
+    }
+
+    /**
      * Data wajib per type. Baris yang tidak lengkap digagalkan (masuk errors),
      * bukan disimpan setengah jadi lalu tercetak tanpa data.
      */
@@ -219,8 +254,9 @@ class MasterCircuitImport
             }
         }
 
-        if ($type === CircuitType::CUTTING_EJ->value && (empty($data['qrcode_ej_a']) || empty($data['qrcode_ej_b']))) {
-            $this->warnings[] = "Row {$row}: CUTTING_EJ dengan QRCode EJ-A / EJ-B kosong, QR tersebut tidak tercetak.";
+        // Satu sisi kosong itu normal (EJ hanya di salah satu ujung circuit).
+        if ($type === CircuitType::CUTTING_EJ->value && empty($data['qrcode_ej_a']) && empty($data['qrcode_ej_b'])) {
+            $this->warnings[] = "Row {$row}: CUTTING_EJ dengan QRCode EJ-A dan EJ-B kosong, tiket EJ tercetak tanpa QR EJ.";
         }
     }
 
@@ -344,9 +380,15 @@ class MasterCircuitImport
 
     protected function mapRowToData($rowData, $conveyor)
     {
-        // Column A (index 0) - Type: CUTTING, CUTTING_TWIST, CUTTING_EJ or CUTTING_JAM.
-        // Unknown values default to CUTTING.
-        $type = CircuitType::fromRaw(ImportHelper::cleanValue($rowData[0] ?? ''))->value;
+        // Column A (index 0) - Type: CUTTING, CUTTING_TWIST, CUTTING_EJ or CUTTING_JAM
+        // (label tampilan seperti "CUTTING EJ" / "EJ" juga diterima). Kosong = CUTTING;
+        // nilai tak dikenal menggagalkan baris, bukan diam-diam dicetak sebagai CUTTING.
+        $rawType = ImportHelper::cleanValue($rowData[0] ?? null);
+        $circuitType = $rawType === null ? CircuitType::CUTTING : CircuitType::tryFromInput($rawType);
+        if ($circuitType === null) {
+            throw new \Exception("Type '{$rawType}' tidak dikenal. Isi salah satu: " . implode(', ', CircuitType::values()) . '.');
+        }
+        $type = $circuitType->value;
 
         // Kolom EJ/JAM (BB-BL) hanya diisi bila ada di file, supaya import file
         // lama tidak mengosongkan data EJ/JAM yang sudah tersimpan.
