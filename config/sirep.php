@@ -184,4 +184,25 @@ return [
         'lock_seconds' => (int) env('SIREP_GENERATE_LOCK', 600),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Pemeriksaan kesegaran saat verifikasi
+    |--------------------------------------------------------------------------
+    |
+    | Generate otomatis hanya mencakup hari ini sampai H+3 dan berjalan saat halaman
+    | dibuka, sedangkan PPC bisa mengubah listing kapan saja (B3-ENG 26-10-2026: seq
+    | diubah setelah sinkron terakhir, jadwal tetap memakai urutan lama). Karena itu
+    | form verifikasi dan tombol Verify memeriksa SIREP untuk SATU tanggal × conveyor
+    | itu saja (satu permintaan), menyusun ulang jadwal pending bila berbeda, dan
+    | menolak verify bila listing berubah sejak form dibuka.
+    |
+    | SIREP yang tidak bisa dihubungi TIDAK menghalangi verify — operator diberi
+    | peringatan bahwa data yang dipakai berasal dari sinkron terakhir.
+    |
+    */
+    'freshness' => [
+        // Batas waktu satu permintaan pemeriksaan (detik), tanpa percobaan ulang.
+        'timeout' => (int) env('SIREP_FRESHNESS_TIMEOUT', 5),
+    ],
+
 ];

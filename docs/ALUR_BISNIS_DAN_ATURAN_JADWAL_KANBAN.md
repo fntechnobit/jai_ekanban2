@@ -4,11 +4,14 @@
 > (analisa sync, planning kanban, perbandingan, analisis cutoff, runbook) **sudah digabung ke sini**.
 > **Berlaku untuk:** `jai_ekanban` (Laravel) **dan** `jai_filter_kanban` (CodeIgniter 3) — konsep sama,
 > perbedaan implementasi ditandai per-app.
-> **Terakhir diperbarui:** 2026-10-15.
+> **Terakhir diperbarui:** 2026-10-21.
 >
 > **Catatan 2026-10-15:** §5 langkah 6 dan §6 pada salinan ini mengikuti aturan baru **jai_ekanban2**
 > (listing urut `seq` SIREP, shift hari lembur diisi penuh sampai `overtime_capacity` lebih dulu).
 > `jai_ekanban` (v1) dan `jai_filter_kanban` masih memakai aturan lama — perbedaannya di §6.5.
+>
+> **Catatan 2026-10-21 (jai_ekanban2):** sinkron mengenali baris dari id SIREP (§4), dan form/tombol Verify
+> memeriksa SIREP untuk tanggal × conveyor itu sebelum menampilkan dan mengunci jadwal (§7, §8).
 
 Daftar isi: §1 Gambaran umum · §2 Komponen · §3 SIREP · §4 Sync · §5 Generate · **§6 Aturan CO1–CO5** ·
 §7 Halaman verifikasi · §8 Verify · §9 Unverify · §10 Generate kanban (carry-over) · §11 Defect ·
@@ -91,8 +94,23 @@ terkunci / ber-kanban, dan dengan pengaman respons kosong / penyusutan tak wajar
 > ulang 19:54:03 → 7YA1A 2 pcs tidak pernah terjadwal). Pengosongan juga mengganti id listing tiap generate
 > dan melangkahi pengaman rekonsiliasi. filter_kanban masih memakai pola hapus-lalu-insert.
 
-**Duplicate check (ekanban):** record dianggap sudah ada bila sama pada
-`listing_date_time + conveyor + assycode + seq`.
+**Kunci identitas (jai_ekanban2, sejak 21-10-2026):** id SIREP (`id_listing`) + sumber + tanggal + conveyor
+(`SirepListingAdapter::keyOf`). seq dan assy code **bukan** bagian kunci: PPC mengubah urutan produksi di
+SIREP beberapa hari sebelum hari-H (B3-ENG 26-10-2026: 7YA1B seq 4 → 1, id tetap 9526). Dengan kunci lama
+`listing_date_time + conveyor + assycode + seq`, perubahan itu terbaca sebagai "baris dibatalkan + baris
+baru"; bila jadwalnya sudah diverifikasi baris lama tidak boleh dihapus → **listing dobel** dan generate
+menjadwalkan duplikatnya. Kini perubahan seq/qty/assy code memperbarui baris yang sama (id staging tetap).
+- Baris tanpa id SIREP tetap memakai kunci lama.
+- Listing yang **dipindah** PPC ke tanggal/conveyor lain: baris lama dihapus dan baris baru ditambahkan bila
+  belum terkunci; bila sudah terkunci, listing **tetap di tempat lama** (tidak digandakan) dan dilaporkan.
+- Salinan dobel peninggalan kunci lama dibersihkan saat sinkron berikutnya (yang terkunci dipertahankan).
+- Perubahan isi pada baris yang jadwalnya sudah terkunci dilaporkan sebagai peringatan sinkron.
+- Penanda `is_overtime` ikut diperbarui, tetapi tidak dihitung sebagai revisi isi (tidak menggeser `synced_at`).
+- Sinkron mengunci baris `master_conveyor` yang tersentuh (urut id) sebelum membaca staging, sehingga dua
+  sinkron bersamaan tidak sama-sama menambahkan baris yang sama.
+
+**Pemeriksaan satu hari saat verifikasi** (`DayListingRefresher`, lihat §7–§8): satu permintaan ke SIREP
+untuk satu conveyor × tanggal (batas waktu `SIREP_FRESHNESS_TIMEOUT`, bawaan 5 detik, tanpa ulang).
 
 **Pemetaan field** `listing → listing_stage`: `id_listing→id_listing`, `time→listing_date_time`, `cv→conveyor`,
 `shift→shift`, `assycode/assy/carline/qty/seq/plt/mode/snp/snpa` (sama), + `synced_at` = waktu sekarang.
@@ -225,6 +243,21 @@ Kolom: Conveyor · Dates · Shift · **Capacity** · **Listing** · **Assy** · 
 - **Listing** `300 (1)` = qty 300, 1 jenis assy; badge `! over` bila lewat kapasitas nominal (§6.4).
 - **Status:** `No Data` (belum ada jadwal) · `Pending` (`is_lock=0`) · `Verified` (`is_lock=1`).
   filter_kanban memakai `is_verified`: **0**=pending · **1**=verified · **2**=sudah jadi kanban.
+- **Badge `listing berubah`** di samping `Verified` (jai_ekanban2): isi listing hari itu berubah setelah shift
+  diverifikasi (`synced_at` baris SIREP / `updated_at` listing manual > `verified_at`). Jadwal terverifikasi
+  tidak ikut berubah; unverify lalu verify ulang bila kanbannya belum dicetak.
+
+**Buka form Verify (jai_ekanban2, sejak 21-10-2026):** sebelum form tampil, `refresh-listing` →
+`DayListingRefresher` memeriksa SIREP untuk tanggal × conveyor itu:
+- listing berbeda → staging disinkron + jadwal pending hari itu disusun ulang (jalur generate yang sama);
+- listing sama tetapi jadwal pending tertinggal dari listing/aturan terbaru (`DayScheduleBuilder::pendingIsStale`)
+  → disusun ulang;
+- hanya penanda lembur berubah → staging diperbarui, jadwal tidak disentuh;
+- SIREP tidak bisa dihubungi → tidak ada yang diubah, form tetap dibuka dengan peringatan.
+
+Hasilnya tampil di bawah panel SIREP (apa saja yang berubah). Tanggal lampau tidak diperiksa. Tombol Detail
+(baca saja) tidak memicu pemeriksaan. Alasan: generate otomatis hanya H..H+3 dan hanya saat halaman dibuka,
+sedangkan PPC bisa mengubah listing kapan saja (B3-ENG 26-10-2026).
 
 **Source panel (H..H+10):** saat mode edit, panel kanan memuat item dari tanggal/shift lain. Aturan:
 hanya `assy_schedule` `is_lock=0` & `verified_at IS NULL`; tanggal H..H+10; shift aktif saat ini tak tampil
@@ -245,7 +278,13 @@ Form detail, daftar jadwal assy, dan generate kanban (nomor issue/urut) memakai 
    155 circuit lain). Unverify tidak dibatasi. Stub lama `assy-scheduler/{id}/verify` (mengunci tanpa kanban)
    ditutup. Dialog konfirmasi memperingatkan bila total shift berkurang dari jadwal awal (item terhapus dari layar
    tidak dipindah ke mana pun).
+0b. **Cek SIREP sekali lagi** (jai_ekanban2), di luar transaksi: bila listing tanggal × conveyor itu berubah,
+   hari itu disusun ulang dan verify **ditolak** (HTTP 409, `code=listing_changed`) — layar memuat ulang jadwal
+   terbaru. SIREP tidak bisa dihubungi → verify **tetap jalan** dengan peringatan (produksi tidak boleh terhenti
+   karena SIREP gangguan).
 1. **Transaction** + kunci baris `master_conveyor` (sama dengan generate/unverify, lihat §5).
+1b. **Token listing** (jai_ekanban2): form mengirim sidik jari listing saat dibuka (`listing_token`); bila
+   berbeda dengan listing sekarang (generate/sinkron/Listing Manual oleh orang lain), verify ditolak 409.
 2. Baca schedule existing slot itu (di-key by `id`) — untuk pertahankan atribut asli.
 3. **Hapus** semua `assy_schedule` slot itu (strategi delete + recreate, bukan update per item).
 4. **Recreate** sesuai payload cutoff final. 3 cabang item:
@@ -440,10 +479,15 @@ function generate_schedules($start, $end, $conveyorId = null) {
 - `app/Services/Schedule/ShiftCapacityCalculator.php` — `cutoff5Nominal()` (overtime − normal),
   `isOvertimeDay()` (qty > shift × normal), `preMapCutoff5()` (lembur: CO5 shift awal = overtime − normal;
   shift terakhir catch-all), `calculateCutoffDistribution()`
-- `app/Services/AssySchedulerService.php` → `generateSchedules()` (sync, bersihkan semua hari, lalu susun)
+- `app/Services/AssySchedulerService.php` → `generateSchedules()` (sync, lalu `susunJadwal()`: bersihkan
+  semua hari, lalu susun — juga dipakai menyusun ulang satu hari)
 - `app/Services/Schedule/DayScheduleBuilder.php` — penyusun satu hari untuk generate & unverify
   (listing urut `seq`, demand penuh → jumlah shift & lembur, kurangi qty terpegang, shift diisi berurutan
-  CO1–CO5)
+  CO1–CO5); `pendingIsStale()` membandingkan jadwal pending dengan hasil susun ulang
+- `app/Services/ListingSyncService.php` + `app/Services/Listing/SirepListingAdapter.php` — rekonsiliasi
+  berkunci id SIREP (`compare()` tanpa menulis, `applyFetched()` menulis)
+- `app/Services/Schedule/DayListingRefresher.php` — pemeriksaan SIREP satu tanggal × conveyor untuk form &
+  tombol Verify (`schedule-verification/refresh-listing`)
 - `app/Services/Schedule/ListingAllocator.php` · `app/Services/Schedule/ShiftLockChecker.php` ·
   `app/Services/Schedule/ScheduleCleanupService.php`
 - `app/Services/ScheduleVerificationService.php` — `getDatatableQuery()` (flag over), `getVerificationDetails()`
@@ -454,6 +498,8 @@ function generate_schedules($start, $end, $conveyorId = null) {
   → `vendor/bin/phpunit --filter ShiftCapacityCalculatorTest`
 - **Unit test penyusunan hari (B3-ENG 30-09 normal, 07-10 lembur, verifikasi parsial):**
   `tests/Unit/Services/Schedule/DayScheduleBuilderTest.php`
+- **Unit test kunci identitas sinkron (B3-ENG 26-10 seq berubah):**
+  `tests/Unit/Services/Listing/SirepListingAdapterTest.php`
 
 ### jai_filter_kanban (CodeIgniter 3)
 - `application/modules/scheduler/models/Assy_schedule_model.php` → `stage()`, `generatePhp()`

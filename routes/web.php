@@ -151,6 +151,7 @@ Route::middleware('auth')->group(function () {
         Route::get('schedule-verification', [ScheduleVerificationController::class, 'index'])->name('schedule-verification.index');
         Route::get('schedule-verification/datatable', [ScheduleVerificationController::class, 'datatable'])->name('schedule-verification.datatable');
         Route::get('schedule-verification/details', [ScheduleVerificationController::class, 'details'])->name('schedule-verification.details');
+        Route::post('schedule-verification/refresh-listing', [ScheduleVerificationController::class, 'refreshListing'])->name('schedule-verification.refresh-listing');
         Route::get('schedule-verification/available-assy', [ScheduleVerificationController::class, 'availableAssyData'])->name('schedule-verification.available-assy');
         Route::get('schedule-verification/available-dates', [ScheduleVerificationController::class, 'availableDates'])->name('schedule-verification.available-dates');
         Route::get('schedule-verification/assy-without-master', [ScheduleVerificationController::class, 'assyWithoutMaster'])->name('schedule-verification.assy-without-master');

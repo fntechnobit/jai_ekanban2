@@ -41,6 +41,23 @@ class SirepApiClient
     }
 
     /**
+     * Salinan klien untuk pemeriksaan yang ditunggu operator di layar: satu percobaan
+     * saja dengan batas waktu pendek. Klien bawaan memakai timeout 30 detik dengan
+     * beberapa kali ulang — layak untuk generate di belakang layar, terlalu lama untuk
+     * membuka form verifikasi saat SIREP sedang gangguan.
+     */
+    public function quick(int $timeoutSeconds): static
+    {
+        $klien = clone $this;
+
+        $klien->timeout        = max(1, $timeoutSeconds);
+        $klien->connectTimeout = min($this->connectTimeout, $klien->timeout);
+        $klien->retry          = 1;
+
+        return $klien;
+    }
+
+    /**
      * Ambil listing untuk satu conveyor pada satu rentang tanggal.
      *
      * @return array<int, array<string, mixed>>

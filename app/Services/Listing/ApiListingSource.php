@@ -38,6 +38,14 @@ class ApiListingSource implements ListingSourceInterface
         return $this->client->ping();
     }
 
+    public function quick(): ListingSourceInterface
+    {
+        return new self(
+            $this->client->quick((int) config('sirep.freshness.timeout', 5)),
+            $this->adapter
+        );
+    }
+
     public function fetch(string $startDate, string $endDate, array $conveyorCodes = []): ListingFetchResult
     {
         $conveyors = $conveyorCodes ?: $this->activeConveyorCodes();

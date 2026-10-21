@@ -368,8 +368,32 @@
                                 <td><span class="badge bg-danger">! over tanpa OT</span></td>
                                 <td>Listing melebihi kapasitas normal padahal lembur tidak dinyatakan. Jadwal tetap dibuat, tapi perlu dikonfirmasi.</td>
                             </tr>
+                            <tr>
+                                <td><span class="badge bg-success">Verified</span> <span class="badge bg-warning text-dark"><i class="fa-solid fa-triangle-exclamation"></i> listing berubah</span></td>
+                                <td>PPC mengubah listing hari itu <strong>setelah</strong> shift ini diverifikasi. Jadwal yang
+                                    sudah diverifikasi tidak ikut berubah. Bila kanbannya belum dicetak, unverify lalu verify
+                                    ulang supaya jadwalnya mengikuti listing terbaru.</td>
+                            </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Form Verify selalu memeriksa SIREP dulu</div>
+                    <p class="small mb-2">Begitu tombol <strong>Verify</strong> ditekan, sistem menanyakan listing tanggal dan
+                    conveyor itu ke SIREP (satu permintaan, paling lama 5 detik) sebelum form tampil. Hasilnya muncul di
+                    bawah panel SIREP:</p>
+                    <ul class="small mb-2">
+                        <li><span class="badge bg-success">Listing sesuai SIREP</span> &mdash; tidak ada yang berubah.</li>
+                        <li><span class="badge bg-info text-dark">Jadwal disusun ulang</span> &mdash; PPC mengubah listing
+                            (urutan seq, qty, assy baru atau dibatalkan) sejak sinkron terakhir. Jadwal pending hari itu sudah
+                            disusun ulang; rinciannya tertulis di kotak itu.</li>
+                        <li><span class="badge bg-warning text-dark">Tidak dapat diperiksa</span> &mdash; SIREP tidak bisa
+                            dihubungi. Form memakai listing hasil sinkron terakhir, dan verify tetap bisa dilakukan.</li>
+                    </ul>
+                    <p class="small mb-0 text-muted">Saat Verify ditekan, SIREP diperiksa sekali lagi. Bila listing berubah
+                    selama form terbuka, verify dibatalkan dan form dimuat ulang dengan jadwal terbaru &mdash; tidak ada
+                    yang terkunci dengan data lama.</p>
                 </div>
 
                 <div class="doc-panel mb-3">
@@ -669,6 +693,25 @@ listing 331  &rarr;  S1 CO5 30, S2 CO5 31   lewat jatah    &rarr; <b>over</b></d
 
                 <p class="text-muted" style="max-width:70ch">Yang berubah belakangan dan berpengaruh langsung ke cara kerja
                 sehari-hari. Diurutkan dari yang paling terasa di lapangan.</p>
+
+                <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Form Verify memeriksa SIREP, listing tidak lagi dobel</div>
+                    <p class="small mb-2">Kasus B3-ENG 26-10: listing ditarik pagi hari, lalu PPC menaikkan 7YA1B dari seq 4
+                    ke seq 1. Form verifikasi masih menampilkan urutan lama sampai generate dijalankan ulang, karena
+                    generate otomatis hanya mencakup hari ini sampai H+3.</p>
+                    <ul class="small mb-2">
+                        <li>Form Verify kini memeriksa SIREP untuk tanggal &amp; conveyor itu sebelum tampil, dan menyusun
+                            ulang jadwal pending bila listing berubah. Tombol Verify memeriksa sekali lagi; bila berubah,
+                            verify dibatalkan dan form dimuat ulang.</li>
+                        <li>Sinkron mengenali baris listing dari <strong>ID SIREP</strong>, bukan dari seq. Perubahan seq,
+                            qty, atau assy code memperbarui baris yang sama &mdash; dulu perubahan seq pada jadwal yang sudah
+                            diverifikasi membuat listing dobel dan bisa memunculkan shift tambahan berisi duplikat.</li>
+                        <li>Shift yang sudah diverifikasi lalu listingnya diubah PPC diberi tanda
+                            <span class="badge bg-warning text-dark">listing berubah</span> di daftar verifikasi.</li>
+                    </ul>
+                    <p class="small mb-0 text-muted">SIREP yang sedang gangguan tidak menghalangi verify: form tetap terbuka
+                    dengan peringatan, dan jadwal dikunci memakai listing hasil sinkron terakhir.</p>
+                </div>
 
                 <div class="doc-panel mb-3">
                     <div class="doc-panel-title">Listing urut seq SIREP, shift lembur diisi penuh lebih dulu</div>

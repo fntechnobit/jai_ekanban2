@@ -8,6 +8,7 @@ use App\Models\MasterConveyor;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Penyusun jadwal satu hari (tanggal × conveyor) dari listing_stage.
@@ -188,6 +189,109 @@ class DayScheduleBuilder
             'shift_capacities'  => $shiftCapacities,
             'co5_needed'        => $co5Needed,
         ];
+    }
+
+    /**
+     * Apakah jadwal hari itu yang belum terlindungi berbeda dari hasil susun ulang dengan
+     * listing dan aturan saat ini. Hanya membaca — tidak menulis apa pun.
+     *
+     * Jadwal pending bisa tertinggal dari listing tanpa SIREP berubah sama sekali: listing
+     * diperbarui lewat menu Sinkron Listing tanpa generate, listing manual ditambahkan, item
+     * sumber berkurang karena dipindah ke tanggal lain, atau aturan pembagian shift berubah
+     * sejak jadwal itu disusun. Layar verifikasi memakainya untuk menyusun ulang hari itu
+     * sebelum dikunci, sehingga yang diverifikasi selalu sama dengan hasil generate.
+     *
+     * Disusun persis seperti generate: baris yang belum terlindungi dianggap sudah dihapus
+     * (clearUnprotected), sisanya memegang qty listingnya dan menempati shiftnya.
+     *
+     * @param  Collection  $listings  Listing tanggal × conveyor itu, dari listingQuery()
+     */
+    public function pendingIsStale(MasterConveyor $conveyor, Carbon $date, Collection $listings): bool
+    {
+        if ((int) ($conveyor->capacity ?? 0) <= 0 || $listings->isEmpty()) {
+            // Generate juga melewati hari seperti ini, jadi tidak ada yang bisa disusun ulang.
+            return false;
+        }
+
+        $rows = AssySchedule::where('conveyor_id', $conveyor->id)
+            ->whereDate('schedule', $date->format('Y-m-d'))
+            ->get(['id', 'shift', 'cutoff', 'listing_id', 'qty', 'seq', 'is_lock']);
+
+        $terlindung = $this->protectedIds($rows);
+        $pending    = $rows->reject(fn ($row) => isset($terlindung[$row->id]));
+        $pendingIds = $pending->pluck('id')->all();
+
+        $held = AssySchedule::whereIn('listing_id', $listings->pluck('id')->filter()->all())
+            ->when($pendingIds !== [], fn ($q) => $q->whereNotIn('id', $pendingIds))
+            ->groupBy('listing_id')
+            ->selectRaw('listing_id, SUM(qty) AS held')
+            ->pluck('held', 'listing_id')
+            ->map(fn ($qty) => (int) $qty)
+            ->all();
+
+        $occupied = $rows->filter(fn ($row) => isset($terlindung[$row->id]))
+            ->pluck('shift')
+            ->map(fn ($shift) => (int) $shift)
+            ->unique()
+            ->values()
+            ->all();
+
+        $plan = $this->allocate(
+            $listings,
+            $held,
+            $occupied,
+            (int) $conveyor->capacity,
+            $conveyor->overtime_capacity,
+            $conveyor->id,
+            $date->format('Y-m-d')
+        );
+
+        $tanda = fn ($shift, $cutoff, $listingId, $qty, $seq) => implode('|', [
+            (int) $shift, (int) $cutoff, (int) $listingId, (int) $qty, (int) $seq,
+        ]);
+
+        $seharusnya = collect($plan['schedules'])
+            ->map(fn ($s) => $tanda($s['shift'], $s['cutoff'], $s['listing_id'], $s['qty'], $s['seq']))
+            ->sort()
+            ->values()
+            ->all();
+
+        $tersimpan = $pending
+            ->map(fn ($r) => $tanda($r->shift, $r->cutoff, $r->listing_id, $r->qty, $r->seq))
+            ->sort()
+            ->values()
+            ->all();
+
+        return $seharusnya !== $tersimpan;
+    }
+
+    /**
+     * Id baris yang terlindungi: sudah terkunci, atau sudah punya kanban walau penanda
+     * kuncinya tidak konsisten (sama dengan pengaman ScheduleCleanupService).
+     *
+     * @return array<int, true>
+     */
+    private function protectedIds(Collection $rows): array
+    {
+        $ids = $rows->pluck('id')->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $berkanban = DB::table('assy_schedule_circuit')->whereIn('assy_schedule_id', $ids)->pluck('assy_schedule_id')
+            ->merge(DB::table('assy_schedule_shikake')->whereIn('assy_schedule_id', $ids)->pluck('assy_schedule_id'))
+            ->all();
+
+        $hasil = array_fill_keys(array_map('intval', $berkanban), true);
+
+        foreach ($rows as $row) {
+            if ((int) $row->is_lock !== 0) {
+                $hasil[(int) $row->id] = true;
+            }
+        }
+
+        return $hasil;
     }
 
     /**

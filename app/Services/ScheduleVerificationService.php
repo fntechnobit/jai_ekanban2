@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AssySchedule;
 use App\Models\ListingStage;
 use App\Models\MasterConveyor;
+use App\Services\Schedule\DayListingRefresher;
 use App\Services\Schedule\DayScheduleBuilder;
 use App\Services\Schedule\ShiftCapacityCalculator;
 use Illuminate\Support\Facades\DB;
@@ -14,18 +15,61 @@ use Carbon\Carbon;
 
 class ScheduleVerificationService
 {
+    /** Kode galat verify: listing berubah, layar harus dimuat ulang sebelum mengunci. */
+    public const LISTING_CHANGED = 'listing_changed';
+
     protected KanbanGeneratorService $kanbanGenerator;
     protected ShiftCapacityCalculator $capacityCalculator;
     protected DayScheduleBuilder $dayBuilder;
+    protected DayListingRefresher $listingRefresher;
 
     public function __construct(
         KanbanGeneratorService $kanbanGenerator,
         ShiftCapacityCalculator $capacityCalculator,
-        DayScheduleBuilder $dayBuilder
+        DayScheduleBuilder $dayBuilder,
+        DayListingRefresher $listingRefresher
     ) {
         $this->kanbanGenerator = $kanbanGenerator;
         $this->capacityCalculator = $capacityCalculator;
         $this->dayBuilder = $dayBuilder;
+        $this->listingRefresher = $listingRefresher;
+    }
+
+    /**
+     * Periksa listing SIREP satu tanggal × conveyor dan susun ulang jadwal pending-nya bila
+     * perlu — dipanggil saat form verifikasi dibuka. Lihat DayListingRefresher.
+     *
+     * @return array<string, mixed>
+     */
+    public function refreshListing($conveyorId, $date): array
+    {
+        $conveyor = MasterConveyor::find($conveyorId);
+
+        if (!$conveyor) {
+            return ['status' => DayListingRefresher::UNAVAILABLE, 'message' => 'Conveyor tidak ditemukan.',
+                'changes' => [], 'notes' => [], 'warnings' => [], 'rebuilt' => false, 'checked_at' => null];
+        }
+
+        return $this->listingRefresher->refresh($conveyor, $date);
+    }
+
+    /**
+     * Sidik jari listing satu tanggal × conveyor (semua sumber, termasuk manual).
+     *
+     * Dikirim ke layar verifikasi saat form dibuka dan dikembalikan saat Verify. Bila
+     * berbeda, listing berubah sejak operator melihat jadwalnya (sinkron lain, generate,
+     * atau Listing Manual) dan isi layar tidak boleh dikunci.
+     */
+    public function listingToken(string $conveyorName, $date): string
+    {
+        $rows = ListingStage::where('conveyor', $conveyorName)
+            ->whereDate('listing_date_time', Carbon::parse($date)->format('Y-m-d'))
+            ->orderBy('id')
+            ->get(['id', 'seq', 'qty', 'assycode', 'assy']);
+
+        return md5($rows->map(fn ($r) => implode(':', [
+            $r->id, (int) $r->seq, (int) $r->qty, trim((string) $r->assycode), trim((string) $r->assy),
+        ]))->implode('|'));
     }
 
     /**
@@ -63,7 +107,7 @@ class ScheduleVerificationService
 
         // --- Step 3: Get actual assy_schedule aggregated data for the range ---
         $assyQuery = DB::table('assy_schedule')
-            ->selectRaw('DATE(schedule) AS schedule_date, conveyor_id, shift, GROUP_CONCAT(DISTINCT assy ORDER BY assy SEPARATOR ", ") AS assy_list, SUM(qty) AS total_listing, COUNT(DISTINCT assy) AS assy_count, MAX(is_lock) AS is_lock, MIN(id) AS first_id, MAX(verified_capacity) AS verified_capacity, MAX(verified_is_overtime) AS verified_is_overtime, MAX(verified_listing_synced_at) AS verified_listing_synced_at, MAX(verified_listing_source) AS verified_listing_source')
+            ->selectRaw('DATE(schedule) AS schedule_date, conveyor_id, shift, GROUP_CONCAT(DISTINCT assy ORDER BY assy SEPARATOR ", ") AS assy_list, SUM(qty) AS total_listing, COUNT(DISTINCT assy) AS assy_count, MAX(is_lock) AS is_lock, MIN(id) AS first_id, MAX(verified_capacity) AS verified_capacity, MAX(verified_is_overtime) AS verified_is_overtime, MAX(verified_listing_synced_at) AS verified_listing_synced_at, MAX(verified_listing_source) AS verified_listing_source, MIN(verified_at) AS verified_at')
             ->whereRaw('DATE(schedule) BETWEEN ? AND ?', [$start->format('Y-m-d'), $end->format('Y-m-d')])
             ->groupByRaw('DATE(schedule), conveyor_id, shift');
 
@@ -110,12 +154,16 @@ class ScheduleVerificationService
 
         // --- Step 3c: penanda lembur SIREP dan waktu pengambilan listing ---
         // is_overtime seragam untuk satu (tanggal × conveyor), jadi MAX() sudah mewakili.
+        // listing_changed_at: kapan isi listing hari itu terakhir berubah — synced_at untuk
+        // baris SIREP (hanya bergeser bila isinya berubah atau baris baru masuk), updated_at
+        // untuk listing manual. Dipakai menandai shift yang listing-nya berubah setelah
+        // diverifikasi.
         $otQuery = DB::table('listing_stage AS ls')
             ->join('master_conveyor AS mc', 'mc.conveyor', '=', 'ls.conveyor')
             ->whereNull('mc.deleted_at')
             ->where('mc.is_active', 1)
             ->whereRaw('DATE(ls.listing_date_time) BETWEEN ? AND ?', [$start->format('Y-m-d'), $end->format('Y-m-d')])
-            ->selectRaw('DATE(ls.listing_date_time) AS d, mc.id AS conveyor_id, MAX(ls.is_overtime) AS is_overtime, MAX(ls.synced_at) AS synced_at, MIN(ls.source) AS source');
+            ->selectRaw("DATE(ls.listing_date_time) AS d, mc.id AS conveyor_id, MAX(ls.is_overtime) AS is_overtime, MAX(ls.synced_at) AS synced_at, MIN(ls.source) AS source, MAX(CASE WHEN ls.source = 'manual' THEN ls.updated_at ELSE ls.synced_at END) AS listing_changed_at");
 
         if ($conveyorId) {
             $otQuery->where('mc.id', $conveyorId);
@@ -211,6 +259,13 @@ class ScheduleVerificationService
                     $rowSyncedAt   = $hasSnapshot ? $assy->verified_listing_synced_at : ($sirepInfo->synced_at ?? null);
                     $rowSource     = $hasSnapshot ? $assy->verified_listing_source : ($sirepInfo->source ?? null);
 
+                    // Listing hari ini berubah setelah shift ini dikunci (PPC merevisi SIREP,
+                    // atau Listing Manual diubah). Jadwal terverifikasi tidak ikut berubah, jadi
+                    // operator perlu tahu untuk memutuskan unverify selagi kanbannya belum dicetak.
+                    $listingChangedAt   = $sirepInfo->listing_changed_at ?? null;
+                    $changedAfterVerify = $isLock == 1 && $assy && $assy->verified_at && $listingChangedAt
+                        && Carbon::parse($listingChangedAt)->gt(Carbon::parse($assy->verified_at));
+
                     $rows[] = (object) [
                         'schedule_date'    => $dateStr,
                         'conveyor_id'      => $conv->conveyor_id,
@@ -239,6 +294,10 @@ class ScheduleVerificationService
                         'is_lock'          => $isLock,
                         'first_id'         => $assy ? $assy->first_id : null,
                         'has_assy'         => $hasAssy,
+                        'listing_changed_after_verify' => $changedAfterVerify ? 1 : 0,
+                        'listing_changed_at' => $changedAfterVerify
+                            ? Carbon::parse($listingChangedAt)->format('d M Y H:i')
+                            : null,
                     ];
                 }
             }
@@ -455,6 +514,7 @@ class ScheduleVerificationService
                 'sirep'                 => $sirepMeta,
                 'cut_offs'              => array_map(fn($i) => ['cutoff' => $i, 'items' => []], range(1, 5)),
                 'is_empty'              => true,
+                'listing_token'         => $this->listingToken($conveyor->conveyor, $date),
             ];
         }
 
@@ -527,7 +587,8 @@ class ScheduleVerificationService
             'overflow' => $overflow,
             'is_over_capacity' => $isOverCapacity,
             'sirep' => $sirepMeta,
-            'cut_offs' => $cutOffs
+            'cut_offs' => $cutOffs,
+            'listing_token' => $this->listingToken($conveyor->conveyor, $date),
         ];
     }
 
@@ -844,7 +905,7 @@ class ScheduleVerificationService
     /**
      * Verify schedule - save changes and lock the schedule for specific conveyor, date, and shift
      */
-    public function verifySchedule($conveyorId, $date, $shift, $cutoffs = [])
+    public function verifySchedule($conveyorId, $date, $shift, $cutoffs = [], ?string $listingToken = null)
     {
         if ($alasan = $this->verifyBlockedReason($date)) {
             Log::warning('Verify ditolak: tanggal sudah lewat', [
@@ -856,6 +917,47 @@ class ScheduleVerificationService
             return ['success' => false, 'message' => $alasan];
         }
 
+        // Yang dikunci harus sama dengan SIREP saat ini. PPC bisa mengubah listing setelah
+        // sinkron terakhir (B3-ENG 26-10-2026: urutan seq diubah, jadwal masih urutan lama),
+        // jadi tanggal × conveyor ini diperiksa ke SIREP sekali lagi tepat sebelum dikunci.
+        // Sengaja di luar transaksi: panggilan HTTP di dalam transaksi menahan kunci
+        // conveyor selama menunggu SIREP.
+        $conveyorModel   = MasterConveyor::find($conveyorId);
+        $peringatanSirep = null;
+
+        if ($conveyorModel) {
+            try {
+                $segar = $this->listingRefresher->refresh($conveyorModel, $date);
+            } catch (\Throwable $e) {
+                Log::error('Verify dihentikan: pemeriksaan listing gagal', ['error' => $e->getMessage()]);
+
+                return ['success' => false, 'message' => 'Gagal memeriksa listing SIREP sebelum verify: ' . $e->getMessage()];
+            }
+
+            if ($segar['status'] === DayListingRefresher::REFRESHED) {
+                Log::warning('Verify ditolak: listing berubah sebelum dikunci', [
+                    'conveyor_id' => $conveyorId,
+                    'date'        => $date,
+                    'shift'       => $shift,
+                    'changes'     => $segar['changes'],
+                ]);
+
+                return [
+                    'success' => false,
+                    'code'    => self::LISTING_CHANGED,
+                    'message' => $segar['message'] . ' Tidak ada yang dikunci — periksa jadwal terbaru lalu verify lagi.',
+                    'refresh' => $segar,
+                ];
+            }
+
+            // SIREP gangguan tidak boleh menghentikan produksi: verify tetap jalan memakai
+            // listing hasil sinkron terakhir, dan operator diberi tahu.
+            if ($segar['status'] === DayListingRefresher::UNAVAILABLE) {
+                $peringatanSirep = 'SIREP tidak dapat dihubungi saat verify — jadwal dikunci memakai listing '
+                    . 'hasil sinkron terakhir.';
+            }
+        }
+
         try {
             DB::beginTransaction();
 
@@ -864,6 +966,28 @@ class ScheduleVerificationService
             // Generate (termasuk auto-sync saat Dashboard dibuka) dan unverify juga menulis
             // ulang shift hari ini. Tunggu mereka selesai sebelum membaca isi shift.
             $this->lockConveyorForScheduling($conveyorId);
+
+            // Listing berubah sejak layar dibuka — oleh generate, sinkron, atau Listing Manual
+            // yang dijalankan orang lain. Isi layar disusun dari listing lama; menguncinya
+            // berarti mengunci jadwal yang tidak lagi sesuai listing.
+            if ($listingToken !== null && $conveyorModel
+                && !hash_equals($this->listingToken($conveyorModel->conveyor, $date), $listingToken)) {
+                DB::rollBack();
+
+                Log::warning('Verify ditolak: listing berubah sejak layar dibuka', [
+                    'conveyor_id' => $conveyorId,
+                    'date'        => $date->format('Y-m-d'),
+                    'shift'       => $shift,
+                ]);
+
+                return [
+                    'success' => false,
+                    'code'    => self::LISTING_CHANGED,
+                    'message' => 'Listing hari ini berubah sejak layar verifikasi dibuka (generate, sinkron SIREP, '
+                        . 'atau Listing Manual dijalankan di tempat lain). Tidak ada yang dikunci — periksa jadwal '
+                        . 'terbaru lalu verify lagi.',
+                ];
+            }
 
             Log::info("verifySchedule called", [
                 'conveyor_id' => $conveyorId,
@@ -1089,10 +1213,14 @@ class ScheduleVerificationService
             if ($kanbanResult['success']) {
                 $message .= " Generated {$kanbanResult['circuit_count']} circuit and {$kanbanResult['shikake_count']} shikake kanbans.";
             }
+            if ($peringatanSirep) {
+                $message .= ' ' . $peringatanSirep;
+            }
 
             return [
                 'success' => true,
                 'message' => $message,
+                'warning' => $peringatanSirep,
                 'affected' => $affected,
                 'kanban_data' => $kanbanResult
             ];

@@ -101,9 +101,94 @@ $(function () {
         var date = $(this).data('date');
         var shift = $(this).data('shift');
 
-        // Load verification details in edit mode
-        loadVerificationDetails(conveyorId, date, shift, false);
+        // Periksa listing hari itu ke SIREP dulu, baru muat form (edit mode)
+        refreshThenLoad(conveyorId, date, shift);
     });
+
+    // Generate otomatis hanya mencakup H..H+3, sedangkan PPC bisa mengubah listing kapan saja
+    // (B3-ENG 26-10-2026: seq diubah setelah sinkron terakhir). Sebelum form dibuka, server
+    // memeriksa SIREP untuk tanggal × conveyor ini dan menyusun ulang jadwal pending bila
+    // berbeda. Hasil apa pun — termasuk SIREP tidak bisa dihubungi — form tetap dibuka.
+    function refreshThenLoad(conveyorId, date, shift) {
+        if (!routeUrls.refreshListing) {
+            loadVerificationDetails(conveyorId, date, shift, false);
+            return;
+        }
+
+        $.ajax({
+            url: routeUrls.refreshListing,
+            type: 'POST',
+            data: {
+                _token: routeUrls.csrfToken,
+                conveyor_id: conveyorId,
+                date: date
+            },
+            beforeSend: function() {
+                Swal.fire({
+                    title: 'Memeriksa listing SIREP...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+            },
+            success: function(result) {
+                if (result && result.rebuilt) {
+                    scheduleVerificationTable.ajax.reload(null, false);
+                }
+                loadVerificationDetails(conveyorId, date, shift, false, result);
+            },
+            error: function(xhr) {
+                var message = (xhr.responseJSON && xhr.responseJSON.message) || 'Pemeriksaan listing SIREP gagal.';
+                loadVerificationDetails(conveyorId, date, shift, false, { status: 'error', message: message });
+            }
+        });
+    }
+
+    function escapeHtml(text) {
+        return $('<div>').text(text == null ? '' : String(text)).html();
+    }
+
+    function htmlList(items) {
+        if (!items || !items.length) {
+            return '';
+        }
+        return '<ul class="mb-0 mt-1 ps-3">' + items.map(function(item) {
+            return '<li>' + escapeHtml(item) + '</li>';
+        }).join('') + '</ul>';
+    }
+
+    // Kotak hasil pemeriksaan listing di bawah panel SIREP.
+    function renderFreshness(fresh) {
+        var $box = $('#sirep-freshness');
+
+        if (!fresh || fresh.status === 'skipped') {
+            $box.prop('hidden', true).empty();
+            return;
+        }
+
+        var cls, icon, title;
+        if (fresh.status === 'refreshed') {
+            cls = 'alert-info'; icon = 'fa-rotate'; title = 'Jadwal disusun ulang mengikuti SIREP terbaru';
+        } else if (fresh.status === 'fresh') {
+            cls = 'alert-success'; icon = 'fa-circle-check'; title = 'Listing sesuai SIREP';
+        } else {
+            cls = 'alert-warning'; icon = 'fa-triangle-exclamation'; title = 'Listing tidak dapat diperiksa ke SIREP';
+        }
+
+        var html = '<div class="alert ' + cls + ' py-2 px-3 mb-0 small">' +
+            '<i class="fa-solid ' + icon + ' me-1"></i><strong>' + escapeHtml(title) + '</strong>' +
+            (fresh.checked_at ? ' <span class="text-muted">· dicek ' + escapeHtml(fresh.checked_at) + '</span>' : '') +
+            (fresh.status !== 'fresh' && fresh.message ? '<div>' + escapeHtml(fresh.message) + '</div>' : '') +
+            htmlList(fresh.changes) +
+            htmlList(fresh.notes) +
+            (fresh.warnings && fresh.warnings.length
+                ? '<div class="mt-1"><strong>Perhatian:</strong>' + htmlList(fresh.warnings) + '</div>'
+                : '') +
+            '</div>';
+
+        $box.html(html).prop('hidden', false);
+    }
 
     // Detail button - opens verification modal in read-only mode
     $(document).on('click', '.btn-detail', function() {
@@ -220,10 +305,10 @@ $(function () {
         });
     }
 
-    // Load verification details
-    function loadVerificationDetails(conveyorId, date, shift, readOnly) {
+    // Load verification details. freshness = hasil refreshThenLoad (opsional).
+    function loadVerificationDetails(conveyorId, date, shift, readOnly, freshness) {
         readOnly = readOnly || false;
-        
+
         $.ajax({
             url: routeUrls.details,
             type: 'GET',
@@ -243,7 +328,7 @@ $(function () {
             },
             success: function(response) {
                 Swal.close();
-                displayVerificationModal(response, readOnly);
+                displayVerificationModal(response, readOnly, freshness);
             },
             error: function(xhr) {
                 var message = 'Failed to load verification details';
@@ -256,9 +341,14 @@ $(function () {
     }
 
     // Display verification modal
-    function displayVerificationModal(data, readOnly) {
+    function displayVerificationModal(data, readOnly, freshness) {
         readOnly = readOnly || false;
-        
+
+        renderFreshness(freshness);
+        // Sidik jari listing saat form dibuka — dikirim balik saat Verify; server menolak
+        // bila listing berubah sejak saat ini.
+        $('#verificationModal').data('listing-token', data.listing_token || '');
+
         // Reset modal state from previous session
         $('#available-assy-container').html('');
         $('#available-date').html('<option value="">-- Pilih Tanggal --</option>');
@@ -1157,7 +1247,8 @@ $(function () {
                             date: date,
                             shift: shift,
                             cutoffs: cutoffs,
-                            transferred: transferred
+                            transferred: transferred,
+                            listing_token: $('#verificationModal').data('listing-token') || ''
                         }),
                         beforeSend: function() {
                             $('#btn-verify-schedule').prop('disabled', true)
@@ -1166,6 +1257,15 @@ $(function () {
                         success: function(response) {
                             $('#verificationModal').modal('hide');
                             scheduleVerificationTable.ajax.reload();
+                            if (response.warning) {
+                                // Terkunci, tetapi SIREP tidak bisa dipastikan — jangan hilang sendiri.
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Verified — SIREP tidak dapat diperiksa',
+                                    text: response.message
+                                });
+                                return;
+                            }
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Verified!',
@@ -1175,10 +1275,26 @@ $(function () {
                             });
                         },
                         error: function(xhr) {
-                            var message = 'Failed to verify schedule';
-                            if (xhr.responseJSON && xhr.responseJSON.message) {
-                                message = xhr.responseJSON.message;
+                            var res = xhr.responseJSON || {};
+
+                            // Listing berubah (di SIREP atau oleh proses lain) — tidak ada yang
+                            // dikunci. Muat ulang form dengan jadwal yang sudah disusun ulang.
+                            if (xhr.status === 409 && res.code === 'listing_changed') {
+                                scheduleVerificationTable.ajax.reload(null, false);
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Listing berubah — belum diverifikasi',
+                                    html: '<div class="text-start">' + escapeHtml(res.message) +
+                                        htmlList(res.refresh && res.refresh.changes) + '</div>',
+                                    confirmButtonText: 'Muat jadwal terbaru'
+                                }).then(function() {
+                                    loadVerificationDetails(conveyorId, date, shift, false,
+                                        res.refresh || { status: 'refreshed', message: res.message, changes: [] });
+                                });
+                                return;
                             }
+
+                            var message = res.message || 'Failed to verify schedule';
                             Swal.fire('Error!', message, 'error');
                         },
                         complete: function() {

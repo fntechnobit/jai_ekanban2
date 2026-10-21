@@ -2,6 +2,7 @@
 
 namespace App\Services\Listing;
 
+use App\Models\ListingStage;
 use Carbon\Carbon;
 
 /**
@@ -67,61 +68,119 @@ class SirepListingAdapter
     }
 
     /**
-     * Kunci identitas baris, sama dengan kunci deduplikasi yang dipakai
-     * sinkronisasi lama: tanggal + conveyor + assycode + seq.
+     * Field isi baris yang dicerminkan dari SIREP. Perubahan pada salah satunya berarti
+     * PPC merevisi baris itu, dan jadwal yang belum terkunci harus disusun ulang.
      *
-     * @param  array<string, mixed>  $attributes  Hasil toStageAttributes()
+     * API SIREP belum menyediakan `updated_at` maupun `revision`, sehingga satu-satunya
+     * cara mengetahui sebuah baris berubah adalah membandingkan isinya.
+     */
+    public const CONTENT_FIELDS = ['seq', 'assycode', 'assy', 'qty', 'carline', 'snp', 'snpa', 'plt', 'mode'];
+
+    /** Field yang dibandingkan sebagai angka; sisanya teks. */
+    private const NUMERIC_FIELDS = ['seq', 'qty', 'snp', 'snpa', 'plt', 'mode'];
+
+    /**
+     * Kunci identitas baris: id SIREP (`id_listing`) pada tanggal × conveyor yang sama.
+     *
+     * seq dan assy code SENGAJA tidak ikut. PPC mengubah urutan produksi di SIREP beberapa
+     * hari sebelum hari-H (B3-ENG 26-10-2026: 7YA1B seq 4 → 1, id tetap 9526). Dengan seq
+     * di dalam kunci, perubahan itu terbaca sebagai "baris lama dibatalkan + baris baru":
+     * bila jadwalnya sudah diverifikasi baris lama tidak boleh dihapus, sehingga listing
+     * menjadi dobel dan generate menjadwalkan duplikatnya di shift lain. Dengan id sebagai
+     * kunci, perubahan seq cukup memperbarui baris yang sama.
+     *
+     * Tanggal dan conveyor tetap bagian kunci: listing yang dipindah PPC ke tanggal atau
+     * conveyor lain diperlakukan sebagai baris baru di tempat barunya, dan baris lamanya
+     * mengikuti aturan pembatalan (dihapus bila belum terkunci).
+     *
+     * Baris tanpa id memakai kunci lama: tanggal + conveyor + assycode + seq.
+     *
+     * @param  array<string, mixed>  $attributes  Hasil toStageAttributes(), atau kolom staging
      */
     public function keyOf(array $attributes): string
     {
+        $tanggal  = Carbon::parse($attributes['listing_date_time'])->format('Y-m-d');
+        $conveyor = trim((string) $attributes['conveyor']);
+        $id       = (int) ($attributes['id_listing'] ?? 0);
+
+        // Sumber ikut di kunci: id SIREP baru (api) dan id database SIREP lama (db) adalah
+        // dua deret angka berbeda yang bisa kebetulan sama.
+        if ($id > 0) {
+            return implode('|', ['id', $this->sourceOf($attributes), $tanggal, $conveyor, $id]);
+        }
+
         return implode('|', [
-            Carbon::parse($attributes['listing_date_time'])->format('Y-m-d'),
-            trim((string) $attributes['conveyor']),
+            $tanggal,
+            $conveyor,
             trim((string) $attributes['assycode']),
             (int) $attributes['seq'],
         ]);
     }
 
     /**
-     * Sidik jari isi baris — dipakai untuk mendeteksi revisi.
-     *
-     * API SIREP belum menyediakan `updated_at` maupun `revision`, sehingga satu-satunya
-     * cara mengetahui sebuah baris berubah adalah membandingkan isinya. Field yang
-     * diikutkan adalah field yang dapat direvisi tim PPC dan berpengaruh ke jadwal
-     * maupun jumlah kanban.
-     *
-     * @param  array<string, mixed>  $attributes
+     * Kunci sebuah baris staging, dihitung dengan aturan yang sama dengan baris masuk.
      */
-    public function fingerprintOf(array $attributes): string
+    public function keyOfModel(ListingStage $stage): string
     {
-        return md5(implode('|', [
-            (int) $attributes['qty'],
-            (string) $attributes['assy'],
-            (string) $attributes['carline'],
-            (int) $attributes['snp'],
-            (int) $attributes['snpa'],
-            (int) $attributes['plt'],
-            (int) $attributes['mode'],
-            (int) $attributes['id_listing'],
-        ]));
+        return $this->keyOf([
+            'listing_date_time' => $stage->listing_date_time,
+            'conveyor'          => $stage->conveyor,
+            'assycode'          => $stage->assycode,
+            'seq'               => $stage->seq,
+            'id_listing'        => $stage->id_listing,
+            'source'            => $stage->source,
+        ]);
     }
 
     /**
-     * Sidik jari untuk baris yang sudah tersimpan di staging, dihitung dengan
-     * aturan yang sama agar dapat dibandingkan langsung.
+     * Sumber sebuah baris. Baris dari DbListingSource tidak membawa kolom `source`,
+     * dan kolom staging-nya berbawaan 'db'.
+     *
+     * @param  array<string, mixed>  $attributes
      */
-    public function fingerprintOfModel(\App\Models\ListingStage $stage): string
+    public function sourceOf(array $attributes): string
     {
-        return $this->fingerprintOf([
-            'qty'        => $stage->qty,
-            'assy'       => $stage->assy,
-            'carline'    => $stage->carline,
-            'snp'        => $stage->snp,
-            'snpa'       => $stage->snpa,
-            'plt'        => $stage->plt,
-            'mode'       => $stage->mode,
-            'id_listing' => $stage->id_listing,
-        ]);
+        return (string) ($attributes['source'] ?? 'db') ?: 'db';
+    }
+
+    /**
+     * Field isi yang berbeda antara baris staging dan baris dari SIREP.
+     *
+     * @param  array<string, mixed>  $attributes  Hasil toStageAttributes()
+     * @return array<string, array{0: mixed, 1: mixed}>  field => [nilai staging, nilai SIREP]
+     */
+    public function changedFields(ListingStage $stage, array $attributes): array
+    {
+        $berubah = [];
+
+        foreach (self::CONTENT_FIELDS as $field) {
+            $lama = $stage->{$field};
+            $baru = $attributes[$field] ?? null;
+
+            $sama = in_array($field, self::NUMERIC_FIELDS, true)
+                ? (int) $lama === (int) $baru
+                : trim((string) $lama) === trim((string) $baru);
+
+            if (!$sama) {
+                $berubah[$field] = [$lama, $baru];
+            }
+        }
+
+        return $berubah;
+    }
+
+    /**
+     * Apakah penanda lembur SIREP berbeda dengan yang tersimpan.
+     *
+     * Dipisah dari isi baris: penanda ini ditetapkan PPC mendekati hari-H dan tidak
+     * memengaruhi pembagian jadwal (lihat ShiftCapacityCalculator), jadi perubahannya
+     * tidak boleh terbaca sebagai "listing direvisi".
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function overtimeChanged(ListingStage $stage, array $attributes): bool
+    {
+        return (bool) $stage->is_overtime !== (bool) ($attributes['is_overtime'] ?? false);
     }
 
     private function toMode(string $shippingMethod): int

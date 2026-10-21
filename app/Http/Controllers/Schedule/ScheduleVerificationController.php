@@ -148,7 +148,17 @@ class ScheduleVerificationController extends Controller
                     return '<span class="badge bg-secondary">No Data</span>';
                 }
                 if ($schedule->is_lock == 1) {
-                    return '<span class="badge bg-success">Verified</span>';
+                    $badge = '<span class="badge bg-success">Verified</span>';
+
+                    if (!empty($schedule->listing_changed_after_verify)) {
+                        $title = 'Listing hari ini berubah setelah shift ini diverifikasi (perubahan terakhir '
+                            . $schedule->listing_changed_at . '). Jadwal yang sudah diverifikasi tidak ikut berubah. '
+                            . 'Unverify lalu verify ulang bila kanbannya belum dicetak.';
+                        $badge .= ' <span class="badge bg-warning text-dark" title="' . e($title) . '">'
+                            . '<i class="fa-solid fa-triangle-exclamation"></i> listing berubah</span>';
+                    }
+
+                    return $badge;
                 }
                 return '<span class="badge bg-danger">Pending</span>';
             })
@@ -218,6 +228,34 @@ class ScheduleVerificationController extends Controller
 
         if (!$result['success']) {
             return response()->json($result, 404);
+        }
+
+        return response()->json($result);
+    }
+
+    /**
+     * Periksa listing SIREP satu tanggal × conveyor sebelum form verifikasi dibuka, dan
+     * susun ulang jadwal pending-nya bila listing berubah atau jadwalnya tertinggal.
+     */
+    public function refreshListing(Request $request)
+    {
+        $request->validate([
+            'conveyor_id' => 'required|integer',
+            'date'        => 'required|date',
+        ]);
+
+        try {
+            $result = $this->scheduleVerificationService->refreshListing(
+                $request->input('conveyor_id'),
+                $request->input('date')
+            );
+        } catch (\Throwable $e) {
+            Log::error('Pemeriksaan listing layar verifikasi gagal', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Pemeriksaan listing gagal: ' . $e->getMessage(),
+            ], 500);
         }
 
         return response()->json($result);
@@ -302,15 +340,21 @@ class ScheduleVerificationController extends Controller
             'cutoffs' => 'nullable|array',
         ]);
 
+        $token = $data['listing_token'] ?? $request->input('listing_token');
+
         $result = $this->scheduleVerificationService->verifySchedule(
             $data['conveyor_id'] ?? $request->input('conveyor_id'),
             $data['date'] ?? $request->input('date'),
             $data['shift'] ?? $request->input('shift'),
-            $data['cutoffs'] ?? $request->input('cutoffs', [])
+            $data['cutoffs'] ?? $request->input('cutoffs', []),
+            is_string($token) && $token !== '' ? $token : null
         );
 
         if (!$result['success']) {
-            return response()->json($result, 500);
+            // Listing berubah: bukan kegagalan server — layar harus memuat ulang jadwal terbaru.
+            $status = ($result['code'] ?? null) === ScheduleVerificationService::LISTING_CHANGED ? 409 : 500;
+
+            return response()->json($result, $status);
         }
 
         return response()->json($result);

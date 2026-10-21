@@ -105,10 +105,25 @@ class AssySchedulerService
         // tidak pernah terjadwal. Pengosongan juga mengganti id listing di setiap
         // generate (layar verifikasi yang sudah terbuka kehilangan acuannya) dan
         // melangkahi pengaman rekonsiliasi untuk conveyor yang gagal diambil.
+        //
+        // Generate untuk satu conveyor hanya mengambil listing conveyor itu. Dulu seluruh
+        // conveyor ikut disinkron, sehingga listing yang dibatalkan PPC di conveyor lain
+        // terhapus beserta jadwal pending-nya tanpa disusun ulang.
+        $conveyorCodes = [];
+
+        if ($conveyorId) {
+            $namaConveyor = MasterConveyor::whereKey($conveyorId)->value('conveyor');
+
+            if ($namaConveyor) {
+                $conveyorCodes = [trim((string) $namaConveyor)];
+            }
+        }
+
         try {
             $syncResult = $this->listingSyncService->syncListingData(
                 $startDate->format('Y-m-d'),
-                $endDate->format('Y-m-d')
+                $endDate->format('Y-m-d'),
+                $conveyorCodes
             );
 
             if (!$syncResult['success']) {
@@ -140,7 +155,122 @@ class AssySchedulerService
             'skipped'       => $syncResult['skipped']       ?? 0,
         ];
 
-        // ─── STEP 2: Generate assy schedules from listing_stage ──────────────
+        // ─── STEP 2: Susun assy schedule dari listing_stage ──────────────────
+        $susun = $this->susunJadwal($startDate, $endDate, $conveyorId);
+
+        if (!$susun['success']) {
+            return [
+                'success'     => false,
+                'step_failed' => 'generate',
+                'message'     => 'Gagal melakukan generate schedule: ' . $susun['error'],
+                'sync_detail' => $syncDetail,
+                'generated'   => 0,
+            ];
+        }
+
+        if ($susun['no_listing']) {
+            return [
+                'success'     => true,
+                'step_failed' => null,
+                'message'     => 'Tidak ada data listing ditemukan untuk rentang tanggal yang dipilih.',
+                'generated'   => 0,
+                'sync_detail' => $syncDetail,
+            ];
+        }
+
+        $generatedCount = $susun['generated'];
+        $capacityErrors = $susun['capacity_missing'];
+        $conveyorErrors = $susun['conveyor_inactive'];
+        $ambangCadangan = $susun['ambang_cadangan'];
+        $belumTerjadwal = $susun['belum_terjadwal'];
+
+        $message = "Berhasil membuat {$generatedCount} schedule.";
+
+        if ($conveyorSync['ditambah'] || $conveyorSync['dinonaktifkan']) {
+            $message .= sprintf(
+                ' Daftar conveyor disamakan dengan SIREP: %d baru, %d dinonaktifkan.',
+                $conveyorSync['ditambah'],
+                $conveyorSync['dinonaktifkan']
+            );
+        }
+
+        if (!empty($capacityErrors)) {
+            $message .= ' Dilewati karena kapasitas SIREP belum tersinkron: '
+                . implode(', ', $capacityErrors) . '.';
+        }
+
+        if (!empty($conveyorErrors)) {
+            $message .= ' Dilewati karena sudah tidak terdaftar di SIREP: '
+                . implode(', ', $conveyorErrors) . '.';
+        }
+
+        if (!empty($ambangCadangan)) {
+            $message .= ' Dijadwalkan tanpa jatah lembur karena SIREP belum mengirim '
+                . 'overtime_capacity: ' . implode(', ', $ambangCadangan) . '.';
+        }
+
+        if (!empty($belumTerjadwal)) {
+            $message .= ' Sebagian listing belum terjadwal karena seluruh shift hari itu sudah '
+                . 'diverifikasi: ' . implode(', ', $belumTerjadwal) . '. Unverify shift terkait '
+                . 'lalu generate ulang untuk memasukkannya.';
+        }
+
+        // Rekonsiliasi kini satu-satunya jalan listing yang dibatalkan PPC keluar dari
+        // staging. Bila pengamannya menahan penghapusan (respons kosong, penyusutan
+        // tidak wajar, jadwal sudah terkunci), operator perlu tahu.
+        $syncWarnings = $syncResult['warnings'] ?? [];
+
+        if (!empty($syncWarnings)) {
+            $message .= ' Peringatan sinkron SIREP: ' . implode(' ', array_slice($syncWarnings, 0, 2))
+                . (count($syncWarnings) > 2 ? ' (+' . (count($syncWarnings) - 2) . ' peringatan lain di log).' : '');
+        }
+
+        return [
+            'success'          => true,
+            'step_failed'      => null,
+            'message'          => $message,
+            'generated'        => $generatedCount,
+            'sync_detail'      => $syncDetail,
+            'sync_warnings'    => $syncWarnings,
+            'conveyor_sync'    => [
+                'ditambah'      => $conveyorSync['ditambah'],
+                'diperbarui'    => $conveyorSync['diperbarui'],
+                'dinonaktifkan' => $conveyorSync['dinonaktifkan'],
+            ],
+            'capacity_missing' => array_values($capacityErrors),
+            'conveyor_inactive' => array_values($conveyorErrors),
+            'ambang_cadangan'   => array_values($ambangCadangan),
+            'belum_terjadwal'   => $belumTerjadwal,
+        ];
+    }
+
+    /**
+     * Tahap susun generate: bersihkan jadwal yang belum terlindungi pada rentang itu lalu
+     * susun ulang dari listing_stage, untuk satu conveyor bila diberikan.
+     *
+     * Dipakai generate dan pemeriksaan kesegaran layar verifikasi (satu tanggal ×
+     * conveyor), supaya keduanya menyusun dengan aturan dan penguncian yang sama.
+     *
+     * @return array{success: bool, error: ?string, no_listing: bool, generated: int,
+     *               capacity_missing: array<int, string>, conveyor_inactive: array<int, string>,
+     *               ambang_cadangan: array<int, string>, belum_terjadwal: array<int, string>}
+     */
+    public function susunJadwal(Carbon $startDate, Carbon $endDate, ?int $conveyorId = null): array
+    {
+        $startDate = $startDate->copy()->startOfDay();
+        $endDate   = $endDate->copy()->endOfDay();
+
+        $hasil = [
+            'success'           => true,
+            'error'             => null,
+            'no_listing'        => false,
+            'generated'         => 0,
+            'capacity_missing'  => [],
+            'conveyor_inactive' => [],
+            'ambang_cadangan'   => [],
+            'belum_terjadwal'   => [],
+        ];
+
         // Transaksi baru dibuka di tengah blok; catch hanya boleh me-rollback transaksi
         // miliknya sendiri, bukan transaksi pemanggil.
         $transaksiDibuka = false;
@@ -167,13 +297,9 @@ class AssySchedulerService
             $listings = $listingsQuery->get();
 
             if ($listings->isEmpty()) {
-                return [
-                    'success'     => true,
-                    'step_failed' => null,
-                    'message'     => 'Tidak ada data listing ditemukan untuk rentang tanggal yang dipilih.',
-                    'generated'   => 0,
-                    'sync_detail' => $syncDetail,
-                ];
+                $hasil['no_listing'] = true;
+
+                return $hasil;
             }
 
             DB::beginTransaction();
@@ -330,77 +456,20 @@ class AssySchedulerService
 
             DB::commit();
 
-            $message = "Berhasil membuat {$generatedCount} schedule.";
-
-            if ($conveyorSync['ditambah'] || $conveyorSync['dinonaktifkan']) {
-                $message .= sprintf(
-                    ' Daftar conveyor disamakan dengan SIREP: %d baru, %d dinonaktifkan.',
-                    $conveyorSync['ditambah'],
-                    $conveyorSync['dinonaktifkan']
-                );
-            }
-
-            if (!empty($capacityErrors)) {
-                $message .= ' Dilewati karena kapasitas SIREP belum tersinkron: '
-                    . implode(', ', $capacityErrors) . '.';
-            }
-
-            if (!empty($conveyorErrors)) {
-                $message .= ' Dilewati karena sudah tidak terdaftar di SIREP: '
-                    . implode(', ', $conveyorErrors) . '.';
-            }
-
-            if (!empty($ambangCadangan)) {
-                $message .= ' Dijadwalkan tanpa jatah lembur karena SIREP belum mengirim '
-                    . 'overtime_capacity: ' . implode(', ', $ambangCadangan) . '.';
-            }
-
-            if (!empty($belumTerjadwal)) {
-                $message .= ' Sebagian listing belum terjadwal karena seluruh shift hari itu sudah '
-                    . 'diverifikasi: ' . implode(', ', $belumTerjadwal) . '. Unverify shift terkait '
-                    . 'lalu generate ulang untuk memasukkannya.';
-            }
-
-            // Rekonsiliasi kini satu-satunya jalan listing yang dibatalkan PPC keluar dari
-            // staging. Bila pengamannya menahan penghapusan (respons kosong, penyusutan
-            // tidak wajar, jadwal sudah terkunci), operator perlu tahu.
-            $syncWarnings = $syncResult['warnings'] ?? [];
-
-            if (!empty($syncWarnings)) {
-                $message .= ' Peringatan sinkron SIREP: ' . implode(' ', array_slice($syncWarnings, 0, 2))
-                    . (count($syncWarnings) > 2 ? ' (+' . (count($syncWarnings) - 2) . ' peringatan lain di log).' : '');
-            }
-
             return [
-                'success'          => true,
-                'step_failed'      => null,
-                'message'          => $message,
-                'generated'        => $generatedCount,
-                'sync_detail'      => $syncDetail,
-                'sync_warnings'    => $syncWarnings,
-                'conveyor_sync'    => [
-                    'ditambah'      => $conveyorSync['ditambah'],
-                    'diperbarui'    => $conveyorSync['diperbarui'],
-                    'dinonaktifkan' => $conveyorSync['dinonaktifkan'],
-                ],
-                'capacity_missing' => array_values($capacityErrors),
+                'generated'         => $generatedCount,
+                'capacity_missing'  => array_values($capacityErrors),
                 'conveyor_inactive' => array_values($conveyorErrors),
                 'ambang_cadangan'   => array_values($ambangCadangan),
                 'belum_terjadwal'   => $belumTerjadwal,
-            ];
+            ] + $hasil;
         } catch (\Exception $e) {
             if ($transaksiDibuka) {
                 DB::rollBack();
             }
             Log::error("Schedule generation failed", ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
 
-            return [
-                'success'     => false,
-                'step_failed' => 'generate',
-                'message'     => 'Gagal melakukan generate schedule: ' . $e->getMessage(),
-                'sync_detail' => $syncDetail,
-                'generated'   => 0,
-            ];
+            return ['success' => false, 'error' => $e->getMessage()] + $hasil;
         }
     }
 

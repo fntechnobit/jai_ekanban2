@@ -147,6 +147,9 @@
                                     </div>
                                 </div>
                             </div>
+
+                            {{-- Hasil pemeriksaan listing ke SIREP saat form dibuka (DayListingRefresher) --}}
+                            <div id="sirep-freshness" class="mt-2" hidden></div>
                         </div>
                     </div>
 
@@ -278,6 +281,7 @@
         routeUrls = {
             datatable: "{{ route('schedule.schedule-verification.datatable') }}",
             details: "{{ route('schedule.schedule-verification.details') }}",
+            refreshListing: "{{ route('schedule.schedule-verification.refresh-listing') }}",
             availableAssy: "{{ route('schedule.schedule-verification.available-assy') }}",
             availableDates: "{{ route('schedule.schedule-verification.available-dates') }}",
             verify: "{{ route('schedule.schedule-verification.verify') }}",

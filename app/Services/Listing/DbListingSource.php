@@ -19,6 +19,11 @@ class DbListingSource implements ListingSourceInterface
         return 'db';
     }
 
+    public function quick(): ListingSourceInterface
+    {
+        return $this;
+    }
+
     public function ping(): array
     {
         try {

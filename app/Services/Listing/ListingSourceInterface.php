@@ -34,4 +34,11 @@ interface ListingSourceInterface
      * Nama sumber untuk keperluan pesan dan log: 'api' atau 'db'.
      */
     public function name(): string;
+
+    /**
+     * Sumber yang sama untuk pemeriksaan yang ditunggu operator di layar: batas waktu
+     * pendek dan tanpa percobaan ulang. Sumber yang tidak lewat jaringan mengembalikan
+     * dirinya sendiri.
+     */
+    public function quick(): self;
 }
