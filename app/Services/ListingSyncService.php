@@ -8,6 +8,7 @@ use App\Models\MasterConveyor;
 use App\Services\Listing\ListingFetchResult;
 use App\Services\Listing\ListingSourceInterface;
 use App\Services\Listing\SirepListingAdapter;
+use App\Services\Listing\SyncActivity;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -63,11 +64,15 @@ class ListingSyncService
     public function __construct(
         private readonly ListingSourceInterface $source,
         private readonly SirepListingAdapter $adapter,
+        private readonly SyncActivity $activity,
     ) {
     }
 
     /**
      * Sinkronkan listing untuk satu rentang tanggal.
+     *
+     * Sinkron seluruh conveyor dicatat untuk badge "Sinkron" di header — berhasil maupun
+     * gagal — karena listing yang tidak berubah tidak menggeser synced_at (lihat SyncActivity).
      *
      * @param  string  $startDate  Format Y-m-d
      * @param  string  $endDate    Format Y-m-d
@@ -75,6 +80,21 @@ class ListingSyncService
      * @return array<string, mixed>
      */
     public function syncListingData($startDate, $endDate, array $conveyorCodes = [])
+    {
+        $result = $this->runSync($startDate, $endDate, $conveyorCodes);
+
+        if ($conveyorCodes === []) {
+            $this->activity->recordSync($result, $startDate, $endDate);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<int, string>  $conveyorCodes
+     * @return array<string, mixed>
+     */
+    private function runSync($startDate, $endDate, array $conveyorCodes): array
     {
         $from = Carbon::parse($startDate)->startOfDay();
         $to   = Carbon::parse($endDate)->endOfDay();

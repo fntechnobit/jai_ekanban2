@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AssySchedule;
 use App\Models\ListingStage;
 use App\Models\MasterConveyor;
+use App\Services\Listing\SyncActivity;
 use App\Services\Schedule\DayScheduleBuilder;
 use App\Services\Schedule\ShiftCapacityCalculator;
 use Carbon\Carbon;
@@ -19,17 +20,20 @@ class AssySchedulerService
     protected $dayBuilder;
 
     protected $conveyorSync;
+    protected $activity;
 
     public function __construct(
         ListingSyncService $listingSyncService,
         ShiftCapacityCalculator $capacityCalculator,
         DayScheduleBuilder $dayBuilder,
-        SirepConveyorSyncService $conveyorSync
+        SirepConveyorSyncService $conveyorSync,
+        SyncActivity $activity
     ) {
         $this->conveyorSync = $conveyorSync;
         $this->listingSyncService = $listingSyncService;
         $this->capacityCalculator = $capacityCalculator;
         $this->dayBuilder = $dayBuilder;
+        $this->activity = $activity;
     }
 
     /**
@@ -167,6 +171,15 @@ class AssySchedulerService
                 'generated'   => 0,
             ];
         }
+
+        // Waktu generate terakhir untuk badge header — dicatat di sini, bukan dibaca dari
+        // assy_schedule.created_at yang ikut bergeser saat verify/unverify (lihat SyncActivity).
+        $this->activity->recordGenerate(
+            $startDate,
+            $endDate,
+            $conveyorCodes[0] ?? null,
+            $susun['no_listing'] ? 0 : (int) $susun['generated']
+        );
 
         if ($susun['no_listing']) {
             return [

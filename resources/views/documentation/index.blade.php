@@ -695,6 +695,22 @@ listing 331  &rarr;  S1 CO5 30, S2 CO5 31   lewat jatah    &rarr; <b>over</b></d
                 sehari-hari. Diurutkan dari yang paling terasa di lapangan.</p>
 
                 <div class="doc-panel mb-3">
+                    <div class="doc-panel-title">Badge &ldquo;Sinkron&rdquo; dan &ldquo;Generate&rdquo; di header menunjukkan waktu proses berjalan</div>
+                    <p class="small mb-2">Dulu kedua badge membaca waktu dari data: <strong>Sinkron</strong> = kapan listing
+                    terakhir <em>berubah</em>, <strong>Generate</strong> = kapan baris jadwal terakhir dibuat (ikut bergeser saat
+                    Verify). Karena sinkron yang tidak menemukan perubahan tidak menggeser waktunya, Sinkron tampak tertinggal
+                    jauh dari Generate, padahal keduanya berjalan dalam satu proses.</p>
+                    <ul class="small mb-0">
+                        <li><strong>Sinkron</strong>: kapan sinkron SIREP seluruh conveyor terakhir berjalan, plus jumlah
+                            listing yang berubah (&ldquo;&middot; 0 berubah&rdquo; berarti SIREP sama dengan e-Kanban). Arahkan
+                            kursor untuk rentang tanggal, rincian, dan kapan listing terakhir berubah. Badge kuning berarti
+                            sinkron terakhir gagal &mdash; data yang dipakai berasal dari sinkron sebelumnya.</li>
+                        <li><strong>Generate</strong>: kapan generate terakhir berjalan. Verify dan unverify tidak lagi
+                            menggesernya.</li>
+                    </ul>
+                </div>
+
+                <div class="doc-panel mb-3">
                     <div class="doc-panel-title">Form Verify memeriksa SIREP, listing tidak lagi dobel</div>
                     <p class="small mb-2">Kasus B3-ENG 26-10: listing ditarik pagi hari, lalu PPC menaikkan 7YA1B dari seq 4
                     ke seq 1. Form verifikasi masih menampilkan urutan lama sampai generate dijalankan ulang, karena

@@ -220,20 +220,57 @@ function refreshSyncStatusBadges(syncStatusUrl) {
         success: function (data) {
             var syncBadge     = $('#badge-last-sync');
             var generateBadge = $('#badge-last-generate');
+            var warna         = 'bg-secondary-subtle text-secondary bg-info-subtle text-info bg-warning-subtle text-warning-emphasis bg-success-subtle text-success';
 
+            // "Sinkron" = kapan sinkron SIREP terakhir BERJALAN (bukan kapan listing terakhir
+            // berubah). Hasilnya ikut ditampilkan: sinkron yang tidak menemukan perubahan
+            // tetap sinkron yang berhasil.
+            var syncTitle = [];
             if (data.last_sync) {
-                $('#last-sync-time').text(data.last_sync);
-                syncBadge.removeClass('bg-secondary-subtle text-secondary').addClass('bg-info-subtle text-info');
+                var syncText = data.last_sync;
+                if (data.last_sync_recorded) {
+                    syncText += ' · ' + (data.last_sync_changes || 0) + ' berubah';
+                    syncTitle.push('Sinkron SIREP terakhir berjalan ' + data.last_sync);
+                    if (data.last_sync_detail) syncTitle.push(data.last_sync_detail);
+                } else {
+                    syncTitle.push('Waktu sinkron belum tercatat — yang tampil adalah waktu listing SIREP terakhir berubah');
+                }
+                $('#last-sync-time').text(syncText);
             } else {
                 $('#last-sync-time').text('Belum pernah');
             }
 
+            if (data.listing_changed_at) {
+                syncTitle.push('Listing SIREP terakhir berubah ' + data.listing_changed_at);
+            }
+
+            syncBadge.removeClass(warna);
+            if (data.last_sync_failed) {
+                // Percobaan terbaru gagal: data yang dipakai berasal dari sinkron sebelumnya.
+                syncTitle.unshift('Sinkron terakhir GAGAL ' + data.last_sync_failed.at + ': ' + data.last_sync_failed.message);
+                syncBadge.addClass('bg-warning-subtle text-warning-emphasis');
+            } else {
+                syncBadge.addClass(data.last_sync ? 'bg-info-subtle text-info' : 'bg-secondary-subtle text-secondary');
+            }
+            syncBadge.attr('title', syncTitle.join('\n') || 'Terakhir sinkronisasi data dari SIREP');
+
+            // "Generate" = kapan generate terakhir berjalan; verify/unverify tidak menggesernya.
+            var generateTitle = [];
             if (data.last_generate) {
                 $('#last-generate-time').text(data.last_generate);
-                generateBadge.removeClass('bg-secondary-subtle text-secondary').addClass('bg-success-subtle text-success');
+                if (data.last_generate_recorded) {
+                    generateTitle.push('Generate terakhir berjalan ' + data.last_generate);
+                    if (data.last_generate_detail) generateTitle.push(data.last_generate_detail);
+                } else {
+                    generateTitle.push('Waktu generate belum tercatat — yang tampil adalah waktu jadwal pending terakhir dibuat');
+                }
             } else {
                 $('#last-generate-time').text('Belum pernah');
             }
+
+            generateBadge.removeClass(warna)
+                .addClass(data.last_generate ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary')
+                .attr('title', generateTitle.join('\n') || 'Terakhir generate jadwal assy');
         }
     });
 }

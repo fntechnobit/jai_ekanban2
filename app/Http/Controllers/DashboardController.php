@@ -3,12 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\GuardsGenerate;
-use App\Models\AssySchedule;
-use App\Models\ListingStage;
 use App\Models\MasterConveyor;
 use App\Services\AssySchedulerService;
 use App\Services\DashboardService;
-use Carbon\Carbon;
+use App\Services\Listing\SyncActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -35,17 +33,12 @@ class DashboardController extends Controller
     }
 
     /**
-     * Return last sync and last generate timestamps (AJAX)
+     * Kapan sinkron SIREP dan generate terakhir berjalan, untuk badge header (AJAX).
+     * Lihat SyncActivity — waktu ini bukan MAX(synced_at)/MAX(created_at).
      */
-    public function syncStatus()
+    public function syncStatus(SyncActivity $activity)
     {
-        $lastSync     = ListingStage::max('synced_at');
-        $lastGenerate = AssySchedule::max('created_at');
-
-        return response()->json([
-            'last_sync'     => $lastSync     ? Carbon::parse($lastSync)->format('d M Y H:i:s')     : null,
-            'last_generate' => $lastGenerate ? Carbon::parse($lastGenerate)->format('d M Y H:i:s') : null,
-        ]);
+        return response()->json($activity->summary());
     }
 
     /**

@@ -14,10 +14,10 @@
                                 {{-- SIREP sync/generate status — shared across Dashboard, Assy Scheduler
                                      and Schedule Verification, populated by assy-generate-shared.js --}}
                                 <div class="d-flex align-items-center gap-2 flex-wrap d-none d-md-flex" id="sync-status-badges">
-                                    <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" id="badge-last-sync" title="Terakhir sinkronisasi data dari SIREP">
+                                    <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" id="badge-last-sync" title="Kapan sinkron SIREP terakhir berjalan">
                                         <i class="fa-solid fa-rotate me-1"></i> Sinkron: <span id="last-sync-time">memuat...</span>
                                     </span>
-                                    <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" id="badge-last-generate" title="Terakhir generate jadwal assy">
+                                    <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" id="badge-last-generate" title="Kapan generate jadwal assy terakhir berjalan">
                                         <i class="fa-solid fa-calendar-check me-1"></i> Generate: <span id="last-generate-time">memuat...</span>
                                     </span>
                                 </div>
