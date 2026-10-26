@@ -356,7 +356,8 @@
         </colgroup>
         <thead>
             <tr>
-                <th colspan="7">E-KANBAN CUTTING TWIST {{ $circuit->carline ?? '' }}</th>
+                {{-- Judul mengikuti family master circuit, bukan carline listing PPC --}}
+                <th colspan="7">E-KANBAN CUTTING TWIST {{ $circuit->family ?: ($circuit->carline ?? '') }}</th>
                 <th colspan="2">{{ $circuit->shikake_code ?? '' }}</th>
             </tr>
         </thead>
