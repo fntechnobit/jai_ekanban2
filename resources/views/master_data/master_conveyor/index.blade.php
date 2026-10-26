@@ -23,9 +23,10 @@
                 dari sini. Tekan <strong>Sync Conveyor SIREP</strong> untuk menariknya. Conveyor yang sudah
                 tidak dikirim SIREP otomatis berstatus <span class="badge bg-secondary">Nonaktif</span> dan
                 berhenti ikut dijadwalkan maupun diverifikasi &mdash; datanya tidak dihapus.
-                Yang masih bisa diubah di sini: Area, Family, Kode Conveyor SIREP, dan Pallet Qty.
+                Yang masih bisa diubah di sini: Area, Family, Kode Conveyor SIREP, Pallet Qty, dan Mulai Shift.
                 Jumlah shift tidak lagi disimpan &mdash; ia dihitung per tanggal saat generate, dari listing
-                dibanding kapasitas lembur.
+                dibanding kapasitas lembur. Hari 1 shift dijadwalkan di Mulai Shift; hari 2 shift selalu
+                mulai dari shift 1.
             </div>
 
             <style>
@@ -81,6 +82,7 @@
                             <th>Capacity/Shift (SIREP)</th>
                             <th>Sinkron Terakhir</th>
                             <th>Pallet Qty</th>
+                            <th class="text-center">Mulai Shift<br><small class="fw-normal text-muted">hari 1 shift</small></th>
                             <th width="10%">Action</th>
                         </tr>
                     </thead>
@@ -183,6 +185,7 @@
                     { data: 'capacity_label', name: 'capacity' },
                     { data: 'synced_label', name: 'capacity_synced_at' },
                     { data: 'pallet_qty', name: 'pallet_qty' },
+                    { data: 'shift_start', name: 'shift_start', className: 'text-center' },
                     { data: 'action', name: 'action', orderable: false, searchable: false }
                 ],
                 pageLength: 50
@@ -319,6 +322,7 @@
                         $('#masterConveyorModalLabel').text('Edit Conveyor — ' + conveyor.conveyor);
                         $('#sirep_conveyor_code').val(conveyor.sirep_conveyor_code || '');
                         $('#pallet_qty').val(conveyor.pallet_qty);
+                        $('#shift_start').val(conveyor.shift_start || 1);
                         $('#capacity_display').text(
                             conveyor.capacity
                                 ? conveyor.capacity + (conveyor.overtime_capacity ? ' / ' + conveyor.overtime_capacity + ' OT' : '')

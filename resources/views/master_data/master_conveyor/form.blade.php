@@ -61,6 +61,17 @@
                                 <span class="text-danger error-text pallet_qty_error"></span>
                             </div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="shift_start">Mulai Shift</label>
+                                <select class="form-select form-select-sm" id="shift_start" name="shift_start">
+                                    <option value="1">Shift 1</option>
+                                    <option value="2">Shift 2</option>
+                                </select>
+                                <small class="text-muted">Berlaku pada hari 1 shift.</small>
+                                <span class="text-danger error-text shift_start_error"></span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="cv-status-row">
@@ -83,7 +94,8 @@
                             Kapasitas ditarik dari API SIREP lewat tombol <strong>Sync Conveyor SIREP</strong>
                             dan tidak dapat diubah di sini. Jumlah shift tidak diisi manual: ia dihitung per
                             tanggal saat generate &mdash; listing yang melampaui kapasitas lembur memecah hari
-                            itu menjadi dua shift. Alokasi selalu mulai dari shift 1.
+                            itu menjadi dua shift. Hari 1 shift dijadwalkan di <strong>Mulai Shift</strong>;
+                            hari 2 shift selalu mulai dari shift 1.
                         </p>
                     </div>
 

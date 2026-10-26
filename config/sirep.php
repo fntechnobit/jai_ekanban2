@@ -76,7 +76,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | Seluruh angka berasal dari API SIREP. Master conveyor tidak menyimpan
-    | kapasitas maupun jumlah shift.
+    | kapasitas maupun jumlah shift — hanya shift_start, shift tempat hari satu
+    | shift dijadwalkan (diisi tangan, SIREP tidak mengirimnya).
     |
     |   normal_capacity    kapasitas satu shift tanpa lembur
     |   overtime_capacity  kapasitas satu shift dengan lembur, sekaligus AMBANG
@@ -103,9 +104,11 @@ return [
     |   normal : selain itu
     |
     | Urutan pengisian — shift diisi berurutan, listing urut seq SIREP terkecil
-    |   1 shift          : S1.CO1 -> S1.CO2 -> S1.CO3 -> S1.CO4 -> S1.CO5
+    |   1 shift          : Sx.CO1 -> Sx.CO2 -> Sx.CO3 -> Sx.CO4 -> Sx.CO5
+    |                      (x = master_conveyor.shift_start, bawaan 1)
     |   2 shift, lembur  : S1.CO1..CO5 (sampai overtime_capacity) -> S2.CO1..CO5 (sisa)
     |   2 shift, normal  : S1.CO1..CO4 (sampai normal_capacity)   -> S2.CO1..CO4 (sisa)
+    |   Hari dua shift selalu mulai dari shift 1, apa pun nilai shift_start.
     |
     | PENANDA is_overtime TIDAK DIPAKAI untuk keputusan apa pun.
     |   Ia ditetapkan PPC mendekati hari produksi. Pada data 10 Sep 2026: baris yang

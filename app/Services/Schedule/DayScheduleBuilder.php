@@ -101,7 +101,8 @@ class DayScheduleBuilder
             (int) ($conveyor->capacity ?? 0),
             $conveyor->overtime_capacity,
             $conveyor->id,
-            $date->format('Y-m-d')
+            $date->format('Y-m-d'),
+            (int) ($conveyor->shift_start ?? 1)
         );
     }
 
@@ -111,6 +112,7 @@ class DayScheduleBuilder
      * @param  Collection       $listings         Listing satu hari, urut FIFO; diberi rem_qty
      * @param  array<int, int>  $held             Qty yang sudah dipegang jadwal lain, per listing_id
      * @param  array<int, int>  $occupiedShifts   Shift yang sudah punya jadwal — tidak diisi lagi
+     * @param  int              $shiftStart       master_conveyor.shift_start — hanya berlaku pada hari satu shift
      * @return array{
      *     schedules: array<int, array<string, mixed>>,
      *     full_demand: int, remaining: int, unallocated: int, max_shifts: int,
@@ -124,7 +126,8 @@ class DayScheduleBuilder
         int $normalCapacity,
         ?int $overtimeCapacity,
         int $conveyorId,
-        string $scheduleDate
+        string $scheduleDate,
+        int $shiftStart = 1
     ): array {
         $this->listingAllocator->initializeListings($listings);
 
@@ -150,7 +153,9 @@ class DayScheduleBuilder
         // diverifikasi tetap dibagi dengan aturan yang sama seperti saat masih kosong.
         $overtimeDay = $this->capacityCalculator->isOvertimeDay($normalCapacity, $maxShifts, $fullDemand);
 
-        $shiftCapacities = $this->capacityCalculator->calculateShiftCapacities($normalCapacity, $lockStatus, $maxShifts);
+        $shiftCapacities = $this->capacityCalculator->calculateShiftCapacities(
+            $normalCapacity, $lockStatus, $maxShifts, $shiftStart
+        );
         $co5Needed       = $this->capacityCalculator->preMapCutoff5(
             $shiftCapacities, $normalCapacity, $overtimeCap, $remaining, $overtimeDay
         );
@@ -158,7 +163,7 @@ class DayScheduleBuilder
         // Shift diisi berurutan, CO1 → CO5 per shift (jatah CO5 dari preMapCutoff5):
         //   lembur : S1.CO1-CO5 sampai overtime_capacity → S2.CO1-CO5 (CO5 = sisa)
         //   normal : S1.CO1-CO4 sampai normal_capacity  → S2.CO1-CO4
-        // Pada hari satu shift ini sama dengan CO1 → CO4 → CO5.
+        // Pada hari satu shift ini sama dengan CO1 → CO4 → CO5, di shift_start master.
         $schedules = [];
 
         foreach ($shiftCapacities as $shift => $caps) {
@@ -243,10 +248,11 @@ class DayScheduleBuilder
             (int) $conveyor->capacity,
             $conveyor->overtime_capacity,
             $conveyor->id,
-            $date->format('Y-m-d')
+            $date->format('Y-m-d'),
+            (int) ($conveyor->shift_start ?? 1)
         );
 
-        $tanda = fn ($shift, $cutoff, $listingId, $qty, $seq) => implode('|', [
+        $tanda =fn ($shift, $cutoff, $listingId, $qty, $seq) => implode('|', [
             (int) $shift, (int) $cutoff, (int) $listingId, (int) $qty, (int) $seq,
         ]);
 

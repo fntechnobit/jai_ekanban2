@@ -6,7 +6,8 @@ namespace App\Services\Schedule;
  * Pembagian kapasitas conveyor menjadi shift dan cutoff.
  *
  * Seluruh angka berasal dari API SIREP. Master conveyor tidak lagi menyimpan
- * kapasitas maupun jumlah shift:
+ * kapasitas maupun jumlah shift — hanya shift mulai untuk hari satu shift
+ * (lihat runningShifts()):
  *
  *   normal_capacity    kapasitas satu shift tanpa lembur
  *   overtime_capacity  kapasitas satu shift dengan lembur — sekaligus AMBANG
@@ -165,17 +166,37 @@ class ShiftCapacityCalculator
     }
 
     /**
-     * Susun kapasitas CO1-CO4 untuk setiap shift yang berjalan.
+     * Shift yang berjalan hari itu, urut pengisian.
+     *
+     *   2 shift : [1, 2] — selalu mulai dari shift 1, shift_start tidak dipakai
+     *   1 shift : [shift_start] dari master conveyor
+     *
+     * Nilai di luar 1..MAX_SHIFT diperlakukan sebagai 1, sama dengan bawaan kolomnya.
+     *
+     * @return array<int, int>
+     */
+    public function runningShifts(int $shiftCount, int $shiftStart = 1): array
+    {
+        if ($shiftCount >= self::MAX_SHIFT) {
+            return range(1, self::MAX_SHIFT);
+        }
+
+        return [($shiftStart >= 1 && $shiftStart <= self::MAX_SHIFT) ? $shiftStart : 1];
+    }
+
+    /**
+     * Susun kapasitas CO1-CO4 untuk setiap shift yang berjalan (lihat runningShifts()).
      * Shift yang terkunci (sudah diverifikasi) dinolkan agar tidak ditimpa.
      *
      * @param  array  $lockStatus  [1 => bool, 2 => bool]
+     * @param  int    $shiftStart  master_conveyor.shift_start — hanya berlaku pada hari satu shift
      * @return array<int, array{c1:int,c2:int,c3:int,c4:int,total:int,locked:bool}>
      */
-    public function calculateShiftCapacities(int $shiftCapacity, array $lockStatus, int $maxShifts): array
+    public function calculateShiftCapacities(int $shiftCapacity, array $lockStatus, int $maxShifts, int $shiftStart = 1): array
     {
         $capacities = [];
 
-        for ($shift = 1; $shift <= $maxShifts; $shift++) {
+        foreach ($this->runningShifts($maxShifts, $shiftStart) as $shift) {
             if ($lockStatus[$shift] ?? false) {
                 $capacities[$shift] = [
                     'c1' => 0, 'c2' => 0, 'c3' => 0, 'c4' => 0,
