@@ -15,6 +15,8 @@ namespace App\Support;
  *   carline.drawing.issue.qty.nomor_urut. STO mencari semua CCT milik drawing
  *   tersebut dan mencatat qty kanban untuk masing-masing CCT.
  *   Contoh: P.B-0154XEB.008.16.0024
+ *   Titik di nomor drawing dibuang: master STO menulisnya tanpa titik
+ *   (B-L148.A di master shikake = B-L148A di STO). Contoh: C.B-L148A.001.3.0101
  */
 final class KanbanBarcode
 {
@@ -31,7 +33,13 @@ final class KanbanBarcode
 
     public static function drawing(string $carline, string $code, string $issue, int $qty, int $nomorUrut): string
     {
-        return sprintf('%s.%s.%s.%d.%04d', $carline, $code, self::issueNumber($issue), $qty, $nomorUrut);
+        return sprintf('%s.%s.%s.%d.%04d', $carline, self::drawingCode($code), self::issueNumber($issue), $qty, $nomorUrut);
+    }
+
+    /** Nomor drawing seperti di master STO: tanpa titik (B-L148.A → B-L148A). */
+    public static function drawingCode(string $code): string
+    {
+        return str_replace('.', '', $code);
     }
 
     /** Ambil bagian XXX dari issue XXX/YYY. */
@@ -49,9 +57,9 @@ final class KanbanBarcode
      */
     public static function parse(string $barcode, string $carline, string $issue, int $qty, int $nomorUrut): ?array
     {
-        $parts = explode('.', $barcode);
-        if (count($parts) === 5) {
-            return $parts[1] === '' ? null : [$parts[0], $parts[1]];
+        // Bertitik; kode di tengah bisa ikut bertitik bila dicetak sebelum titiknya dibuang
+        if (preg_match('/^([^.]+)\.(.+)\.\d+\.\d+\.\d+$/', $barcode, $m)) {
+            return [$m[1], $m[2]];
         }
 
         $nys = sprintf('%04d', $nomorUrut);
@@ -92,7 +100,7 @@ final class KanbanBarcode
     {
         return match (true) {
             !preg_match(self::CARLINE, $carline) => "carline '{$carline}' harus 1 huruf/angka",
-            !preg_match(self::DRAWING, $code) => "kode '{$code}' hanya boleh huruf/angka/strip/spasi (tanpa titik)",
+            !preg_match(self::DRAWING, self::drawingCode($code)) => "kode '{$code}' hanya boleh huruf/angka/strip/spasi",
             $qty < 0 || $qty > self::DRAWING_MAX_QTY => "qty {$qty} lebih dari 3 digit",
             default => null,
         };

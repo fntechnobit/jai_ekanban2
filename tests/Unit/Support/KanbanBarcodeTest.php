@@ -13,8 +13,8 @@ class KanbanBarcodeTest extends TestCase
      */
     private function readAsSto(string $kanban): ?array
     {
-        if (preg_match('/^([A-Z0-9])\.([A-Z0-9][A-Z0-9 -]*)\.(\d{3})\.(\d{1,3})\.(\d{4})$/i', $kanban, $m)) {
-            return ['type' => 'drawing', 'carline' => $m[1], 'drawing' => $m[2], 'issue' => $m[3], 'qty' => $m[4], 'nys' => $m[5]];
+        if (preg_match('/^([A-Z0-9])\.([A-Z0-9][A-Z0-9 -]*(?:\.[A-Z][A-Z0-9 -]*)*)\.(\d{3})\.(\d{1,3})\.(\d{4})$/i', $kanban, $m)) {
+            return ['type' => 'drawing', 'carline' => $m[1], 'drawing' => str_replace('.', '', $m[2]), 'issue' => $m[3], 'qty' => $m[4], 'nys' => $m[5]];
         }
         if (preg_match('/^([A-Z0-9])([A-Z0-9-]{4,10})(\d{3})(\d{2})(\d{4})$/i', $kanban, $m)) {
             return ['type' => 'cct', 'carline' => $m[1], 'cct' => $m[2], 'issue' => $m[3], 'qty' => $m[4], 'nys' => $m[5]];
@@ -70,6 +70,22 @@ class KanbanBarcodeTest extends TestCase
         $this->assertSame('C.B-L63P.013.3.5026', KanbanBarcode::drawing('C', 'B-L63P', '013/020', 3, 5026));
     }
 
+    public function test_drawing_drops_dots_to_match_sto_master(): void
+    {
+        // Master shikake menulis B-L148.A, master STO B-L148A
+        $barcode = KanbanBarcode::drawing('C', 'B-L148.A', '001/003', 3, 101);
+
+        $this->assertSame('C.B-L148A.001.3.0101', $barcode);
+        $this->assertSame('B-L148A', $this->readAsSto($barcode)['drawing']);
+        $this->assertNull(KanbanBarcode::drawingProblem('C', 'B-L148.A', 3));
+    }
+
+    public function test_parse_barcode_whose_drawing_still_has_a_dot(): void
+    {
+        $this->assertSame(['C', 'B-L148.A'], KanbanBarcode::parse('C.B-L148.A.001.3.0101', 'C', '001/003', 3, 101));
+        $this->assertSame(['C', 'B-L148.A'], KanbanBarcode::parse('CB-L148.A00130101', 'C', '001/003', 3, 101));
+    }
+
     public function test_parse_concatenated_shikake_barcode_from_before_the_fix(): void
     {
         $this->assertSame(['P', 'B-0154XEB'], KanbanBarcode::parse('PB-0154XEB008160024', 'P', '008/010', 16, 24));
@@ -105,10 +121,10 @@ class KanbanBarcodeTest extends TestCase
 
     public function test_drawing_problem_flags_what_sto_cannot_read(): void
     {
-        $this->assertNotNull(KanbanBarcode::drawingProblem('P', 'B-01.5', 16));
+        $this->assertNotNull(KanbanBarcode::drawingProblem('P', 'B-01/5', 16));
         $this->assertNotNull(KanbanBarcode::drawingProblem('PX', 'B-0154XEB', 16));
         $this->assertNotNull(KanbanBarcode::drawingProblem('P', 'B-0154XEB', 1000));
         $this->assertNull(KanbanBarcode::drawingProblem('K', 'BC-0138-1 B', 10));
-        $this->assertNull($this->readAsSto(KanbanBarcode::drawing('P', 'B-01.5', '001/001', 16, 1)));
+        $this->assertNull($this->readAsSto(KanbanBarcode::drawing('P', 'B-01/5', '001/001', 16, 1)));
     }
 }
