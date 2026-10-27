@@ -14,6 +14,7 @@ use App\Models\MasterAssy;
 use App\Models\MasterCircuit;
 use App\Models\MasterConveyor;
 use App\Models\MasterShikake;
+use App\Support\KanbanBarcode;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -208,11 +209,10 @@ class KanbanGeneratorService
                 $balance->last_nomor_urut
             );
 
-            // JAM Twist (1 kanban = 1 pasang circuit): barcode kanban memakai format
-            // barcode shikake, yaitu kode Twist No (shikake_code) dan bukan CCT code circuit 1.
-            $kanbanCode = ($circuitData['type'] === CircuitType::CUTTING_JAM->value && !empty($circuitData['shikake_code']))
-                ? $circuitData['shikake_code']
-                : $circuitData['cct_code'];
+            // JAM Twist (1 kanban = 1 pasang circuit): barcode kanban memakai kode Twist No
+            // (shikake_code), bukan CCT code circuit 1. Twist No terdaftar di STO sebagai
+            // drawing twist, jadi formatnya format drawing (bertitik).
+            $isJamPair = $circuitData['type'] === CircuitType::CUTTING_JAM->value && !empty($circuitData['shikake_code']);
 
             // Save generated kanbans
             foreach ($result['kanban_list'] as $kanban) {
@@ -223,9 +223,11 @@ class KanbanGeneratorService
                     'master_circuit_id' => $circuitData['master_circuit_id'],
                     'issue' => $kanban['issue'],
                     'nomor_urut' => $kanban['nomor_urut'],
-                    'barcode_kanban' => $this->generateBarcode($circuitData['carline'], $kanbanCode, $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut']),
+                    'barcode_kanban' => $isJamPair
+                        ? KanbanBarcode::drawing($circuitData['carline'], $circuitData['shikake_code'], $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut'])
+                        : KanbanBarcode::circuit($circuitData['carline'], $circuitData['cct_code'], $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut']),
                     'qrcode_shikake' => !empty($circuitData['shikake_code'])
-                        ? $this->generateBarcode($circuitData['carline'], $circuitData['shikake_code'], $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut'])
+                        ? KanbanBarcode::drawing($circuitData['carline'], $circuitData['shikake_code'], $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut'])
                         : null,
                     'release_date' => $date,
                     'qty_listing' => $kanban['qty_listing'],
@@ -320,7 +322,7 @@ class KanbanGeneratorService
                     'master_shikake_id' => $shikakeData['master_shikake_id'],
                     'issue' => $kanban['issue'],
                     'nomor_urut' => $kanban['nomor_urut'],
-                    'barcode_kanban' => $this->generateBarcode($shikakeData['carline'], $shikakeData['code'], $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut']),
+                    'barcode_kanban' => KanbanBarcode::drawing($shikakeData['carline'], $shikakeData['code'], $kanban['issue'], $kanban['qty_kanban'], $kanban['nomor_urut']),
                     'release_date' => $date,
                     'qty_listing' => $kanban['qty_listing'],
                     'qty_kanban' => $kanban['qty_kanban'],
@@ -624,27 +626,6 @@ class KanbanGeneratorService
         }
 
         return $result;
-    }
-
-    /**
-     * Generate barcode kanban.
-     * Format: {carline}.{code}.{issue_3d}.{qty}.{nomor_urut_4d}
-     * Contoh: T.TD36.002.40.0002
-     * Contoh: T.T-AK30.002.40.0002
-     * 
-     * @param string $carline  - Carline code (misal: T)
-     * @param string $code     - CCT code atau shikake code (misal: TD36, T-AK30)
-     * @param string $issue    - Issue format XXX/YYY, diambil bagian XXX (misal: 001/005 → 001)
-     * @param int    $qty      - Qty per kanban (misal: 40)
-     * @param int    $nomorUrut - Nomor urut 4 digit (misal: 0002)
-     * @return string
-     */
-    private function generateBarcode(string $carline, string $code, string $issue, int $qty, int $nomorUrut): string
-    {
-        // Ambil bagian XXX dari format XXX/YYY
-        $issueNumber = explode('/', $issue)[0] ?? '001';
-
-        return sprintf('%s%s%s%d%04d', $carline, $code, $issueNumber, $qty, $nomorUrut);
     }
 
     /**

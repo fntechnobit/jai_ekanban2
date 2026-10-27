@@ -8,6 +8,9 @@
     // Cell BARCODE MESIN = kolom 7+8+9 (72+60+col9). Kolom 9 dilebarkan sampai
     // barcode Code 39 muat 1:1 plus quiet zone 30px di kiri-kanan (+2 border).
     $barcodeCol9 = max(192, ($circuit->barcode_width ?? 0) + 2 * \App\Helpers\BarcodeHelper::CODE39_QUIET_ZONE + 2 - (72 + 60));
+    // Judul & kotak family mengikuti family master circuit (spesifikasi conveyor), bukan
+    // carline listing PPC yang bisa berbeda per baris listing (mis. 812D/837D vs 837D/812D).
+    $familyLabel = $circuit->family ?: ($circuit->carline ?? '');
 @endphp
 <div class="ticket circuit-print-wrapper" data-orientation="landscape">
     @if(!empty($circuit->image_path))
@@ -31,7 +34,7 @@
             </colgroup>
             <thead>
                 <tr>
-                    <th colspan="9">E-KANBAN CUTTING {{ $circuit->carline ?? '' }}</th>
+                    <th colspan="9">E-KANBAN CUTTING {{ $familyLabel }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -145,7 +148,7 @@
                             <div style="width:128px;height:128px;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR CODE</div>
                         @endif
                     </td>
-                    <td colspan="3" class="value-cell text-left">{{ $circuit->carline ?? '' }}</td>
+                    <td colspan="3" class="value-cell text-left">{{ $familyLabel }}</td>
                     <td colspan="3" rowspan="4" class="barcode-cell">
                         <div class="barcode-label">BARCODE MESIN</div>
                         @if(isset($circuit->barcode_path))
