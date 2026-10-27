@@ -3,12 +3,13 @@
 namespace App\Support;
 
 /**
- * Isi QR kanban. Formatnya mengikuti scan STO Circuit di jai_sto_wip, yang
- * membedakan dua jenis kanban dari ada-tidaknya titik:
+ * Isi QR kanban. Formatnya mengikuti scan STO Circuit di jai_sto_wip
+ * (sto/views/circuit_scan/index_js.php), yang membedakan dua jenis kanban dari
+ * ada-tidaknya titik:
  *
- * - Circuit (CCT single): tanpa titik, dipotong per posisi tetap
- *   carline(1) + cct(4) + issue(3) + qty(2) + nomor urut(4).
- *   Contoh: GGE64003404174 → G | GE64 | 003 | 40 | 4174
+ * - Circuit (CCT single): tanpa titik, dipotong dari kedua ujung
+ *   carline(1) + cct(4-10) + issue(3) + qty(2) + nomor urut(4).
+ *   Contoh: GGE64003404174 → G | GE64 | 003 | 40 | 4174, SSC86A001200001 → S | SC86A | ...
  *
  * - Drawing (joint, bonder, shield, double crimp, twist): dipisah titik
  *   carline.drawing.issue.qty.nomor_urut. STO mencari semua CCT milik drawing
@@ -17,9 +18,11 @@ namespace App\Support;
  */
 final class KanbanBarcode
 {
-    public const CIRCUIT_CARLINE_LENGTH = 1;
-    public const CIRCUIT_CCT_LENGTH = 4;
-    public const CIRCUIT_MAX_QTY = 99;
+    private const CARLINE = '/^[A-Z0-9]$/i';
+    private const CCT = '/^[A-Z0-9-]{4,10}$/i';
+    private const DRAWING = '/^[A-Z0-9][A-Z0-9 -]*$/i';
+    private const CIRCUIT_MAX_QTY = 99;
+    private const DRAWING_MAX_QTY = 999;
 
     public static function circuit(string $carline, string $cctCode, string $issue, int $qty, int $nomorUrut): string
     {
@@ -68,25 +71,30 @@ final class KanbanBarcode
     }
 
     /**
-     * Alasan barcode tidak bisa dibaca scan STO Circuit, atau null bila terbaca.
-     * Hanya memeriksa bentuknya; keberadaan CCT / drawing di master STO tidak.
+     * Alasan kanban circuit tidak bisa dibaca scan STO, atau null bila terbaca.
+     * Hanya memeriksa bentuknya; keberadaan CCT di master STO tidak.
      */
-    public static function stoProblem(string $barcode): ?string
+    public static function circuitProblem(string $carline, string $cctCode, int $qty): ?string
     {
-        if (str_contains($barcode, '.')) {
-            $parts = explode('.', $barcode);
+        return match (true) {
+            !preg_match(self::CARLINE, $carline) => "carline '{$carline}' harus 1 huruf/angka",
+            !preg_match(self::CCT, $cctCode) => "CCT '{$cctCode}' harus 4-10 karakter huruf/angka/strip",
+            $qty < 0 || $qty > self::CIRCUIT_MAX_QTY => "qty {$qty} lebih dari 2 digit",
+            default => null,
+        };
+    }
 
-            return match (true) {
-                count($parts) !== 5 => 'kode drawing mengandung titik',
-                $parts[1] === '' => 'kode drawing kosong',
-                default => null,
-            };
-        }
-
-        $expected = self::CIRCUIT_CARLINE_LENGTH + self::CIRCUIT_CCT_LENGTH + 3 + 2 + 4;
-
-        return strlen($barcode) === $expected
-            ? null
-            : sprintf('panjang %d karakter, STO membaca circuit sebagai %d karakter (carline 1, CCT 4, qty maks 2 digit)', strlen($barcode), $expected);
+    /**
+     * Alasan kanban drawing tidak bisa dibaca scan STO, atau null bila terbaca.
+     * Hanya memeriksa bentuknya; keberadaan drawing di master STO tidak.
+     */
+    public static function drawingProblem(string $carline, string $code, int $qty): ?string
+    {
+        return match (true) {
+            !preg_match(self::CARLINE, $carline) => "carline '{$carline}' harus 1 huruf/angka",
+            !preg_match(self::DRAWING, $code) => "kode '{$code}' hanya boleh huruf/angka/strip/spasi (tanpa titik)",
+            $qty < 0 || $qty > self::DRAWING_MAX_QTY => "qty {$qty} lebih dari 3 digit",
+            default => null,
+        };
     }
 }

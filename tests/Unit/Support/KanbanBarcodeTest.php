@@ -8,25 +8,19 @@ use PHPUnit\Framework\TestCase;
 class KanbanBarcodeTest extends TestCase
 {
     /**
-     * Tiru pembacaan scan STO Circuit (jai_sto_wip sto/views/circuit_scan/index_js.php):
-     * bertitik → drawing, selain itu → CCT single per posisi tetap.
+     * Tiru pembacaan scan STO Circuit (regex KANBAN_DRAWING / KANBAN_CCT di
+     * jai_sto_wip sto/views/circuit_scan/index_js.php). Null bila ditolak STO.
      */
-    private function readAsSto(string $kanban): array
+    private function readAsSto(string $kanban): ?array
     {
-        if (str_contains($kanban, '.')) {
-            [$carline, $drawing, $issue, $qty, $nys] = array_pad(explode('.', $kanban, 5), 5, null);
-
-            return ['type' => 'drawing', 'carline' => $carline, 'drawing' => $drawing, 'issue' => $issue, 'qty' => $qty, 'nys' => $nys];
+        if (preg_match('/^([A-Z0-9])\.([A-Z0-9][A-Z0-9 -]*)\.(\d{3})\.(\d{1,3})\.(\d{4})$/i', $kanban, $m)) {
+            return ['type' => 'drawing', 'carline' => $m[1], 'drawing' => $m[2], 'issue' => $m[3], 'qty' => $m[4], 'nys' => $m[5]];
+        }
+        if (preg_match('/^([A-Z0-9])([A-Z0-9-]{4,10})(\d{3})(\d{2})(\d{4})$/i', $kanban, $m)) {
+            return ['type' => 'cct', 'carline' => $m[1], 'cct' => $m[2], 'issue' => $m[3], 'qty' => $m[4], 'nys' => $m[5]];
         }
 
-        return [
-            'type' => 'cct',
-            'carline' => substr($kanban, 0, 1),
-            'cct' => substr($kanban, 1, 4),
-            'issue' => substr($kanban, 5, 3),
-            'qty' => substr($kanban, 8, 2),
-            'nys' => substr($kanban, 10, 4),
-        ];
+        return null;
     }
 
     public function test_circuit_kanban_is_read_by_sto_as_single_cct(): void
@@ -38,7 +32,16 @@ class KanbanBarcodeTest extends TestCase
             ['type' => 'cct', 'carline' => 'G', 'cct' => 'GE64', 'issue' => '003', 'qty' => '40', 'nys' => '4174'],
             $this->readAsSto($barcode)
         );
-        $this->assertNull(KanbanBarcode::stoProblem($barcode));
+        $this->assertNull(KanbanBarcode::circuitProblem('G', 'GE64', 40));
+    }
+
+    public function test_circuit_kanban_with_five_char_cct_is_read_whole(): void
+    {
+        $barcode = KanbanBarcode::circuit('S', 'SC86A', '001/003', 20, 1);
+
+        $this->assertSame('SSC86A001200001', $barcode);
+        $this->assertSame('SC86A', $this->readAsSto($barcode)['cct']);
+        $this->assertNull(KanbanBarcode::circuitProblem('S', 'SC86A', 20));
     }
 
     public function test_circuit_single_digit_qty_is_zero_padded_so_sto_reads_the_right_qty(): void
@@ -59,7 +62,7 @@ class KanbanBarcodeTest extends TestCase
             ['type' => 'drawing', 'carline' => 'P', 'drawing' => 'B-0154XEB', 'issue' => '008', 'qty' => '16', 'nys' => '0024'],
             $this->readAsSto($barcode)
         );
-        $this->assertNull(KanbanBarcode::stoProblem($barcode));
+        $this->assertNull(KanbanBarcode::drawingProblem('P', 'B-0154XEB', 16));
     }
 
     public function test_drawing_keeps_single_digit_qty_unpadded(): void
@@ -90,15 +93,22 @@ class KanbanBarcodeTest extends TestCase
         $this->assertNull(KanbanBarcode::parse('CV1-TD36-0002', 'T', '002/005', 40, 2));
     }
 
-    public function test_sto_problem_flags_circuit_barcodes_that_break_fixed_positions(): void
+    public function test_circuit_problem_flags_what_sto_cannot_read(): void
     {
-        $this->assertNotNull(KanbanBarcode::stoProblem(KanbanBarcode::circuit('S', 'SC86A', '001/001', 20, 1)));
-        $this->assertNotNull(KanbanBarcode::stoProblem(KanbanBarcode::circuit('G', 'GE64', '001/001', 100, 1)));
-        $this->assertNotNull(KanbanBarcode::stoProblem(KanbanBarcode::circuit('GA', 'GE64', '001/001', 40, 1)));
+        $this->assertNotNull(KanbanBarcode::circuitProblem('G', 'GE64', 100));
+        $this->assertNotNull(KanbanBarcode::circuitProblem('GA', 'GE64', 40));
+        $this->assertNotNull(KanbanBarcode::circuitProblem('', 'GE64', 40));
+        $this->assertNotNull(KanbanBarcode::circuitProblem('G', 'GE6', 40));
+        // carline 2 huruf: STO mengambil 1 huruf, sisanya ikut terbaca sebagai CCT
+        $this->assertSame('AGE64', $this->readAsSto(KanbanBarcode::circuit('GA', 'GE64', '001/001', 40, 1))['cct']);
     }
 
-    public function test_sto_problem_flags_drawing_code_containing_a_dot(): void
+    public function test_drawing_problem_flags_what_sto_cannot_read(): void
     {
-        $this->assertNotNull(KanbanBarcode::stoProblem(KanbanBarcode::drawing('P', 'B-01.5', '001/001', 16, 1)));
+        $this->assertNotNull(KanbanBarcode::drawingProblem('P', 'B-01.5', 16));
+        $this->assertNotNull(KanbanBarcode::drawingProblem('PX', 'B-0154XEB', 16));
+        $this->assertNotNull(KanbanBarcode::drawingProblem('P', 'B-0154XEB', 1000));
+        $this->assertNull(KanbanBarcode::drawingProblem('K', 'BC-0138-1 B', 10));
+        $this->assertNull($this->readAsSto(KanbanBarcode::drawing('P', 'B-01.5', '001/001', 16, 1)));
     }
 }

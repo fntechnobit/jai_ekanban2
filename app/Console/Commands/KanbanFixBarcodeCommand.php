@@ -57,9 +57,7 @@ class KanbanFixBarcodeCommand extends Command
         $this->rows('assy_schedule_shikake', 'master_shikake', 'master_shikake_id', [])
             ->chunkById(1000, function ($rows) use (&$hasil) {
                 foreach ($rows as $row) {
-                    $this->check($hasil, 'assy_schedule_shikake', $row, 'barcode_kanban', fn ($carline, $code) => KanbanBarcode::drawing(
-                        $carline, $code, $row->issue, (int) $row->qty_kanban, (int) $row->nomor_urut
-                    ));
+                    $this->check($hasil, 'assy_schedule_shikake', $row, 'barcode_kanban', fn ($carline, $code) => $this->asDrawing($row, $carline, $code));
                 }
             }, 'k.id', 'id');
 
@@ -73,19 +71,14 @@ class KanbanFixBarcodeCommand extends Command
         $this->rows('assy_schedule_circuit', 'master_circuit', 'master_circuit_id', ['k.cct_code', 'k.qrcode_shikake'])
             ->chunkById(1000, function ($rows) use (&$hasil) {
                 foreach ($rows as $row) {
-                    $qty = (int) $row->qty_kanban;
-                    $nys = (int) $row->nomor_urut;
-
                     // Kode selain CCT di barcode kanban circuit adalah Twist No (JAM Twist),
                     // yang di STO terdaftar sebagai drawing.
                     $this->check($hasil, 'assy_schedule_circuit', $row, 'barcode_kanban', fn ($carline, $code) => $code === $row->cct_code
-                        ? KanbanBarcode::circuit($carline, $code, $row->issue, $qty, $nys)
-                        : KanbanBarcode::drawing($carline, $code, $row->issue, $qty, $nys));
+                        ? $this->asCircuit($row, $carline, $code)
+                        : $this->asDrawing($row, $carline, $code));
 
                     if ($row->qrcode_shikake !== null && $row->qrcode_shikake !== '') {
-                        $this->check($hasil, 'assy_schedule_circuit', $row, 'qrcode_shikake', fn ($carline, $code) => KanbanBarcode::drawing(
-                            $carline, $code, $row->issue, $qty, $nys
-                        ));
+                        $this->check($hasil, 'assy_schedule_circuit', $row, 'qrcode_shikake', fn ($carline, $code) => $this->asDrawing($row, $carline, $code));
                     }
                 }
             }, 'k.id', 'id');
@@ -104,6 +97,30 @@ class KanbanFixBarcodeCommand extends Command
             ->when($this->option('since'), fn ($q, $since) => $q->where('k.release_date', '>=', $since));
     }
 
+    /** @return array{0: string, 1: ?string} [barcode seharusnya, alasan tidak terbaca STO] */
+    private function asCircuit(object $row, string $carline, string $code): array
+    {
+        $qty = (int) $row->qty_kanban;
+
+        return [
+            KanbanBarcode::circuit($carline, $code, $row->issue, $qty, (int) $row->nomor_urut),
+            KanbanBarcode::circuitProblem($carline, $code, $qty),
+        ];
+    }
+
+    /** @return array{0: string, 1: ?string} [barcode seharusnya, alasan tidak terbaca STO] */
+    private function asDrawing(object $row, string $carline, string $code): array
+    {
+        $qty = (int) $row->qty_kanban;
+        $problem = KanbanBarcode::drawingProblem($carline, $code, $qty)
+            ?? (str_starts_with($code, 'SHK-') ? "kode '{$code}' adalah fallback: nomor bonder/drawing/shield kosong di master proses" : null);
+
+        return [
+            KanbanBarcode::drawing($carline, $code, $row->issue, $qty, (int) $row->nomor_urut),
+            $problem,
+        ];
+    }
+
     /**
      * Periksa satu kolom barcode: hitung barcode seharusnya, simpan bila --fix,
      * dan catat kanban yang tidak dikenali atau tetap tidak terbaca STO.
@@ -119,9 +136,9 @@ class KanbanFixBarcodeCommand extends Command
             return;
         }
 
-        $target = $format(...$parsed);
+        [$target, $problem] = $format(...$parsed);
 
-        if ($problem = KanbanBarcode::stoProblem($target)) {
+        if ($problem !== null) {
             $this->sample($hasil, 'tidak_terbaca', [$row->id, $column, $row->release_date, $target, $problem]);
         }
 
