@@ -125,9 +125,9 @@ abstract class BaseShikakeImport
         return $rowData[$index] ?? null;
     }
 
-    protected function slotKey($machine, $sequence): string
+    protected function slotKey($family, $machine, $sequence): string
     {
-        return $machine . '|' . $sequence;
+        return $family . '|' . $machine . '|' . $sequence;
     }
 
     /**
@@ -144,10 +144,15 @@ abstract class BaseShikakeImport
     /**
      * Find the master a row updates, or a new one.
      *
-     * Rows are matched on slot (conveyor, process, machine, sequence) AND shikake
-     * code. Matching on the slot alone made rows sharing a sequence overwrite each
-     * other - five bonders at sequence 210 ended up as one master holding only the
-     * last bonder, so the other four never reached the e-kanban.
+     * Rows are matched on slot (conveyor, process, family, machine, sequence) AND
+     * shikake code. Matching on the slot alone made rows sharing a sequence
+     * overwrite each other - five bonders at sequence 210 ended up as one master
+     * holding only the last bonder, so the other four never reached the e-kanban.
+     *
+     * Family keeps mirrored families apart: RHD and LHD share machines and
+     * sequences, so without it the "code changed" fallback below took the other
+     * family's masters (RHD S-N110 became LHD S-O110) and every import of one
+     * family shrank the other.
      *
      * Soft-deleted masters are included so a re-import after "remove by conveyor"
      * restores the existing master in place instead of creating a duplicate.
@@ -156,9 +161,9 @@ abstract class BaseShikakeImport
      *
      * @param string[] $codesInSlot codes this file holds for the same slot
      */
-    protected function findOrNewMaster(string $machine, $sequence, string $code, array $codesInSlot): MasterShikake
+    protected function findOrNewMaster(?string $family, string $machine, $sequence, string $code, array $codesInSlot): MasterShikake
     {
-        $masters = MasterShikake::inSlot($this->conveyorId, $this->process, $machine, $sequence);
+        $masters = MasterShikake::inSlot($this->conveyorId, $this->process, $family, $machine, $sequence);
 
         // Same slot + same code: the same shikake.
         $shikake = $masters->first(fn ($m) => MasterShikake::normalizeCode($m->shikake_code) === $code)
@@ -169,6 +174,7 @@ abstract class BaseShikakeImport
         return $shikake ?? new MasterShikake([
             'conveyor_id' => $this->conveyorId,
             'process' => $this->process,
+            'family' => $family,
             'machine' => $machine,
             'sequence' => $sequence,
         ]);
@@ -227,7 +233,7 @@ abstract class BaseShikakeImport
                 $rows[$row] = $rowData;
 
                 $shikakeData = $this->mapShikakeData($rowData, $conveyor);
-                $slot = $this->slotKey($shikakeData['machine'], $shikakeData['sequence']);
+                $slot = $this->slotKey($shikakeData['family'], $shikakeData['machine'], $shikakeData['sequence']);
                 $slotCodes[$slot][] = $this->getRowCode($rowData);
             }
 
@@ -237,15 +243,17 @@ abstract class BaseShikakeImport
                 try {
                     // Map and update or create MasterShikake
                     $shikakeData = $this->mapShikakeData($rowData, $conveyor);
+                    $family = $shikakeData['family'] ?? null;
                     $machine = $shikakeData['machine'] ?? null;
                     $sequence = $shikakeData['sequence'] ?? null;
 
                     if ($machine && $sequence !== null) {
                         $shikake = $this->findOrNewMaster(
+                            $family,
                             $machine,
                             $sequence,
                             $this->getRowCode($rowData),
-                            $slotCodes[$this->slotKey($machine, $sequence)] ?? []
+                            $slotCodes[$this->slotKey($family, $machine, $sequence)] ?? []
                         );
                         if ($shikake->trashed()) {
                             $shikake->restore();
