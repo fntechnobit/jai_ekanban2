@@ -256,6 +256,70 @@ class AdditionController extends Controller
     }
 
     /**
+     * Parse an uploaded STO Circuit Scan History file and return a preview of
+     * its drawing (shikake) kanban scans, without writing to the database.
+     */
+    public function shikakeImportStoPreview(Request $request)
+    {
+        $validated = $request->validate([
+            'conveyor_id' => 'required|exists:master_conveyor,id',
+            'file'        => 'required|file|mimes:xlsx,xls|max:10240',
+        ]);
+
+        try {
+            $result = $this->additionService->previewShikakeSto(
+                $request->file('file')->getRealPath(),
+                (int) $validated['conveyor_id']
+            );
+
+            return response()->json([
+                'success' => true,
+                'data'    => $result,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('AdditionController: shikakeImportStoPreview failed', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Apply one chunk of previously previewed shikake STO rows as balance
+     * additions (AJAX), one chunk per call like cuttingImportStoCommit().
+     */
+    public function shikakeImportStoCommit(Request $request)
+    {
+        $validated = $request->validate([
+            'conveyor_id'                => 'required|exists:master_conveyor,id',
+            'addition_date'              => 'required|date|before_or_equal:today',
+            'shift'                      => 'required|integer|in:1,2,3',
+            'items'                      => 'required|array|min:1|max:200',
+            'items.*.master_shikake_id'  => 'required|integer|exists:master_shikake,id',
+            'items.*.code'               => 'required|string',
+            'items.*.qty'                => 'required|integer|min:1',
+        ]);
+
+        try {
+            $result = $this->additionService->commitShikakeAdditions(
+                (int) $validated['conveyor_id'],
+                $validated['addition_date'],
+                (int) $validated['shift'],
+                $validated['items']
+            );
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+            Log::error('AdditionController: shikakeImportStoCommit failed', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
      * Get shikakes for a conveyor and type (AJAX).
      */
     public function getShikakes(Request $request)

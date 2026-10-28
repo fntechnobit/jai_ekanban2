@@ -585,13 +585,16 @@ listing 331  &rarr;  S1 CO5 30, S2 CO5 31   lewat jatah    &rarr; <b>over</b></d
                                 <thead class="table-light"><tr><th>Kejadian</th><th class="text-center">Efek</th></tr></thead>
                                 <tbody>
                                     <tr><td>Generate kanban</td><td class="text-center"><span class="badge bg-primary">+ / &minus;</span></td></tr>
-                                    <tr><td>Addition di layar cutting</td><td class="text-center"><span class="badge bg-success">+</span></td></tr>
+                                    <tr><td>Addition di layar cutting / shikake (termasuk Import STO)</td><td class="text-center"><span class="badge bg-success">+</span></td></tr>
                                     <tr><td>Defect di layar cutting</td><td class="text-center"><span class="badge bg-danger">&minus;</span></td></tr>
                                 </tbody>
                             </table>
-                            <p class="small text-muted mb-0">Setiap perubahan tercatat beserta saldo sebelum dan sesudahnya.
+                            <p class="small text-muted mb-2">Setiap perubahan tercatat beserta saldo sebelum dan sesudahnya.
                             Kalau saldo tidak sama dengan hasil penjumlahan ketiganya, berarti ada yang mengubah saldo tanpa
                             jejak &mdash; dan itu selalu bisa dilacak.</p>
+                            <p class="small text-muted mb-0"><strong>Stok awal item baru.</strong> Circuit/shikake yang belum
+                            pernah di-generate belum punya saldo. Addition atau Import STO membuatkan saldonya mulai dari 0, lalu
+                            generate pertama langsung memakainya sebagai sisa.</p>
                         </div>
                     </div>
                 </div>

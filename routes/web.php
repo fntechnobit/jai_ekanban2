@@ -229,6 +229,8 @@ Route::middleware('auth')->group(function () {
         Route::get('shikake', [AdditionController::class, 'shikakeIndex'])->name('shikake.index');
         Route::get('shikake/datatable', [AdditionController::class, 'shikakeDatatable'])->name('shikake.datatable');
         Route::post('shikake', [AdditionController::class, 'shikakeStore'])->name('shikake.store');
+        Route::post('shikake/import-sto/preview', [AdditionController::class, 'shikakeImportStoPreview'])->name('shikake.import-sto.preview');
+        Route::post('shikake/import-sto/commit', [AdditionController::class, 'shikakeImportStoCommit'])->name('shikake.import-sto.commit');
         Route::get('shikake/list', [AdditionController::class, 'getShikakes'])->name('shikake.list');
         Route::get('shikake/balance', [AdditionController::class, 'getShikakeBalance'])->name('shikake.balance');
 
