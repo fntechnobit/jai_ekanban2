@@ -74,10 +74,10 @@ class DayScheduleBuilderTest extends TestCase
         ]);
     }
 
-    private function susun(Collection $listings, array $held = [], array $occupied = []): array
+    private function susun(Collection $listings, array $held = [], array $occupied = [], int $shiftStart = 1): array
     {
         return $this->builder->allocate(
-            $listings, $held, $occupied, self::NORMAL, self::OVERTIME, 2, '2026-09-30'
+            $listings, $held, $occupied, self::NORMAL, self::OVERTIME, 2, '2026-09-30', $shiftStart
         );
     }
 
@@ -256,5 +256,32 @@ class DayScheduleBuilderTest extends TestCase
 
         $this->assertSame([1 => ['24012-7YA1E' => 96]], $this->perShift($plan));
         $this->assertSame([1 => 21, 2 => 19, 3 => 19, 4 => 19, 5 => 18], $this->perCutoff($plan, 1));
+    }
+
+    // ─────────────── shift mulai dari master conveyor ───────────────
+
+    /** Conveyor mulai shift 2: hari satu shift seluruhnya di S2, CO5 tetap penampung. */
+    public function test_hari_satu_shift_mulai_shift_2_dijadwalkan_di_shift_2(): void
+    {
+        $listings = $this->listing([[9, 1, 'E1', 'A', 90, 1]]);
+
+        $plan = $this->susun($listings, shiftStart: 2);
+
+        $this->assertSame(1, $plan['max_shifts']);
+        $this->assertSame([2 => ['A' => 90]], $this->perShift($plan));
+        $this->assertSame([1 => 21, 2 => 19, 3 => 19, 4 => 19, 5 => 12], $this->perCutoff($plan, 2));
+        $this->assertSame(0, $plan['unallocated']);
+    }
+
+    /** Mulai shift 2 tidak berlaku pada hari dua shift: tetap S1 lalu S2. */
+    public function test_hari_dua_shift_mulai_shift_2_tetap_dari_shift_1(): void
+    {
+        $plan = $this->susun($this->listingB3Eng(), shiftStart: 2);
+
+        $this->assertSame(2, $plan['max_shifts']);
+        $this->assertSame([
+            1 => ['24012-7YA1E' => 78],
+            2 => ['24012-7YA1E' => 34, '24012-7YA6A' => 6, '24012-7YA1A' => 22],
+        ], $this->perShift($plan));
     }
 }

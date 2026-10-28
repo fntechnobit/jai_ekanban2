@@ -33,11 +33,16 @@ class ShiftCapacityCalculatorTest extends TestCase
      *
      * @return array{shift:int, lembur:bool, caps:array<int, array<string,int>>}
      */
-    private function jalankan(int $qty, int $normal = self::NORMAL, ?int $overtime = self::OVERTIME, array $lock = []): array
-    {
+    private function jalankan(
+        int $qty,
+        int $normal = self::NORMAL,
+        ?int $overtime = self::OVERTIME,
+        array $lock = [],
+        int $shiftStart = 1
+    ): array {
         $shift  = $this->calc->resolveShiftCount($overtime, $qty);
         $lembur = $this->calc->isOvertimeDay($normal, $shift, $qty);
-        $caps   = $this->calc->calculateShiftCapacities($normal, $lock, $shift);
+        $caps   = $this->calc->calculateShiftCapacities($normal, $lock, $shift, $shiftStart);
         $this->calc->preMapCutoff5($caps, $normal, $overtime, $qty, $lembur);
 
         return ['shift' => $shift, 'lembur' => $lembur, 'caps' => $caps];
@@ -162,6 +167,48 @@ class ShiftCapacityCalculatorTest extends TestCase
         $this->assertSame(0, $h['caps'][1]['c5']);
         $this->assertSame(0, $h['caps'][2]['c5']);
         $this->assertSame(136, $h['caps'][1]['total'], 'Shift pertama sampai kapasitas normal');
+    }
+
+    // ───────────────────────── shift mulai ─────────────────────────
+
+    public function test_hari_satu_shift_berjalan_di_shift_mulai_master(): void
+    {
+        $this->assertSame([1], $this->calc->runningShifts(1), 'Bawaan shift 1');
+        $this->assertSame([1], $this->calc->runningShifts(1, 1));
+        $this->assertSame([2], $this->calc->runningShifts(1, 2));
+    }
+
+    public function test_hari_dua_shift_selalu_mulai_dari_shift_1(): void
+    {
+        $this->assertSame([1, 2], $this->calc->runningShifts(2, 1));
+        $this->assertSame([1, 2], $this->calc->runningShifts(2, 2), 'shift_start tidak dipakai pada hari dua shift');
+    }
+
+    public function test_shift_mulai_di_luar_rentang_dianggap_shift_1(): void
+    {
+        $this->assertSame([1], $this->calc->runningShifts(1, 0));
+        $this->assertSame([1], $this->calc->runningShifts(1, 3), 'Tidak ada shift 3 di lapangan');
+    }
+
+    /** qty 160, mulai shift 2 -> seluruh hari di S2 termasuk CO5 penampung; S1 tidak dibentuk. */
+    public function test_acuan_ppc_satu_shift_mulai_shift_2(): void
+    {
+        $h = $this->jalankan(160, shiftStart: 2);
+
+        $this->assertSame(1, $h['shift']);
+        $this->assertSame([2], array_keys($h['caps']));
+        $this->assertSame(24, $h['caps'][2]['c5']);
+        $this->assertSame(160, $this->totalTeralokasi($h['caps']));
+    }
+
+    /** qty 310, mulai shift 2 -> tetap S1 penuh 160 dulu, S2 menampung sisa 150. */
+    public function test_dua_shift_mulai_shift_2_tetap_diisi_dari_shift_1(): void
+    {
+        $h = $this->jalankan(310, shiftStart: 2);
+
+        $this->assertSame([1, 2], array_keys($h['caps']));
+        $this->assertSame(160, $h['caps'][1]['total']);
+        $this->assertSame(150, $h['caps'][2]['total']);
     }
 
     // ───────────────────────── perilaku lain ─────────────────────────

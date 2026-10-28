@@ -92,7 +92,7 @@ class ScheduleVerificationService
             ->where('mc.is_active', 1)
             ->whereRaw('DATE(a.schedule) BETWEEN ? AND ?', [$start->format('Y-m-d'), $end->format('Y-m-d')])
             ->select('mc.id AS conveyor_id', 'mc.conveyor AS conveyor_name', 'mc.capacity', 'mc.overtime_capacity',
-                'mc.overtime_capacity', 'mc.capacity_synced_at')
+                'mc.overtime_capacity', 'mc.capacity_synced_at', 'mc.shift_start')
             ->distinct();
 
         if ($conveyorId) {
@@ -188,9 +188,10 @@ class ScheduleVerificationService
                 $shiftsHere = $shiftMap[$dateStr . '|' . $conv->conveyor_id] ?? [];
 
                 // Tanggal tanpa jadwal sama sekali tetap muncul satu baris agar celah
-                // penjadwalan tetap terlihat, bukan hilang diam-diam dari layar.
+                // penjadwalan tetap terlihat, bukan hilang diam-diam dari layar — di
+                // shift tempat hari satu shift conveyor ini dijadwalkan.
                 if (empty($shiftsHere)) {
-                    $shiftsHere = [1];
+                    $shiftsHere = $this->capacityCalculator->runningShifts(1, (int) ($conv->shift_start ?? 1));
                 }
 
                 $shiftQty  = count($shiftsHere);

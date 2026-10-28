@@ -24,10 +24,11 @@ class MasterConveyorRequest extends FormRequest
         return [
             // Nama conveyor, kapasitas, dan status aktif seluruhnya milik SIREP —
             // tidak ada satu pun yang boleh diubah dari sini. Yang tersisa hanyalah
-            // parameter lokal yang tidak dikirim API, termasuk jumlah shift.
+            // parameter lokal yang tidak dikirim API, termasuk shift mulai.
             'master_area_id' => ['nullable', 'exists:master_area,id'],
             'sirep_conveyor_code' => ['nullable', 'string', 'max:50'],
             'pallet_qty' => ['nullable', 'integer', 'min:1'],
+            'shift_start' => ['required', 'integer', 'in:1,2'],
             'family_ids' => ['nullable', 'array'],
             'family_ids.*' => ['exists:master_family,id'],
         ];
@@ -42,6 +43,7 @@ class MasterConveyorRequest extends FormRequest
             'master_area_id' => 'Area',
             'sirep_conveyor_code' => 'Kode Conveyor SIREP',
             'pallet_qty' => 'Pallet Qty',
+            'shift_start' => 'Mulai Shift',
             'family_ids' => 'Family',
         ];
     }

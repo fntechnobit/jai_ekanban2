@@ -20,11 +20,13 @@ class MasterConveyor extends Model
      * sini: ketiganya milik SIREP dan hanya boleh ditulis `sirep:sync-conveyor`,
      * bukan lewat form master. `sirep_conveyor_code` tetap dapat diisi manual —
      * itulah jembatan bagi conveyor yang namanya berbeda antara SIREP dan sini.
+     * `shift_start` juga lokal: SIREP tidak mengirimnya.
      */
     protected $fillable = [
         'master_area_id',
         'sirep_conveyor_code',
         'pallet_qty',
+        'shift_start',
         'created_by',
         'updated_by',
         'deleted_by',
@@ -34,6 +36,7 @@ class MasterConveyor extends Model
         'capacity_synced_at' => 'datetime',
         'deactivated_at'     => 'datetime',
         'is_active'          => 'boolean',
+        'shift_start'        => 'integer',
     ];
 
     /**
