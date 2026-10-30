@@ -12,11 +12,16 @@ use Illuminate\Support\Facades\DB;
  *
  *     sisa = sisa_before baris ledger PERTAMA
  *          + Σ kanban_generation_log.delta
- *          + Σ addition.qty  −  Σ defect.qty     (sejak tanggal ledger pertama)
+ *          + Σ addition.qty  −  Σ defect.qty     (dicatat sesudah ledger pertama)
  *
  * Titik awalnya sengaja diambil dari ledger, bukan dari nol: mutasi yang terjadi
  * sebelum ledger ada tidak punya jejak yang bisa diverifikasi, dan memasukkannya
  * hanya menghasilkan selisih palsu.
+ *
+ * Addition/defect dipilah menurut WAKTU PENCATATAN-nya, bukan tanggal bisnisnya:
+ * stok awal yang di-import sebelum generate pertama sudah terkandung dalam
+ * `sisa_before`, walaupun tanggal addition-nya sama dengan atau sesudah tanggal
+ * jadwal yang di-generate.
  *
  * Bila tidak sama, ada mutasi yang terjadi tanpa jejak — misalnya reset saldo yang
  * tidak ikut membersihkan ledger, atau kanban terhapus tanpa pembalikan saldo.
@@ -62,9 +67,11 @@ class BalanceIntegrityService
 
         // Titik awal perbandingan adalah baris ledger PERTAMA tiap item: nilai
         // `sisa_before`-nya diperlakukan sebagai saldo pembuka yang sudah benar.
-        // Mutasi sebelum ledger ada tidak dapat diverifikasi dan karena itu tidak
-        // ikut dihitung — memasukkannya akan menghasilkan selisih palsu.
-        $awal = "(SELECT l.conveyor_id, l.master_id, l.schedule_date AS tgl_awal, l.sisa_before AS saldo_awal
+        // Mutasi yang dicatat sebelum `sisa_before` itu diambil (updated_at baris
+        // tsb — record() memakai updateOrCreate) sudah terkandung di dalamnya,
+        // jadi tidak dihitung lagi.
+        $awal = "(SELECT l.conveyor_id, l.master_id, l.schedule_date AS tgl_awal, l.sisa_before AS saldo_awal,
+                         l.updated_at AS dicatat_awal
                   FROM kanban_generation_log l
                   JOIN (SELECT conveyor_id, master_id, MIN(CONCAT(schedule_date, '-', LPAD(shift,2,'0'))) AS k
                         FROM kanban_generation_log WHERE item_type = '{$type}'
@@ -90,13 +97,13 @@ class BalanceIntegrityService
             LEFT JOIN (SELECT x.conveyor_id, x.{$key} AS mid, SUM(x.qty_addition) AS a
                        FROM {$s['addition']} x
                        JOIN {$awal} w ON w.conveyor_id = x.conveyor_id AND w.master_id = x.{$key}
-                       WHERE x.addition_date >= w.tgl_awal
+                       WHERE x.created_at > w.dicatat_awal
                        GROUP BY x.conveyor_id, x.{$key}) ad
                    ON ad.conveyor_id = b.conveyor_id AND ad.mid = b.{$key}
             LEFT JOIN (SELECT x.conveyor_id, x.{$key} AS mid, SUM(x.qty_defect) AS f
                        FROM {$s['defect']} x
                        JOIN {$awal} w ON w.conveyor_id = x.conveyor_id AND w.master_id = x.{$key}
-                       WHERE x.defect_date >= w.tgl_awal
+                       WHERE x.created_at > w.dicatat_awal
                        GROUP BY x.conveyor_id, x.{$key}) df
                    ON df.conveyor_id = b.conveyor_id AND df.mid = b.{$key}
             WHERE 1 = 1 {$filter}

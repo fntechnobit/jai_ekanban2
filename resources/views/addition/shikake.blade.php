@@ -38,6 +38,9 @@
                 <button type="button" class="btn btn-outline-danger btn-sm" id="btn-reset-filter" title="Reset Filter">
                     <i class="fa-solid fa-arrows-rotate"></i>
                 </button>
+                <button type="button" class="btn btn-success btn-sm" id="btn-import-sto">
+                    <i class="fa-solid fa-file-import me-1"></i> Import STO
+                </button>
             </div>
         </div>
         <div class="card-body">
@@ -139,6 +142,27 @@
         </div>
     </div>
 </div>
+
+@include('addition.partials.import-sto', [
+    'conveyors' => $conveyors,
+    'config'    => [
+        'previewUrl'    => route('addition.shikake.import-sto.preview'),
+        'commitUrl'     => route('addition.shikake.import-sto.commit'),
+        'tableSelector' => '#shikake-table',
+        'title'         => 'Import STO Shikake (Drawing) Scan History',
+        'help'          => 'Use the same <strong>Stock Opname Barcode Scan History</strong> export from '
+                         . '<strong>jai_sto_wip</strong>. Only drawing kanban scans (column <strong>Drawing</strong> '
+                         . 'other than SINGLE) and their <strong>STO</strong> are used; one scan is counted once even '
+                         . 'though the file lists it per CCT. Each Drawing is matched against the shikake code of the '
+                         . 'selected conveyor &mdash; unmatched codes are skipped. Shikake that have no balance yet start from 0.',
+        'noun'          => 'shikake',
+        'nounLabel'     => 'Shikake',
+        'codeLabel'     => 'Drawing',
+        'idKey'         => 'master_shikake_id',
+        'codeKey'       => 'code',
+        'columns'       => [['code', 'Kode Shikake'], ['process', 'Process'], ['machine', 'Machine']],
+    ],
+])
 @endsection
 
 @section('script')

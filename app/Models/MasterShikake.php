@@ -172,18 +172,24 @@ class MasterShikake extends Model
 
     /**
      * Masters (soft-deleted included, live first) in one (conveyor, process,
-     * machine, sequence) slot, each carrying its shikake code as `shikake_code`.
+     * family, machine, sequence) slot, each carrying its shikake code as
+     * `shikake_code`.
      *
      * Several shikake may legitimately share one slot - e.g. five bonders all at
      * sequence 210 on HW32.NPR-03 - so a slot alone does not identify a master;
      * the slot plus the shikake code does.
+     *
+     * Family is part of the slot: mirrored families (953W HEV-RHD / 953W-HEV LHD)
+     * run the same machines at the same sequences, and without it importing one
+     * family took over the other family's masters.
      */
-    public static function inSlot($conveyorId, $process, $machine, $sequence)
+    public static function inSlot($conveyorId, $process, $family, $machine, $sequence)
     {
         $query = static::withTrashed()
             ->select('master_shikake.*')
             ->where('master_shikake.conveyor_id', $conveyorId)
             ->where('master_shikake.process', $process)
+            ->where('master_shikake.family', $family)
             ->where('master_shikake.machine', $machine)
             ->where('master_shikake.sequence', $sequence)
             ->orderByRaw('master_shikake.deleted_at IS NOT NULL')

@@ -176,6 +176,18 @@ class ListingSyncService
                     $stage->delete();
                 }
 
+                // uq_listing_stage memuat assy code + seq, sedangkan kunci sinkron id SIREP.
+                // Saat PPC menukar urutan dua listing ber-assy code sama (C6 02-11-2026: DZP8),
+                // baris pertama yang diperbarui menabrak seq lama baris kedua yang belum
+                // diperbarui. Parkir dulu baris yang posisinya berubah di seq sementara yang
+                // pasti unik (-id), baru tulis nilai akhirnya.
+                foreach ($plan['update'] as $u) {
+                    if (isset($u['fields']['seq']) || isset($u['fields']['assycode'])) {
+                        $u['stage']->seq = -$u['stage']->id;
+                        $u['stage']->save();
+                    }
+                }
+
                 foreach ($plan['update'] as $u) {
                     $u['stage']->fill($u['attributes'] + ['synced_at' => now()])->save();
                 }

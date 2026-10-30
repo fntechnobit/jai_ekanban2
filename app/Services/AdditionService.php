@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\CircuitType;
 use App\Imports\CuttingStoImport;
+use App\Imports\ShikakeStoImport;
 use App\Models\AdditionLogCircuit;
 use App\Models\AdditionLogShikake;
 use App\Models\KanbanBalanceCircuit;
@@ -320,8 +321,21 @@ class AdditionService
                 ])->first();
             }
 
+            // Item baru di master yang belum pernah di-generate/verifikasi belum
+            // punya baris saldo. Buat saldo awal 0 seperti yang dilakukan
+            // KanbanGeneratorService, asalkan master memang milik conveyor ini.
             if (!$balance) {
-                throw new \Exception('Balance record not found. Please verify a schedule first to initialize the balance.');
+                if ($type === 'circuit') {
+                    if (!MasterCircuit::where('id', $params['master_circuit_id'])->where('conveyor_id', $conveyorId)->exists()) {
+                        throw new \Exception('Circuit is not registered on this conveyor.');
+                    }
+                    $balance = KanbanBalanceCircuit::findOrCreate($conveyorId, $params['master_circuit_id']);
+                } else {
+                    if (!MasterShikake::where('id', $params['master_shikake_id'])->where('conveyor_id', $conveyorId)->exists()) {
+                        throw new \Exception('Shikake is not registered on this conveyor.');
+                    }
+                    $balance = KanbanBalanceShikake::findOrCreate($conveyorId, $params['master_shikake_id']);
+                }
             }
 
             $balanceBefore = $balance->sisa;
@@ -390,14 +404,43 @@ class AdditionService
      */
     public function previewCuttingSto(string $filePath, int $conveyorId): array
     {
-        $importer = new CuttingStoImport($conveyorId);
+        return $this->buildStoPreview(new CuttingStoImport($conveyorId), $filePath, KanbanBalanceCircuit::class, 'master_circuit_id', $conveyorId);
+    }
+
+    /**
+     * Same as previewCuttingSto(), for the drawing (shikake) kanban scans of
+     * the same STO export.
+     */
+    public function previewShikakeSto(string $filePath, int $conveyorId): array
+    {
+        return $this->buildStoPreview(new ShikakeStoImport($conveyorId), $filePath, KanbanBalanceShikake::class, 'master_shikake_id', $conveyorId);
+    }
+
+    /**
+     * Run an STO importer and attach each matched row's current balance;
+     * `is_new` marks items with no balance record yet, which the commit
+     * initializes from 0.
+     */
+    private function buildStoPreview(CuttingStoImport $importer, string $filePath, string $balanceModel, string $key, int $conveyorId): array
+    {
         $matched = $importer->parse($filePath);
         $notFoundCodes = $importer->getNotFoundCodes();
+
+        $balances = $balanceModel::where('conveyor_id', $conveyorId)
+            ->whereIn($key, array_column($matched, $key))
+            ->pluck('sisa', $key);
+
+        foreach ($matched as &$row) {
+            $row['is_new']  = !$balances->has($row[$key]);
+            $row['balance'] = (int) $balances->get($row[$key], 0);
+        }
+        unset($row);
 
         return [
             'total_rows'      => $importer->getTotalRows(),
             'matched'         => $matched,
             'matched_count'   => count($matched),
+            'new_count'       => count(array_filter(array_column($matched, 'is_new'))),
             'total_qty'       => array_sum(array_column($matched, 'qty')),
             'not_found_codes' => $notFoundCodes,
             'not_found_count' => count($notFoundCodes),
@@ -433,6 +476,49 @@ class AdditionService
                 $successCount++;
             } else {
                 $errors[] = "{$item['cct_code']}: {$result['message']}";
+            }
+        }
+
+        return [
+            'success'       => true,
+            'success_count' => $successCount,
+            'failed_count'  => count($items) - $successCount,
+            'errors'        => $errors,
+        ];
+    }
+
+    /**
+     * Shikake counterpart of commitCuttingAdditions().
+     *
+     * @param array $items Each: ['master_shikake_id' => int, 'code' => string, 'qty' => int]
+     */
+    public function commitShikakeAdditions(int $conveyorId, string $date, int $shift, array $items): array
+    {
+        $successCount = 0;
+        $errors = [];
+
+        $processes = MasterShikake::whereIn('id', array_column($items, 'master_shikake_id'))->pluck('process', 'id');
+
+        foreach ($items as $item) {
+            $result = $this->recordAddition(
+                'shikake',
+                $conveyorId,
+                [
+                    'master_shikake_id' => $item['master_shikake_id'],
+                    'shikake_type'      => $processes->get($item['master_shikake_id']),
+                ],
+                $item['qty'],
+                [
+                    'date'   => $date,
+                    'shift'  => $shift,
+                    'reason' => 'Import STO Circuit Scan History (Drawing ' . $item['code'] . ')',
+                ]
+            );
+
+            if ($result['success']) {
+                $successCount++;
+            } else {
+                $errors[] = "{$item['code']}: {$result['message']}";
             }
         }
 

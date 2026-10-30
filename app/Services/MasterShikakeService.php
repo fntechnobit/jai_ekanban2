@@ -163,16 +163,17 @@ class MasterShikakeService
         try {
             $conveyorId = $data['conveyor_id'] ?? null;
             $process = $data['process'] ?? null;
+            $family = $data['family'] ?? null;
             $machine = $data['machine'] ?? null;
             $sequence = $data['sequence'] ?? null;
 
-            // Enforce uniqueness on (conveyor_id, process, machine, sequence) plus
-            // shikake code - the same identifier the Excel import matches on, so a
-            // manual add can't silently create a duplicate of what import would
+            // Enforce uniqueness on (conveyor_id, process, family, machine, sequence)
+            // plus shikake code - the same identifier the Excel import matches on,
+            // so a manual add can't silently create a duplicate of what import would
             // have merged. Several shikake may share one sequence (e.g. bonders).
             if ($conveyorId && $process && $machine && $sequence !== null) {
                 $code = $this->requestedCode($process, $data);
-                $existing = MasterShikake::inSlot($conveyorId, $process, $machine, $sequence)
+                $existing = MasterShikake::inSlot($conveyorId, $process, $family, $machine, $sequence)
                     ->first(fn ($m) => MasterShikake::normalizeCode($m->shikake_code) === $code);
 
                 if ($existing) {
@@ -209,14 +210,15 @@ class MasterShikakeService
         try {
             $conveyorId = $data['conveyor_id'] ?? $shikake->conveyor_id;
             $process = $data['process'] ?? $shikake->process;
+            $family = array_key_exists('family', $data) ? $data['family'] : $shikake->family;
             $machine = array_key_exists('machine', $data) ? $data['machine'] : $shikake->machine;
             $sequence = array_key_exists('sequence', $data) ? $data['sequence'] : $shikake->sequence;
 
             // Block updates that would duplicate another live shikake's
-            // (conveyor_id, process, machine, sequence) + shikake code combination.
+            // (conveyor_id, process, family, machine, sequence) + shikake code combination.
             if ($conveyorId && $process && $machine && $sequence !== null) {
                 $code = $this->requestedCode($process, $data, $shikake);
-                $duplicate = MasterShikake::inSlot($conveyorId, $process, $machine, $sequence)
+                $duplicate = MasterShikake::inSlot($conveyorId, $process, $family, $machine, $sequence)
                     ->first(fn ($m) => $m->isNot($shikake)
                         && !$m->trashed()
                         && MasterShikake::normalizeCode($m->shikake_code) === $code);

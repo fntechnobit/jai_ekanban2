@@ -35,29 +35,8 @@ class CuttingStoImport
      */
     public function parse(string $filePath): array
     {
-        $spreadsheet = IOFactory::load($filePath);
-        $worksheet = $spreadsheet->getActiveSheet();
-        $highestRow = $worksheet->getHighestRow();
-        $highestColumn = $worksheet->getHighestColumn();
-
-        $headerRow = $worksheet->rangeToArray('A' . self::HEADER_ROW . ':' . $highestColumn . self::HEADER_ROW, null, true, false)[0];
-        $this->validateHeaders($headerRow);
-
-        $dataStart = self::HEADER_ROW + 1;
-        $this->totalRows = max(0, $highestRow - $dataStart + 1);
-
-        if ($this->totalRows > self::MAX_ROWS) {
-            throw new \Exception("Data exceeds " . self::MAX_ROWS . " rows limit. You are trying to upload {$this->totalRows} rows. Please split your data into smaller batches.");
-        }
-
         $grouped = [];
-        for ($row = $dataStart; $row <= $highestRow; $row++) {
-            $rowData = $worksheet->rangeToArray("A{$row}:{$highestColumn}{$row}", null, true, false)[0];
-
-            if ($this->isEmptyRow($rowData)) {
-                continue;
-            }
-
+        foreach ($this->readRows($filePath) as $rowData) {
             $cctCode = ImportHelper::cleanValue($rowData[self::CCT_CODE_COL] ?? null);
             $sto = ImportHelper::cleanNumeric($rowData[self::STO_COL] ?? null);
 
@@ -93,6 +72,35 @@ class CuttingStoImport
         }
 
         return $matched;
+    }
+
+    /**
+     * Validate the header and yield every non-empty data row as a 0-indexed array.
+     */
+    protected function readRows(string $filePath): \Generator
+    {
+        $spreadsheet = IOFactory::load($filePath);
+        $worksheet = $spreadsheet->getActiveSheet();
+        $highestRow = $worksheet->getHighestRow();
+        $highestColumn = $worksheet->getHighestColumn();
+
+        $headerRow = $worksheet->rangeToArray('A' . self::HEADER_ROW . ':' . $highestColumn . self::HEADER_ROW, null, true, false)[0];
+        $this->validateHeaders($headerRow);
+
+        $dataStart = self::HEADER_ROW + 1;
+        $this->totalRows = max(0, $highestRow - $dataStart + 1);
+
+        if ($this->totalRows > self::MAX_ROWS) {
+            throw new \Exception("Data exceeds " . self::MAX_ROWS . " rows limit. You are trying to upload {$this->totalRows} rows. Please split your data into smaller batches.");
+        }
+
+        for ($row = $dataStart; $row <= $highestRow; $row++) {
+            $rowData = $worksheet->rangeToArray("A{$row}:{$highestColumn}{$row}", null, true, false)[0];
+
+            if (!$this->isEmptyRow($rowData)) {
+                yield $rowData;
+            }
+        }
     }
 
     protected function isEmptyRow($rowData): bool
