@@ -380,24 +380,7 @@ class ListingSyncService
             $fields = $this->adapter->changedFields($stage, $attributes);
 
             if ($fields !== []) {
-                $protected = $this->isProtected($stage);
-
-                $plan['update'][] = [
-                    'stage'      => $stage,
-                    'attributes' => $attributes,
-                    'fields'     => $fields,
-                    'protected'  => $protected,
-                ];
-
-                if ($protected && array_intersect(array_keys($fields), self::SCHEDULE_FIELDS)) {
-                    $plan['warnings'][] = $this->labelListing($stage->assy, $stage)
-                        . ' diubah di SIREP setelah jadwalnya diverifikasi ('
-                        . collect($fields)->only(self::SCHEDULE_FIELDS)
-                            ->map(fn ($v, $f) => $this->fieldLabel($f) . ' ' . $this->nilai($v[0]) . ' → ' . $this->nilai($v[1]))
-                            ->implode(', ')
-                        . '). Jadwal yang sudah diverifikasi tidak ikut berubah — unverify bila kanbannya belum dicetak.';
-                }
-
+                $this->planUpdate($stage, $attributes, $fields, $plan);
                 continue;
             }
 
@@ -411,6 +394,7 @@ class ListingSyncService
 
         $sudahDiputuskan = [];
         $this->planMoves($baru, $plan, $sudahDiputuskan);
+        $this->planReissues($existing, $incoming, $plan, $sudahDiputuskan);
 
         // Salinan dobel dari masa sinkron berkunci seq. Kembarannya sudah dicocokkan di
         // atas, jadi salinan ini bukan pembatalan — buang bila belum terlindungi.
@@ -441,7 +425,169 @@ class ListingSyncService
             $this->planDeletions($missing, $existing, $incoming, $plan);
         }
 
+        $this->dropSlotConflicts($plan);
+
         return $plan;
+    }
+
+    /**
+     * Rencanakan pembaruan satu baris staging. Baris yang jadwalnya sudah terkunci tetap
+     * diperbarui — staging mencerminkan SIREP — tetapi operator diberi tahu bahwa jadwalnya
+     * tidak ikut berubah.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @param  array<string, array{0: mixed, 1: mixed}>  $fields
+     */
+    private function planUpdate(ListingStage $stage, array $attributes, array $fields, array &$plan): void
+    {
+        $protected = $this->isProtected($stage);
+
+        $plan['update'][] = [
+            'stage'      => $stage,
+            'attributes' => $attributes,
+            'fields'     => $fields,
+            'protected'  => $protected,
+        ];
+
+        if ($protected && array_intersect(array_keys($fields), self::SCHEDULE_FIELDS)) {
+            $plan['warnings'][] = $this->labelListing($stage->assy, $stage)
+                . ' diubah di SIREP setelah jadwalnya diverifikasi ('
+                . collect($fields)->only(self::SCHEDULE_FIELDS)
+                    ->map(fn ($v, $f) => $this->fieldLabel($f) . ' ' . $this->nilai($v[0]) . ' → ' . $this->nilai($v[1]))
+                    ->implode(', ')
+                . '). Jadwal yang sudah diverifikasi tidak ikut berubah — unverify bila kanbannya belum dicetak.';
+        }
+    }
+
+    /**
+     * Listing yang diterbitkan ulang PPC: id SIREP lamanya hilang dan id baru muncul di
+     * posisi yang persis sama (tanggal, conveyor, assy code, seq — posisi uq_listing_stage).
+     *
+     * Dengan id sebagai kunci, keduanya terbaca "lama dibatalkan + baru ditambahkan". Baris
+     * lama yang tidak boleh dihapus (jadwalnya terkunci, atau ditahan pengaman penyusutan)
+     * membuat baris baru menabrak uq_listing_stage, dan seluruh sinkronisasi batal untuk
+     * semua conveyor (C9 02-11-2026: DRK9 seq 1, id baru 10351). Baris lama diambil alih —
+     * id SIREP dan isinya diperbarui di tempat — sehingga jadwal yang merujuknya tetap terikat.
+     *
+     * @param  array<string, ListingStage>  $existing
+     * @param  array<string, array<string, mixed>>  $incoming
+     * @param  array<int, bool>  $sudahDiputuskan
+     */
+    private function planReissues(array $existing, array $incoming, array &$plan, array &$sudahDiputuskan): void
+    {
+        $lepas = [];
+
+        foreach ($existing as $key => $stage) {
+            if (!isset($incoming[$key]) && !isset($sudahDiputuskan[$stage->id])) {
+                $lepas[$this->slotOf($stage->getAttributes())] = $stage;
+            }
+        }
+
+        if ($lepas === []) {
+            return;
+        }
+
+        $sisa = [];
+
+        foreach ($plan['insert'] as $attributes) {
+            $slot  = $this->slotOf($attributes);
+            $stage = $lepas[$slot] ?? null;
+
+            if ($stage === null) {
+                $sisa[] = $attributes;
+                continue;
+            }
+
+            unset($lepas[$slot]);
+            $sudahDiputuskan[$stage->id] = true;
+
+            $fields = ['id_listing' => [$stage->id_listing, $attributes['id_listing'] ?? null]]
+                + $this->adapter->changedFields($stage, $attributes);
+
+            $this->planUpdate($stage, $attributes, $fields, $plan);
+        }
+
+        $plan['insert'] = $sisa;
+    }
+
+    /**
+     * Baris baru yang posisinya (uq_listing_stage) masih dipegang baris staging lain sesudah
+     * rencana dijalankan tidak ditambahkan — mis. SIREP memuat dua listing dengan assy code
+     * dan seq yang sama. Satu baris seperti itu dulu membatalkan seluruh sinkronisasi.
+     *
+     * Posisi dibaca langsung dari staging, bukan dari baris dalam lingkup: baris di luar
+     * lingkup sinkron (conveyor gagal diambil, listing manual) tetap memegang posisinya.
+     */
+    private function dropSlotConflicts(array &$plan): void
+    {
+        if ($plan['insert'] === []) {
+            return;
+        }
+
+        $dihapus    = array_fill_keys(array_map(fn ($stage) => $stage->id, $plan['delete']), true);
+        $diperbarui = [];
+
+        foreach ($plan['update'] as $u) {
+            $diperbarui[$u['stage']->id] = $u['attributes'];
+        }
+
+        // Tanggal dan conveyor baris yang diperbarui tidak pernah berubah (keduanya bagian
+        // kunci), jadi baris yang bisa berebut posisi dengan baris baru pasti ada di sini.
+        $sePosisi = ListingStage::query()
+            ->whereIn('listing_date_time', array_unique(array_map(
+                fn ($a) => Carbon::parse($a['listing_date_time'])->format('Y-m-d H:i:s'),
+                $plan['insert']
+            )))
+            ->whereIn(DB::raw('TRIM(conveyor)'), array_unique(array_map(
+                fn ($a) => trim((string) $a['conveyor']),
+                $plan['insert']
+            )))
+            ->get();
+
+        $terisi = [];
+
+        foreach ($sePosisi as $stage) {
+            if (!isset($dihapus[$stage->id])) {
+                $terisi[$this->slotOf($diperbarui[$stage->id] ?? $stage->getAttributes())] = true;
+            }
+        }
+
+        $sisa = [];
+
+        foreach ($plan['insert'] as $attributes) {
+            $slot = $this->slotOf($attributes);
+
+            if (isset($terisi[$slot])) {
+                $plan['warnings'][] = $this->labelListing($attributes['assy'] ?? '-', $attributes)
+                    . ' (id SIREP ' . ($attributes['id_listing'] ?? '-') . ') tidak ditambahkan: assy code '
+                    . trim((string) $attributes['assycode']) . ' seq ' . (int) $attributes['seq']
+                    . ' pada tanggal dan conveyor itu sudah dipakai listing lain. Mohon periksa listing ganda di SIREP.';
+                continue;
+            }
+
+            $terisi[$slot] = true;
+            $sisa[]        = $attributes;
+        }
+
+        $plan['insert'] = $sisa;
+    }
+
+    /**
+     * Posisi baris menurut uq_listing_stage. Kolatenya tidak membedakan huruf besar/kecil
+     * maupun spasi di akhir, jadi keduanya dinormalkan.
+     *
+     * @param  array<string, mixed>  $row  Atribut baris masuk, atau getAttributes() baris staging
+     */
+    private function slotOf(array $row): string
+    {
+        return implode('|', [
+            Carbon::parse($row['listing_date_time'])->format('Y-m-d H:i:s'),
+            mb_strtoupper(trim((string) $row['conveyor'])),
+            mb_strtoupper(trim((string) $row['assycode'])),
+            (int) ($row['shift'] ?? 0),
+            (int) $row['seq'],
+            $this->adapter->sourceOf($row),
+        ]);
     }
 
     /**
@@ -702,15 +848,16 @@ class ListingSyncService
     private function fieldLabel(string $field): string
     {
         return [
-            'seq'      => 'seq',
-            'assycode' => 'assy code',
-            'assy'     => 'assy',
-            'qty'      => 'qty',
-            'carline'  => 'carline',
-            'snp'      => 'SNP',
-            'snpa'     => 'SNP alternatif',
-            'plt'      => 'palet',
-            'mode'     => 'pengiriman',
+            'id_listing' => 'id SIREP',
+            'seq'        => 'seq',
+            'assycode'   => 'assy code',
+            'assy'       => 'assy',
+            'qty'        => 'qty',
+            'carline'    => 'carline',
+            'snp'        => 'SNP',
+            'snpa'       => 'SNP alternatif',
+            'plt'        => 'palet',
+            'mode'       => 'pengiriman',
         ][$field] ?? $field;
     }
 
