@@ -513,6 +513,11 @@ class EkanbanCircuitService
      * Server-side guard for the progressive print rule - returns an error
      * message when any of the groups belongs to a cut off that is still locked
      * by an earlier, unfinished cut off. Returns null when printing is allowed.
+     *
+     * Scope harus per area, sama seperti getMaxPrintableCutoff(): nama mesin
+     * yang sama bisa terdaftar di beberapa area (master_machine per area), dan
+     * CO1/CO2 area lain tidak tampil di daftar print operator - kalau ikut
+     * dihitung, CO3 yang di layar sudah terbuka malah ditolak saat diprint.
      */
     public function getCutoffOrderViolation(array $groupIds): ?string
     {
@@ -524,17 +529,19 @@ class EkanbanCircuitService
 
             $group = DB::table('assy_schedule_circuit')
                 ->join('assy_schedule', 'assy_schedule_circuit.assy_schedule_id', '=', 'assy_schedule.id')
+                ->join('master_conveyor', 'assy_schedule.conveyor_id', '=', 'master_conveyor.id')
                 ->join('master_circuit', 'assy_schedule_circuit.master_circuit_id', '=', 'master_circuit.id')
                 ->where('assy_schedule_circuit.assy_schedule_id', $parts[0])
                 ->where('assy_schedule_circuit.master_circuit_id', $parts[1])
                 ->select([
                     'assy_schedule.schedule',
                     'assy_schedule.shift',
+                    'master_conveyor.master_area_id',
                     'master_circuit.machine',
                     'master_circuit.type',
                     DB::raw('MAX(assy_schedule_circuit.cutoff) as cutoff'),
                 ])
-                ->groupBy('assy_schedule.schedule', 'assy_schedule.shift', 'master_circuit.machine', 'master_circuit.type')
+                ->groupBy('assy_schedule.schedule', 'assy_schedule.shift', 'master_conveyor.master_area_id', 'master_circuit.machine', 'master_circuit.type')
                 ->first();
 
             if (!$group || $group->cutoff === null) {
@@ -548,10 +555,12 @@ class EkanbanCircuitService
 
             $pendingCutoff = DB::table('assy_schedule_circuit')
                 ->join('assy_schedule', 'assy_schedule_circuit.assy_schedule_id', '=', 'assy_schedule.id')
+                ->join('master_conveyor', 'assy_schedule.conveyor_id', '=', 'master_conveyor.id')
                 ->join('master_circuit', 'assy_schedule_circuit.master_circuit_id', '=', 'master_circuit.id')
                 ->where('assy_schedule.is_lock', '!=', 0)
                 ->whereDate('assy_schedule.schedule', $group->schedule)
                 ->where('assy_schedule.shift', $group->shift)
+                ->where('master_conveyor.master_area_id', $group->master_area_id)
                 ->where('master_circuit.machine', $group->machine)
                 ->where('master_circuit.type', $group->type)
                 ->where('assy_schedule_circuit.is_printed', 0)
