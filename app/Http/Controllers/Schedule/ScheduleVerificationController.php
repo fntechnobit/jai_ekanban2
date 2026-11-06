@@ -13,6 +13,7 @@ use App\Models\MasterConveyor;
 use App\Services\Schedule\AssyMasterChecker;
 use App\Services\ScheduleVerificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\Facades\DataTables;
@@ -67,6 +68,7 @@ class ScheduleVerificationController extends Controller
         $status = $request->input('status');
 
         $schedules = $this->scheduleVerificationService->getDatatableQuery($startDate, $endDate, $conveyorId, $status);
+        $isAdmin = Auth::user()->isAdmin();
 
         return DataTables::of($schedules)
             ->addIndexColumn()
@@ -162,7 +164,7 @@ class ScheduleVerificationController extends Controller
                 }
                 return '<span class="badge bg-danger">Pending</span>';
             })
-            ->addColumn('action', function ($schedule) {
+            ->addColumn('action', function ($schedule) use ($isAdmin) {
                 if (!$schedule->has_assy) {
                     // No Data — nothing exists yet to verify, detail, or unverify.
                     return '-';
@@ -186,7 +188,27 @@ class ScheduleVerificationController extends Controller
                 }
                 // Pending tetapi tanggalnya sudah lewat — tidak boleh diverifikasi lagi (lihat
                 // ScheduleVerificationService::verifyBlockedReason). Isinya tetap bisa dilihat.
+                // Admin tetap mendapat tombol verify, dengan peringatan sebelum form dibuka.
                 if ($alasan = $this->scheduleVerificationService->verifyBlockedReason($schedule->schedule_date)) {
+                    if ($isAdmin) {
+                        return '<div class="btn-group" role="group">
+                            <button type="button" class="btn btn-info btn-sm text-white btn-detail"
+                                data-conveyor-id="' . $schedule->conveyor_id . '"
+                                data-date="' . $schedule->schedule_date . '"
+                                data-shift="' . $schedule->shift . '">
+                                <i class="ti ti-eye"></i> Detail
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm btn-verify"
+                                data-conveyor-id="' . $schedule->conveyor_id . '"
+                                data-date="' . $schedule->schedule_date . '"
+                                data-shift="' . $schedule->shift . '"
+                                data-past-date="1"
+                                title="Khusus admin. ' . e($alasan) . '">
+                                <i class="ti ti-calendar-off"></i> Verify (lampau)
+                            </button>
+                        </div>';
+                    }
+
                     return '<div class="btn-group" role="group">
                         <button type="button" class="btn btn-info btn-sm text-white btn-detail"
                             data-conveyor-id="' . $schedule->conveyor_id . '"
@@ -342,12 +364,18 @@ class ScheduleVerificationController extends Controller
 
         $token = $data['listing_token'] ?? $request->input('listing_token');
 
+        // Verify tanggal lampau: hanya admin, dan hanya bila layar mengirim tanda bahwa
+        // peringatannya sudah dikonfirmasi. Operator tetap ditolak oleh service.
+        $allowPastDate = Auth::user()->isAdmin()
+            && filter_var($data['allow_past_date'] ?? $request->input('allow_past_date', false), FILTER_VALIDATE_BOOLEAN);
+
         $result = $this->scheduleVerificationService->verifySchedule(
             $data['conveyor_id'] ?? $request->input('conveyor_id'),
             $data['date'] ?? $request->input('date'),
             $data['shift'] ?? $request->input('shift'),
             $data['cutoffs'] ?? $request->input('cutoffs', []),
-            is_string($token) && $token !== '' ? $token : null
+            is_string($token) && $token !== '' ? $token : null,
+            $allowPastDate
         );
 
         if (!$result['success']) {

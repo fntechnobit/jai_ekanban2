@@ -69,8 +69,8 @@ class DayListingRefresher
             'checked_at' => now()->format('d M Y H:i:s'),
         ];
 
-        // Tanggal lampau tidak bisa diverifikasi lagi, dan menyusun ulang sejarahnya hanya
-        // mengubah catatan yang sudah tidak dipakai.
+        // Tanggal lampau tidak bisa diverifikasi lagi (kecuali admin, memakai jadwal apa
+        // adanya), dan menyusun ulang sejarahnya hanya mengubah catatan yang sudah tidak dipakai.
         if ($tanggal->lt(Carbon::today())) {
             return ['status' => self::SKIPPED, 'message' => 'Tanggal sudah lewat — listing tidak diperiksa ulang.'] + $hasil;
         }

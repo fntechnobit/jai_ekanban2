@@ -275,7 +275,11 @@ Form detail, daftar jadwal assy, dan generate kanban (nomor issue/urut) memakai 
 0. **Tanggal < hari ini ditolak** (`verifyBlockedReason`, zona Asia/Jakarta); tombol Verify diganti Detail +
    "Lewat". Alasan: verify mengkreditkan sisa lot ke tanggal berikutnya seolah kanban diproduksi — C1 08-10-2026
    diverifikasi 14-10 tanpa satu pun cetak, sisa fiktifnya membuat C1 16-10 dicetak kurang (B-K162.D 60 dari 64,
-   155 circuit lain). Unverify tidak dibatasi. Stub lama `assy-scheduler/{id}/verify` (mengunci tanpa kanban)
+   155 circuit lain). Unverify tidak dibatasi. **Pengecualian admin** (06-11-2026): Admin/Super Admin mendapat
+   tombol "Verify (lampau)" dengan peringatan; request membawa `allow_past_date=true` dan controller hanya
+   meneruskannya bila `isAdmin()`. Listing tidak diperiksa ulang ke SIREP (refresher melewati tanggal lampau),
+   kanban dihitung dari saldo saat ini, sisa lot tetap dikreditkan, dan setiap pemakaian dicatat di log
+   ("Verify tanggal lampau oleh admin"). Stub lama `assy-scheduler/{id}/verify` (mengunci tanpa kanban)
    ditutup. Dialog konfirmasi memperingatkan bila total shift berkurang dari jadwal awal (item terhapus dari layar
    tidak dipindah ke mana pun).
 0b. **Cek SIREP sekali lagi** (jai_ekanban2), di luar transaksi: bila listing tanggal × conveyor itu berubah,

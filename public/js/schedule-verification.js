@@ -100,9 +100,41 @@ $(function () {
         var conveyorId = $(this).data('conveyor-id');
         var date = $(this).data('date');
         var shift = $(this).data('shift');
+        var isPastDate = String($(this).data('past-date')) === '1';
 
-        // Periksa listing hari itu ke SIREP dulu, baru muat form (edit mode)
-        refreshThenLoad(conveyorId, date, shift);
+        // Tanda ini ikut dikirim saat Verify; server hanya menerimanya dari admin.
+        $('#verificationModal').data('allow-past-date', isPastDate);
+
+        if (!isPastDate) {
+            // Periksa listing hari itu ke SIREP dulu, baru muat form (edit mode)
+            refreshThenLoad(conveyorId, date, shift);
+            return;
+        }
+
+        // Tombol "Verify (lampau)" hanya muncul untuk admin. Jelaskan akibatnya dulu.
+        Swal.fire({
+            icon: 'warning',
+            title: 'Verify tanggal yang sudah lewat?',
+            html: '<div class="text-start">' +
+                '<p>Tanggal <strong>' + escapeHtml(moment(date).format('DD-MM-YYYY')) + '</strong> sudah lewat. ' +
+                'Operator tidak bisa memverifikasinya; Anda bisa karena admin.</p>' +
+                '<ul class="mb-2">' +
+                '<li>Kanban dibuat untuk tanggal tersebut, dihitung dari <strong>saldo saat ini</strong>, bukan saldo pada tanggal itu.</li>' +
+                '<li>Saldo sisa lot ikut berubah, sehingga jumlah cetak verify berikutnya di conveyor ini <strong>bergeser (bisa kurang atau lebih)</strong> bila kanban ini tidak benar-benar diproduksi.</li>' +
+                '<li>Listing tidak diperiksa ulang ke SIREP; jadwal dikunci apa adanya.</li>' +
+                '</ul>' +
+                '<p class="mb-0">Lanjutkan hanya bila kanban tanggal ini memang diperlukan. Tindakan ini dicatat di log.</p>' +
+                '</div>',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Ya, buka form verify',
+            cancelButtonText: 'Batal'
+        }).then(function(result) {
+            if (result.isConfirmed) {
+                refreshThenLoad(conveyorId, date, shift);
+            }
+        });
     });
 
     // Generate otomatis hanya mencakup H..H+3, sedangkan PPC bisa mengubah listing kapan saja
@@ -1206,6 +1238,13 @@ $(function () {
             });
         });
 
+        var allowPastDate = $('#verificationModal').data('allow-past-date') === true;
+        var pastDateHtml = allowPastDate
+            ? '<div class="alert alert-danger text-start mt-2 mb-0"><i class="fas fa-calendar-times"></i> ' +
+              '<strong>Tanggal sudah lewat.</strong> Verify ini memakai hak admin; saldo sisa lot ikut berubah ' +
+              'dan jumlah cetak verify berikutnya bisa bergeser.</div>'
+            : '';
+
         fetchAssyWithoutMaster(postedAssy).then(function(missing) {
             var masterHtml = '';
             if (missing.length) {
@@ -1224,6 +1263,7 @@ $(function () {
                       '<li><strong>Date:</strong> ' + $('#modal-date').text() + '</li>' +
                       '<li><strong>Shift:</strong> ' + $('#modal-shift').text() + '</li>' +
                       '</ul>' +
+                      pastDateHtml +
                       shrinkHtml +
                       masterHtml +
                       '<p class="text-warning mt-2"><i class="fas fa-exclamation-triangle"></i> Once verified, the schedule cannot be modified or regenerated.</p>',
@@ -1248,7 +1288,8 @@ $(function () {
                             shift: shift,
                             cutoffs: cutoffs,
                             transferred: transferred,
-                            listing_token: $('#verificationModal').data('listing-token') || ''
+                            listing_token: $('#verificationModal').data('listing-token') || '',
+                            allow_past_date: allowPastDate
                         }),
                         beforeSend: function() {
                             $('#btn-verify-schedule').prop('disabled', true)

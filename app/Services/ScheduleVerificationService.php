@@ -885,6 +885,9 @@ class ScheduleVerificationService
      * dianggap ada sisa 4 (155 circuit lain ikut kurang). Di seluruh data tidak ada
      * verifikasi tanggal lampau yang sungguh dicetak untuk produksi. Unverify tetap boleh
      * — itu jalan membersihkan verifikasi seperti ini.
+     *
+     * Admin boleh melewati aturan ini secara sadar (lihat verifySchedule $allowPastDate);
+     * operator tetap ditolak.
      */
     public function verifyBlockedReason($date): ?string
     {
@@ -905,17 +908,30 @@ class ScheduleVerificationService
 
     /**
      * Verify schedule - save changes and lock the schedule for specific conveyor, date, and shift
+     *
+     * $allowPastDate hanya boleh true untuk admin yang sudah mengonfirmasi peringatan
+     * tanggal lampau (dicek di controller). Sisa lot verify seperti ini tetap dikreditkan
+     * ke saldo, jadi setiap pemakaiannya dicatat di log.
      */
-    public function verifySchedule($conveyorId, $date, $shift, $cutoffs = [], ?string $listingToken = null)
+    public function verifySchedule($conveyorId, $date, $shift, $cutoffs = [], ?string $listingToken = null, bool $allowPastDate = false)
     {
         if ($alasan = $this->verifyBlockedReason($date)) {
-            Log::warning('Verify ditolak: tanggal sudah lewat', [
+            if (!$allowPastDate) {
+                Log::warning('Verify ditolak: tanggal sudah lewat', [
+                    'conveyor_id' => $conveyorId,
+                    'date'        => $date,
+                    'shift'       => $shift,
+                ]);
+
+                return ['success' => false, 'message' => $alasan];
+            }
+
+            Log::warning('Verify tanggal lampau oleh admin', [
                 'conveyor_id' => $conveyorId,
                 'date'        => $date,
                 'shift'       => $shift,
+                'user_id'     => auth()->id(),
             ]);
-
-            return ['success' => false, 'message' => $alasan];
         }
 
         // Yang dikunci harus sama dengan SIREP saat ini. PPC bisa mengubah listing setelah

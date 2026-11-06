@@ -447,10 +447,15 @@ listing 331  &rarr;  S1 CO5 30, S2 CO5 31   lewat jatah    &rarr; <b>over</b></d
                     <strong>Detail</strong> dan label <span class="badge bg-light text-dark border">Lewat</span>; server juga menolak
                     verifikasinya. Verifikasi membuat kanban dan memindahkan sisa lot terakhir ke tanggal berikutnya dengan anggapan
                     kanban itu diproduksi &mdash; untuk hari yang sudah lewat anggapan itu tidak pernah benar.</p>
-                    <p class="small mb-0 text-muted">Contoh nyata: C1 08-10-2026 diverifikasi 14-10 dan tidak satu pun kanbannya
+                    <p class="small mb-2 text-muted">Contoh nyata: C1 08-10-2026 diverifikasi 14-10 dan tidak satu pun kanbannya
                     dicetak. Sisa fiktifnya terpakai pada 16-10: B-K162.D butuh 64 tetapi hanya dicetak 60, dan 155 circuit lain ikut
                     kurang. Jadwal yang tidak dijalankan cukup dibiarkan Pending. Unverify tetap bisa dipakai untuk membuka verifikasi
                     lama seperti itu.</p>
+                    <p class="small mb-0"><strong>Pengecualian admin:</strong> akun Admin/Super Admin melihat tombol
+                    <span class="badge bg-light text-danger border border-danger">Verify (lampau)</span> pada jadwal tersebut.
+                    Sebelum form dibuka muncul peringatan; listing tidak diperiksa ulang ke SIREP, kanban dihitung dari saldo saat
+                    ini, dan sisa lotnya tetap masuk ke saldo. Pakai hanya bila kanban tanggal itu memang diperlukan &mdash; setiap
+                    pemakaiannya dicatat di log.</p>
                 </div>
 
                 <h6 class="mt-4 mb-2">Memindahkan item sebelum dikunci</h6>
