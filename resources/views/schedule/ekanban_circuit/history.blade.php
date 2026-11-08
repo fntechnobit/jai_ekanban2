@@ -138,13 +138,15 @@
         /* Force borders visible inside preview - override Bootstrap resets */
         #previewContent .ticket-circuit-print,
         #previewContent .ticket-twist-print,
-        #previewContent .ticket-jam-print {
+        #previewContent .ticket-jam-print,
+        #previewContent .ticket-special-print {
             border: 2px solid #000 !important;
             overflow: visible !important;
         }
         #previewContent .ticket-circuit-print table,
         #previewContent .ticket-twist-print table,
-        #previewContent .ticket-jam-print table {
+        #previewContent .ticket-jam-print table,
+        #previewContent .ticket-special-print table {
             border-collapse: collapse !important;
             border: 1px solid #000 !important;
         }
@@ -153,18 +155,23 @@
         #previewContent .ticket-twist-print th,
         #previewContent .ticket-twist-print td,
         #previewContent .ticket-jam-print th,
-        #previewContent .ticket-jam-print td {
+        #previewContent .ticket-jam-print td,
+        #previewContent .ticket-special-print th,
+        #previewContent .ticket-special-print td {
             border: 1px solid #000 !important;
         }
         #previewContent .ticket-circuit-print thead th,
         #previewContent .ticket-twist-print thead th,
-        #previewContent .ticket-jam-print thead th {
+        #previewContent .ticket-jam-print thead th,
+        #previewContent .ticket-special-print thead th {
             border: 2px solid #000 !important;
         }
         #previewContent .ticket-circuit-print .section-label.black-bg,
         #previewContent .ticket-twist-print .twist-section-label.black-bg,
         #previewContent .ticket-jam-print .jam-section.black-bg,
-        #previewContent .ticket-jam-print .jam-inv {
+        #previewContent .ticket-jam-print .jam-inv,
+        #previewContent .ticket-special-print .sp-section.black-bg,
+        #previewContent .ticket-special-print .sp-inv {
             background-color: #000 !important;
             color: #fff !important;
         }
@@ -331,7 +338,10 @@
                             var badges = {
                                 CUTTING_TWIST: '<span class="badge bg-info">TWS</span>',
                                 CUTTING_EJ: '<span class="badge bg-success">EJ</span>',
-                                CUTTING_JAM: '<span class="badge bg-dark">JAM</span>'
+                                CUTTING_JAM: '<span class="badge bg-dark">JAM</span>',
+                                CUTTING_MINICOAX: '<span class="badge bg-secondary">MCX</span>',
+                                CUTTING_ANTENA_FEEDER: '<span class="badge bg-light text-dark border border-dark">ANT</span>',
+                                CUTTING_BATTERY_CABLE: '<span class="badge bg-danger">BC</span>'
                             };
                             var badge = badges[data] || '<span class="badge bg-primary">CCT</span>';
                             // JAM = 1 kanban untuk 2 circuit, tampilkan kedua CCT code

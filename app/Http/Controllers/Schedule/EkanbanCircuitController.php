@@ -33,6 +33,12 @@ class EkanbanCircuitController extends Controller
      */
     private const JAM_BARCODE_HEIGHT = 64;
 
+    /**
+     * Tinggi barcode proses A/B (Code 39) pada tiket MINICOAX (dot). Barcode B
+     * menempati sel 3 baris (~105 dot) bersama label dan teks kodenya.
+     */
+    private const MINICOAX_BARCODE_HEIGHT = 64;
+
     protected $ekanbanCircuitService;
 
     public function __construct(EkanbanCircuitService $ekanbanCircuitService)
@@ -174,7 +180,9 @@ class EkanbanCircuitController extends Controller
     /**
      * Render print tickets for circuits - dispatches to type-specific templates:
      * CUTTING → print_ticket, CUTTING_TWIST → print_ticket_twist,
-     * CUTTING_EJ → print_ticket_ej, CUTTING_JAM → print_ticket_jam.
+     * CUTTING_EJ → print_ticket_ej, CUTTING_JAM → print_ticket_jam,
+     * CUTTING_MINICOAX → print_ticket_minicoax, CUTTING_ANTENA_FEEDER → print_ticket_antena,
+     * CUTTING_BATTERY_CABLE → print_ticket_battery.
      *
      * Tiket dirender per rangkaian type yang berurutan (bukan dikelompokkan per type),
      * supaya urutan cetak tetap sama dengan urutan daftar print walau satu mesin
@@ -213,6 +221,9 @@ class EkanbanCircuitController extends Controller
                 CircuitType::CUTTING_TWIST => $this->generateCircuitTwistBarcodes($circuit),
                 CircuitType::CUTTING_EJ => $this->generateCircuitEjBarcodes($circuit),
                 CircuitType::CUTTING_JAM => $this->generateCircuitJamBarcodes($circuit),
+                CircuitType::CUTTING_MINICOAX => $this->generateCircuitMinicoaxBarcodes($circuit),
+                CircuitType::CUTTING_ANTENA_FEEDER => $this->generateKanbanQr($circuit),
+                CircuitType::CUTTING_BATTERY_CABLE => $this->generateCircuitBatteryBarcodes($circuit),
             };
         }
 
@@ -221,6 +232,9 @@ class EkanbanCircuitController extends Controller
             CircuitType::CUTTING_TWIST => 'schedule.ekanban_circuit.print_ticket_twist',
             CircuitType::CUTTING_EJ => 'schedule.ekanban_circuit.print_ticket_ej',
             CircuitType::CUTTING_JAM => 'schedule.ekanban_circuit.print_ticket_jam',
+            CircuitType::CUTTING_MINICOAX => 'schedule.ekanban_circuit.print_ticket_minicoax',
+            CircuitType::CUTTING_ANTENA_FEEDER => 'schedule.ekanban_circuit.print_ticket_antena',
+            CircuitType::CUTTING_BATTERY_CABLE => 'schedule.ekanban_circuit.print_ticket_battery',
         };
 
         return view($view, ['circuits' => $circuits])->render();
@@ -275,6 +289,50 @@ class EkanbanCircuitController extends Controller
                 $circuit->{$field . '_data'} = BarcodeHelper::sanitizeCode39($circuit->$field);
                 $circuit->{$field . '_width'} = BarcodeHelper::code39Width($circuit->$field);
             }
+        }
+    }
+
+    /**
+     * QR kanban (barcode_kanban). Satu-satunya kode di tiket ANTENA FEEDER - barcode
+     * ikitsukan di format lama sengaja tidak dicetak.
+     */
+    private function generateKanbanQr($circuit)
+    {
+        if (!empty($circuit->barcode_kanban)) {
+            $circuit->qr_code_path = BarcodeHelper::generateQRCodeCached($circuit->barcode_kanban, 'circuit');
+        }
+    }
+
+    /**
+     * Generate barcodes for CUTTING_MINICOAX circuits: QR kanban dan Code 39 barcode
+     * proses sisi A (barcode_process) dan sisi B (barcode_process_2).
+     */
+    private function generateCircuitMinicoaxBarcodes($circuit)
+    {
+        $this->generateKanbanQr($circuit);
+
+        foreach (['barcode_process', 'barcode_process_2'] as $field) {
+            if (!empty($circuit->$field)) {
+                $circuit->{$field . '_path'} = BarcodeHelper::generateCode39Cached($circuit->$field, self::MINICOAX_BARCODE_HEIGHT, 'circuit');
+                $circuit->{$field . '_data'} = BarcodeHelper::sanitizeCode39($circuit->$field);
+                $circuit->{$field . '_width'} = BarcodeHelper::code39Width($circuit->$field);
+            }
+        }
+    }
+
+    /**
+     * Generate barcodes for CUTTING_BATTERY_CABLE circuits: QR kanban, QR mesin
+     * (qrcode_mesin, isi dari MTC) dan QR drawing (qrcode_drawing).
+     */
+    private function generateCircuitBatteryBarcodes($circuit)
+    {
+        $this->generateKanbanQr($circuit);
+
+        if (!empty($circuit->qrcode_mesin)) {
+            $circuit->qr_mesin_path = BarcodeHelper::generateQRCodeCached($circuit->qrcode_mesin, 'circuit');
+        }
+        if (!empty($circuit->qrcode_drawing)) {
+            $circuit->qr_drawing_path = BarcodeHelper::generateQRCodeCached($circuit->qrcode_drawing, 'circuit');
         }
     }
 

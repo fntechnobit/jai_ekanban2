@@ -53,6 +53,10 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="mb-2" data-types="CUTTING_BATTERY_CABLE">
+                                <label class="form-label small mb-0">Qty DC</label>
+                                <input type="text" name="qty_dc" id="edit_qty_dc" class="form-control form-control-sm">
+                            </div>
                             <div class="row g-2">
                                 <div class="col-6">
                                     <div class="mb-2">
@@ -134,15 +138,17 @@
                                 </div>
                             </div>
 
-                            <!-- Drawing Upload (CUTTING_TWIST only) -->
-                            <div id="edit_drawing_section" class="border rounded p-2 mt-2" style="display:none;">
+                            <!-- Drawing: upload & Barcode Twist (CUTTING_TWIST), QRCode Drawing (TWIST & BATTERY CABLE) -->
+                            <div id="edit_drawing_section" class="border rounded p-2 mt-2" data-types="CUTTING_TWIST,CUTTING_BATTERY_CABLE" style="display:none;">
                                 <label class="form-label small mb-1 fw-semibold text-primary">Drawing</label>
-                                <input type="file" name="image" id="edit_drawing_file" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp">
-                                <div id="edit_drawing_preview_container" class="text-center mt-2" style="display:none;">
-                                    <img id="edit_drawing_preview" src="" alt="Drawing" class="img-fluid rounded" style="max-height: 180px;">
+                                <div data-types="CUTTING_TWIST">
+                                    <input type="file" name="image" id="edit_drawing_file" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp">
+                                    <div id="edit_drawing_preview_container" class="text-center mt-2" style="display:none;">
+                                        <img id="edit_drawing_preview" src="" alt="Drawing" class="img-fluid rounded" style="max-height: 180px;">
+                                    </div>
                                 </div>
                                 <div class="row g-2 mt-1">
-                                    <div class="col-6">
+                                    <div class="col-6" data-types="CUTTING_TWIST">
                                         <div class="mb-2">
                                             <label class="form-label small mb-0">Barcode Twist</label>
                                             <input type="text" name="barcode_twist" id="edit_barcode_twist" class="form-control form-control-sm">
@@ -160,7 +166,7 @@
                     </div>
 
                     <!-- QR EJ (CUTTING_EJ only) -->
-                    <div id="edit_ej_section" class="row g-2 mt-1" style="display:none;">
+                    <div id="edit_ej_section" class="row g-2 mt-1" data-types="CUTTING_EJ" style="display:none;">
                         <div class="col-12">
                             <div class="border rounded p-2">
                                 <h6 class="fw-semibold small mb-1 text-primary">QR EJ</h6>
@@ -179,7 +185,7 @@
                     </div>
 
                     <!-- Circuit 2 (CUTTING_JAM only: 1 baris = 1 pasang circuit) -->
-                    <div id="edit_jam_section" class="row g-2 mt-1" style="display:none;">
+                    <div id="edit_jam_section" class="row g-2 mt-1" data-types="CUTTING_JAM" style="display:none;">
                         <div class="col-12">
                             <div class="border rounded p-2">
                                 <h6 class="fw-semibold small mb-1 text-primary">Circuit 2 (JAM Twist)</h6>
@@ -216,9 +222,28 @@
                                         <label class="form-label small mb-0">C/L 2</label>
                                         <input type="text" name="cl_2" id="edit_cl_2" class="form-control form-control-sm">
                                     </div>
-                                    <div class="col-12">
-                                        <label class="form-label small mb-0">QRCode Mesin <span class="text-muted">(dari MTC)</span></label>
-                                        <input type="text" name="qrcode_mesin" id="edit_qrcode_mesin" class="form-control form-control-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Antena Feeder: KODE, PART NO., NO ASSY -->
+                    <div id="edit_antena_section" class="row g-2 mt-1" data-types="CUTTING_ANTENA_FEEDER" style="display:none;">
+                        <div class="col-12">
+                            <div class="border rounded p-2">
+                                <h6 class="fw-semibold small mb-1 text-primary">Antena Feeder</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-4 col-6">
+                                        <label class="form-label small mb-0">Kode</label>
+                                        <input type="text" name="part_code" id="edit_part_code" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-4 col-6">
+                                        <label class="form-label small mb-0">Part No.</label>
+                                        <input type="text" name="part_no" id="edit_part_no" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-4 col-6">
+                                        <label class="form-label small mb-0">No Assy</label>
+                                        <input type="text" name="no_assy" id="edit_no_assy" class="form-control form-control-sm">
                                     </div>
                                 </div>
                             </div>
@@ -246,6 +271,14 @@
                                     <div class="col-md-3 col-6">
                                         <label class="form-label small mb-0">Barcode Shikake</label>
                                         <input type="text" name="barcode_shikake" id="edit_barcode_shikake" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-3 col-6" data-types="CUTTING_MINICOAX">
+                                        <label class="form-label small mb-0">Barcode Process 2 <span class="text-muted">(sisi B)</span></label>
+                                        <input type="text" name="barcode_process_2" id="edit_barcode_process_2" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-md-6" data-types="CUTTING_JAM,CUTTING_BATTERY_CABLE">
+                                        <label class="form-label small mb-0">QRCode Mesin <span class="text-muted">(dari MTC)</span></label>
+                                        <input type="text" name="qrcode_mesin" id="edit_qrcode_mesin" class="form-control form-control-sm">
                                     </div>
                                 </div>
                             </div>
@@ -281,6 +314,14 @@
                                     <div class="col-6 mb-1">
                                         <label class="form-label small mb-0">Acc A</label>
                                         <input type="text" name="acc_1a" id="edit_acc_1a" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-6 mb-1" data-types="CUTTING_MINICOAX">
+                                        <label class="form-label small mb-0">Acc B <span class="text-muted">(ACC3)</span></label>
+                                        <input type="text" name="acc_1b" id="edit_acc_1b" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-6 mb-1" data-types="CUTTING_MINICOAX">
+                                        <label class="form-label small mb-0">Acc C <span class="text-muted">(ACC4)</span></label>
+                                        <input type="text" name="acc_1c" id="edit_acc_1c" class="form-control form-control-sm">
                                     </div>
                                     <div class="col-6 mb-1">
                                         <label class="form-label small mb-0">Tube</label>
@@ -321,6 +362,14 @@
                                         <label class="form-label small mb-0">Acc A</label>
                                         <input type="text" name="acc_2a" id="edit_acc_2a" class="form-control form-control-sm">
                                     </div>
+                                    <div class="col-6 mb-1" data-types="CUTTING_MINICOAX">
+                                        <label class="form-label small mb-0">Acc B <span class="text-muted">(ACC3)</span></label>
+                                        <input type="text" name="acc_2b" id="edit_acc_2b" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-6 mb-1" data-types="CUTTING_MINICOAX">
+                                        <label class="form-label small mb-0">Acc C <span class="text-muted">(ACC4)</span></label>
+                                        <input type="text" name="acc_2c" id="edit_acc_2c" class="form-control form-control-sm">
+                                    </div>
                                     <div class="col-6 mb-1">
                                         <label class="form-label small mb-0">Tube</label>
                                         <input type="text" name="tube_2" id="edit_tube_2" class="form-control form-control-sm">
@@ -329,6 +378,24 @@
                                         <label class="form-label small mb-0">Mark</label>
                                         <input type="text" name="mark_2" id="edit_mark_2" class="form-control form-control-sm">
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tujuan proses berikutnya: TO 1-3 semua type (Minicoax: TO MESIN = T01), TO 4-9 Battery Cable -->
+                    <div class="row g-2 mt-1">
+                        <div class="col-12">
+                            <div class="border rounded p-2">
+                                <h6 class="fw-semibold small mb-1 text-primary">TO (Mesin Tujuan)</h6>
+                                <div class="row g-2">
+                                    @foreach(range(1, 9) as $n)
+                                        @php $toField = sprintf('t%02d', $n); @endphp
+                                        <div class="col-md-4 col-6"@if($n > 3) data-types="CUTTING_BATTERY_CABLE"@endif>
+                                            <label class="form-label small mb-0">TO {{ $n }}</label>
+                                            <input type="text" name="{{ $toField }}" id="edit_{{ $toField }}" class="form-control form-control-sm">
+                                        </div>
+                                    @endforeach
                                 </div>
                             </div>
                         </div>

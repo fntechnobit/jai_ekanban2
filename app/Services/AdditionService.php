@@ -28,6 +28,9 @@ class AdditionService
             CircuitType::CUTTING_TWIST => 'bg-info',
             CircuitType::CUTTING_EJ => 'bg-success',
             CircuitType::CUTTING_JAM => 'bg-dark',
+            CircuitType::CUTTING_MINICOAX => 'bg-secondary',
+            CircuitType::CUTTING_ANTENA_FEEDER => 'bg-light text-dark border border-dark',
+            CircuitType::CUTTING_BATTERY_CABLE => 'bg-danger',
             default => 'bg-primary',
         };
 

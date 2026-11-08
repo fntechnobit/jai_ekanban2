@@ -22,8 +22,11 @@ class MasterCircuitImport
     protected $totalRows = 0;
     protected $warnings = [];
 
-    /** Kolom EJ/JAM yang ada di file: [kolom DB => indeks kolom Excel] */
+    /** Kolom tambahan (BB-BX) yang ada di file: [kolom DB => indeks kolom Excel] */
     protected $extensionColumns = [];
+
+    /** Kelompok kolom tambahan yang ada di file (key CircuitTemplateConfig::getExtensionHeaderGroups) */
+    protected $extensionGroups = [];
 
     /** Baris CUTTING_JAM yang berhasil diimport: [id => ['codes' => [cct_code, cct_code_2], 'row' => nomor baris]] */
     protected $jamRows = [];
@@ -64,12 +67,13 @@ class MasterCircuitImport
             // Get conveyor data
             $conveyor = MasterConveyor::findOrFail($this->conveyorId);
 
-            // Kolom EJ / JAM (opsional) langsung setelah BA. File lama tanpa kolom
-            // ini tetap valid untuk CUTTING / CUTTING_TWIST.
+            // Kolom tambahan (opsional) langsung setelah BA: EJ/JAM (BB-BL) lalu
+            // Minicoax/Antena/Battery (BM-BX). File lama tanpa kolom ini tetap valid
+            // untuk type yang tidak membutuhkannya.
             $this->extensionColumns = $this->detectExtensionColumns($headerRow);
 
             // Get assy columns (after the last template column: BA/MEMORI TWIST, or
-            // the EJ/JAM columns when the file has them)
+            // the last extension column the file has)
             $assyColumns = [];
             $assyStart = CircuitTemplateConfig::getHeaderCount() + count($this->extensionColumns);
             for ($col = $assyStart; $col < count($headerRow); $col++) {
@@ -169,32 +173,35 @@ class MasterCircuitImport
     }
 
     /**
-     * Kolom EJ/JAM dikenali bila header tepat setelah BA cocok berurutan dengan
-     * CircuitTemplateConfig::getExtensionHeaders(). Tidak ada sama sekali = file lama
-     * (valid); ada sebagian = template salah, ditolak agar kolom assy tidak bergeser.
+     * Kolom tambahan dikenali per kelompok (CircuitTemplateConfig::getExtensionHeaderGroups),
+     * mulai tepat setelah BA. Sebuah kelompok dianggap ada bila header pertamanya cocok
+     * di posisi berikutnya, dan saat itu seluruh kelompok wajib cocok berurutan - ada
+     * sebagian = template salah, ditolak agar kolom assy tidak bergeser. Kelompok yang
+     * tidak ada mengakhiri pencarian: sisanya kolom assy (file template versi lama).
      *
      * @return array<string,int> [kolom DB => indeks kolom Excel]
      */
     protected function detectExtensionColumns(array $headerRow): array
     {
-        $start = CircuitTemplateConfig::getHeaderCount();
-        $expected = CircuitTemplateConfig::getExtensionHeaders();
-        $firstHeader = reset($expected);
-
-        if (strcasecmp(trim((string) ($headerRow[$start] ?? '')), $firstHeader) !== 0) {
-            return [];
-        }
-
         $columns = [];
-        $index = $start;
-        foreach ($expected as $dbColumn => $header) {
-            $uploaded = trim((string) ($headerRow[$index] ?? ''));
-            if (strcasecmp($uploaded, $header) !== 0) {
-                $columnLetter = ImportHelper::numberToColumnLetter($index + 1);
-                throw new \Exception("Invalid template! Column {$columnLetter}: Expected '{$header}', found '{$uploaded}'.\n\nPlease download and use the correct Circuit template.");
+        $this->extensionGroups = [];
+        $index = CircuitTemplateConfig::getHeaderCount();
+
+        foreach (CircuitTemplateConfig::getExtensionHeaderGroups() as $group => $expected) {
+            if (strcasecmp(trim((string) ($headerRow[$index] ?? '')), reset($expected)) !== 0) {
+                break;
             }
-            $columns[$dbColumn] = $index;
-            $index++;
+
+            foreach ($expected as $dbColumn => $header) {
+                $uploaded = trim((string) ($headerRow[$index] ?? ''));
+                if (strcasecmp($uploaded, $header) !== 0) {
+                    $columnLetter = ImportHelper::numberToColumnLetter($index + 1);
+                    throw new \Exception("Invalid template! Column {$columnLetter}: Expected '{$header}', found '{$uploaded}'.\n\nPlease download and use the correct Circuit template.");
+                }
+                $columns[$dbColumn] = $index;
+                $index++;
+            }
+            $this->extensionGroups[] = $group;
         }
 
         return $columns;
@@ -231,6 +238,13 @@ class MasterCircuitImport
     protected function validateTypeData(array $data, int $row): void
     {
         $type = $data['type'];
+
+        $circuitType = CircuitType::from($type);
+        if ($circuitType->usesSpecialColumns()) {
+            $this->validateSpecialTypeData($circuitType, $data, $row);
+            return;
+        }
+
         if (!in_array($type, [CircuitType::CUTTING_EJ->value, CircuitType::CUTTING_JAM->value], true)) {
             return;
         }
@@ -257,6 +271,35 @@ class MasterCircuitImport
         // Satu sisi kosong itu normal (EJ hanya di salah satu ujung circuit).
         if ($type === CircuitType::CUTTING_EJ->value && empty($data['qrcode_ej_a']) && empty($data['qrcode_ej_b'])) {
             $this->warnings[] = "Row {$row}: CUTTING_EJ dengan QRCode EJ-A dan EJ-B kosong, tiket EJ tercetak tanpa QR EJ.";
+        }
+    }
+
+    /**
+     * Minicoax / Antena Feeder / Battery Cable membaca kolom BM-BX (Battery juga QRCode
+     * Mesin di BL). File tanpa kolom itu menggagalkan baris - kalau disimpan, tiketnya
+     * tercetak setengah kosong. Data kunci tiket yang kosong cukup diperingatkan.
+     */
+    protected function validateSpecialTypeData(CircuitType $type, array $data, int $row): void
+    {
+        if (!in_array('special', $this->extensionGroups, true)) {
+            throw new \Exception("Type {$type->value} membutuhkan kolom tambahan BB-BX yang tidak ada di file ini. Download template terbaru.");
+        }
+
+        $missing = match ($type) {
+            CircuitType::CUTTING_MINICOAX => empty($data['barcode_process']) && empty($data['barcode_process_2'])
+                ? 'Barcode Process dan Barcode Process 2 kosong: BARCODE PROSES A/B tidak tercetak'
+                : null,
+            CircuitType::CUTTING_ANTENA_FEEDER => empty($data['part_code']) || empty($data['part_no'])
+                ? 'Kode atau Part No. kosong: KODE / PART NO. di tiket kosong'
+                : null,
+            CircuitType::CUTTING_BATTERY_CABLE => empty($data['qrcode_mesin'])
+                ? 'QRCode Mesin kosong: QR MESIN tidak tercetak'
+                : null,
+            default => null,
+        };
+
+        if ($missing) {
+            $this->warnings[] = "Row {$row}: {$type->label()} dengan {$missing}.";
         }
     }
 
@@ -380,8 +423,8 @@ class MasterCircuitImport
 
     protected function mapRowToData($rowData, $conveyor)
     {
-        // Column A (index 0) - Type: CUTTING, CUTTING_TWIST, CUTTING_EJ or CUTTING_JAM
-        // (label tampilan seperti "CUTTING EJ" / "EJ" juga diterima). Kosong = CUTTING;
+        // Column A (index 0) - Type: salah satu CircuitType::values() (label tampilan seperti
+        // "CUTTING EJ" / "EJ" / "BATTERY CABLE" juga diterima). Kosong = CUTTING;
         // nilai tak dikenal menggagalkan baris, bukan diam-diam dicetak sebagai CUTTING.
         $rawType = ImportHelper::cleanValue($rowData[0] ?? null);
         $circuitType = $rawType === null ? CircuitType::CUTTING : CircuitType::tryFromInput($rawType);
@@ -390,8 +433,8 @@ class MasterCircuitImport
         }
         $type = $circuitType->value;
 
-        // Kolom EJ/JAM (BB-BL) hanya diisi bila ada di file, supaya import file
-        // lama tidak mengosongkan data EJ/JAM yang sudah tersimpan.
+        // Kolom tambahan (BB-BX) hanya diisi bila ada di file, supaya import file
+        // lama tidak mengosongkan data EJ/JAM/Minicoax/Antena/Battery yang sudah tersimpan.
         $extension = [];
         foreach ($this->extensionColumns as $dbColumn => $index) {
             $extension[$dbColumn] = ImportHelper::cleanValue($rowData[$index] ?? null);
@@ -449,9 +492,9 @@ class MasterCircuitImport
             't01' => ImportHelper::cleanValue($rowData[46] ?? null),            // Column AU - T01
             't02' => ImportHelper::cleanValue($rowData[47] ?? null),            // Column AV - T02
             't03' => ImportHelper::cleanValue($rowData[48] ?? null),            // Column AW - T03
-            // Column AX (index 49) - T04: not in DB schema, skipped
-            // Column AY (index 50) - T05: not in DB schema, skipped
-            // Column AZ (index 51) - T06: not in DB schema, skipped
+            't04' => ImportHelper::cleanValue($rowData[49] ?? null),            // Column AX - T04 (Battery Cable: TO 4)
+            't05' => ImportHelper::cleanValue($rowData[50] ?? null),            // Column AY - T05 (Battery Cable: TO 5)
+            't06' => ImportHelper::cleanValue($rowData[51] ?? null),            // Column AZ - T06 (Battery Cable: TO 6)
             'memory_twist' => ImportHelper::cleanValue($rowData[52] ?? null),   // Column BA - Memori Twist
             'created_by' => Auth::id(),
         ];

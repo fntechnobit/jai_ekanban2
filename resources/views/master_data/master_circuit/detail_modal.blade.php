@@ -20,6 +20,7 @@
                             <tr><td class="text-muted">Shikake Code</td><td id="v_shikake_code">-</td></tr>
                             <tr><td class="text-muted">Family</td><td id="v_family">-</td></tr>
                             <tr><td class="text-muted">QTY</td><td id="v_qty">-</td></tr>
+                            <tr data-types="CUTTING_BATTERY_CABLE"><td class="text-muted">Qty DC</td><td id="v_qty_dc">-</td></tr>
                             <tr><td class="text-muted">Machine</td><td id="v_machine">-</td></tr>
                             <tr><td class="text-muted">Machine Twist</td><td id="v_machine_twist">-</td></tr>
                             <tr><td class="text-muted">Memory Twist</td><td id="v_memory_twist">-</td></tr>
@@ -40,15 +41,17 @@
                             <tr><td class="text-muted">Barcode Mesin</td><td id="v_barcode_mesin">-</td></tr>
                             <tr><td class="text-muted">Barcode Navigasi</td><td id="v_barcode_navigasi">-</td></tr>
                             <tr><td class="text-muted">Barcode Process</td><td id="v_barcode_process">-</td></tr>
+                            <tr data-types="CUTTING_MINICOAX"><td class="text-muted">Barcode Process 2</td><td id="v_barcode_process_2">-</td></tr>
                             <tr><td class="text-muted">Barcode Shikake</td><td id="v_barcode_shikake">-</td></tr>
                             <tr><td class="text-muted">Barcode Twist</td><td id="v_barcode_twist">-</td></tr>
                             <tr><td class="text-muted">QRCode Drawing</td><td id="v_qrcode_drawing">-</td></tr>
+                            <tr data-types="CUTTING_JAM,CUTTING_BATTERY_CABLE"><td class="text-muted">QRCode Mesin</td><td id="v_qrcode_mesin">-</td></tr>
                         </table>
                     </div>
                 </div>
 
                 <!-- QR EJ (CUTTING_EJ only) -->
-                <div id="v_ej_section" class="border rounded p-2 mb-2" style="display:none;">
+                <div id="v_ej_section" class="border rounded p-2 mb-2" data-types="CUTTING_EJ" style="display:none;">
                     <h6 class="fw-semibold small mb-1 text-primary">QR EJ</h6>
                     <table class="table table-sm table-borderless mb-0 small">
                         <tr><td class="text-muted" width="17.5%">QRCode EJ-A</td><td id="v_qrcode_ej_a">-</td></tr>
@@ -57,7 +60,7 @@
                 </div>
 
                 <!-- Circuit 2 (CUTTING_JAM only) -->
-                <div id="v_jam_section" class="border rounded p-2 mb-2" style="display:none;">
+                <div id="v_jam_section" class="border rounded p-2 mb-2" data-types="CUTTING_JAM" style="display:none;">
                     <h6 class="fw-semibold small mb-1 text-primary">Circuit 2 (JAM Twist)</h6>
                     <div class="row g-0">
                         <div class="col-md-6">
@@ -74,10 +77,19 @@
                                 <tr><td class="text-muted">Size 2</td><td id="v_size_2">-</td></tr>
                                 <tr><td class="text-muted">Col 2</td><td id="v_col_2">-</td></tr>
                                 <tr><td class="text-muted">C/L 2</td><td id="v_cl_2">-</td></tr>
-                                <tr><td class="text-muted">QRCode Mesin</td><td id="v_qrcode_mesin">-</td></tr>
                             </table>
                         </div>
                     </div>
+                </div>
+
+                <!-- Antena Feeder -->
+                <div id="v_antena_section" class="border rounded p-2 mb-2" data-types="CUTTING_ANTENA_FEEDER" style="display:none;">
+                    <h6 class="fw-semibold small mb-1 text-primary">Antena Feeder</h6>
+                    <table class="table table-sm table-borderless mb-0 small">
+                        <tr><td class="text-muted" width="17.5%">Kode</td><td id="v_part_code">-</td></tr>
+                        <tr><td class="text-muted">Part No.</td><td id="v_part_no">-</td></tr>
+                        <tr><td class="text-muted">No Assy</td><td id="v_no_assy">-</td></tr>
+                    </table>
                 </div>
 
                 <!-- Terminal 1 & 2 -->
@@ -92,6 +104,8 @@
                                 <tr><td class="text-muted">Strip</td><td id="v_strip_1">-</td></tr>
                                 <tr><td class="text-muted">Acc</td><td id="v_acc_1">-</td></tr>
                                 <tr><td class="text-muted">Acc A</td><td id="v_acc_1a">-</td></tr>
+                                <tr data-types="CUTTING_MINICOAX"><td class="text-muted">Acc B (ACC3)</td><td id="v_acc_1b">-</td></tr>
+                                <tr data-types="CUTTING_MINICOAX"><td class="text-muted">Acc C (ACC4)</td><td id="v_acc_1c">-</td></tr>
                                 <tr><td class="text-muted">Tube</td><td id="v_tube_1">-</td></tr>
                                 <tr><td class="text-muted">Mark</td><td id="v_mark_1">-</td></tr>
                                 <tr><td class="text-muted">TA</td><td id="v_ta">-</td></tr>
@@ -108,6 +122,8 @@
                                 <tr><td class="text-muted">Strip</td><td id="v_strip_2">-</td></tr>
                                 <tr><td class="text-muted">Acc</td><td id="v_acc_2">-</td></tr>
                                 <tr><td class="text-muted">Acc A</td><td id="v_acc_2a">-</td></tr>
+                                <tr data-types="CUTTING_MINICOAX"><td class="text-muted">Acc B (ACC3)</td><td id="v_acc_2b">-</td></tr>
+                                <tr data-types="CUTTING_MINICOAX"><td class="text-muted">Acc C (ACC4)</td><td id="v_acc_2c">-</td></tr>
                                 <tr><td class="text-muted">Tube</td><td id="v_tube_2">-</td></tr>
                                 <tr><td class="text-muted">Mark</td><td id="v_mark_2">-</td></tr>
                                 <tr><td class="text-muted">TB</td><td id="v_tb">-</td></tr>
@@ -125,6 +141,9 @@
                                 <tr><td class="text-muted" width="30%">T01</td><td id="v_t01">-</td></tr>
                                 <tr><td class="text-muted">T02</td><td id="v_t02">-</td></tr>
                                 <tr><td class="text-muted">T03</td><td id="v_t03">-</td></tr>
+                                @foreach(range(4, 9) as $n)
+                                    <tr data-types="CUTTING_BATTERY_CABLE"><td class="text-muted">T0{{ $n }}</td><td id="v_t0{{ $n }}">-</td></tr>
+                                @endforeach
                             </table>
                         </div>
                     </div>

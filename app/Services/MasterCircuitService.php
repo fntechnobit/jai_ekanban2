@@ -32,6 +32,9 @@ class MasterCircuitService
                     CircuitType::CUTTING_TWIST => 'bg-warning text-dark',
                     CircuitType::CUTTING_EJ => 'bg-success text-white',
                     CircuitType::CUTTING_JAM => 'bg-dark text-white',
+                    CircuitType::CUTTING_MINICOAX => 'bg-secondary text-white',
+                    CircuitType::CUTTING_ANTENA_FEEDER => 'bg-light text-dark border border-dark',
+                    CircuitType::CUTTING_BATTERY_CABLE => 'bg-danger text-white',
                     default => 'bg-info text-white',
                 };
                 return '<span class="badge ' . $class . ' fw-semibold">' . $type->shortLabel() . '</span>';

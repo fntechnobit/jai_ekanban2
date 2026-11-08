@@ -86,6 +86,31 @@
         $(function () {
             var optionsUrl = "{{ route('master-data.master-circuit.filter-options') }}";
 
+            // Kolom yang hanya dipakai type tertentu (EJ, JAM, Minicoax, Antena, Battery, ...).
+            // Setiap field-nya tetap diisi apa pun type-nya; yang diatur di sini hanya tampil/tidaknya.
+            var TYPE_FIELDS = [
+                'qrcode_ej_a', 'qrcode_ej_b',
+                'cct_code_2', 'cct_no_2', 'cust_no_2', 'kind_2', 'size_2', 'col_2', 'cl_2', 'barcode_mesin_2', 'qrcode_mesin',
+                'barcode_process_2', 'acc_1b', 'acc_1c', 'acc_2b', 'acc_2c',
+                'part_code', 'part_no', 'no_assy', 'qty_dc',
+                't01', 't02', 't03', 't04', 't05', 't06', 't07', 't08', 't09'
+            ];
+            var TYPE_BADGES = {
+                CUTTING_TWIST: '<span class="badge bg-warning text-dark">TWS</span>',
+                CUTTING_EJ: '<span class="badge bg-success text-white">EJ</span>',
+                CUTTING_JAM: '<span class="badge bg-dark text-white">JAM</span>',
+                CUTTING_MINICOAX: '<span class="badge bg-secondary text-white">MCX</span>',
+                CUTTING_ANTENA_FEEDER: '<span class="badge bg-light text-dark border border-dark">ANT</span>',
+                CUTTING_BATTERY_CABLE: '<span class="badge bg-danger text-white">BC</span>'
+            };
+
+            // Elemen ber-atribut data-types hanya tampil untuk type yang tercantum di dalamnya.
+            function toggleTypeFields($modal, type) {
+                $modal.find('[data-types]').each(function () {
+                    $(this).toggle(String($(this).data('types')).split(',').indexOf(type) !== -1);
+                });
+            }
+
             // Initialize Select2 for filters
             $('#filter_area_id, #filter_family, #filter_conveyor_id, #filter_type, #filter_machine').select2({
                 theme: 'bootstrap-5',
@@ -318,12 +343,7 @@
                         if (!response.success) return;
                         const d = response.data;
                         const v = (val) => val || '-';
-                        const typeBadges = {
-                            CUTTING_TWIST: '<span class="badge bg-warning text-dark">TWS</span>',
-                            CUTTING_EJ: '<span class="badge bg-success text-white">EJ</span>',
-                            CUTTING_JAM: '<span class="badge bg-dark text-white">JAM</span>'
-                        };
-                        const typeBadge = typeBadges[d.type] || '<span class="badge bg-info text-white">CCT</span>';
+                        const typeBadge = TYPE_BADGES[d.type] || '<span class="badge bg-info text-white">CCT</span>';
 
                         // Info Utama
                         $('#v_type').html(typeBadge);
@@ -354,14 +374,11 @@
                         $('#v_barcode_twist').text(v(d.barcode_twist));
                         $('#v_qrcode_drawing').text(v(d.qrcode_drawing));
 
-                        // QR EJ (CUTTING_EJ) & circuit 2 (CUTTING_JAM)
-                        $('#v_qrcode_ej_a').text(v(d.qrcode_ej_a));
-                        $('#v_qrcode_ej_b').text(v(d.qrcode_ej_b));
-                        $('#v_ej_section').toggle(d.type === 'CUTTING_EJ');
-                        ['cct_code_2', 'cct_no_2', 'cust_no_2', 'kind_2', 'size_2', 'col_2', 'cl_2', 'barcode_mesin_2', 'qrcode_mesin'].forEach(function (field) {
+                        // Field khusus type (EJ, JAM, Minicoax, Antena, Battery) & TO 1-9
+                        TYPE_FIELDS.forEach(function (field) {
                             $('#v_' + field).text(v(d[field]));
                         });
-                        $('#v_jam_section').toggle(d.type === 'CUTTING_JAM');
+                        toggleTypeFields($('#detailCircuitModal'), d.type);
 
                         // Terminal 1
                         $('#v_terminal_1').text(v(d.terminal_1));
@@ -384,11 +401,6 @@
                         $('#v_tube_2').text(v(d.tube_2));
                         $('#v_mark_2').text(v(d.mark_2));
                         $('#v_tb').text(v(d.tb));
-
-                        // T fields
-                        $('#v_t01').text(v(d.t01));
-                        $('#v_t02').text(v(d.t02));
-                        $('#v_t03').text(v(d.t03));
 
                         // Assy
                         if (d.assemblies && d.assemblies.length > 0) {
@@ -472,26 +484,18 @@
                         // nilai record yang dibuka sebelumnya tidak ikut tersimpan ke record ini.
                         $('#edit_barcode_twist').val(d.barcode_twist);
                         $('#edit_qrcode_drawing').val(d.qrcode_drawing);
-                        $('#edit_qrcode_ej_a').val(d.qrcode_ej_a);
-                        $('#edit_qrcode_ej_b').val(d.qrcode_ej_b);
-                        ['cct_code_2', 'cct_no_2', 'cust_no_2', 'kind_2', 'size_2', 'col_2', 'cl_2', 'barcode_mesin_2', 'qrcode_mesin'].forEach(function (field) {
+                        TYPE_FIELDS.forEach(function (field) {
                             $('#edit_' + field).val(d[field]);
                         });
-                        $('#edit_ej_section').toggle(d.type === 'CUTTING_EJ');
-                        $('#edit_jam_section').toggle(d.type === 'CUTTING_JAM');
+                        toggleTypeFields($('#editCircuitModal'), d.type);
 
-                        // Drawing section (only for CUTTING_TWIST)
+                        // Upload drawing hanya untuk CUTTING_TWIST (tampil/tidaknya diatur data-types)
                         $('#edit_drawing_file').val('');
-                        if (d.type === 'CUTTING_TWIST') {
-                            $('#edit_drawing_section').show();
-                            if (d.image_path) {
-                                $('#edit_drawing_preview').attr('src', '{{ asset("") }}' + d.image_path);
-                                $('#edit_drawing_preview_container').show();
-                            } else {
-                                $('#edit_drawing_preview_container').hide();
-                            }
+                        if (d.type === 'CUTTING_TWIST' && d.image_path) {
+                            $('#edit_drawing_preview').attr('src', '{{ asset("") }}' + d.image_path);
+                            $('#edit_drawing_preview_container').show();
                         } else {
-                            $('#edit_drawing_section').hide();
+                            $('#edit_drawing_preview_container').hide();
                         }
 
                         $('#editCircuitModal').modal('show');
