@@ -287,7 +287,7 @@ class MasterCircuitImport
 
         $missing = match ($type) {
             CircuitType::CUTTING_MINICOAX => empty($data['barcode_process']) && empty($data['barcode_process_2'])
-                ? 'Barcode Process dan Barcode Process 2 kosong: BARCODE PROSES A/B tidak tercetak'
+                ? 'Barcode Process dan Barcode Process 2 kosong: QR PROSES A/B tidak tercetak'
                 : null,
             CircuitType::CUTTING_ANTENA_FEEDER => empty($data['part_code']) || empty($data['part_no'])
                 ? 'Kode atau Part No. kosong: KODE / PART NO. di tiket kosong'

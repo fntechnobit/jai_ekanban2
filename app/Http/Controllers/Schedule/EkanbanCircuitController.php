@@ -33,12 +33,6 @@ class EkanbanCircuitController extends Controller
      */
     private const JAM_BARCODE_HEIGHT = 64;
 
-    /**
-     * Tinggi barcode proses A/B (Code 39) pada tiket MINICOAX (dot). Barcode B
-     * menempati sel 3 baris (~105 dot) bersama label dan teks kodenya.
-     */
-    private const MINICOAX_BARCODE_HEIGHT = 64;
-
     protected $ekanbanCircuitService;
 
     public function __construct(EkanbanCircuitService $ekanbanCircuitService)
@@ -304,18 +298,21 @@ class EkanbanCircuitController extends Controller
     }
 
     /**
-     * Generate barcodes for CUTTING_MINICOAX circuits: QR kanban dan Code 39 barcode
-     * proses sisi A (barcode_process) dan sisi B (barcode_process_2).
+     * Generate barcodes for CUTTING_MINICOAX circuits: semuanya QR - kanban, proses sisi A
+     * (barcode_process), proses sisi B (barcode_process_2) dan address store (to_store).
      */
     private function generateCircuitMinicoaxBarcodes($circuit)
     {
         $this->generateKanbanQr($circuit);
 
-        foreach (['barcode_process', 'barcode_process_2'] as $field) {
+        $qrFields = [
+            'barcode_process' => 'qr_process_path',
+            'barcode_process_2' => 'qr_process_2_path',
+            'to_store' => 'qr_store_path',
+        ];
+        foreach ($qrFields as $field => $pathField) {
             if (!empty($circuit->$field)) {
-                $circuit->{$field . '_path'} = BarcodeHelper::generateCode39Cached($circuit->$field, self::MINICOAX_BARCODE_HEIGHT, 'circuit');
-                $circuit->{$field . '_data'} = BarcodeHelper::sanitizeCode39($circuit->$field);
-                $circuit->{$field . '_width'} = BarcodeHelper::code39Width($circuit->$field);
+                $circuit->$pathField = BarcodeHelper::generateQRCodeCached($circuit->$field, 'circuit');
             }
         }
     }

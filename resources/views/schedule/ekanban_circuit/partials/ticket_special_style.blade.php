@@ -122,6 +122,18 @@
     text-align: left;
 }
 
+/* Teks yang boleh dilipat di dalam lebar maksimum (max-width diberi per pemakaian), dipotong
+   di spasi atau setelah tanda hubung; kode tanpa celah dipotong di mana saja. Lebar tabel
+   mengikuti isi, jadi tanpa max-width teks panjang memperlebar kolom, bukan dilipat. */
+.ticket-special-print .sp-wrap {
+    display: block;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.1;
+    margin: 0 auto;
+}
+
 .text-left {
     text-align: left !important;
 }

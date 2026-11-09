@@ -104,7 +104,7 @@ class CircuitTemplateConfig
                 'acc_1c' => 'Acc. 1C',                   // BN - 65 (Minicoax: ACC4 sisi A)
                 'acc_2b' => 'Acc 2B',                    // BO - 66 (Minicoax: ACC3 sisi B)
                 'acc_2c' => 'Acc 2C',                    // BP - 67 (Minicoax: ACC4 sisi B)
-                'barcode_process_2' => 'Barcode Process 2', // BQ - 68 (Minicoax: barcode proses B; A = Barcode Process kolom O)
+                'barcode_process_2' => 'Barcode Process 2', // BQ - 68 (Minicoax: QR proses B; A = Barcode Process kolom O)
                 'part_code' => 'Kode',                   // BR - 69 (Antena Feeder: KODE)
                 'part_no' => 'Part No.',                 // BS - 70 (Antena Feeder: PART NO.)
                 'no_assy' => 'No Assy',                  // BT - 71 (Antena Feeder: NO ASSY)
