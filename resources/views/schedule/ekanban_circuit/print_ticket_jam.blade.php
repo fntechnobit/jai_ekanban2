@@ -371,7 +371,7 @@
                      (format barcode shikake, kode Twist No) | Qty, Issue, ADDR | QR drawing --}}
                 <tr class="jam-bottom">
                     <td colspan="2" rowspan="4" class="jam-qr-cell">
-                        <div class="jam-qr-label">BARCODE MESIN</div>
+                        <div class="jam-qr-label">QRCODE MESIN</div>
                         @if(isset($circuit->qr_mesin_path))
                             <img src="{{ $circuit->qr_mesin_path }}" alt="QR Mesin" class="jam-qr-img">
                         @endif
@@ -380,7 +380,7 @@
                     <td class="jam-label text-left">CV No.</td>
                     <td colspan="3" class="jam-value-sm text-left">{{ $circuit->conveyor ?? '' }}</td>
                     <td colspan="2" rowspan="4" class="jam-qr-cell">
-                        <div class="jam-qr-label">BARCODE KANBAN</div>
+                        <div class="jam-qr-label">QRCODE KANBAN</div>
                         @if(isset($circuit->qr_code_path))
                             <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="jam-qr-img">
                         @endif

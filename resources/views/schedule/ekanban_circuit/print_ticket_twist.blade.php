@@ -83,10 +83,15 @@
     white-space: nowrap;
 }
 
-/* Semua baris isi sama tinggi: 18 baris x 30 px. Header 30 px:
-   30 + 18 x 30 + border = 572 px. */
+/* Header 26 px + 12 baris x 28 px + 7 baris bawah (QR) x 29 px + border = 572 px.
+   Tujuh baris bawah = 203 px: QR 165 px + judul di atas + isi di bawah, masing-masing
+   berjarak 5 px dari garis sel. Ukuran QR tidak diperkecil. */
 .ticket-twist-print tbody tr {
-    height: 30px;
+    height: 28px;
+}
+
+.ticket-twist-print tbody tr.twist-bottom {
+    height: 29px;
 }
 
 /* Released note boleh 2 baris di dalam satu baris 30 px */
@@ -107,11 +112,11 @@
 }
 
 .ticket-twist-print thead th {
-    height: 30px;
+    height: 26px;
     background-color: transparent;
     color: #000;
     font-weight: bold;
-    font-size: 26px;
+    font-size: 22px;
     padding: 0 6px;
     border: 2px solid #000;
 }
@@ -163,7 +168,7 @@
     font-size: 15px;
 }
 
-/* MARK lebih besar dari nilai lain; line-height 1 supaya muat di baris 30 px */
+/* MARK lebih besar dari nilai lain; line-height 1 supaya muat di baris 28 px */
 .twist-value-cell.twist-mark {
     font-size: 25px;
     line-height: 1;
@@ -179,7 +184,7 @@
 }
 
 .twist-qrcode-cell {
-    padding: 1px;
+    padding: 5px 1px;
     vertical-align: middle;
     text-align: center;
 }
@@ -200,6 +205,18 @@
 .twist-qr-img.qr-kanban {
     height: 160px;
     width: 160px;
+}
+
+/* Judul di atas QR dan isi QR di bawahnya */
+.twist-qr-caption {
+    font-size: 11px;
+    font-weight: bold;
+    line-height: 1;
+    margin: 0 0 2px;
+}
+
+.twist-qr-caption.below {
+    margin: 2px 0 0;
 }
 
 
@@ -490,47 +507,48 @@
             {{-- bawah: TO STORE | QR drawing | blok teks (TO 1-3, CV, family, note) | QR kanban.
                  Blok teks di tengah memisahkan kedua QR. Nilainya rata kiri dan selebar kolom 5-7
                  supaya note lega; QR kanban cukup kolom 8-9. --}}
-            <tr>
+            <tr class="twist-bottom">
                 <td colspan="2" class="twist-label-cell">TO STORE</td>
-                <td rowspan="6" class="twist-qrcode-cell">
+                <td rowspan="7" class="twist-qrcode-cell">
+                    <div class="twist-qr-caption">QR DRAWING</div>
                     @if(isset($circuit->qr_qrcode_drawing_path))
                         <img src="{{ $circuit->qr_qrcode_drawing_path }}" alt="QR Drawing" class="twist-qr-img">
-                    @else
-                        <div style="font-size:12px">{{ $circuit->qrcode_drawing ?? 'DRW' }}</div>
                     @endif
+                    <div class="twist-qr-caption below">{{ $circuit->qrcode_drawing ?? '' }}</div>
                 </td>
                 <td class="twist-label-cell">TO 1</td>
                 <td colspan="3" class="twist-value-cell text-left">{{ $circuit->t01 ?? '' }}</td>
-                <td colspan="2" rowspan="6" class="twist-qrcode-cell qr-bottom">
+                <td colspan="2" rowspan="7" class="twist-qrcode-cell qr-bottom">
+                    <div class="twist-qr-caption">QR KANBAN</div>
                     @if(isset($circuit->qr_code_path))
                         <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="twist-qr-img qr-kanban">
                     @endif
-                    @if(!empty($circuit->barcode_kanban))
-                        <div style="font-size:11px;font-weight:bold;line-height:1;margin:2px 0 0;">{{ $circuit->barcode_kanban }}</div>
-                    @endif
+                    <div class="twist-qr-caption below">{{ $circuit->barcode_kanban ?? '' }}</div>
                 </td>
             </tr>
-            <tr>
-                <td colspan="2" rowspan="5" class="twist-value-cell store-big">{{ $toStoreLine1 }}<br>{{ $toStoreLine2 }}</td>
+            <tr class="twist-bottom">
+                <td colspan="2" rowspan="6" class="twist-value-cell store-big">{{ $toStoreLine1 }}<br>{{ $toStoreLine2 }}</td>
                 <td class="twist-label-cell">TO 2</td>
                 <td colspan="3" class="twist-value-cell text-left">{{ $circuit->t02 ?? '' }}</td>
             </tr>
-            <tr>
+            <tr class="twist-bottom">
                 <td class="twist-label-cell">TO 3</td>
                 <td colspan="3" class="twist-value-cell text-left">{{ $circuit->t03 ?? '' }}</td>
             </tr>
-            <tr>
+            <tr class="twist-bottom">
                 <td class="twist-label-cell">CV NO</td>
                 <td colspan="3" class="twist-value-cell text-left">{{ $circuit->conveyor ?? '-' }}</td>
             </tr>
-            <tr>
+            <tr class="twist-bottom">
                 <td class="twist-label-cell">FAMILY</td>
                 <td colspan="3" class="twist-value-cell text-left">{{ $circuit->family ?? '-' }}</td>
             </tr>
-            <tr>
-                <td class="twist-label-cell">NOTE</td>
-                <td colspan="3" class="twist-value-cell text-left note-cell">{{ $circuit->released_note ?? '' }}</td>
+            {{-- NOTE memakai 2 baris: baris ke-7 ada supaya QR 165 px muat bersama judul dan isinya --}}
+            <tr class="twist-bottom">
+                <td rowspan="2" class="twist-label-cell">NOTE</td>
+                <td colspan="3" rowspan="2" class="twist-value-cell text-left note-cell" style="font-size: 15px;">{{ $circuit->released_note ?? '' }}</td>
             </tr>
+            <tr class="twist-bottom"></tr>
         </tbody>
     </table>
     </div>

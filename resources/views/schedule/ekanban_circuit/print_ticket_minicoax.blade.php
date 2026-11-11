@@ -4,7 +4,7 @@
        spesifikasi kabel                                 2 baris 29 px
        sisi A | QR proses A | QTY..TO MESIN | QR kanban  6 baris 29 px
        ADDRESS STORE selebar tiket: label 24 px, barcode Code 39 70 px, isi 24 px
-       sisi B | QR proses B | alamat, family, note       6 baris 29 px
+       sisi B | QR proses B | family, note               6 baris 29 px
      Barcode alamat (to_store) panjangnya ~40 dot per karakter, jadi diberi seluruh
      lebar tiket; dengan begitu panjang tiket ditentukan barcode itu saja. QR proses A dan QR
      kanban rata atas, QR proses B rata bawah, sehingga tiap QR berjarak >= 40 dot dan satu
@@ -125,10 +125,10 @@
                     </td>
                 </tr>
                 <tr class="addr-text">
-                    <td colspan="8" class="sp-value" style="font-size: 18px;">{{ $circuit->barcode_store_data ?? '' }}</td>
+                    <td colspan="8" class="sp-value" style="font-size: 18px;">{{ $circuit->to_store ?? '' }}</td>
                 </tr>
 
-                {{-- sisi B | QR proses B (rata bawah) | alamat lengkap, family, note --}}
+                {{-- sisi B | QR proses B (rata bawah) | family (3 baris), note (3 baris) --}}
                 <tr>
                     <td rowspan="6" class="sp-section black-bg">B</td>
                     <td class="sp-label text-left">TERMINAL</td>
@@ -140,9 +140,9 @@
                         @endif
                         <div class="sp-qr-text">{{ $circuit->barcode_process_2 ?? '' }}</div>
                     </td>
-                    {{-- Isi To Store lengkap (barcode hanya memuat bagian yang bisa di-encode Code 39) --}}
-                    <td rowspan="2" class="sp-label">ADDR. STORE</td>
-                    <td colspan="2" rowspan="2" class="sp-value text-left"><span class="sp-wrap" style="max-width: 350px; margin: 0;">{{ $circuit->to_store ?? '' }}</span></td>
+                    <td rowspan="3" class="sp-label">FAMILY</td>
+                    {{-- Family dilipat supaya kolom tidak melebar --}}
+                    <td colspan="2" rowspan="3" class="sp-value text-left"><span class="sp-wrap" style="font-size: 20px; max-width: 350px; margin: 0;">{{ $circuit->family ?? '' }}</span></td>
                 </tr>
                 <tr>
                     <td class="sp-label text-left">STRIP</td>
@@ -151,19 +151,16 @@
                 <tr>
                     <td class="sp-label text-left">ACC1</td>
                     <td class="sp-value text-left">{{ $circuit->acc_2 ?? '' }}</td>
-                    <td rowspan="2" class="sp-label">FAMILY</td>
-                    {{-- Family dilipat (maks. 2 baris) supaya kolom tidak melebar --}}
-                    <td colspan="2" rowspan="2" class="sp-value text-left"><span class="sp-wrap" style="font-size: 20px; max-width: 350px; margin: 0;">{{ $circuit->family ?? '' }}</span></td>
                 </tr>
                 <tr>
                     <td class="sp-label text-left">ACC2</td>
                     <td class="sp-value text-left">{{ $circuit->acc_2a ?? '' }}</td>
+                    <td rowspan="3" class="sp-label">NOTE</td>
+                    <td colspan="2" rowspan="3" class="text-left"><span class="sp-note" style="max-width: 350px; font-size: 16px;">{{ $circuit->released_note ?? '' }}</span></td>
                 </tr>
                 <tr>
                     <td class="sp-label text-left">ACC3</td>
                     <td class="sp-value text-left">{{ $circuit->acc_2b ?? '' }}</td>
-                    <td rowspan="2" class="sp-label">NOTE</td>
-                    <td colspan="2" rowspan="2" class="text-left"><span class="sp-note" style="max-width: 350px; font-size: 16px;">{{ $circuit->released_note ?? '' }}</span></td>
                 </tr>
                 <tr>
                     <td class="sp-label text-left">ACC4</td>

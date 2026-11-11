@@ -11,6 +11,10 @@
 
 @foreach($circuits as $circuit)
 @php
+    // Satu circuit EJ hanya punya QR EJ di satu sisi (A atau B). Sel QR sisi yang kosong
+    // tidak dibuat; kolomnya dipakai sel di sebelahnya supaya tidak ada kotak kosong besar.
+    $hasEjA = !empty($circuit->qrcode_ej_a);
+    $hasEjB = !empty($circuit->qrcode_ej_b);
     // Cell BARCODE MESIN = kolom 9+10+11 (140+96+col11). Kolom 11 dilebarkan sampai
     // barcode Code 39 muat 1:1 plus quiet zone 30px di kiri-kanan (+2 border).
     $ejCol11 = max(192, ($circuit->barcode_width ?? 0) + 2 * \App\Helpers\BarcodeHelper::CODE39_QUIET_ZONE + 2 - (140 + 96));
@@ -68,13 +72,15 @@
                     <td colspan="4" class="value-cell text-left"@if(!empty($circuit->gold_1)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_1 ?? '' }}@include('schedule.ekanban_circuit.partials.term_star', ['star' => $circuit->note_1 ?? null])</td>
                     <td class="label-cell text-left">MARK</td>
                     <td class="value-cell mark-value">{{ $circuit->mark_1 ?? '' }}</td>
+                    @if($hasEjA)
                     <td rowspan="4" class="qr-ej-cell">
                         <div class="qr-label">EJ-A {{ $circuit->qrcode_ej_a ?? '' }}</div>
                         @if(!empty($circuit->qr_ej_a_path))
                             <img src="{{ $circuit->qr_ej_a_path }}" alt="QR EJ-A" class="qr-img">
                         @endif
                     </td>
-                    <td class="label-cell text-left">TO 1</td>
+                    @endif
+                    <td @if(!$hasEjA) colspan="2" @endif class="label-cell text-left">TO 1</td>
                     <td class="value-cell text-left">{{ $circuit->t01 ?? '' }}</td>
                 </tr>
                 <!-- Section A - Row 2 -->
@@ -83,7 +89,7 @@
                     <td colspan="4" class="value-cell text-left">{{ $circuit->acc_1 ?? '' }}</td>
                     <td class="label-cell text-left">NOTE</td>
                     <td class="value-cell">{{ $circuit->ta ?? '' }}</td>
-                    <td class="label-cell text-left">TO 2</td>
+                    <td @if(!$hasEjA) colspan="2" @endif class="label-cell text-left">TO 2</td>
                     <td class="value-cell text-left">{{ $circuit->t02 ?? '' }}</td>
                 </tr>
                 <!-- Section A - Row 3 -->
@@ -92,7 +98,7 @@
                     <td colspan="4" class="value-cell text-left">{{ $circuit->acc_1a ?? '' }}</td>
                     <td class="label-cell text-left">STRIP</td>
                     <td class="value-cell">{{ $circuit->strip_1 ?? '' }}</td>
-                    <td class="label-cell text-left">TO 3</td>
+                    <td @if(!$hasEjA) colspan="2" @endif class="label-cell text-left">TO 3</td>
                     <td class="value-cell text-left">{{ $circuit->t03 ?? '' }}</td>
                 </tr>
                 <!-- Section A - Row 4 -->
@@ -101,7 +107,7 @@
                     <td colspan="4" class="value-cell text-left">{{ $circuit->tube_1 ?? '' }}</td>
                     {{-- bekas MARK: pindah ke baris TERM, di atas NOTE --}}
                     <td colspan="2"></td>
-                    <td class="label-cell text-left">STORE</td>
+                    <td @if(!$hasEjA) colspan="2" @endif class="label-cell text-left">STORE</td>
                     <td class="value-cell text-left">{{ $circuit->to_store ?? '' }}</td>
                 </tr>
 
@@ -109,13 +115,15 @@
                 <tr>
                     <td rowspan="4" class="section-label black-bg">B</td>
                     <td class="label-cell text-left">TERM.</td>
-                    <td colspan="3" class="value-cell text-left"@if(!empty($circuit->gold_2)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_2 ?? '' }}@include('schedule.ekanban_circuit.partials.term_star', ['star' => $circuit->note_2 ?? null])</td>
+                    <td colspan="{{ $hasEjB ? 3 : 4 }}" class="value-cell text-left"@if(!empty($circuit->gold_2)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_2 ?? '' }}@include('schedule.ekanban_circuit.partials.term_star', ['star' => $circuit->note_2 ?? null])</td>
+                    @if($hasEjB)
                     <td rowspan="4" class="qr-ej-cell">
                         <div class="qr-label">EJ-B {{ $circuit->qrcode_ej_b ?? '' }}</div>
                         @if(!empty($circuit->qr_ej_b_path))
                             <img src="{{ $circuit->qr_ej_b_path }}" alt="QR EJ-B" class="qr-img">
                         @endif
                     </td>
+                    @endif
                     <td class="label-cell text-left">MARK</td>
                     <td class="value-cell mark-value">{{ $circuit->mark_2 ?? '' }}</td>
                     <td colspan="2" class="label-cell text-left">ADDR</td>
@@ -124,7 +132,7 @@
                 <!-- Section B - Row 2 -->
                 <tr>
                     <td class="label-cell text-left">ACC 1</td>
-                    <td colspan="3" class="value-cell text-left">{{ $circuit->acc_2 ?? '' }}</td>
+                    <td colspan="{{ $hasEjB ? 3 : 4 }}" class="value-cell text-left">{{ $circuit->acc_2 ?? '' }}</td>
                     <td class="label-cell text-left">NOTE</td>
                     <td class="value-cell">{{ $circuit->tb ?? '' }}</td>
                     <td colspan="2" class="label-cell text-left">CCT CODE</td>
@@ -133,7 +141,7 @@
                 <!-- Section B - Row 3 -->
                 <tr>
                     <td class="label-cell text-left">ACC 2</td>
-                    <td colspan="3" class="value-cell text-left">{{ $circuit->acc_2a ?? '' }}</td>
+                    <td colspan="{{ $hasEjB ? 3 : 4 }}" class="value-cell text-left">{{ $circuit->acc_2a ?? '' }}</td>
                     <td class="label-cell text-left">STRIP</td>
                     <td class="value-cell">{{ $circuit->strip_2 ?? '' }}</td>
                     <td colspan="2" class="label-cell text-left">QTY</td>
@@ -142,7 +150,7 @@
                 <!-- Section B - Row 4 -->
                 <tr>
                     <td class="label-cell text-left">TUBE</td>
-                    <td colspan="3" class="value-cell text-left">{{ $circuit->tube_2 ?? '' }}</td>
+                    <td colspan="{{ $hasEjB ? 3 : 4 }}" class="value-cell text-left">{{ $circuit->tube_2 ?? '' }}</td>
                     {{-- bekas MARK: pindah ke baris TERM, di atas NOTE --}}
                     <td colspan="2"></td>
                     <td colspan="2" class="label-cell text-left">ISSUE</td>
