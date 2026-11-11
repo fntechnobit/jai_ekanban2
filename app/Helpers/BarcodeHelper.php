@@ -31,8 +31,10 @@ class BarcodeHelper
             $cachePath = "cache/{$subfolder}/{$filename}";
             $fullPath = storage_path("app/public/{$cachePath}");
             
-            // Check if cached version exists
-            if (file_exists($fullPath)) {
+            // Cache dipakai hanya bila file-nya PNG utuh. File 0 byte / terpotong (disk penuh,
+            // proses terhenti saat menulis) dulu dianggap valid selamanya, sehingga QR itu
+            // tidak pernah tampil lagi sampai file dihapus manual.
+            if (self::isValidPng($fullPath)) {
                 return asset("storage/{$cachePath}");
             }
 
@@ -55,13 +57,40 @@ class BarcodeHelper
                 mkdir($dir, 0755, true);
             }
             
-            Storage::disk('public')->put($cachePath, $qrCodeBinary);
-            
-            return asset("storage/{$cachePath}");
-        } catch (\Exception $e) {
-            Log::error('QR generation failed: ' . $e->getMessage());
+            // Tulis ke file sementara lalu rename, supaya request lain tidak pernah membaca
+            // PNG yang baru setengah tertulis. Kalau cache gagal ditulis, QR tetap dikirim
+            // sebagai data URI - tiket tidak boleh tercetak tanpa QR.
+            $tmpPath = $fullPath . '.' . uniqid('', true) . '.tmp';
+            if (@file_put_contents($tmpPath, $qrCodeBinary) === strlen($qrCodeBinary) && @rename($tmpPath, $fullPath)) {
+                return asset("storage/{$cachePath}");
+            }
+            @unlink($tmpPath);
+            Log::warning('QR cache tidak bisa ditulis, memakai data URI: ' . $cachePath);
+
+            return $qrCodeDataUri;
+        } catch (\Throwable $e) {
+            Log::error('QR generation failed: ' . $e->getMessage() . ' | data: ' . $text);
             return null;
         }
+    }
+
+    /** True bila file ada, diawali signature PNG dan diakhiri chunk IEND (tidak terpotong). */
+    private static function isValidPng(string $path): bool
+    {
+        if (!is_file($path) || filesize($path) < 67) {
+            return false;
+        }
+
+        $fh = @fopen($path, 'rb');
+        if (!$fh) {
+            return false;
+        }
+        $head = fread($fh, 8);
+        fseek($fh, -8, SEEK_END);
+        $tail = fread($fh, 8);
+        fclose($fh);
+
+        return $head === "\x89PNG\r\n\x1a\n" && substr($tail, 0, 4) === 'IEND';
     }
 
     /**

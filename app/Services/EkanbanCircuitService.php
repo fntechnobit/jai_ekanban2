@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AssyScheduleCircuit;
 use Illuminate\Http\Request;
+use App\Support\CutoffPrintRule;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -119,11 +120,14 @@ class EkanbanCircuitService
         // unlocks once every earlier cut off in the same scope is fully printed.
         $maxPrintableCutoff = $this->getMaxPrintableCutoff($request);
 
+        // Area yang mematikan aturan urutan cut off: kanbannya selalu boleh diprint.
+        $ruleOffSchedules = CutoffPrintRule::scheduleIdsWithRuleOff(collect($data)->pluck('assy_schedule_id')->unique()->all());
+
         $result = [];
         foreach ($data as $index => $row) {
             // New Group ID format: assyScheduleId-masterCircuitId
             $groupId = $row->assy_schedule_id . '-' . $row->master_circuit_id;
-            $canPrint = (int) $row->cutoff <= $maxPrintableCutoff;
+            $canPrint = (int) $row->cutoff <= $maxPrintableCutoff || isset($ruleOffSchedules[$row->assy_schedule_id]);
 
             $result[] = [
                 'DT_RowIndex' => $start + $index + 1,
@@ -518,7 +522,9 @@ class EkanbanCircuitService
             ->join('master_circuit', 'assy_schedule_circuit.master_circuit_id', '=', 'master_circuit.id')
             ->where('assy_schedule.is_lock', '!=', 0)
             ->where('assy_schedule_circuit.is_printed', 0)
-            ->where('assy_schedule_circuit.cutoff', '<=', self::GATE_CUTOFF);
+            ->where('assy_schedule_circuit.cutoff', '<=', self::GATE_CUTOFF)
+            // Hanya CO1/CO2 di area yang memakai aturan yang menahan CO3 ke atas.
+            ->whereRaw(CutoffPrintRule::SQL_RULE_ON);
 
         $this->applyScopeFilters($query, $request);
 
@@ -567,6 +573,11 @@ class EkanbanCircuitService
 
             // CO1 dan CO2 tidak pernah terkunci.
             if ((int) $group->cutoff <= self::GATE_CUTOFF) {
+                continue;
+            }
+
+            // Area yang mematikan aturan (Master Area) bebas print cut off berapa pun.
+            if (!CutoffPrintRule::isOnForArea($group->master_area_id)) {
                 continue;
             }
 

@@ -119,7 +119,7 @@
                         <strong>Process</strong>, <strong>Area</strong>, dan <strong>Machine</strong> wajib dipilih.
                         Pilihan Process &amp; Area menentukan daftar Machine.
                         Cut Off 1 dan Cut Off 2 selalu bisa diprint; tombol Print pada
-                        <strong>Cut Off 3, 4, dan 5</strong> baru muncul setelah seluruh kanban Cut Off 1 &amp; 2 selesai diprint.
+                        <strong>Cut Off 3, 4, dan 5</strong> baru muncul setelah seluruh kanban Cut Off 1 &amp; 2 selesai diprint. Aturan ini bisa dimatikan per area di Master Area.
                     </div>
 
                     <div class="table-responsive">
@@ -429,7 +429,7 @@
                     { data: 'actions', name: 'actions', orderable: false, searchable: false, width: '12%' }
                 ],
                 ordering: false,
-                pageLength: 25,
+                pageLength: 10,
                 lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
             });
 
@@ -683,6 +683,66 @@
             QZPrint.disconnect();
         });
 
+        // Ganti src tiap <img> tiket dengan data URI (diunduh sekali, dengan retry), lalu
+        // tunggu sampai benar-benar ter-decode. Melempar Error bila ada gambar yang gagal.
+        async function inlineTicketImages(stack) {
+            const imgs = Array.from(stack.querySelectorAll('img'));
+            const cache = new Map();
+
+            async function toDataUri(url) {
+                if (url.startsWith('data:')) return url;
+                if (cache.has(url)) return cache.get(url);
+                const job = (async () => {
+                    let lastErr = null;
+                    for (let attempt = 1; attempt <= 3; attempt++) {
+                        try {
+                            // 'reload' pada percobaan ulang: respons rusak di cache browser tidak dipakai lagi
+                            const res = await fetch(url, { cache: attempt === 1 ? 'default' : 'reload' });
+                            if (!res.ok) throw new Error('HTTP ' + res.status);
+                            const blob = await res.blob();
+                            if (!blob.size) throw new Error('file kosong');
+                            return await new Promise((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onload = () => resolve(reader.result);
+                                reader.onerror = () => reject(new Error('gagal dibaca'));
+                                reader.readAsDataURL(blob);
+                            });
+                        } catch (e) {
+                            lastErr = e;
+                            await new Promise(r => setTimeout(r, 300 * attempt));
+                        }
+                    }
+                    throw lastErr || new Error('gagal dimuat');
+                })();
+                cache.set(url, job);
+                return job;
+            }
+
+            const failed = [];
+            await Promise.all(imgs.map(async (img) => {
+                const label = img.alt || 'gambar';
+                try {
+                    const dataUri = await toDataUri(img.currentSrc || img.src);
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = () => reject(new Error('gagal ditampilkan'));
+                        img.src = dataUri;
+                    });
+                    if (!img.naturalWidth) throw new Error('gambar kosong');
+                } catch (e) {
+                    failed.push(label + ' (' + (e && e.message ? e.message : e) + ')');
+                }
+            }));
+
+            if (failed.length) {
+                const uniq = Array.from(new Set(failed));
+                throw new Error(
+                    failed.length + ' gambar QR/barcode gagal dimuat: ' + uniq.slice(0, 5).join(', ') +
+                    '. Print dibatalkan supaya kanban tidak tercetak tanpa kode. Periksa koneksi ke server lalu coba lagi.'
+                );
+            }
+        }
+
         // Constants from working code
         const TARGET_DOTS = 576;
         const RASTER_SCALE_MODE = 0x00;
@@ -826,18 +886,14 @@
                 holder.innerHTML = '';
                 holder.appendChild(stack);
 
-                // Wait for all images inside tickets to load before capturing
-                const imgs = stack.querySelectorAll('img');
-                if (imgs.length > 0) {
-                    await Promise.all(Array.from(imgs).map(img => {
-                        if (img.complete) return Promise.resolve();
-                        return new Promise((resolve) => {
-                            img.onload = resolve;
-                            img.onerror = resolve;
-                        });
-                    }));
-                }
-
+                // Muat SEMUA gambar tiket (QR, barcode, drawing) ke data URI sebelum capture.
+                // Dulu gambar yang gagal dimuat dilewati diam-diam (onerror = lanjut) dan
+                // html2canvas mengunduh ulang tiap gambar saat capture, jadi QR kadang hilang
+                // dari hasil cetak walau tampil di layar. Sekarang tiap gambar dicoba sampai
+                // 3 kali, dan kalau tetap gagal print DIBATALKAN - tiket tanpa kode tidak
+                // boleh sampai tercetak dan tertandai "printed".
+                setPrintProgress('Memuat gambar QR/barcode...');
+                await inlineTicketImages(stack);
                 // Allow browser to complete layout before capture
                 await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 

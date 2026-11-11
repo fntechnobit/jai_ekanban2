@@ -26,6 +26,7 @@
                         <tr>
                             <th width="5%">No</th>
                             <th>Area</th>
+                            <th width="22%">Aturan Urutan Cut Off</th>
                             <th width="15%">Action</th>
                         </tr>
                     </thead>
@@ -52,14 +53,32 @@
             columns: [
                 { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
                 { data: 'area', name: 'area' },
+                {
+                    data: 'cutoff_print_rule', name: 'cutoff_print_rule', searchable: false, className: 'text-center',
+                    render: function (data) {
+                        return Number(data) === 1
+                            ? '<span class="badge bg-success">ON</span>'
+                            : '<span class="badge bg-secondary">OFF</span>';
+                    }
+                },
                 { data: 'action', name: 'action', orderable: false, searchable: false }
             ]
+        });
+
+        // Switch aturan urutan print cut off: label mengikuti posisi switch
+        function setCutoffRule(on) {
+            $('#cutoff_print_rule').prop('checked', on);
+            $('#cutoff_print_rule_label').text(on ? 'ON' : 'OFF');
+        }
+        $('#cutoff_print_rule').on('change', function () {
+            setCutoffRule(this.checked);
         });
 
         // Add Area Data Button
         $('#btn-add').click(function () {
             $('#masterAreaForm')[0].reset();
             $('#area_id').val('');
+            setCutoffRule(true);
             $('#masterAreaModalLabel').text('Add Area Data');
             $('.error-text').text('');
             $('#masterAreaModal').modal('show');
@@ -76,6 +95,7 @@
 
                     $('#area_id').val(area.id);
                     $('#area').val(area.area);
+                    setCutoffRule(Number(area.cutoff_print_rule) === 1 || area.cutoff_print_rule === true);
 
                     $('#masterAreaModalLabel').text('Edit Area Data');
                     $('.error-text').text('');

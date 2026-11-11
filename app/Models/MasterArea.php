@@ -17,9 +17,14 @@ class MasterArea extends Model
 
     protected $fillable = [
         'area',
+        'cutoff_print_rule',
         'created_by',
         'updated_by',
         'deleted_by',
+    ];
+
+    protected $casts = [
+        'cutoff_print_rule' => 'boolean',
     ];
 
     /**

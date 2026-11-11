@@ -31,6 +31,8 @@ class MasterAreaRequest extends FormRequest
                 'max:255',
                 Rule::unique('master_area')->ignore($masterAreaId)
             ],
+            // Aturan urutan print cut off (CO1 & CO2 dulu sebelum CO3-CO5) untuk area ini
+            'cutoff_print_rule' => ['required', 'boolean'],
         ];
     }
 }
