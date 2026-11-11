@@ -1,6 +1,6 @@
 {{-- CIRCUIT CUTTING Print Template --}}
 {{-- Based on cutting.html reference, scaled up for thermal printing (1px = 1 dot at 203dpi) --}}
-{{-- 9 columns, landscape, height 576px = 80mm --}}
+{{-- 9 columns, landscape, height 576px = 80mm. Header 36 px + 14 baris x 38 px. --}}
 @include('schedule.ekanban_circuit.partials.ticket_cutting_style')
 
 @foreach($circuits as $circuit)
@@ -65,9 +65,9 @@
                 <tr>
                     <td rowspan="4" class="section-label">A</td>
                     <td class="label-cell text-left">TERM.</td>
-                    <td colspan="3" class="value-cell text-left"@if(!empty($circuit->gold_1)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_1 ?? '' }}</td>
-                    <td class="label-cell" style="overflow:hidden;">@if(!empty($circuit->note_1))<span style="display:inline-block;font-size:32px;font-weight:bold;line-height:0.8;margin-bottom:-8px;">{{ $circuit->note_1 }}</span>@endif</td>
-                    <td class="value-cell">{{ $circuit->seal_1 ?? '' }}</td>
+                    <td colspan="3" class="value-cell text-left"@if(!empty($circuit->gold_1)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_1 ?? '' }}@include('schedule.ekanban_circuit.partials.term_star', ['star' => $circuit->note_1 ?? null])</td>
+                    <td class="label-cell text-left">MARK</td>
+                    <td class="value-cell mark-value">{{ $circuit->mark_1 ?? '' }}</td>
                     <td class="label-cell text-left">TO 1</td>
                     <td class="value-cell text-left">{{ $circuit->t01 ?? '' }}</td>
                 </tr>
@@ -93,8 +93,8 @@
                 <tr>
                     <td class="label-cell text-left">TUBE</td>
                     <td colspan="3" class="value-cell text-left">{{ $circuit->tube_1 ?? '' }}</td>
-                    <td class="label-cell text-left">MARK</td>
-                    <td class="value-cell">{{ $circuit->mark_1 ?? '' }}</td>
+                    {{-- bekas MARK: pindah ke baris TERM, di atas NOTE --}}
+                    <td colspan="2"></td>
                     <td class="label-cell text-left">STORE</td>
                     <td class="value-cell text-left">{{ $circuit->to_store ?? '' }}</td>
                 </tr>
@@ -103,9 +103,9 @@
                 <tr>
                     <td rowspan="4" class="section-label black-bg">B</td>
                     <td class="label-cell text-left">TERM.</td>
-                    <td colspan="3" class="value-cell text-left"@if(!empty($circuit->gold_2)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_2 ?? '' }}</td>
-                    <td class="label-cell" style="overflow:hidden;">@if(!empty($circuit->note_2))<span style="display:inline-block;font-size:32px;font-weight:bold;line-height:0.8;margin-bottom:-8px;">{{ $circuit->note_2 }}</span>@endif</td>
-                    <td class="value-cell">{{ $circuit->seal_2 ?? '' }}</td>
+                    <td colspan="3" class="value-cell text-left"@if(!empty($circuit->gold_2)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_2 ?? '' }}@include('schedule.ekanban_circuit.partials.term_star', ['star' => $circuit->note_2 ?? null])</td>
+                    <td class="label-cell text-left">MARK</td>
+                    <td class="value-cell mark-value">{{ $circuit->mark_2 ?? '' }}</td>
                     <td class="label-cell text-left">ADDR</td>
                     <td class="value-cell text-left">{{ $circuit->address ?? '' }}</td>
                 </tr>
@@ -131,8 +131,8 @@
                 <tr>
                     <td class="label-cell text-left">TUBE</td>
                     <td colspan="3" class="value-cell text-left">{{ $circuit->tube_2 ?? '' }}</td>
-                    <td class="label-cell text-left">MARK</td>
-                    <td class="value-cell">{{ $circuit->mark_2 ?? '' }}</td>
+                    {{-- bekas MARK: pindah ke baris TERM, di atas NOTE --}}
+                    <td colspan="2"></td>
                     <td class="label-cell text-left">ISSUE</td>
                     <td class="value-cell text-left">{{ $circuit->issue ?? '' }}</td>
                 </tr>
@@ -140,10 +140,9 @@
                 <!-- Bottom Section - Row 1 -->
                 <tr>
                     <td colspan="3" rowspan="4" class="qrcode-cell">
-                        <div class="qr-label">QRCODE KANBAN</div>
+                        <div class="qr-label">QR KANBAN {{ $circuit->barcode_kanban ?? '' }}</div>
                         @if(isset($circuit->qr_code_path))
                             <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="qr-img">
-                            <div class="qr-text">{{ $circuit->barcode_kanban ?? '' }}</div>
                         @else
                             <div style="width:128px;height:128px;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR CODE</div>
                         @endif

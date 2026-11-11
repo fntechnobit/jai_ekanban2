@@ -163,6 +163,12 @@
     font-size: 15px;
 }
 
+/* MARK lebih besar dari nilai lain; line-height 1 supaya muat di baris 30 px */
+.twist-value-cell.twist-mark {
+    font-size: 25px;
+    line-height: 1;
+}
+
 .twist-value-cell {
     font-weight: bold;
     font-size: 18px;
@@ -180,6 +186,8 @@
 /* QR Kanban menempel di dasar selnya supaya menjauh dari barcode twist di atasnya */
 .twist-qrcode-cell.qr-bottom {
     vertical-align: bottom;
+    /* teks isi QR berjarak 5 px dari garis bawah sel */
+    padding-bottom: 5px;
 }
 .twist-qr-img {
     /* QR Drawing 165 px dan QR Kanban 160 px (tiket lama 155 px), masing-masing di sel
@@ -412,9 +420,9 @@
             <tr>
                 <td rowspan="4" class="twist-section-label">A</td>
                 <td class="twist-label-cell text-left">TERM.</td>
-                <td colspan="2" class="twist-value-cell text-left"@if(!empty($circuit->gold_1)) style="background-color:#000;color:white;"@endif>{{ $circuit->terminal_1 ?? '' }}</td>
-                <td class="twist-label-cell" style="text-align:center;overflow:hidden;">@if(!empty($circuit->note_1))<span style="display:inline-block;font-size:28px;font-weight:bold;line-height:0.8;margin-bottom:-6px;">{{ $circuit->note_1 }}</span>@endif</td>
-                <td class="twist-value-cell text-left"></td>
+                <td colspan="2" class="twist-value-cell text-left"@if(!empty($circuit->gold_1)) style="background-color:#000;color:white;"@endif>{{ $circuit->terminal_1 ?? '' }}@include('schedule.ekanban_circuit.partials.term_star', ['star' => $circuit->note_1 ?? null, 'size' => 64, 'text' => 18])</td>
+                <td class="twist-label-cell text-left">MARK</td>
+                <td class="twist-value-cell text-left twist-mark">{{ $circuit->mark_1 ?? '' }}</td>
                 <td class="twist-value-cell">{{ $circuit->qty ?? '-' }}</td>
                 <td class="twist-value-cell">{{ $circuit->issue ?? '-' }}</td>
                 <td class="twist-value-cell">{{ $circuit->memory_twist ?? '-' }}</td>
@@ -444,16 +452,16 @@
             <tr>
                 <td class="twist-label-cell text-left">TUBE</td>
                 <td colspan="2" class="twist-value-cell text-left">{{ $circuit->tube_1 ?? '' }}</td>
-                <td class="twist-label-cell text-left">MARK</td>
-                <td class="twist-value-cell text-left">{{ $circuit->mark_1 ?? '' }}</td>
+                {{-- bekas MARK: pindah ke baris TERM, di atas NOTE --}}
+                <td colspan="2"></td>
             </tr>
             {{-- section B --}}
             <tr>
                 <td rowspan="4" class="twist-section-label black-bg">B</td>
                 <td class="twist-label-cell text-left">TERM.</td>
-                <td colspan="2" class="twist-value-cell text-left"@if(!empty($circuit->gold_2)) style="background-color:#000;color:white;"@endif>{{ $circuit->terminal_2 ?? '' }}</td>
-                <td class="twist-label-cell text-left" style="overflow:hidden;">@if(!empty($circuit->note_2))<span style="display:inline-block;font-size:28px;font-weight:bold;line-height:0.8;margin-bottom:-6px;">{{ $circuit->note_2 }}</span>@endif</td>
-                <td class="twist-value-cell text-left"></td>
+                <td colspan="2" class="twist-value-cell text-left"@if(!empty($circuit->gold_2)) style="background-color:#000;color:white;"@endif>{{ $circuit->terminal_2 ?? '' }}@include('schedule.ekanban_circuit.partials.term_star', ['star' => $circuit->note_2 ?? null, 'size' => 64, 'text' => 18])</td>
+                <td class="twist-label-cell text-left">MARK</td>
+                <td class="twist-value-cell text-left twist-mark">{{ $circuit->mark_2 ?? '' }}</td>
             </tr>
             <tr>
                 <td class="twist-label-cell text-left">ACC 1</td>
@@ -474,8 +482,8 @@
             <tr>
                 <td class="twist-label-cell text-left">TUBE</td>
                 <td colspan="2" class="twist-value-cell text-left">{{ $circuit->tube_2 ?? '' }}</td>
-                <td class="twist-label-cell text-left">MARK</td>
-                <td class="twist-value-cell text-left">{{ $circuit->mark_2 ?? '' }}</td>
+                {{-- bekas MARK: pindah ke baris TERM, di atas NOTE --}}
+                <td colspan="2"></td>
                 <td class="twist-label-cell">DATE</td>
                 <td colspan="2" class="twist-value-cell">{{ \Carbon\Carbon::now()->format('d-M-y') }}</td>
             </tr>
@@ -498,7 +506,7 @@
                         <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="twist-qr-img qr-kanban">
                     @endif
                     @if(!empty($circuit->barcode_kanban))
-                        <div style="font-size:10px;font-weight:bold;line-height:1;margin:0;">{{ $circuit->barcode_kanban }}</div>
+                        <div style="font-size:11px;font-weight:bold;line-height:1;margin:2px 0 0;">{{ $circuit->barcode_kanban }}</div>
                     @endif
                 </td>
             </tr>

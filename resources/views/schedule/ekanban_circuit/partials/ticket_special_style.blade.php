@@ -59,10 +59,16 @@
 }
 
 /* Tinggi baris per template: jumlah baris x tinggi + border = 572 px */
-.ticket-special-print table.rows-14-40 tr { height: 40px; }
+.ticket-special-print table.rows-14-40 tr { height: 38px; }
+.ticket-special-print table.rows-14-40 tr.qr-row { height: 46px; }
 .ticket-special-print table.rows-16-35 tr { height: 35px; }
 .ticket-special-print table.rows-16-35 tr.title-row { height: 38px; }
 .ticket-special-print table.rows-14-37 tbody tr { height: 37px; }
+/* MINICOAX: judul 36 + 14 baris x 29 + blok alamat (24 + 70 + 24) */
+.ticket-special-print table.rows-mcx tr { height: 29px; }
+.ticket-special-print table.rows-mcx tr.title-row { height: 36px; }
+.ticket-special-print table.rows-mcx tr.addr-text { height: 24px; }
+.ticket-special-print table.rows-mcx tr.addr-bar { height: 70px; }
 
 .ticket-special-print thead th {
     height: 52px;
@@ -140,7 +146,8 @@
 
 /* QR: label & isi kode di dalam sel yang sama. PNG QR sudah membawa quiet zone sendiri. */
 .ticket-special-print .sp-qr-cell {
-    padding: 0 4px;
+    /* 6 px atas-bawah: label/isi QR tidak menempel garis sel */
+    padding: 6px 4px;
     vertical-align: middle;
     text-align: center;
 }
@@ -152,7 +159,12 @@
     line-height: 1;
 }
 
+.ticket-special-print .sp-qr-label {
+    margin-bottom: 2px;
+}
+
 .ticket-special-print .sp-qr-text {
+    margin-top: 2px;
     word-break: break-all;
 }
 

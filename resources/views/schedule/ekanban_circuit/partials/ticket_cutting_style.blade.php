@@ -81,23 +81,23 @@
     white-space: nowrap;
 }
 
-/* Semua baris isi sama tinggi: 14 baris x 37 px. Header menyerap sisanya (52 px) supaya
-   tinggi baris tetap bilangan bulat dot: 52 + 14 x 37 + border = 572 px. */
+/* 14 baris isi x 38 px + header 36 px + border = 572 px. Baris 38 px (bukan 37) memberi
+   sel QR 4 baris tinggi 152 px: QR 128 px + satu baris keterangan dengan jarak dari garis. */
 .ticket-circuit-print thead th {
-    height: 52px;
+    height: 36px;
     background-color: transparent;
     color: #000;
     font-weight: bold;
-    font-size: 32px;
-    padding: 4px;
+    font-size: 26px;
+    padding: 2px 4px;
     border: 2px solid #000;
 }
 
 .ticket-circuit-print tbody tr {
-    height: 37px;
+    height: 38px;
 }
 
-/* Released note boleh 2 baris di dalam satu baris 37 px */
+/* Released note boleh 2 baris di dalam satu baris 38 px */
 .ticket-circuit-print td.note-cell {
     white-space: normal;
     font-size: 15px;
@@ -150,6 +150,12 @@
     font-size: 18px;
 }
 
+/* MARK dicetak lebih besar dari nilai lain; line-height 1 supaya tetap muat di baris 38 px */
+.ticket-circuit-print .value-cell.mark-value {
+    font-size: 30px;
+    line-height: 1;
+}
+
 .ticket-circuit-print .value-cell {
     font-weight: bold;
     font-size: 22px;
@@ -159,18 +165,21 @@
     text-align: left !important;
 }
 
-/* QR Kanban 128 px (tiket lama 110 px) di sel 4 baris: label & kode 9 px tanpa jarak.
-   PNG QR sudah membawa quiet zone 4 modul sendiri. */
-.ticket-circuit-print .qrcode-cell {
-    padding: 0;
+/* QR 128 px di sel 4 baris (152 px). Keterangan (nama QR + isinya) satu baris DI ATAS QR,
+   berjarak 5 px dari garis atas; QR berjarak 5 px dari garis bawah. Tidak ada teks di bawah
+   QR supaya tidak ada tulisan yang menempel garis. PNG QR sudah membawa quiet zone sendiri. */
+.ticket-circuit-print .qrcode-cell,
+.ticket-circuit-print .qr-ej-cell {
+    padding: 5px 4px;
     vertical-align: middle;
     text-align: center;
 }
 
 .ticket-circuit-print .qr-label {
-    font-size: 9px;
+    font-size: 11px;
     font-weight: bold;
     line-height: 1;
+    margin-bottom: 3px;
 }
 
 .ticket-circuit-print .qr-img {
@@ -178,13 +187,6 @@
     height: 128px;
     display: block;
     margin: 0 auto;
-}
-
-.ticket-circuit-print .qr-text {
-    font-size: 9px;
-    font-weight: bold;
-    line-height: 1;
-    word-break: break-all;
 }
 
 /* Padding horizontal 30px = quiet zone minimum Code 39 (10x bar sempit 3 dot). */

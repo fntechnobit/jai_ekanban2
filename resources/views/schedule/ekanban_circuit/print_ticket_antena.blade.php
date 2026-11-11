@@ -1,5 +1,6 @@
 {{-- CIRCUIT CUTTING_ANTENA_FEEDER Print Template. 1px = 1 dot @203dpi, landscape, tinggi 576px = 80mm.
-     8 kolom x 14 baris x 40 px. Satu-satunya kode di tiket ini adalah QR kanban;
+     8 kolom x 14 baris: 10 baris x 38 px + 4 baris QR x 46 px (QR 128 px + label & isi
+     dengan jarak dari garis). Satu-satunya kode di tiket ini adalah QR kanban;
      BARCODE IKITSUKAN dari format lama sengaja dihapus, ruangnya dipakai KODE & PART NO.
      Kiri: spesifikasi kabel, terminal/strip/accessories A & B, KODE, PART NO. & NO ASSY.
      Kanan: mesin, seq, C/L, qty, issue | QR kanban + CV, tanggal | TO (to_store), family, note. --}}
@@ -10,14 +11,14 @@
     <div class="ticket-special-print">
         <table class="rows-14-40">
             <colgroup>
-                <col style="width: 130px">  {{-- Col 1: CCT CODE / TERMINAL / KODE --}}
-                <col style="width: 110px">  {{-- Col 2: CUST NO --}}
+                <col style="width: 110px">  {{-- Col 1: CCT CODE / TERMINAL / KODE --}}
+                <col style="width: 100px">  {{-- Col 2: CUST NO --}}
                 <col style="width: 110px">  {{-- Col 3: KIND / STRIP --}}
                 <col style="width: 90px">   {{-- Col 4: SIZE / ACCESSORIES --}}
-                <col style="width: 110px">  {{-- Col 5: COLOUR / ACCESSORIES / NO ASSY --}}
+                <col style="width: 100px">  {{-- Col 5: COLOUR / ACCESSORIES / NO ASSY --}}
                 <col style="width: 100px">  {{-- Col 6: C/L / QR / TO --}}
                 <col style="width: 90px">   {{-- Col 7: QTY / QR --}}
-                <col style="width: 150px">  {{-- Col 8: ISSUE NO / SEQUENCE / CV / DATE --}}
+                <col style="width: 130px">  {{-- Col 8: ISSUE NO / SEQUENCE / CV / DATE --}}
             </colgroup>
             <tbody>
                 {{-- r1-r2: judul | MACH NO, SEQUENCE --}}
@@ -54,7 +55,7 @@
                 </tr>
 
                 {{-- r5-r8: terminal/strip/accessories A & B | QR kanban (r5-r8) | CV NO, ISSUE DATE --}}
-                <tr>
+                <tr class="qr-row">
                     <td colspan="2" class="sp-label">TERMINAL A</td>
                     <td class="sp-label">STRIP A</td>
                     <td colspan="2" class="sp-label">ACCESSORIES A</td>
@@ -67,20 +68,20 @@
                     </td>
                     <td class="sp-label">CV NO.</td>
                 </tr>
-                <tr>
-                    <td colspan="2" class="sp-value{{ !empty($circuit->gold_1) ? ' sp-inv' : '' }}">{{ $circuit->terminal_1 ?? '' }}</td>
+                <tr class="qr-row">
+                    <td colspan="2" class="sp-value{{ !empty($circuit->gold_1) ? ' sp-inv' : '' }}">{{ $circuit->terminal_1 ?? '' }}@include('schedule.ekanban_circuit.partials.term_star', ['star' => $circuit->note_1 ?? null])</td>
                     <td class="sp-value">{{ $circuit->strip_1 ?? '' }}</td>
                     <td colspan="2" class="sp-value">{{ $circuit->acc_1 ?? '' }}</td>
                     <td class="sp-value">{{ $circuit->conveyor ?? '-' }}</td>
                 </tr>
-                <tr>
+                <tr class="qr-row">
                     <td colspan="2" class="sp-label">TERMINAL B</td>
                     <td class="sp-label">STRIP B</td>
                     <td colspan="2" class="sp-label">ACCESSORIES B</td>
                     <td class="sp-label">ISSUE DATE</td>
                 </tr>
-                <tr>
-                    <td colspan="2" class="sp-value{{ !empty($circuit->gold_2) ? ' sp-inv' : '' }}">{{ $circuit->terminal_2 ?? '' }}</td>
+                <tr class="qr-row">
+                    <td colspan="2" class="sp-value{{ !empty($circuit->gold_2) ? ' sp-inv' : '' }}">{{ $circuit->terminal_2 ?? '' }}@include('schedule.ekanban_circuit.partials.term_star', ['star' => $circuit->note_2 ?? null])</td>
                     <td class="sp-value">{{ $circuit->strip_2 ?? '' }}</td>
                     <td colspan="2" class="sp-value">{{ $circuit->acc_2 ?? '' }}</td>
                     <td class="sp-value">{{ strtoupper(\Carbon\Carbon::now()->format("d M'y")) }}</td>

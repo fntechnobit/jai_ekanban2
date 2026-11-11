@@ -1,17 +1,12 @@
 {{-- CIRCUIT CUTTING_EJ Print Template --}}
 {{-- Tiket CUTTING + QR EJ-A (section A) dan QR EJ-B (section B), 1px = 1 dot at 203dpi --}}
-{{-- 11 kolom, landscape, tinggi 576px = 80mm. Grid baris sama dengan CUTTING: header 52 + 14 x 37 --}}
+{{-- 11 kolom, landscape, tinggi 576px = 80mm. Grid baris sama dengan CUTTING: header 36 + 14 x 38 --}}
 @include('schedule.ekanban_circuit.partials.ticket_cutting_style')
 <style>
-/* Kolom QR EJ: QR 128 px (sama dengan QR kanban cutting) di sel 4 baris, label & isi 9 px.
+/* Kolom QR EJ: QR 128 px (sama dengan QR kanban cutting) di sel 4 baris (152 px), keterangan satu baris di atas QR.
    QR EJ-A di kolom 9 (section A) dan QR EJ-B di kolom 6 (section B) sengaja tidak
    sekolom: keduanya dipisah blok NOTE/STRIP (kolom 7-8) supaya scanner tidak
    menangkap QR sebelahnya, dan di bawah QR EJ-B ada blok teks, bukan barcode mesin. */
-.ticket-circuit-print .qr-ej-cell {
-    padding: 0 4px;
-    vertical-align: middle;
-    text-align: center;
-}
 </style>
 
 @foreach($circuits as $circuit)
@@ -70,14 +65,13 @@
                 <tr>
                     <td rowspan="4" class="section-label">A</td>
                     <td class="label-cell text-left">TERM.</td>
-                    <td colspan="4" class="value-cell text-left"@if(!empty($circuit->gold_1)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_1 ?? '' }}</td>
-                    <td class="label-cell" style="overflow:hidden;">@if(!empty($circuit->note_1))<span style="display:inline-block;font-size:32px;font-weight:bold;line-height:0.8;margin-bottom:-8px;">{{ $circuit->note_1 }}</span>@endif</td>
-                    <td class="value-cell">{{ $circuit->seal_1 ?? '' }}</td>
+                    <td colspan="4" class="value-cell text-left"@if(!empty($circuit->gold_1)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_1 ?? '' }}@include('schedule.ekanban_circuit.partials.term_star', ['star' => $circuit->note_1 ?? null])</td>
+                    <td class="label-cell text-left">MARK</td>
+                    <td class="value-cell mark-value">{{ $circuit->mark_1 ?? '' }}</td>
                     <td rowspan="4" class="qr-ej-cell">
-                        <div class="qr-label">QRCODE EJ-A</div>
+                        <div class="qr-label">EJ-A {{ $circuit->qrcode_ej_a ?? '' }}</div>
                         @if(!empty($circuit->qr_ej_a_path))
                             <img src="{{ $circuit->qr_ej_a_path }}" alt="QR EJ-A" class="qr-img">
-                            <div class="qr-text">{{ $circuit->qrcode_ej_a }}</div>
                         @endif
                     </td>
                     <td class="label-cell text-left">TO 1</td>
@@ -105,8 +99,8 @@
                 <tr>
                     <td class="label-cell text-left">TUBE</td>
                     <td colspan="4" class="value-cell text-left">{{ $circuit->tube_1 ?? '' }}</td>
-                    <td class="label-cell text-left">MARK</td>
-                    <td class="value-cell">{{ $circuit->mark_1 ?? '' }}</td>
+                    {{-- bekas MARK: pindah ke baris TERM, di atas NOTE --}}
+                    <td colspan="2"></td>
                     <td class="label-cell text-left">STORE</td>
                     <td class="value-cell text-left">{{ $circuit->to_store ?? '' }}</td>
                 </tr>
@@ -115,16 +109,15 @@
                 <tr>
                     <td rowspan="4" class="section-label black-bg">B</td>
                     <td class="label-cell text-left">TERM.</td>
-                    <td colspan="3" class="value-cell text-left"@if(!empty($circuit->gold_2)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_2 ?? '' }}</td>
+                    <td colspan="3" class="value-cell text-left"@if(!empty($circuit->gold_2)) style="background-color:#000;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact;"@endif>{{ $circuit->terminal_2 ?? '' }}@include('schedule.ekanban_circuit.partials.term_star', ['star' => $circuit->note_2 ?? null])</td>
                     <td rowspan="4" class="qr-ej-cell">
-                        <div class="qr-label">QRCODE EJ-B</div>
+                        <div class="qr-label">EJ-B {{ $circuit->qrcode_ej_b ?? '' }}</div>
                         @if(!empty($circuit->qr_ej_b_path))
                             <img src="{{ $circuit->qr_ej_b_path }}" alt="QR EJ-B" class="qr-img">
-                            <div class="qr-text">{{ $circuit->qrcode_ej_b }}</div>
                         @endif
                     </td>
-                    <td class="label-cell" style="overflow:hidden;">@if(!empty($circuit->note_2))<span style="display:inline-block;font-size:32px;font-weight:bold;line-height:0.8;margin-bottom:-8px;">{{ $circuit->note_2 }}</span>@endif</td>
-                    <td class="value-cell">{{ $circuit->seal_2 ?? '' }}</td>
+                    <td class="label-cell text-left">MARK</td>
+                    <td class="value-cell mark-value">{{ $circuit->mark_2 ?? '' }}</td>
                     <td colspan="2" class="label-cell text-left">ADDR</td>
                     <td class="value-cell text-left">{{ $circuit->address ?? '' }}</td>
                 </tr>
@@ -150,8 +143,8 @@
                 <tr>
                     <td class="label-cell text-left">TUBE</td>
                     <td colspan="3" class="value-cell text-left">{{ $circuit->tube_2 ?? '' }}</td>
-                    <td class="label-cell text-left">MARK</td>
-                    <td class="value-cell">{{ $circuit->mark_2 ?? '' }}</td>
+                    {{-- bekas MARK: pindah ke baris TERM, di atas NOTE --}}
+                    <td colspan="2"></td>
                     <td colspan="2" class="label-cell text-left">ISSUE</td>
                     <td class="value-cell text-left">{{ $circuit->issue ?? '' }}</td>
                 </tr>
@@ -160,10 +153,9 @@
                      tepat di bawah QR EJ-B) | barcode mesin (kolom 9-11) -->
                 <tr>
                     <td colspan="3" rowspan="4" class="qrcode-cell">
-                        <div class="qr-label">QRCODE KANBAN</div>
+                        <div class="qr-label">QR KANBAN {{ $circuit->barcode_kanban ?? '' }}</div>
                         @if(isset($circuit->qr_code_path))
                             <img src="{{ $circuit->qr_code_path }}" alt="QR Kanban" class="qr-img">
-                            <div class="qr-text">{{ $circuit->barcode_kanban ?? '' }}</div>
                         @else
                             <div style="width:128px;height:128px;border:1px solid #000;margin:0 auto;font-size:12px;display:flex;align-items:center;justify-content:center;">QR CODE</div>
                         @endif

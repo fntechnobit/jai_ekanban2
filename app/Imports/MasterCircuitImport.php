@@ -286,9 +286,14 @@ class MasterCircuitImport
         }
 
         $missing = match ($type) {
-            CircuitType::CUTTING_MINICOAX => empty($data['barcode_process']) && empty($data['barcode_process_2'])
-                ? 'Barcode Process dan Barcode Process 2 kosong: QR PROSES A/B tidak tercetak'
-                : null,
+            CircuitType::CUTTING_MINICOAX => match (true) {
+                empty($data['barcode_process']) && empty($data['barcode_process_2'])
+                    => 'Barcode Process dan Barcode Process 2 kosong: QR PROSES A/B tidak tercetak',
+                // Barcode address store Code 39: hanya huruf, angka, spasi dan - . $ / + %
+                !empty($data['to_store']) && !preg_match('/^[A-Za-z0-9 .$\/+%-]+$/', trim((string) $data['to_store']))
+                    => 'To Store memuat karakter di luar Code 39 (mis. koma atau ~): barcode ADDRESS STORE hanya memuat bagian sebelum karakter itu',
+                default => null,
+            },
             CircuitType::CUTTING_ANTENA_FEEDER => empty($data['part_code']) || empty($data['part_no'])
                 ? 'Kode atau Part No. kosong: KODE / PART NO. di tiket kosong'
                 : null,

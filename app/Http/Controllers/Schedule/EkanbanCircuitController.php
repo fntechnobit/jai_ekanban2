@@ -33,6 +33,9 @@ class EkanbanCircuitController extends Controller
      */
     private const JAM_BARCODE_HEIGHT = 64;
 
+    /** Tinggi barcode alamat (Code 39) pada tiket MINICOAX (dot), di baris 70 dot. */
+    private const MINICOAX_STORE_BARCODE_HEIGHT = 60;
+
     protected $ekanbanCircuitService;
 
     public function __construct(EkanbanCircuitService $ekanbanCircuitService)
@@ -264,7 +267,7 @@ class EkanbanCircuitController extends Controller
 
     /**
      * Generate barcodes for CUTTING_JAM circuits: QR barcode mesin (qrcode_mesin, isi dari
-     * MTC), QR kanban (barcode_kanban, format barcode shikake dengan kode Twist No) dan
+     * MTC), QR drawing (qrcode_drawing), QR kanban (barcode_kanban, format barcode shikake dengan kode Twist No) dan
      * Code 39 barcode mesin cadangan untuk circuit 1 dan circuit 2.
      */
     private function generateCircuitJamBarcodes($circuit)
@@ -275,6 +278,10 @@ class EkanbanCircuitController extends Controller
 
         if (!empty($circuit->barcode_kanban)) {
             $circuit->qr_code_path = BarcodeHelper::generateQRCodeCached($circuit->barcode_kanban, 'circuit');
+        }
+
+        if (!empty($circuit->qrcode_drawing)) {
+            $circuit->qr_drawing_path = BarcodeHelper::generateQRCodeCached($circuit->qrcode_drawing, 'circuit');
         }
 
         foreach (['barcode_mesin', 'barcode_mesin_2'] as $field) {
@@ -298,23 +305,45 @@ class EkanbanCircuitController extends Controller
     }
 
     /**
-     * Generate barcodes for CUTTING_MINICOAX circuits: semuanya QR - kanban, proses sisi A
-     * (barcode_process), proses sisi B (barcode_process_2) dan address store (to_store).
+     * Generate barcodes for CUTTING_MINICOAX circuits: QR kanban, QR proses sisi A
+     * (barcode_process) dan sisi B (barcode_process_2), serta barcode Code 39 address
+     * store (to_store).
      */
     private function generateCircuitMinicoaxBarcodes($circuit)
     {
         $this->generateKanbanQr($circuit);
 
-        $qrFields = [
-            'barcode_process' => 'qr_process_path',
-            'barcode_process_2' => 'qr_process_2_path',
-            'to_store' => 'qr_store_path',
-        ];
-        foreach ($qrFields as $field => $pathField) {
+        foreach (['barcode_process' => 'qr_process_path', 'barcode_process_2' => 'qr_process_2_path'] as $field => $pathField) {
             if (!empty($circuit->$field)) {
                 $circuit->$pathField = BarcodeHelper::generateQRCodeCached($circuit->$field, 'circuit');
             }
         }
+
+        // Address store = satu kolom (To Store). Gabungan address store + address sub assy
+        // sudah diketik operator di Excel master, jadi tidak digabung lagi di sini.
+        $storeCode = self::addressStoreBarcodeData($circuit->to_store ?? null);
+        if ($storeCode !== null) {
+            $circuit->barcode_store_path = BarcodeHelper::generateCode39Cached($storeCode, self::MINICOAX_STORE_BARCODE_HEIGHT, 'circuit');
+            $circuit->barcode_store_data = $storeCode;
+            $circuit->barcode_store_width = BarcodeHelper::code39Width($storeCode);
+        }
+    }
+
+    /**
+     * Isi barcode Code 39 address store. To Store bisa memuat beberapa posisi rak
+     * sekaligus (FAMF01-A-01,02 / BPJ01-A-01~05), sedangkan koma dan "~" tidak ada di set
+     * karakter Code 39. Yang di-barcode-kan adalah alamat rak pertama: bagian sebelum
+     * karakter pertama yang tidak bisa di-encode (FAMF01-A-01, BPJ01-A-01). Teks lengkapnya
+     * tetap tercetak di bawah barcode. Null bila tidak ada yang bisa di-encode.
+     */
+    private static function addressStoreBarcodeData($toStore): ?string
+    {
+        $value = strtoupper(trim((string) $toStore));
+        if (!preg_match('/^[A-Z0-9 .$\/+%-]+/', $value, $m)) {
+            return null;
+        }
+
+        return BarcodeHelper::sanitizeCode39(rtrim($m[0], ' .-'));
     }
 
     /**
