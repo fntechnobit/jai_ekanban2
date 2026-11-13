@@ -51,7 +51,7 @@
                 ajax: "{{ route('master-data.master-family.datatable') }}",
                 columns: [
                     { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-                    { data: 'area_name', name: 'carline.area.area' },
+                    { data: 'area_name', name: 'area.area' },
                     { data: 'carline_code', name: 'carline.code' },
                     { data: 'carline_name', name: 'carline.name' },
                     { data: 'family', name: 'family' },
@@ -82,14 +82,9 @@
                         $('#family_id').val(family.id);
                         $('#family').val(family.family);
                         
-                        // Set area and trigger carline loading
-                        if (family.carline) {
-                            $('#area_id').val(family.carline.area_id).trigger('change');
-                            // Set carline after brief delay to allow options to load
-                            setTimeout(function() {
-                                $('#carline_id').val(family.carline_id).trigger('change');
-                            }, 100);
-                        }
+                        // Set area (this loads its carlines), then the optional carline
+                        $('#area_id').val(family.master_area_id).trigger('change');
+                        $('#carline_id').val(family.carline_id || '');
 
                         $('#masterFamilyModalLabel').text('Edit Family Data');
                         $('.error-text').text('');

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RegistersMasterFamily;
 use App\Models\Concerns\RestrictedByArea;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MasterCircuit extends Model
 {
-    use HasFactory, SoftDeletes, RestrictedByArea;
+    use HasFactory, SoftDeletes, RestrictedByArea, RegistersMasterFamily;
 
     protected $table = 'master_circuit';
 

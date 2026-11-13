@@ -12,8 +12,8 @@
                     <input type="hidden" id="family_id" name="family_id">
 
                     <div class="mb-3">
-                        <label for="area_id" class="form-label">Area</label>
-                        <select class="form-select form-select-sm" id="area_id" name="area_id">
+                        <label for="area_id" class="form-label">Area <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm" id="area_id" name="area_id" required>
                             <option value="">- Select Area -</option>
                             @foreach($areas as $area)
                                 <option value="{{ $area->id }}">{{ $area->area }}</option>
