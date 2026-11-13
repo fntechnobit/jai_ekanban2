@@ -1136,22 +1136,20 @@
             }
 
             const restore = makeVisibleForCapture(ticket, isLandscape);
-            // JANGAN naikkan ke 2. Dengan scale 1, canvas hasil rotate lebarnya
-            // persis BASE_DOTS (576) sehingga dstW === srcW dan canvas dikembalikan
-            // APA ADANYA - nol resampling, piksel 1:1 ke dot printer. Dengan scale 2
-            // canvas harus diperkecil 0.5x: bar barcode Code 39 ikut di-blur oleh
-            // interpolasi, lalu melebar/menyatu saat di-threshold hitam-putih
-            // sehingga barcode mesin tercetak "tebal" dan sulit discan.
-            const CAPTURE_SCALE = 1;
-            const canvas = await html2canvas(ticket, { scale: CAPTURE_SCALE, backgroundColor: '#fff', useCORS: true });
-            restore();
+            let canvas;
+            try {
+                canvas = await captureTicketCanvas(ticket);
+            } finally {
+                // finally: gaya tiket selalu dikembalikan walau capture gagal
+                restore();
 
-            // Restore all saved inline styles
-            ticket.style.width = saved.w;
-            ticket.style.height = saved.h;
-            ticket.style.boxSizing = saved.b;
-            ticket.style.maxWidth = saved.mw;
-            ticket.style.overflow = saved.ov;
+                // Restore all saved inline styles
+                ticket.style.width = saved.w;
+                ticket.style.height = saved.h;
+                ticket.style.boxSizing = saved.b;
+                ticket.style.maxWidth = saved.mw;
+                ticket.style.overflow = saved.ov;
+            }
 
             let finalCanvas, dstW, dstH, srcW, srcH;
 
@@ -1191,6 +1189,67 @@
                 return out;
             }
             return finalCanvas;
+        }
+
+        // Ukuran tiket yang sebenarnya. Di sebagian browser/PC, tiket yang diletakkan di
+        // luar layar bisa terbaca 0x0 lewat getBoundingClientRect padahal isinya ada,
+        // lalu html2canvas menghasilkan canvas 0x0 ("Cannot rotate empty canvas"). Ambil
+        // nilai terbesar dari beberapa sumber ukur, dan kalau tiketnya sendiri terbaca 0
+        // jumlahkan lebar anak-anaknya (gambar drawing + tabel + strip punch).
+        function measureTicket(ticket) {
+            const r = ticket.getBoundingClientRect();
+            let w = Math.ceil(Math.max(r.width, ticket.offsetWidth, ticket.scrollWidth));
+            let h = Math.ceil(Math.max(r.height, ticket.offsetHeight, ticket.scrollHeight));
+            if (w < 2) {
+                w = Math.ceil(Array.from(ticket.children).reduce(function (sum, c) {
+                    return sum + Math.max(c.getBoundingClientRect().width, c.offsetWidth, c.scrollWidth);
+                }, 0));
+            }
+            return { w: w, h: h };
+        }
+
+        // Capture satu tiket ke canvas dengan skala 1:1 (lihat catatan di bawah).
+        // Kalau hasilnya 0x0, tunggu layout lalu ulangi SEKALI dengan lebar/tinggi
+        // eksplisit. Kalau masih gagal, lempar error yang menyebut tiket & ukuran yang
+        // terbaca supaya penyebabnya bisa dilacak, bukan sekadar "empty canvas".
+        async function captureTicketCanvas(ticket) {
+            // JANGAN naikkan ke 2. Dengan scale 1, canvas hasil rotate lebarnya
+            // persis BASE_DOTS (576) sehingga dstW === srcW dan canvas dikembalikan
+            // APA ADANYA - nol resampling, piksel 1:1 ke dot printer. Dengan scale 2
+            // canvas harus diperkecil 0.5x: bar barcode Code 39 ikut di-blur oleh
+            // interpolasi, lalu melebar/menyatu saat di-threshold hitam-putih
+            // sehingga barcode mesin tercetak "tebal" dan sulit discan.
+            const base = { scale: 1, backgroundColor: '#fff', useCORS: true };
+
+            let canvas = await html2canvas(ticket, base);
+            if (canvas.width > 0 && canvas.height > 0) return canvas;
+
+            console.warn('captureTicketCanvas: hasil 0x0, mengulang dengan ukuran eksplisit', measureTicket(ticket));
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            await new Promise(r => setTimeout(r, 150));
+
+            const size = measureTicket(ticket);
+            if (size.w >= 2 && size.h >= 2) {
+                ticket.style.width = size.w + 'px';
+                canvas = await html2canvas(ticket, Object.assign({}, base, {
+                    width: size.w,
+                    height: size.h,
+                    windowWidth: Math.max(window.innerWidth, size.w),
+                    windowHeight: Math.max(window.innerHeight, size.h)
+                }));
+                if (canvas.width > 0 && canvas.height > 0) return canvas;
+            }
+
+            const r = ticket.getBoundingClientRect();
+            throw new Error(
+                'Tiket gagal di-render (canvas ' + canvas.width + 'x' + canvas.height + '). ' +
+                'Tipe=' + (ticket.className || '-') +
+                ', ukuran terbaca=' + Math.round(r.width) + 'x' + Math.round(r.height) +
+                ', anak=' + Array.from(ticket.children).map(c => Math.round(c.getBoundingClientRect().width)).join('/') +
+                ', terpasang di halaman=' + document.body.contains(ticket) +
+                ', jendela=' + window.innerWidth + 'x' + window.innerHeight + ' dpr=' + window.devicePixelRatio +
+                ', browser=' + navigator.userAgent
+            );
         }
 
         function makeVisibleForCapture(node, isLandscape) {
