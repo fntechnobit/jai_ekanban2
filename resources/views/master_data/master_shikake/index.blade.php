@@ -81,6 +81,7 @@
 @section('script')
     <script src="{{ asset('plugins/sweetalert2/sweetalert2.min.js') }}"></script>
     @include('master_data.partials.cascade_select_script')
+    @include('master_data.partials.import_area_conveyor_script')
     <script>
         $(function () {
             var optionsUrl = "{{ route('master-data.master-shikake.filter-options') }}";
@@ -153,28 +154,11 @@
             // Initialize Select2 for import modal
             $('#import_area_id, #import_conveyor_id').select2({
                 theme: 'bootstrap-5',
-                dropdownParent: $('#importShikakeModal'),
-                allowClear: true
+                dropdownParent: $('#importShikakeModal')
             });
 
-            // Filter conveyors by area in import modal
-            $('#import_area_id').on('change', function() {
-                var areaId = $(this).val();
-                var conveyorSelect = $('#import_conveyor_id');
-                
-                conveyorSelect.val('').trigger('change');
-                
-                if (areaId) {
-                    conveyorSelect.find('option').each(function() {
-                        var option = $(this);
-                        if (option.val() !== '') {
-                            option.show();
-                        }
-                    });
-                } else {
-                    conveyorSelect.find('option').show();
-                }
-            });
+            // Conveyor options follow the chosen Area (area is required)
+            var importAreaConveyor = ImportAreaConveyor.init($('#import_area_id'), $('#import_conveyor_id'));
 
             // Update file input label
             $('#import_file').on('change', function() {
@@ -224,8 +208,7 @@
                         
                         // Reset form including Select2 dropdowns
                         $('#importShikakeForm')[0].reset();
-                        $('#import_area_id').val('').trigger('change');
-                        $('#import_conveyor_id').val('').trigger('change');
+                        importAreaConveyor.reset();
                         $('#import_process').val('').trigger('change');
                         $('.custom-file-label').html('Browse File');
                         

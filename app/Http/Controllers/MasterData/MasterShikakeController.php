@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class MasterShikakeController extends Controller
 {
@@ -318,11 +319,20 @@ class MasterShikakeController extends Controller
     {
         try {
             $request->validate([
+                'area_id' => 'required|exists:master_area,id',
                 'conveyor_id' => 'required|exists:master_conveyor,id',
                 'process' => 'required|string|in:BONDER,DBL CRIMP,JOINT,SHIELD,TWIST',
                 'file' => 'required|file|mimes:xlsx,xls|max:10240',
                 'rows_start' => 'required|integer|min:1',
             ]);
+
+            // Imported rows take their area from the conveyor, so it must be in the chosen area.
+            $conveyor = MasterConveyor::findOrFail($request->input('conveyor_id'));
+            if ((int) $conveyor->master_area_id !== (int) $request->input('area_id')) {
+                throw ValidationException::withMessages([
+                    'conveyor_id' => "Conveyor {$conveyor->conveyor} is not in the selected area. Set the conveyor's area in Master Conveyor first.",
+                ]);
+            }
 
             $file = $request->file('file');
             $conveyorId = $request->input('conveyor_id');

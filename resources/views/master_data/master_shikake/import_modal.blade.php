@@ -17,10 +17,10 @@
                     </div>
 
                     <div class="mb-3 row">
-                        <label for="import_area_id" class="col-sm-3 col-form-label">Area :</label>
+                        <label for="import_area_id" class="col-sm-3 col-form-label">Area <span class="text-danger">*</span>:</label>
                         <div class="col-sm-9">
-                            <select class="form-select select2" id="import_area_id" name="area_id" style="width: 100%;">
-                                <option value="">- All Area -</option>
+                            <select class="form-select select2" id="import_area_id" name="area_id" style="width: 100%;" required>
+                                <option value="">- Choose Area -</option>
                                 @foreach($areas as $area)
                                     <option value="{{ $area->id }}">{{ $area->area }}</option>
                                 @endforeach
@@ -35,7 +35,7 @@
                             <select class="form-select select2" id="import_conveyor_id" name="conveyor_id" style="width: 100%;" required>
                                 <option value="">- Choose Conveyor -</option>
                                 @foreach($conveyors as $conveyor)
-                                    <option value="{{ $conveyor->id }}">{{ $conveyor->conveyor }}</option>
+                                    <option value="{{ $conveyor->id }}" data-area-id="{{ $conveyor->master_area_id }}">{{ $conveyor->conveyor }}</option>
                                 @endforeach
                             </select>
                             <small class="form-text text-danger import_conveyor_id_error"></small>

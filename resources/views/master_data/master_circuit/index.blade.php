@@ -82,6 +82,7 @@
 
 @section('script')
     @include('master_data.partials.cascade_select_script')
+    @include('master_data.partials.import_area_conveyor_script')
     <script>
         $(function () {
             var optionsUrl = "{{ route('master-data.master-circuit.filter-options') }}";
@@ -183,28 +184,11 @@
             // Initialize Select2 for import modal
             $('#import_area_id, #import_conveyor_id').select2({
                 theme: 'bootstrap-5',
-                dropdownParent: $('#importCircuitModal'),
-                allowClear: true
+                dropdownParent: $('#importCircuitModal')
             });
 
-            // Filter conveyors by area in import modal
-            $('#import_area_id').on('change', function() {
-                var areaId = $(this).val();
-                var conveyorSelect = $('#import_conveyor_id');
-                
-                conveyorSelect.val('').trigger('change');
-                
-                if (areaId) {
-                    conveyorSelect.find('option').each(function() {
-                        var option = $(this);
-                        if (option.val() !== '') {
-                            option.show();
-                        }
-                    });
-                } else {
-                    conveyorSelect.find('option').show();
-                }
-            });
+            // Conveyor options follow the chosen Area (area is required)
+            var importAreaConveyor = ImportAreaConveyor.init($('#import_area_id'), $('#import_conveyor_id'));
 
             // Update file input label
             $('#import_file').on('change', function() {
@@ -236,6 +220,7 @@
                     success: function(response) {
                         $('#importCircuitModal').modal('hide');
                         $('#importCircuitForm')[0].reset();
+                        importAreaConveyor.reset();
                         $('.custom-file-label').html('Browse File');
                         table.ajax.reload();
                         
