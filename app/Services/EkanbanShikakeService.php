@@ -389,8 +389,10 @@ class EkanbanShikakeService
     /**
      * Mark shikake group as printed - updates ALL rows in the group
      */
-    public function markAsPrinted(array $groupIds, $userId)
+    public function markAsPrinted(array $groupIds, $userId, bool $onlyUnprinted = false): int
     {
+        $updated = 0;
+
         foreach ($groupIds as $groupId) {
             $parts = explode('-', $groupId, 2);
             if (count($parts) === 2) {
@@ -398,8 +400,10 @@ class EkanbanShikakeService
                 $masterShikakeId = $parts[1];
                 
                 // Update ALL kanban rows in this group
-                AssyScheduleShikake::where('assy_schedule_id', $assyScheduleId)
+                $updated += AssyScheduleShikake::where('assy_schedule_id', $assyScheduleId)
                     ->where('master_shikake_id', $masterShikakeId)
+                    // Tandai manual: baris yang sudah printed tidak disentuh (print_count tetap)
+                    ->when($onlyUnprinted, fn ($q) => $q->where('is_printed', 0))
                     ->update([
                         'is_printed' => true,
                         'last_printed_at' => now(),
@@ -408,6 +412,65 @@ class EkanbanShikakeService
                     ]);
             }
         }
+
+        return $updated;
+    }
+
+    /**
+     * Baca ulang status print langsung dari database sesudah markAsPrinted(),
+     * supaya operator baru melihat "Success" bila semua kanban di grup benar-benar
+     * tersimpan is_printed = 1 - bukan sekadar karena perintah UPDATE terkirim.
+     *
+     * @return array{groups:int, groups_found:int, rows:int, unprinted_rows:int, missing_groups:array}
+     */
+    public function verifyPrinted(array $groupIds): array
+    {
+        $pairs = [];
+        foreach ($groupIds as $groupId) {
+            $parts = explode('-', trim($groupId), 2);
+            if (count($parts) === 2) {
+                $pairs[$parts[0] . '-' . $parts[1]] = [(int) $parts[0], (int) $parts[1]];
+            }
+        }
+
+        if (!$pairs) {
+            return ['groups' => 0, 'groups_found' => 0, 'rows' => 0, 'unprinted_rows' => 0, 'missing_groups' => []];
+        }
+
+        $rows = DB::table('assy_schedule_shikake')
+            ->where(function ($q) use ($pairs) {
+                foreach ($pairs as [$scheduleId, $masterId]) {
+                    $q->orWhere(function ($w) use ($scheduleId, $masterId) {
+                        $w->where('assy_schedule_id', $scheduleId)
+                            ->where('master_shikake_id', $masterId);
+                    });
+                }
+            })
+            ->select([
+                'assy_schedule_id',
+                'master_shikake_id',
+                DB::raw('COUNT(*) as row_count'),
+                DB::raw('SUM(CASE WHEN is_printed = 1 THEN 0 ELSE 1 END) as unprinted_count'),
+            ])
+            ->groupBy('assy_schedule_id', 'master_shikake_id')
+            ->get();
+
+        $found = [];
+        $rowTotal = 0;
+        $unprinted = 0;
+        foreach ($rows as $row) {
+            $found[$row->assy_schedule_id . '-' . $row->master_shikake_id] = true;
+            $rowTotal += (int) $row->row_count;
+            $unprinted += (int) $row->unprinted_count;
+        }
+
+        return [
+            'groups' => count($pairs),
+            'groups_found' => count($found),
+            'rows' => $rowTotal,
+            'unprinted_rows' => $unprinted,
+            'missing_groups' => array_values(array_diff(array_keys($pairs), array_keys($found))),
+        ];
     }
 
     /**

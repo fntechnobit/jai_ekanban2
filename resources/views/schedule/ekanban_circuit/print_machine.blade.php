@@ -51,6 +51,10 @@
                         <button type="button" class="btn btn-success btn-sm d-none" id="btn-print-selected">
                             <i class="fa-solid fa-print"></i> Print Selected (<span id="selected-count">0</span>)
                         </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="btn-mark-selected"
+                            title="Ubah status kanban yang dicentang menjadi printed TANPA mencetak - untuk tiket yang sudah tercetak tetapi statusnya gagal tersimpan">
+                            <i class="fa-solid fa-check-double"></i> Tandai Sudah Print (<span id="mark-selected-count">0</span>)
+                        </button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -763,6 +767,8 @@
             function updateSelectedCount() {
                 $('#selected-count').text(selectedIds.size);
                 $('#btn-print-selected').toggleClass('d-none', selectedIds.size === 0);
+                $('#mark-selected-count').text(selectedIds.size);
+                $('#btn-mark-selected').toggleClass('d-none', selectedIds.size === 0);
             }
 
             // Bulk print of all checked rows (reads from selectedIds, not the DOM, so a
@@ -913,32 +919,25 @@
                 setPrintProgress('Mengirim ' + ticketCount + ' tiket ke printer...');
                 await printStackNow('#print_stack_ajax', selectedPrinter);
 
-                // Step 3: Mark as printed ONLY after successful QZ print
+                // Step 3: Mark as printed ONLY after successful QZ print.
+                // Tiket SUDAH keluar dari printer di titik ini, jadi kegagalan simpan
+                // status tidak boleh lagi ditelan diam-diam (dulu cuma console.warn lalu
+                // tetap tampil "Success" - kanban yang sudah dicetak tampil belum print).
                 setPrintProgress('Menyimpan status print...');
-                try {
-                    const markResponse = await fetch("{{ route('schedule.ekanban-circuit.print') }}", {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({ ids: ids, mark_only: true })
-                    });
-                    const markData = await markResponse.json();
-                    if (!markData.ok) {
-                        console.warn('Failed to update print status:', markData);
-                    }
-                } catch (markErr) {
-                    console.error('Failed to update print status:', markErr);
-                }
+                const markResult = await saveStatusPrint(ids);
 
-                // Step 4: Clear the bulk-print selection and reload table to show updated status
+                // Step 4: Clear the bulk-print selection and reload table. Popup baru
+                // muncul SESUDAH tabel selesai dimuat ulang, jadi yang dilihat operator
+                // di layar sudah status terbaru dari database.
                 selectedIds.clear();
-                if (typeof table !== 'undefined') {
-                    table.ajax.reload(null, false);
-                }
+                setPrintProgress('Memuat ulang daftar kanban...');
+                await reloadTableAsync();
 
-                Swal.fire('Success!', 'Print completed successfully! (' + ticketCount + ' tiket terkirim ke printer)', 'success');
+                if (markResult.ok) {
+                    Swal.fire('Success!', 'Print completed successfully! (' + ticketCount + ' tiket terkirim ke printer)', 'success');
+                } else {
+                    await warnStatusPrintNotSaved(ids, ticketCount, markResult.message);
+                }
 
             } catch (err) {
                 console.error('Print error:', err);
@@ -1039,6 +1038,137 @@
         const GUARD_NULS = 256;
         const GUARD_HEX = '00'.repeat(GUARD_NULS);
         const guarded = (hex) => GUARD_NULS > 0 ? GUARD_HEX + hex : hex;
+
+        // Tombol "Tandai Sudah Print": ubah status kanban yang dicentang menjadi printed
+        // TANPA mencetak. Untuk tiket yang sudah keluar dari printer tetapi statusnya
+        // gagal tersimpan otomatis. Kanban yang sudah printed tidak disentuh.
+        $(document).on('click', '#btn-mark-selected', async function() {
+            const ids = Array.from(selectedIds);
+            if (!ids.length) return;
+
+            const confirm = await Swal.fire({
+                icon: 'question',
+                title: 'Tandai Sudah Print?',
+                html: '<strong>' + ids.length + '</strong> kanban yang dicentang akan ditandai '
+                    + '<strong>sudah print</strong> tanpa dicetak.<br><br>'
+                    + '<span class="text-danger">Gunakan hanya bila tiketnya BENAR-BENAR sudah tercetak '
+                    + 'tetapi statusnya masih belum print.</span>',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Tandai Sudah Print',
+                cancelButtonText: 'Batal',
+                focusCancel: true
+            });
+            if (!confirm.isConfirmed) return;
+
+            Swal.fire({
+                title: 'Menyimpan status print...',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const result = await saveStatusPrint(ids.join(','), true);
+            if (result.ok) {
+                selectedIds.clear();
+            }
+            await reloadTableAsync();
+
+            if (result.ok) {
+                Swal.fire('Success!', ids.length + ' kanban sudah tersimpan sebagai printed.', 'success');
+            } else {
+                Swal.fire('Error!', 'Status print gagal disimpan: ' + (result.message || ''), 'error');
+            }
+        });
+
+        // table.ajax.reload versi Promise - selesai sesudah data baru tergambar (atau
+        // gagal dimuat; batas 15 detik supaya popup tidak tertahan selamanya).
+        function reloadTableAsync() {
+            return new Promise(function (resolve) {
+                if (typeof table === 'undefined') return resolve();
+                var done = false;
+                var finish = function () { if (!done) { done = true; resolve(); } };
+                table.one('xhr.dt', function () { setTimeout(finish, 0); });
+                setTimeout(finish, 15000);
+                table.ajax.reload(null, false);
+            });
+        }
+
+        // Simpan status "printed" sesudah tiket tercetak. Dicoba sampai 3 kali (jaringan
+        // pabrik kadang putus sesaat); respons non-JSON (sesi habis / error server)
+        // dianggap gagal, bukan dilewati.
+        async function saveStatusPrint(ids, manual) {
+            let lastMessage = 'Tidak diketahui';
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const res = await fetch("{{ route('schedule.ekanban-circuit.print') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ ids: ids, mark_only: true, manual: !!manual })
+                    });
+                    let data = null;
+                    try { data = await res.json(); } catch (e) { data = null; }
+                    // Sukses hanya bila server sudah membaca ulang database dan
+                    // tidak ada lagi kanban grup ini yang tersimpan belum print.
+                    if (res.ok && data && data.ok && data.verify
+                        && data.verify.rows > 0 && data.verify.unprinted_rows === 0) {
+                        return { ok: true, verify: data.verify };
+                    }
+                    lastMessage = (data && data.message)
+                        ? data.message
+                        : (res.status === 419 ? 'Sesi login berakhir (HTTP 419)' : 'HTTP ' + res.status);
+                    // Kanban memang tidak ada / sesi habis - mengulang tidak akan menolong
+                    if (res.status === 404 || res.status === 419 || res.status === 401) break;
+                } catch (err) {
+                    lastMessage = err.toString();
+                }
+                console.warn('saveStatusPrint attempt ' + attempt + ' failed:', lastMessage);
+                await new Promise(r => setTimeout(r, 1000 * attempt));
+            }
+            console.error('Failed to update print status for ids=' + ids + ':', lastMessage);
+            return { ok: false, message: lastMessage };
+        }
+
+        // Tiket sudah tercetak tapi statusnya gagal disimpan: beri tahu operator dengan
+        // jelas dan sediakan tombol simpan ulang - TANPA mencetak ulang kertasnya.
+        async function warnStatusPrintNotSaved(ids, ticketCount, message) {
+            while (true) {
+                const choice = await Swal.fire({
+                    icon: 'warning',
+                    title: 'Status Print Belum Tersimpan',
+                    html: ticketCount + ' tiket sudah terkirim ke printer, tetapi status '
+                        + '<strong>printed</strong> GAGAL disimpan ke server.<br>'
+                        + '<small class="text-muted">' + $('<div>').text(message || '').html() + '</small><br><br>'
+                        + 'Klik <strong>Simpan Ulang Status</strong> (kertas tidak dicetak ulang). '
+                        + 'Jangan print ulang kanban ini.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Simpan Ulang Status',
+                    cancelButtonText: 'Tutup',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                });
+                if (!choice.isConfirmed) return;
+
+                Swal.fire({
+                    title: 'Menyimpan status print...',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => Swal.showLoading()
+                });
+                const retry = await saveStatusPrint(ids);
+                await reloadTableAsync();
+                if (retry.ok) {
+                    Swal.fire('Success!', 'Status print tersimpan (' + ticketCount + ' tiket).', 'success');
+                    return;
+                }
+                message = retry.message;
+            }
+        }
 
         async function printStackNow(stackRootSel, printer) {
             const tickets = Array.from(document.querySelectorAll(stackRootSel + ' .ticket'));

@@ -129,6 +129,47 @@ class EkanbanCircuitController extends Controller
     {
         $ids = is_array($request->ids) ? $request->ids : explode(',', $request->ids);
 
+        // mark_only dipanggil SESUDAH tiket keluar dari printer - izin sudah dicek
+        // lewat check_only sebelum print. Jangan ditolak lagi di sini: kertasnya
+        // sudah tercetak, jadi statusnya wajib tersimpan. Kalau ditolak (atau gagal
+        // diam-diam), kanban yang sudah dicetak tetap tampil "belum print".
+        // manual = tombol "Tandai Sudah Print": operator menandai kanban yang tiketnya
+        // sudah tercetak tetapi statusnya gagal tersimpan otomatis (tanpa print ulang).
+        if ($request->boolean('mark_only')) {
+            $manual = $request->boolean('manual');
+            $updated = $this->ekanbanCircuitService->markAsPrinted($ids, Auth::id(), $manual);
+
+            // Baca ulang dari database: "ok" hanya dikirim bila SEMUA kanban di grup
+            // yang dicetak memang sudah tersimpan printed.
+            $verify = $this->ekanbanCircuitService->verifyPrinted($ids);
+            $saved = $verify['rows'] > 0
+                && $verify['unprinted_rows'] === 0
+                && empty($verify['missing_groups']);
+
+            Log::info('EkanbanCircuit markPrinted', [
+                'manual' => $manual,
+                'group_ids' => $ids,
+                'group_count' => count($ids),
+                'rows_updated' => $updated,
+                'verify' => $verify,
+                'user_id' => Auth::id(),
+            ]);
+
+            if (!$saved) {
+                $message = !empty($verify['missing_groups'])
+                    ? count($verify['missing_groups']) . ' kanban tidak ditemukan di database (mungkin sudah di-generate ulang).'
+                    : $verify['unprinted_rows'] . ' kanban belum tersimpan sebagai printed.';
+
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'Status print tidak tersimpan: ' . $message,
+                    'verify' => $verify,
+                ], empty($verify['missing_groups']) ? 500 : 404);
+            }
+
+            return response()->json(['ok' => true, 'verify' => $verify]);
+        }
+
         // Only admins may reprint a kanban that has already been printed before
         if (!Auth::user()->isAdmin() && $this->ekanbanCircuitService->anyAlreadyPrinted($ids)) {
             return response()->json([
@@ -155,11 +196,6 @@ class EkanbanCircuitController extends Controller
 
         // Mark circuits as printed
         $this->ekanbanCircuitService->markAsPrinted($ids, Auth::id());
-
-        // If mark_only flag is set, skip HTML generation
-        if ($request->boolean('mark_only')) {
-            return response()->json(['ok' => true]);
-        }
 
         $circuits = $this->ekanbanCircuitService->getCircuitsForPrint($ids);
         
