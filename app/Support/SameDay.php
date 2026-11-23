@@ -16,7 +16,16 @@ class SameDay
 {
     public static function where($query, string $column, $date)
     {
-        $day = Carbon::parse($date)->startOfDay();
+        // Rentang hanya dipakai bila hasilnya PASTI sama dengan whereDate(): nilai
+        // 'Y-m-d' atau 'Y-m-d 00:00:00' yang valid. Selain itu (kosong, format lain,
+        // jam bukan 00:00) tetap whereDate() supaya perilakunya tidak berubah.
+        $value = is_string($date) ? trim($date) : (string) $date;
+        if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})(?: 00:00:00)?$/', $value, $m)
+            || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            return $query->whereDate($column, $date);
+        }
+
+        $day = Carbon::createFromFormat('Y-m-d', "{$m[1]}-{$m[2]}-{$m[3]}")->startOfDay();
 
         return $query->where($column, '>=', $day->toDateTimeString())
             ->where($column, '<', $day->copy()->addDay()->toDateTimeString());

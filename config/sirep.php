@@ -182,6 +182,12 @@ return [
         // tidak pernah dilewati.
         'auto_throttle_seconds' => (int) env('SIREP_GENERATE_THROTTLE', 300),
 
+        // Sesudah GAGAL, panggilan OTOMATIS untuk rentang yang sama ditahan selama
+        // ini - supaya saat PPC/SIREP bermasalah setiap halaman yang dibuka (±50 PC)
+        // tidak mengulang sinkron penuh. Dibuat pendek: begitu PPC pulih, sinkron
+        // otomatis jalan lagi paling lambat sekian detik kemudian. 0 = mati.
+        'auto_fail_throttle_seconds' => (int) env('SIREP_GENERATE_FAIL_THROTTLE', 60),
+
         // Umur kunci: cukup panjang untuk menampung proses terlama, dan tetap
         // lepas sendiri bila prosesnya mati tanpa sempat melepaskan.
         'lock_seconds' => (int) env('SIREP_GENERATE_LOCK', 600),

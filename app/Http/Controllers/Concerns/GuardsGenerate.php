@@ -83,9 +83,7 @@ trait GuardsGenerate
      */
     protected function generateBaruGagal(Request $request, string $scope): ?array
     {
-        $throttle = (int) config('sirep.generate.auto_throttle_seconds', 300);
-
-        if (!$request->boolean('auto') || $throttle <= 0) {
+        if (!$request->boolean('auto') || $this->failThrottleSeconds() <= 0) {
             return null;
         }
 
@@ -94,10 +92,16 @@ trait GuardsGenerate
         return is_array($failed) ? $failed : null;
     }
 
+    /** Lama panggilan otomatis ditahan sesudah gagal (lebih pendek dari sesudah berhasil). */
+    protected function failThrottleSeconds(): int
+    {
+        return (int) config('sirep.generate.auto_fail_throttle_seconds', 60);
+    }
+
     /** Catat kegagalan supaya panggilan otomatis berikutnya tidak langsung mengulang. */
     protected function catatGenerateGagal(string $scope, ?string $stepFailed, string $message): void
     {
-        $throttle = (int) config('sirep.generate.auto_throttle_seconds', 300);
+        $throttle = $this->failThrottleSeconds();
 
         if ($throttle > 0) {
             Cache::put($scope . ':failed', [
@@ -115,7 +119,8 @@ trait GuardsGenerate
      */
     protected function failedRecentlyResponse(array $failed)
     {
-        $throttleMinutes = max(1, (int) ceil(config('sirep.generate.auto_throttle_seconds', 300) / 60));
+        $seconds = $this->failThrottleSeconds();
+        $wait = $seconds % 60 === 0 ? ($seconds / 60) . ' menit' : $seconds . ' detik';
 
         return response()->json([
             'success'     => false,
@@ -123,7 +128,7 @@ trait GuardsGenerate
             'step_failed' => $failed['step_failed'] ?? 'unknown',
             'message'     => ($failed['message'] ?? 'Sinkron & generate gagal.')
                 . ' (Percobaan otomatis terakhir gagal pukul ' . ($failed['at'] ?? '-')
-                . '; dicoba otomatis lagi setelah ' . $throttleMinutes . ' menit,'
+                . '; dicoba otomatis lagi setelah ' . $wait . ','
                 . ' atau tekan tombol Sinkron & Generate.)',
             'data'        => ['generated' => 0, 'sync_detail' => null],
         ]);
