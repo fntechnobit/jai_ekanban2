@@ -63,6 +63,10 @@ class DashboardController extends Controller
             );
         }
 
+        if ($failed = $this->generateBaruGagal($request, $scope)) {
+            return $this->failedRecentlyResponse($failed);
+        }
+
         $lock = $this->ambilGenerateLock($scope);
 
         if (!$lock->get()) {
@@ -93,6 +97,8 @@ class DashboardController extends Controller
                 ]);
             }
 
+            $this->catatGenerateGagal($scope, $result['step_failed'] ?? 'unknown', (string) $result['message']);
+
             return response()->json([
                 'success'     => false,
                 'step_failed' => $result['step_failed'] ?? 'unknown',
@@ -109,6 +115,7 @@ class DashboardController extends Controller
         // penelusuran. Ditangkap di sini supaya pesannya jujur dan tercatat.
         } catch (\Throwable $e) {
             Log::error('Dashboard generate error', ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
+            $this->catatGenerateGagal($scope, 'unknown', 'Terjadi kesalahan: ' . $e->getMessage());
 
             return response()->json([
                 'success'     => false,

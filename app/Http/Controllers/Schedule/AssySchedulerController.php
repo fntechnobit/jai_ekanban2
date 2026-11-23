@@ -348,6 +348,10 @@ class AssySchedulerController extends Controller
             );
         }
 
+        if ($failed = $this->generateBaruGagal($request, $scope)) {
+            return $this->failedRecentlyResponse($failed);
+        }
+
         $lock = $this->ambilGenerateLock($scope);
 
         if (!$lock->get()) {
@@ -376,6 +380,8 @@ class AssySchedulerController extends Controller
                     ],
                 ]);
             } else {
+                $this->catatGenerateGagal($scope, $result['step_failed'] ?? 'unknown', (string) $result['message']);
+
                 return response()->json([
                     'success'     => false,
                     'step_failed' => $result['step_failed'] ?? 'unknown',
@@ -393,6 +399,7 @@ class AssySchedulerController extends Controller
         // penelusuran. Ditangkap di sini supaya pesannya jujur dan tercatat.
         } catch (\Throwable $e) {
             Log::error('Schedule generation error', ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()]);
+            $this->catatGenerateGagal($scope, 'unknown', 'Terjadi kesalahan: ' . $e->getMessage());
 
             return response()->json([
                 'success'     => false,

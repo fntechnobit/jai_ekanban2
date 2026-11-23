@@ -72,7 +72,7 @@
             <div class="card">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <h5 class="card-title mb-0">
-                        <i class="fa-solid fa-chart-bar text-primary me-2"></i> Kanban Printed per Machine (Top 20)
+                        <i class="fa-solid fa-chart-bar text-primary me-2"></i> Kanban Printed per Machine (Top 20) <small class="text-muted fw-normal fs-12">{{ \App\Services\DashboardService::PERIOD_DAYS }} hari terakhir, diperbarui tiap {{ intdiv(\App\Services\DashboardService::CACHE_SECONDS, 60) }} menit</small>
                     </h5>
                     <button type="button" class="btn btn-outline-primary btn-sm" id="btn-refresh-chart" title="Refresh">
                         <i class="fa-solid fa-arrows-rotate"></i>
@@ -94,7 +94,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
-                        <i class="fa-solid fa-scissors text-success me-2"></i> Cutting - Kanban Printed per Machine
+                        <i class="fa-solid fa-scissors text-success me-2"></i> Cutting - Kanban Printed per Machine <small class="text-muted fw-normal fs-12">({{ \App\Services\DashboardService::PERIOD_DAYS }} hari terakhir)</small>
                     </h5>
                 </div>
                 <div class="card-body">
@@ -119,7 +119,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
-                        <i class="fa-solid fa-link text-warning me-2"></i> Shikake - Kanban Printed per Machine
+                        <i class="fa-solid fa-link text-warning me-2"></i> Shikake - Kanban Printed per Machine <small class="text-muted fw-normal fs-12">({{ \App\Services\DashboardService::PERIOD_DAYS }} hari terakhir)</small>
                     </h5>
                 </div>
                 <div class="card-body">
