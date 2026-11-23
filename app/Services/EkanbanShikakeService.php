@@ -10,6 +10,7 @@ use App\Models\MasterShikakeDblCrimp;
 use App\Models\MasterShikakeTwist;
 use Illuminate\Http\Request;
 use App\Support\CutoffPrintRule;
+use App\Support\SameDay;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -39,11 +40,8 @@ class EkanbanShikakeService
         // Apply filters
         $this->applyFilters($query, $request);
 
-        // Clone query for counting before search (subquery counting like Circuit service)
-        $countQuery = clone $query;
-        $totalRecords = DB::table(DB::raw("({$countQuery->toSql()}) as sub"))
-            ->mergeBindings($countQuery)
-            ->count();
+        // Count before search
+        $totalRecords = $this->countGroups($query);
 
         if ($request->filled('search.value')) {
             $searchValue = $request->input('search.value');
@@ -57,10 +55,10 @@ class EkanbanShikakeService
             )", [$escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch, $escapedSearch]);
         }
 
-        $filteredQuery = clone $query;
-        $filteredRecords = DB::table(DB::raw("({$filteredQuery->toSql()}) as sub"))
-            ->mergeBindings($filteredQuery)
-            ->count();
+        // Tanpa pencarian hasilnya sama dengan $totalRecords - jangan hitung dua kali.
+        $filteredRecords = $request->filled('search.value')
+            ? $this->countGroups($query)
+            : $totalRecords;
 
         // Order
         $orderColumn = $request->input('order.0.column', 0);
@@ -240,13 +238,48 @@ class EkanbanShikakeService
             ->orderBy('assy_schedule_shikake.issue')
             ->get();
 
-        // Load process-specific details for each shikake
+        // Detail per proses dimuat sekaligus (1 query per jenis proses), bukan 1 query
+        // per tiket: satu shikake punya banyak issue, dulu detailnya dibaca ulang tiap tiket.
+        $details = $this->loadProcessDetailsBatch($shikakes);
+
         foreach ($shikakes as $shikake) {
-            $shikake->details = $this->loadProcessDetails($shikake->shikake_id, $shikake->process);
+            $shikake->details = $details[$shikake->process][$shikake->shikake_id] ?? null;
             $shikake->identifier = $this->getIdentifierByProcess($shikake);
         }
 
         return $shikakes;
+    }
+
+    /**
+     * Detail proses untuk semua shikake di batch print, dikelompokkan
+     * [process][master_shikake_id] => model. Sama dengan loadProcessDetails()
+     * (baris pertama per shikake), hanya tanpa query per tiket.
+     */
+    private function loadProcessDetailsBatch($shikakes): array
+    {
+        $models = [
+            'BONDER'    => MasterShikakeBonder::class,
+            'JOINT'     => MasterShikakeJoint::class,
+            'SHIELD'    => MasterShikakeShield::class,
+            'DBL CRIMP' => MasterShikakeDblCrimp::class,
+            'TWIST'     => MasterShikakeTwist::class,
+        ];
+
+        $result = [];
+        foreach ($shikakes->groupBy('process') as $process => $rows) {
+            if (!isset($models[$process])) {
+                continue;
+            }
+
+            $result[$process] = $models[$process]::whereIn('master_shikake_id', $rows->pluck('shikake_id')->unique()->values())
+                ->orderBy('id')
+                ->get()
+                ->groupBy('master_shikake_id')
+                ->map(fn ($group) => $group->first())
+                ->all();
+        }
+
+        return $result;
     }
 
     /**
@@ -550,7 +583,7 @@ class EkanbanShikakeService
         }
 
         if ($request->filled('date')) {
-            $query->whereDate('assy_schedule.schedule', $request->date);
+            SameDay::where($query, 'assy_schedule.schedule', $request->date);
         }
 
         if ($request->filled('shift')) {
@@ -638,7 +671,7 @@ class EkanbanShikakeService
                 ->join('master_shikake', 'assy_schedule_shikake.master_shikake_id', '=', 'master_shikake.id')
                 ->where('assy_schedule.is_lock', '!=', 0)
                 ->whereNull('master_shikake.deleted_at')
-                ->whereDate('assy_schedule.schedule', $group->schedule)
+                ->where(fn ($q) => SameDay::where($q, 'assy_schedule.schedule', $group->schedule))
                 ->where('assy_schedule.shift', $group->shift)
                 ->where('master_conveyor.master_area_id', $group->master_area_id)
                 ->where('master_shikake.machine', $group->machine)
@@ -787,6 +820,14 @@ class EkanbanShikakeService
         }
     }
 
+    /** Jumlah grup (baris DataTable) dari query ber-GROUP BY. */
+    private function countGroups($query): int
+    {
+        return DB::table(DB::raw("({$query->toSql()}) as sub"))
+            ->mergeBindings($query)
+            ->count();
+    }
+
     /**
      * Print history for DataTable
      */
@@ -795,10 +836,7 @@ class EkanbanShikakeService
         $query = $this->getPrintHistoryQuery();
         $this->applyHistoryFilters($query, $request);
 
-        $countQuery = clone $query;
-        $totalRecords = DB::table(DB::raw("({$countQuery->toSql()}) as sub"))
-            ->mergeBindings($countQuery)
-            ->count();
+        $totalRecords = $this->countGroups($query);
 
         if ($request->filled('search.value')) {
             $escapedSearch = '%' . addcslashes($request->input('search.value'), '%_') . '%';
@@ -813,10 +851,10 @@ class EkanbanShikakeService
             )", array_fill(0, 7, $escapedSearch));
         }
 
-        $filteredQuery = clone $query;
-        $filteredRecords = DB::table(DB::raw("({$filteredQuery->toSql()}) as sub"))
-            ->mergeBindings($filteredQuery)
-            ->count();
+        // Tanpa pencarian hasilnya sama dengan $totalRecords - jangan hitung dua kali.
+        $filteredRecords = $request->filled('search.value')
+            ? $this->countGroups($query)
+            : $totalRecords;
 
         $query->orderBy(DB::raw('MAX(assy_schedule_shikake.last_printed_at)'), 'desc')
             ->orderBy('assy_schedule.shift', 'asc')

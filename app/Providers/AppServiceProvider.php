@@ -56,11 +56,16 @@ class AppServiceProvider extends ServiceProvider
             ->toArray();
 
         // Get parent menus
-        return Menu::with(['children' => function ($query) use ($accessibleMenuIds) {
-                $query->where('is_active', 1)
-                      ->whereIn('id', $accessibleMenuIds)
-                      ->orderBy('order');
-            }])
+        return Menu::with([
+                'children' => function ($query) use ($accessibleMenuIds) {
+                    $query->where('is_active', 1)
+                          ->whereIn('id', $accessibleMenuIds)
+                          ->orderBy('order');
+                },
+                // Sub-sub-menu dibaca sidebar per sub-menu; tanpa eager load = 1 query
+                // per sub-menu (±11 query per halaman). Isinya sama dengan lazy load.
+                'children.children',
+            ])
             ->whereNull('parent_id')
             ->where('is_active', 1)
             ->whereIn('id', $accessibleMenuIds)

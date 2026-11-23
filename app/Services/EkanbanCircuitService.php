@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AssyScheduleCircuit;
 use Illuminate\Http\Request;
 use App\Support\CutoffPrintRule;
+use App\Support\SameDay;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -32,12 +33,9 @@ class EkanbanCircuitService
         // Apply filters
         $this->applyFilters($query, $request);
 
-        // Clone query for counting before search
-        $countQuery = clone $query;
-        $totalRecords = DB::table(DB::raw("({$countQuery->toSql()}) as sub"))
-            ->mergeBindings($countQuery)
-            ->count();
-        
+        // Count before search
+        $totalRecords = $this->countGroups($query);
+
         if ($request->filled('search.value')) {
             $searchValue = $request->input('search.value');
             $escapedSearch = '%' . addcslashes($searchValue, '%_') . '%';
@@ -53,10 +51,10 @@ class EkanbanCircuitService
             )", array_fill(0, 8, $escapedSearch));
         }
 
-        $filteredQuery = clone $query;
-        $filteredRecords = DB::table(DB::raw("({$filteredQuery->toSql()}) as sub"))
-            ->mergeBindings($filteredQuery)
-            ->count();
+        // Tanpa pencarian hasilnya sama dengan $totalRecords - jangan hitung dua kali.
+        $filteredRecords = $request->filled('search.value')
+            ? $this->countGroups($query)
+            : $totalRecords;
 
         // Order - column mapping matches DataTable column indices
         $columns = [
@@ -564,7 +562,7 @@ class EkanbanCircuitService
 
         // Single date filter
         if ($request->filled('date')) {
-            $query->whereDate('assy_schedule.schedule', $request->date);
+            SameDay::where($query, 'assy_schedule.schedule', $request->date);
         }
 
         if ($request->filled('shift')) {
@@ -650,7 +648,7 @@ class EkanbanCircuitService
                 ->join('master_conveyor', 'assy_schedule.conveyor_id', '=', 'master_conveyor.id')
                 ->join('master_circuit', 'assy_schedule_circuit.master_circuit_id', '=', 'master_circuit.id')
                 ->where('assy_schedule.is_lock', '!=', 0)
-                ->whereDate('assy_schedule.schedule', $group->schedule)
+                ->where(fn ($q) => SameDay::where($q, 'assy_schedule.schedule', $group->schedule))
                 ->where('assy_schedule.shift', $group->shift)
                 ->where('master_conveyor.master_area_id', $group->master_area_id)
                 ->where('master_circuit.machine', $group->machine)
@@ -792,6 +790,14 @@ class EkanbanCircuitService
         }
     }
 
+    /** Jumlah grup (baris DataTable) dari query ber-GROUP BY. */
+    private function countGroups($query): int
+    {
+        return DB::table(DB::raw("({$query->toSql()}) as sub"))
+            ->mergeBindings($query)
+            ->count();
+    }
+
     /**
      * Print history for DataTable
      */
@@ -800,10 +806,7 @@ class EkanbanCircuitService
         $query = $this->getPrintHistoryQuery();
         $this->applyHistoryFilters($query, $request);
 
-        $countQuery = clone $query;
-        $totalRecords = DB::table(DB::raw("({$countQuery->toSql()}) as sub"))
-            ->mergeBindings($countQuery)
-            ->count();
+        $totalRecords = $this->countGroups($query);
 
         if ($request->filled('search.value')) {
             $escapedSearch = '%' . addcslashes($request->input('search.value'), '%_') . '%';
@@ -820,10 +823,10 @@ class EkanbanCircuitService
             )", array_fill(0, 9, $escapedSearch));
         }
 
-        $filteredQuery = clone $query;
-        $filteredRecords = DB::table(DB::raw("({$filteredQuery->toSql()}) as sub"))
-            ->mergeBindings($filteredQuery)
-            ->count();
+        // Tanpa pencarian hasilnya sama dengan $totalRecords - jangan hitung dua kali.
+        $filteredRecords = $request->filled('search.value')
+            ? $this->countGroups($query)
+            : $totalRecords;
 
         $query->orderBy(DB::raw('MAX(assy_schedule_circuit.last_printed_at)'), 'desc')
             ->orderBy('assy_schedule.shift', 'asc')
