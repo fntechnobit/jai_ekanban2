@@ -696,6 +696,12 @@
             });
 
             // Print button handler
+            // Kosongkan isi preview saat modal ditutup supaya tiket preview (yang juga
+            // memakai id print_stack_ajax) tidak tertinggal di halaman.
+            $('#previewModal').on('hidden.bs.modal', function () {
+                $('#previewContent').empty();
+            });
+
             $(document).on('click', '.btn-preview', function() {
                 var groupId = $(this).data('group-id');
                 
@@ -822,6 +828,7 @@
                 if (el) el.textContent = msg;
             };
 
+            let sentToPrinter = false;
             try {
                 // Step 0: Authorization pre-check (must happen before any physical printing)
                 setPrintProgress('Memeriksa izin cetak...');
@@ -917,7 +924,8 @@
                 const ticketCount = stack.querySelectorAll('.ticket').length;
                 console.log('printCircuit: sending ' + ticketCount + ' ticket(s) to printer for ids=' + ids);
                 setPrintProgress('Mengirim ' + ticketCount + ' tiket ke printer...');
-                await printStackNow('#print_stack_ajax', selectedPrinter);
+                await printStackNow(stack, selectedPrinter, function () { sentToPrinter = true; });
+                holder.innerHTML = '';
 
                 // Step 3: Mark as printed ONLY after successful QZ print.
                 // Tiket SUDAH keluar dari printer di titik ini, jadi kegagalan simpan
@@ -941,7 +949,21 @@
 
             } catch (err) {
                 console.error('Print error:', err);
-                Swal.fire('Error!', 'Print failed: ' + err.toString(), 'error');
+                if (sentToPrinter) {
+                    // Gagal SESUDAH data dikirim ke printer: sebagian/semua tiket mungkin
+                    // sudah keluar, tetapi statusnya belum disimpan.
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Print Terputus',
+                        html: 'Error saat mengirim ke printer: ' + $('<div>').text(err.toString()).html() + '<br><br>'
+                            + 'Sebagian tiket <strong>mungkin sudah tercetak</strong>. Cek kertas yang keluar: '
+                            + 'kanban yang tiketnya sudah ada, centang lalu klik <strong>Tandai Sudah Print</strong>; '
+                            + 'sisanya print ulang.'
+                    });
+                } else {
+                    Swal.fire('Error!', 'Print gagal - <strong>belum ada tiket yang dicetak</strong>, aman untuk print ulang.<br><br>'
+                        + '<small>' + $('<div>').text(err.toString()).html() + '</small>', 'error');
+                }
             }
         }
 
@@ -1170,8 +1192,15 @@
             }
         }
 
-        async function printStackNow(stackRootSel, printer) {
-            const tickets = Array.from(document.querySelectorAll(stackRootSel + ' .ticket'));
+        // stackRoot = elemen stack tiket yang BARU diambil untuk print ini. Jangan cari
+        // lewat selector global '#print_stack_ajax': modal preview (ikon mata) juga
+        // memuat <div id="print_stack_ajax"> - tiketnya ikut terambil, terbaca 0x0
+        // karena modalnya tersembunyi, lalu print gagal "canvas 0x0" (atau tercetak
+        // dobel bila modal masih terbuka).
+        // onSend dipanggil tepat sebelum data dikirim ke printer: sebelum titik itu
+        // belum ada kertas yang keluar.
+        async function printStackNow(stackRoot, printer, onSend) {
+            const tickets = Array.from(stackRoot.querySelectorAll('.ticket'));
             if (!tickets.length) {
                 throw new Error('No tickets found');
             }
@@ -1218,6 +1247,7 @@
             }
 
             const cfg = qz.configs.create(printer);
+            if (onSend) onSend();
             await qz.print(cfg, jobs);
         }
 
